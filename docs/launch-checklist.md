@@ -46,6 +46,15 @@ follow-up.
   separately authorised. No broadcast path ships with the launch.
   Owner: ________. Evidence: ________.
 
+## Devnet exception
+
+- [ ] Devnet exception E1: expires 2027-02-20. Either the owner renews
+  it before that date, or the removal checklist in `docs/DECISIONS.md`
+  is run (delete the devnet files, the devnet branches, the five
+  temporary `connect-src` origins, and exception E1 itself). An
+  exception with an expiry date and no renewal owner is how a temporary
+  test mode becomes a permanent hole. Owner: ________. Evidence: ________.
+
 ## Verification
 
 - [ ] Fresh-reader test passed for the launch-critical docs: a fresh

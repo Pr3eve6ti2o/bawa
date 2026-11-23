@@ -1,8 +1,9 @@
 // derive-daemon.js — persistent public-only Trust Wallet Core derivation daemon.
-// JSONL request: {"chain":"btc|eth|trx","xpub":"...","index":5}
+// JSONL request: {"chain":"btc|eth|trx|ltc|doge|bsc|matic|arb|op|base|avax|gnosis|celo|linea|mantle|scroll|opbnb|metis|aurora|fantom","xpub":"...","index":5}
 // Optional "branch": 0 (receiving, default) or 1 (change). Any other value
 // is a bad request. The branch selects the BIP-44 change component only;
 // purpose, coin type and account stay fixed per chain (M-41).
+// TON and SOL have no xpub and are not supported here (see derive.js).
 // JSONL response: {"ok":true,"address":"..."} or {"ok":false,"error":"..."}
 // Startup: {"ready":true}
 // Extended keys are validated via the shared module before any per-request WASM call.
@@ -15,13 +16,52 @@ const CHAINS = Object.create(null);
 CHAINS.btc = (coin) => coin.bitcoin;
 CHAINS.eth = (coin) => coin.ethereum;
 CHAINS.trx = (coin) => coin.tron;
+CHAINS.ltc = (coin) => coin.litecoin;
+CHAINS.doge = (coin) => coin.dogecoin;
+CHAINS.bsc = (coin) => coin.smartChain;
+CHAINS.matic = (coin) => coin.polygon;
+CHAINS.arb = (coin) => coin.arbitrum;
+CHAINS.op = (coin) => coin.optimism;
+CHAINS.base = (coin) => coin.base;
+CHAINS.avax = (coin) => coin.avalancheCChain;
+CHAINS.gnosis = (coin) => coin.xdai;
+CHAINS.celo = (coin) => coin.celo;
+CHAINS.linea = (coin) => coin.linea;
+CHAINS.mantle = (coin) => coin.mantle;
+CHAINS.scroll = (coin) => coin.scroll;
+CHAINS.opbnb = (coin) => coin.opBNB;
+CHAINS.metis = (coin) => coin.metis;
+CHAINS.aurora = (coin) => coin.aurora;
+CHAINS.fantom = (coin) => coin.fantom;
 
+const EVM_PATH = (branch, i) => `m/44'/60'/0'/${branch}/${i}`;
 const PATHS = Object.create(null);
 PATHS.btc = (branch, i) => `m/84'/0'/0'/${branch}/${i}`;
-PATHS.eth = (branch, i) => `m/44'/60'/0'/${branch}/${i}`;
+PATHS.eth = EVM_PATH;
 PATHS.trx = (branch, i) => `m/44'/195'/0'/${branch}/${i}`;
+PATHS.ltc = (branch, i) => `m/84'/2'/0'/${branch}/${i}`;
+PATHS.doge = (branch, i) => `m/44'/3'/0'/${branch}/${i}`;
+PATHS.bsc = EVM_PATH;
+PATHS.matic = EVM_PATH;
+PATHS.arb = EVM_PATH;
+PATHS.op = EVM_PATH;
+PATHS.base = EVM_PATH;
+PATHS.avax = EVM_PATH;
+PATHS.gnosis = EVM_PATH;
+PATHS.celo = EVM_PATH;
+PATHS.linea = EVM_PATH;
+PATHS.mantle = EVM_PATH;
+PATHS.scroll = EVM_PATH;
+PATHS.opbnb = EVM_PATH;
+PATHS.metis = EVM_PATH;
+PATHS.aurora = EVM_PATH;
+PATHS.fantom = EVM_PATH;
 
-const ALLOWED_CHAINS = new Set(["btc", "eth", "trx"]);
+const ALLOWED_CHAINS = new Set([
+  "btc", "eth", "trx", "ltc", "doge",
+  "bsc", "matic", "arb", "op", "base", "avax", "gnosis", "celo", "linea",
+  "mantle", "scroll", "opbnb", "metis", "aurora", "fantom",
+]);
 const MAX_XPUB_LENGTH = 200;
 const MAX_LINE_LENGTH = 4096;
 const MAX_INDEX = 2147483647;

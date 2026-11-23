@@ -5,9 +5,11 @@
  * a viem public client on the chain's pinned RPC, chain-id checked on
  * every call, native balance via getBalance, nonce tx inputs, and a
  * 21000-gas native-transfer fee estimate. History is Blockscout-shaped
- * only when a history endpoint is configured (Ethereum today); the other
- * EVM chains report history unavailable — never faked. Broadcast stays
- * disabled.
+ * only when a history endpoint is configured (Ethereum, Celo, Optimism
+ * and Scroll — the three non-ETH chains whose hosts answer the
+ * Blockscout `?module=account&action=txlist` shape, probed live
+ * 2026-11-23); the other EVM chains report history unavailable — never
+ * faked. Broadcast stays disabled.
  */
 import {
   createPublicClient,
@@ -47,10 +49,16 @@ export interface EvmAdapterConfig {
   /** Native asset symbol, e.g. ETH, BNB, POL, AVAX. */
   nativeSymbol: string;
   source: string;
-  /** Blockscout-shaped history base URL (Ethereum only today). */
+  /** Blockscout-shaped history base URL (Ethereum, Celo, Optimism, Scroll). */
   historyBaseUrl?: string;
   /** Explorer base for history links, e.g. https://eth.blockscout.com. */
   historyExplorerBase?: string;
+  /**
+   * Label for the history source in adapter results, e.g. 'blockscout'.
+   * Defaults to 'blockscout'; Optimism reports 'optimism-explorer' and
+   * Scroll 'scrollscan' so the result names the host that answered.
+   */
+  historySource?: string;
 }
 
 export interface EvmAdapterOverrides {
@@ -134,6 +142,7 @@ export function createEvmAdapter(
   const historyBaseUrl = overrides.historyBaseUrl ?? config.historyBaseUrl;
   const historyExplorerBase =
     overrides.historyExplorerBase ?? config.historyExplorerBase;
+  const historySource = config.historySource ?? 'blockscout';
   const transport = overrides.transport ?? httpFetchTransport;
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });
@@ -233,9 +242,9 @@ export function createEvmAdapter(
     if (raw['status'] !== '1') {
       const message = typeof raw['message'] === 'string' ? raw['message'] : '';
       if (message.includes('No transactions found')) {
-        return { status: 'ok', data: [], source: 'blockscout', fetchedAt: Date.now() };
+        return { status: 'ok', data: [], source: historySource, fetchedAt: Date.now() };
       }
-      return { status: 'error', reason: message || 'Blockscout request failed' };
+      return { status: 'error', reason: message || 'History request failed' };
     }
     if (!Array.isArray(raw['result'])) {
       return { status: 'error', reason: 'Invalid response: expected a result list' };
@@ -273,7 +282,7 @@ export function createEvmAdapter(
             : null,
       });
     }
-    return { status: 'ok', data: txs, source: 'blockscout', fetchedAt: Date.now() };
+    return { status: 'ok', data: txs, source: historySource, fetchedAt: Date.now() };
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {

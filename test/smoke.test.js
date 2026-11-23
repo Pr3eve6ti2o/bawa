@@ -2,12 +2,18 @@
 // tools/hdwallet-gen (package.json: node ../../test/smoke.test.js).
 //
 // Fixtures are PUBLIC material only:
-// - The three account xpubs below are the extended PUBLIC keys derived from
+// - The twenty account xpubs below are the extended PUBLIC keys derived from
 //   the repo's own published test-vector mnemonic (the same vector shipped in
 //   tools/hdwallet-gen/generate.js and test/differential_test.py). No
 //   mnemonic, seed, or private key appears in this file.
 // - Every expected address was verified against TWO independent
 //   implementations: Trust Wallet Core (WASM) and Python bip_utils 2.12.2.
+// - Lane D (2026-11-23) extended the fixtures from 3 chains to 20: the
+//   LTC (Ltub) and DOGE (dpub) ripple fixtures and the fifteen EVM chains
+//   (all share the ETH xpub and address — one EVM address is the same
+//   address on every EVM chain). The new addresses were verified against
+//   Wallet Core 4.9.3 and bip_utils 2.12.3 (the repo pin), index 0/1 and
+//   change 0 each. TON and SOL have no xpub and stay out (see below).
 //
 // Pin note (2026-11-20): the current bip-utils pin in requirements.txt is 2.12.3.
 // Mentions of bip_utils 2.12.2 record the version the fixtures were verified
@@ -62,6 +68,63 @@ const FIXTURES = {
     path: (i) => `m/44'/195'/0'/0/${i}`,
     changePath: (i) => `m/44'/195'/0'/1/${i}`,
   },
+  // Lane D (2026-11-23): LTC and DOGE from the same ripple test vector
+  // (Ltub / dpub — the serialisations the app exports; the dgub form of
+  // the same DOGE key family is accepted by derive.js too).
+  ltc: {
+    xpub: "Ltub2YwB7k9sjn5JgCMHzxRYAWdTwJcaxjLSoaCpYjJZ2xN1bh9BdB1y3BXBiSobcrSnHj4WnopzaoK8J5L5nJzeqmJhkeDVCb52cb2WM3UaH4h",
+    0: "ltc1qrw5czevuyhhgzrz2ca6hd8ulncqwnl8dp6gtca",
+    1: "ltc1qnrg9a67uxcsw446sy2l9twevck0s4t06fdkvx8",
+    c0: "ltc1qpqfzwxpww0zrunl7562q8gf2x0r78lenyp243m",
+    coin: "litecoin",
+    path: (i) => `m/84'/2'/0'/0/${i}`,
+    changePath: (i) => `m/84'/2'/0'/1/${i}`,
+  },
+  doge: {
+    xpub: "dpubZG2yVAE9cxzbb951cYM2av1gxG46wXAdAKDDJEcTLC7cSFUvHbVo8mMYqZDAe2dPyigxSve76Kvi537CVzxjyhZnNPCRBCm6HJKTqYSjKSn",
+    0: "DTkd5ZVxsernAkEVuvyp7bAW3oMYz9nH5H",
+    1: "DTZz4xP4sUGxfRrzkRapvXjN335EtPKsED",
+    c0: "DQ2C1S5y3B8PyJVyph6zTnJKaixzvgJTT7",
+    coin: "dogecoin",
+    path: (i) => `m/44'/3'/0'/0/${i}`,
+    changePath: (i) => `m/44'/3'/0'/1/${i}`,
+  },
+  // Lane D (2026-11-23): the fifteen EVM chains. All share the ETH
+  // account key (m/44'/60'/0') and therefore the ETH addresses — the
+  // CoinType differs per chain (that is what the per-chain derive.js
+  // and daemon tables pin), the address does not.
+  ...(() => {
+    const evmCoins = {
+      bsc: "smartChain",
+      matic: "polygon",
+      arb: "arbitrum",
+      op: "optimism",
+      base: "base",
+      avax: "avalancheCChain",
+      gnosis: "xdai",
+      celo: "celo",
+      linea: "linea",
+      mantle: "mantle",
+      scroll: "scroll",
+      opbnb: "opBNB",
+      metis: "metis",
+      aurora: "aurora",
+      fantom: "fantom",
+    };
+    const out = {};
+    for (const [chain, coin] of Object.entries(evmCoins)) {
+      out[chain] = {
+        xpub: "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc",
+        0: "0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7",
+        1: "0xD6c3112a8Db4991a7359018F15e501dfEE316d59",
+        c0: "0x01183125aF0c91eA24E4E7066D87B7564fb08aF5",
+        coin,
+        path: (i) => `m/44'/60'/0'/0/${i}`,
+        changePath: (i) => `m/44'/60'/0'/1/${i}`,
+      };
+    }
+    return out;
+  })(),
 };
 
 // TON watch-only fixture: PUBLIC material only. The public key is the
@@ -440,6 +503,39 @@ async function testDaemonDefects() {
         name: "daemon derives TRX index 0 after bad requests",
         request: { chain: "trx", xpub: FIXTURES.trx.xpub, index: 0 },
         address: FIXTURES.trx[0]
+      },
+      // Lane D (2026-11-23): the daemon carries the same twenty-chain
+      // tables as derive.js — LTC, DOGE and a sample of the EVM chains
+      // prove it here; the derive.js CLI loop in section 3 covers all 20.
+      {
+        name: "daemon derives LTC index 0 after bad requests",
+        request: { chain: "ltc", xpub: FIXTURES.ltc.xpub, index: 0 },
+        address: FIXTURES.ltc[0]
+      },
+      {
+        name: "daemon derives DOGE index 0 after bad requests",
+        request: { chain: "doge", xpub: FIXTURES.doge.xpub, index: 0 },
+        address: FIXTURES.doge[0]
+      },
+      {
+        name: "daemon derives BSC index 0 after bad requests",
+        request: { chain: "bsc", xpub: FIXTURES.bsc.xpub, index: 0 },
+        address: FIXTURES.bsc[0]
+      },
+      {
+        name: "daemon derives Celo index 0 after bad requests",
+        request: { chain: "celo", xpub: FIXTURES.celo.xpub, index: 0 },
+        address: FIXTURES.celo[0]
+      },
+      {
+        name: "daemon derives Fantom index 0 after bad requests",
+        request: { chain: "fantom", xpub: FIXTURES.fantom.xpub, index: 0 },
+        address: FIXTURES.fantom[0]
+      },
+      {
+        name: "daemon rejects LTC Ltub as doge",
+        request: { chain: "doge", xpub: FIXTURES.ltc.xpub, index: 0 },
+        error: "not allowed for doge"
       },
       {
         name: "daemon stays up and derives BTC index 1 after bad requests",
@@ -1292,16 +1388,19 @@ Module._load = function (request, parent, isMain) {
     );
   }
 
-  // 5. Watch-only policy guard: the three documented paths exist in both
+  // 5. Watch-only policy guard: the documented paths exist in both
   // xpub tools (branch is now a 0|1 parameter, default receiving), and no
   // TON derivation path exists in either (TON has no xpub; its watch-only
-  // route is the separate derive-ton.js).
+  // route is the separate derive-ton.js). Lane D (2026-11-23): the tools
+  // now carry twenty chains — BTC/ETH/TRX plus LTC, DOGE and the fifteen
+  // EVM chains — so the guard asserts the LTC and DOGE paths too.
   for (const script of ["derive.js", "derive-daemon.js"]) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, script), "utf8");
     check(`${script} carries BTC/ETH/TRX paths`,
       src.includes("m/84'/0'/0'/${branch}/${i}") && src.includes("m/44'/60'/0'/${branch}/${i}") && src.includes("m/44'/195'/0'/${branch}/${i}"));
-    check(`${script} carries no TON derivation path`, !src.includes("m/44'/607'"));
-  }
+    check(`${script} carries LTC/DOGE paths`,
+      src.includes("m/84'/2'/0'/${branch}/${i}") && src.includes("m/44'/3'/0'/${branch}/${i}"));
+    check(`${script} carries no TON derivation path`, !src.includes("m/44'/607'"));  }
   {
     const tonSrc = fs.readFileSync(path.join(TOOLS_DIR, "derive-ton.js"), "utf8");
     check("derive-ton.js documents the TON account path m/44'/607'/0'",

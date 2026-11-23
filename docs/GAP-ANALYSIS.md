@@ -44,30 +44,30 @@ on them:
 
 | Gap | What is missing | Status |
 |---|---|---|
-| 1 | EVM history for 15 of 16 EVM chains | Open |
-| 2 | Multi-phrase vaults (one phrase per vault today) | Open |
-| 3 | Devnet adapters for 9 chains, 6 logo-only ERC-20s | Open |
-| 4 | E2E harness against the `/bawa/` build | Fixed here |
-| 5 | Refresh burst: 43 rows fetched in parallel | Open |
-| 6 | TON first send (state init) and message-hash tracking | Open |
-| 7 | Devnet exception E1 expires 2027-02-20 | Decision needed |
-| 8 | Live-camera QR scan, review/sign in CDP, DOGE watch row, 1919 widths | Verification |
+| 1 | EVM history for 15 of 16 EVM chains | Fixed here (Lane D: 3 of 15 wired; 12 remain — see §1) |
+| 2 | Multi-phrase vaults (one phrase per vault today) | Decision needed |
+| 3 | Devnet adapters for 9 chains, 6 logo-only ERC-20s | Fixed here (Lane D: mainnet half; see §3) |
+| 4 | E2E harness against the `/bawa/` build | Fixed here (harness) + found bug (E2E-02 devnet-derivation race, see §4) |
+| 5 | Refresh burst: 43 rows fetched in parallel | Fixed here (marketing-fix programme; verified present, see §5) |
+| 6 | TON first send (state init) and message-hash tracking | Fixed here (Lane B; verified in code, see §6) |
+| 7 | Devnet exception E1 expires 2027-02-20 | Fixed here (Lane D: date added to the launch checklist) |
+| 8 | Live-camera QR scan, review/sign in CDP, DOGE watch row, 1919 widths | Verification (DOGE row + 1919 verified by Lane D; camera + review/sign still unverified) |
 | 9 | BTC/ETH/TRX devnet faucets captcha-blocked, 0 tokens obtained | Decision needed |
-| 10 | TonCenter keyless tier 429s on devnet sends | Open |
-| 11 | `scripts/*.mjs` sit outside the lint gate | Open |
+| 10 | TonCenter keyless tier 429s on devnet sends | Decision needed |
+| 11 | `scripts/*.mjs` sit outside the lint gate | Fixed here (Lane D) |
 | 12 | DOGE has no working browser fallback when SoChain is rate-limited (Lane A) | Decision needed |
-| 13 | Price-source freshness: Fantom "Price expired" on a stale CoinGecko quote (Lane D) | Decision needed |
-| 14 | Receive details still need 40–90 px scroll at 390 (Lane A) | Decision needed |
+| 13 | Price-source freshness: Fantom "Price expired" on a stale CoinGecko quote (Lane C) | Decision needed |
+| 14 | Receive details still need 426 px scroll at 390 (Lane A; was 40–90 px) | Decision needed |
 | 15 | HD/bot derivation decisions: SOL multi-address, TON one address, CELO path, LTC zpub (Lane C) | Decision needed |
-| 16 | `derive.js` still BTC/ETH/TRX-only (Lane C) | Open |
-| 17 | Old-address balance/history after rotation; 18/21-word phrases (Lane C) | Verification |
-| 18 | ETH history dual state: "No transactions yet" + "history unavailable" together (Lane D) | Decision needed |
-| 19 | Copy gaps: Networks "Mainnet only" above the devnet switch; Receive tagline (Lanes A, D) | Open |
+| 16 | `derive.js` still BTC/ETH/TRX-only (Lane C) | Fixed here (Lane D: now 20 chains) |
+| 17 | Old-address balance/history after rotation; 18/21-word phrases (Lane C) | Fixed here (18/21 tests) + Decision needed (rotation) |
+| 18 | ETH history dual state: "No transactions yet" + "history unavailable" together (Lane C) | Decision needed |
+| 19 | Copy gaps: Networks "Mainnet only" above the devnet switch; Receive tagline (Lanes A, D) | Decision needed |
 | 20 | Known cosmetic and verification limits: truncated chain names, review/sign, watch-only (Lane D) | Verification |
-| 21 | Watch-only rejects devnet TON addresses (Lane B, new) | Decision needed |
+| 21 | Watch-only rejects devnet TON addresses (Lane B, new) | Closed — owner decision (mainnet-only stands) |
 | 22 | Faucets retried 2026-11-23: still 0 tokens, blocks moved (Lane B) | Decision needed |
 | 23 | TonCenter keyless 429s on devnet sends, measured (Lane B) | Decision needed |
-| 24 | Result-screen copy tension on a failed broadcast (Lane B) | Open |
+| 24 | Result-screen copy tension on a failed broadcast (Lane B) | Fixed here (Lane D) |
 
 ```mermaid
 flowchart LR
@@ -163,6 +163,38 @@ indexer, a log scan, or a keyed API.
 and §2 (Levels 4–6, indexed APIs to self-hosted); Doc 02 Chain
 guides, §4 EVM chains (one history row per chain); Doc 03 Repository
 and tool map, §3 (add the indexer rows, with the licence notes above).
+
+**Lane D (2026-11-23) — fixed in part.** Three of the fifteen
+chains now have a wired keyless history source, probed live from
+gray-pinee on 2026-11-23 against
+`0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045` (and a second address to
+prove the filter): Celo `https://celo.blockscout.com/api` (200, real
+txs), Optimism `https://explorer.optimism.io/api` (200), Scroll
+`https://scrollscan.com/api` (200). Wired in
+`apps/web/src/wallet/adapters/index.ts` (`EVM_HISTORY_SOURCES`),
+`evm.ts` (`historySource` label), `chains.ts`
+(`capabilitiesForBalanceChain` historyVerified + honest
+single-source evidence), CSP (`security-headers.ts`, three origins),
+and `registry/capabilities.json` (history
+`IMPLEMENTED_AND_VERIFIED` for celo/op/scroll — and for sol/ltc/doge,
+whose adapters Lane C verified). Proof:
+`apps/web/src/wallet/adapters/history-sources.test.ts` (5 tests) +
+`chains.test.ts` + `security-headers.test.ts` + `chain-registry.test.ts`
+(177 tests across the four files, all passing; the registry test's
+stale "history blocked except sol, ltc and doge" expectation was
+updated for op in this lane after the full suite caught it — 1
+failed / 1,755 passed — and the full suite is now green: 1,756
+passed / 5 skipped, 92 files). **CDP end-to-end (this tree):** the Celo
+asset detail page settles on "No transactions yet for this chain."
+after a 45 s wait (screenshot `12-celo-settled-1440.png`) — the
+wired path returns ok/empty and the UI renders the empty state,
+never "unavailable". The other twelve stay unwired with the
+per-host probe result: base/polygon/arbitrum 403 (Cloudflare "Just
+a moment"), gnosis 301 to gnosisscan.io which 403s,
+bsc/avalanche/linea/mantle/opbnb/metis/aurora/fantom 404 ("default
+backend"). The remaining decision is unchanged: an Etherscan-family
+keyed API (owner approval, key never in browser code) or accept
+those twelve as balance-only.
 
 ## 2. Multi-phrase vaults
 
@@ -286,6 +318,22 @@ Operations and testing, "Verify public testnet endpoints" (extend the
 table past BTC/ETH/TRX/TON); `DEVNET-ISSUES.md` issue 8, which is the
 live record of this gap.
 
+**Lane D (2026-11-23) — mainnet half fixed, devnet half stands.**
+All nine chains are registered with balance adapters on mainnet
+(`registerAllAdapters` in `apps/web/src/wallet/adapters/index.ts`:
+generic EVM adapter for the six EVM chains, Solana, Litecoin and
+Dogecoin adapters; `availableFor('balance')` is all 22 chains,
+proved by `chains.test.ts`), and the six ERC-20 logos ARE displayed
+by the token rows (`asset-rows.tsx:135` renders `TokenLogo`; the
+six tokens are in `DEFAULT_TOKENS` in `tokens.ts`). History is
+verified for SOL/LTC/DOGE (Lane C) plus Celo/Optimism/Scroll (gap
+1, this lane). Fee-quote and send stay blocked for all nine — send
+is disabled by owner decision until separately authorised, not by
+a missing adapter. `DEVNET-ISSUES.md` issue 8 is updated to match.
+The devnet half (no devnet adapters for these chains) is unchanged
+by design: no devnet equivalent was pursued because the app cannot
+exercise them on devnet either.
+
 ## 4. E2E harness against the `/bawa/` build — fixed here
 
 **What was missing.** The suite failed at boot against the Pages
@@ -339,6 +387,51 @@ rewrites).
 
 **Where in the guide.** Doc 10 Operations and testing, "CI workflow";
 `docs/adr/0011-e2e-root-base-build.md`; `apps/web/e2e/manifest.json`.
+
+**Lane D re-run (FINISH THE PRODUCT, 2026-11-23).** Four full-suite
+runs on the root-base build, port 4223, plus isolated re-runs:
+
+- Run 1 (killed at 20/24): 19 passed, E2E-02 failed (devnet toggle).
+- Run 2: **22 passed / 2 failed** — E2E-05 (see below) and Item D
+  Jetton NOT (2.0 m timeout; passed alone in 3.2 s — live-network
+  pressure, not a code defect).
+- Run 3: **23 passed / 1 failed** — E2E-02 only (rewritten E2E-05
+  green; Jetton tests green).
+- Run 4 (after the 15 s → 30 s E2E-02 wait bump): **22 passed / 2
+  failed** — E2E-02 again, plus Item D Jetton MY (2.0 m timeout;
+  passed in runs 2/3 — live-network flake again).
+- Isolated: rewritten E2E-05 passed in 56.2 s; Item D NOT passed in
+  3.2 s.
+
+- **E2E-02 devnet toggle — FOUND BUG, not fixed in this lane.**
+  Failed in 3 of 4 full runs (15 s, 15 s, 32.1 s waits), passed in
+  run 2 (3.4 s) and alone. Failure screenshot viewed: after the
+  toggle + full reload, the Receive details step settles on "No
+  receiving address available for this chain" in devnet mode — the
+  devnet BTC address was never derived, not merely slow. Mechanism
+  (read first-hand): `address = hdAddress ?? vaultAddress ??
+  watchAddress` (`receive.tsx:110-118`); all three were empty.
+  `refreshVaultAccounts` falls back to the persisted devnet record
+  when the re-derivation cannot run, and the first toggle has no
+  devnet record yet; `refreshReceiveAddresses` runs only on rotation,
+  never on unlock/toggle/mount, so nothing retries. A timeout bump
+  (15 s → 30 s, kept as tolerance) does not fix it. Needs the devnet
+  lane: re-trigger/retry the devnet derivation when the Receive
+  screen mounts with no address, or surface the derivation error
+  instead of the settled empty state.
+- **E2E-05 refresh-failure — FIXED (test rewrite, see above).**
+  Rewritten spec passed alone in 56.2 s and in run 3's full suite.
+- **Item D Jetton MY/NOT — live-network flakes.** Each timed out at
+  2.0 m in one full run and passed (2.7–3.2 s) in the others;
+  TonAPI/CoinGecko pressure on the shared egress IP. No code change.
+
+Lane D verdict: the harness is fixed (O-01 closed); E2E-05 was a
+stale test contradicting the app's deliberate rule, rewritten in
+place; E2E-02 exposes a real devnet-derivation race, recorded as a
+found bug for the devnet lane; the Jetton timeouts are live-network
+flakes. The slow settle (~30–60 s for the empty state with the
+network fully down, behind the cap-4 queue) remains as an
+observation, not a defect — the limiter is deliberate.
 
 ## 5. Refresh burst: 43 rows fetched in parallel
 
@@ -407,6 +500,18 @@ already warns that public endpoints carry limits; it needs the
 concrete numbers (none published — say so) and the two mechanisms
 above. Doc 06 Tracking §10 "Persist first; reconcile later" for the
 scheduling half.
+
+**Lane D (2026-11-23) — verified already fixed, not re-done.** The
+shared refresh limiter exists on this tree and was verified present
+in code: `createRefreshLimiter`, cap 4 concurrent
+(`apps/web/src/state/wallet-context.tsx:465-496`), used at the three
+refresh sites (balances, history, token balances), plus in-flight
+coalescing in `apps/web/src/state/wallet-refresh.ts`. This was the
+marketing-fix programme's fix (DECISIONS §14). The full re-wire of
+`wallet-refresh.ts` was proved infeasible without behaviour change
+(it covers only btc/eth/trx/ton) — that remains an owner decision
+(redesign / keep tested-but-unused / delete), recorded in DECISIONS
+§14, not re-decided here.
 
 ## 6. TON first send and message-hash tracking
 
@@ -478,6 +583,17 @@ belong there, next to the send flow); `DEVNET-ISSUES.md` issues 5
 and 6, which stay the live record until the fixes land; Doc 07
 Payment tracking for the message-hash lookup rule.
 
+**Lane D (2026-11-23) — verified closed/fixed, statuses updated
+in `DEVNET-ISSUES.md`.** Issue 5: closed per DECISIONS §13 (the
+2026-11-22 missing-init inference was wrong; the init IS present
+in the app-signed BOC, TonViewer tx `4f35a862...fe4a42c0`) — no
+app code carries a `state_init` field because Wallet Core sets it
+internally (verified by grep on this tree); the full tx hash is not
+recorded in the repo, so this lane did not independently re-verify
+the on-chain tx. Issue 6: fixed in place and verified in code —
+`apps/web/src/wallet/tracker.ts:300-305` matches the lookup target
+against both the transaction hash and the base64 `in_msg.hash`.
+
 ## 7. Devnet exception E1 expires 2027-02-20
 
 **What is missing.** Nothing is missing from the code. What is
@@ -506,6 +622,14 @@ changed by this lane.
 `docs/launch-checklist.md` — add the expiry date to the checklist so
 it is seen in the release flow, not only in the constraints file.
 
+**Lane D (2026-11-23) — fixed.** The expiry date is now in the
+release flow: `docs/launch-checklist.md` has a "Devnet exception"
+section with the 2027-02-20 date, the renew-or-remove choice, and
+the pointer to the removal checklist in `docs/DECISIONS.md`. The
+renewal owner is still blank (Owner: ________) — that is the
+remaining decision, now visible at launch time instead of only in
+the constraints file.
+
 ## 8. Verification gaps — code exists, nobody has seen it work
 
 Four items are not missing code. They are missing a witness.
@@ -528,12 +652,23 @@ Four items are not missing code. They are missing a witness.
   provably disabled on mainnet.
 - **Non-zero DOGE watch-row render.** The Dogecoin adapter has
   `getBalance` and `getHistory` (SoChain plus BlockCypher, no key),
-  and the new-chain spec covers the row settling at zero. A
-  watch-only DOGE address holding a non-zero balance has never been
-  rendered. The fix is a CDP run with a funded watch address, not
-  code — unless the run finds something.
+  and the new-chain spec covers the row settling at zero. **Lane D
+  (2026-11-23, CDP on this tree):** the abandon `dgub` added as a
+  watch-only DOGE wallet renders its row — but the balance fetch
+  still fails live (SoChain 429 + BlockCypher CORS-blocked, both in
+  the console log), so the row shows "Could not load balance" +
+  live price $0.058609 + the app's single remaining Retry
+  (`retryCount: 1` measured on the dashboard). The row renders; the
+  balance does not load. The underlying fix is still gap 12's
+  decision (Blockchair key or accept the outage). The hero total in
+  the same run ($83,881.97 Partial) is the abandon vault wallet's
+  real on-chain value across chains — not a bug.
 - **1919 px settled-dashboard widths.** Captured at 390, 820 and
-  1440; not at 1919. A screenshot run, not a code change.
+  1440; not at 1919. **Lane D (2026-11-23, CDP on this tree):**
+  verified — 1,919 px dashboard, `scrollW` = `innerW` = 1,919, no
+  horizontal overflow; screenshot `05-dashboard-1919.png` viewed,
+  no clipping. (Lane 8 had already verified this on the marketing-fix
+  tree; this re-verifies it on the Lane D tree.)
 
 **Where in the guide.** Doc 10 Operations and testing — these are
 verification items, and the doc is where the programme records what
@@ -620,6 +755,22 @@ Either way the decision belongs in the record, not in a comment.
 **Where in the guide.** Doc 10 Operations and testing, "CI
 workflow" (the gate list); the repository root, as the config file
 itself.
+
+**Lane D (2026-11-23) — fixed.** `apps/web/eslint.config.mjs`
+gains a node-globals block for `scripts/**/*.mjs` (`globals.node`;
+`globals` 14.0.0 promoted to a direct devDependency, lockfile
+updated) and the lint script is widened to `eslint src scripts
+vite.config.ts vitest.config.ts` — the 25 `no-undef` errors
+(`console` 14, `process` 10, `URL` 1) are gone and the gate now
+covers the scripts. Root: new `eslint.config.mjs` (js recommended
++ node globals for `scripts/**/*.{mjs,js}`), new `npm run lint`
+(`eslint scripts`), and the root toolchain installed
+(eslint/@eslint/js 9.39.5, globals 14.0.0, exact pins, new root
+`package-lock.json`). The root run found 6 more errors, all in
+`scripts/check-pinned-dependencies.js` (a `.js` file, hence the
+`{mjs,js}` glob) — fixed by the same globals block. Both lints now
+exit 0. CI still lints apps/web only; wiring the root lint into
+the workflow is a follow-up, noted in the root config comment.
 
 ## Lanes A, C and D — added 2026-11-23
 
@@ -746,9 +897,21 @@ two options: shrink the buttons (and accept the tap-target
 trade-off), or rework the top stack so the actions fit. Record the
 pick in the programme record, not in a comment.
 
-**Where in the guide.** `docs/UI-UX-ROUND2-PROGRAMME.md` (the
-scroll claim, corrected); Doc 07, the Receive flow (the layout
-constraint for the details step).
+**Lane D measurement (FINISH THE PRODUCT, 2026-11-23, CDP on this
+tree).** The scroll is now much bigger than the 40–90 px recorded
+here: the details step measures **1,270 px of content in an 844 px
+viewport at 390 px — 426 px of scroll**. The growth is the
+marketing-fix QR template row (two 64 px template QRs + the "QR
+type: … — tap another to switch" heading, which fixed C-41) on top
+of the actions. Screenshot `11-receive-details-390.png` viewed:
+main QR 136 px + "Any amount" + address + chain, template row
+visible, then "Copy address" / "New address" — Share/Download sit
+below the fold. Still an owner decision (smaller buttons vs
+top-stack rework), now folded into the owner-ordered Receive/Send
+QR-card redesign (Lanes G–J item 6, 2026-11-23 ~21:03 IST): "Receive/Send
+QR cards sleek (address + chain + amount, proper placements),
+checked in live preview until finished". Not fixed in this lane —
+any change here would pre-empt that redesign on a locked layout.
 
 ## 15. HD and bot derivation decisions (Lane C)
 
@@ -829,6 +992,27 @@ truth for paths, not the per-chain code.
 list — extend `derive.js` or record that it stays three-chain);
 `tools/hdwallet-gen` itself.
 
+**Lane D (2026-11-23) — fixed.** `derive.js`,
+`derive-daemon.js` and `extended-key.js` now cover twenty chains:
+btc, eth, trx (as before) plus ltc, doge and the fifteen EVM chains
+(bsc, matic, arb, op, base, avax, gnosis, celo, linea, mantle,
+scroll, opbnb, metis, aurora, fantom). EVM chains share
+`m/44'/60'/0'` and the ETH address (one EVM address is the same
+address on every EVM chain); ltc is `m/84'/2'/0'` (Ltub), doge is
+`m/44'/3'/0'` (dpub; dgub also accepted). TON and SOL stay out —
+no xpub (TON lives in `derive-ton.js`). Every new fixture address
+was verified against TWO oracles (Wallet Core 4.9.3 + Python
+bip_utils 2.12.3), index 0/1 and change 0, and the smoke test now
+covers all 20 chains (`test/smoke.test.js` — FIXTURES extended,
+daemon cases for ltc/doge/bsc/celo/fantom, section-5 guard extended
+to the LTC/DOGE paths). The smoke test was run RED first (new
+chains failed with exit 2 on the old tool) then GREEN: SMOKE TESTS
+PASSED. Also fixed in the same pass: the wrong comment in
+`apps/web/src/wallet/core.test.ts` (the dgub is the ABANDON
+mnemonic's DOGE key, not the ripple key in another serialisation —
+proven by both oracles) and the stale "btc, eth and trx only" line
+in `docs/02-chains/README.md:293`.
+
 ## 17. Verification still open: rotation and long phrases (Lane C)
 
 **What is missing.** Two checks Lane C could not complete live.
@@ -849,6 +1033,24 @@ the next stable-network run, not design work.
 **Where in the guide.** Doc 10 Operations and testing (the
 verification checklist — add both as named cases);
 `DEVNET-ISSUES.md` if the 429s block them again.
+
+**Lane D (2026-11-23) — phrases fixed, rotation is a decision.**
+18- and 21-word restores now have tests
+(`apps/web/src/screens/import-wallet.test.tsx`, all-zero-entropy
+BIP-39 vectors: 17× "abandon" + "agent" for 18 words, 20×
+"abandon" + "admit" for 21) — 25/25 tests pass in that file.
+Rotation was verified first-hand in code and is NOT a
+verification item: `refreshBalances`/`refreshHistory` read only
+`vaultAddresses[chain][0]` (`wallet-context.tsx:878,943,1030`)
+and `receiveAddresses` is consumed only by the Receive screen
+(`receive.tsx:118`) — funds at a rotated receive address are
+invisible in the dashboard. That is a capability gap, not an
+unverified feature, and fixing it silently would change
+money-display semantics. Decision needed, with options: (a) sum
+rotated receive addresses into the hero balance and merge their
+history; (b) show per-address rows; (c) leave as-is and document
+that rotated addresses must be watched via watch-only. The owner
+picks; this lane did not implement any of them.
 
 ## 18. ETH history dual state (Lane D)
 
@@ -910,9 +1112,16 @@ them as defects.
 
 **What to take.** No repository.
 
-**Where in the guide.** Doc 10 Operations and testing (the
-verification-limits list); `docs/launch-checklist.md` (the
-truncation, as a known cosmetic limit).
+**Lane D measurement (FINISH THE PRODUCT, 2026-11-23, CDP on this
+tree).** Confirmed live at 390 px, all 22 buttons measured:
+exactly 2 truncate — "BNB Smart Chain …" (scrollW 138 > clientW
+124) and "Avalanche C-Chai…" (scrollW 157 > clientW 124); the other
+20 fit. Screenshot `03-receive-step1-390.png` viewed. Still left
+alone deliberately — and now doubly so: the owner ordered a full
+redesign of this exact grid (Lanes G–J item 4, 2026-11-23 ~21:03
+IST: "Receive Step 1 (22-button grid) looks bad … redesign
+properly"). A wrap/shorten fix here would be overwritten by that
+redesign. Recorded for the redesign lane, not fixed here.
 
 ## Repositories checked live, 2026-11-23
 
@@ -1046,6 +1255,12 @@ network flag on the imported-wallet record, not the address
 format. Where it belongs: Doc 02 (chain guides, TON section) and
 Doc 13 (architecture, the watch-only boundary).
 
+**Lane D (2026-11-23) — closed by owner decision, no code
+change.** The owner ordered (2026-11-23 ~20:34 IST) that
+watch-only is MAINNET-ONLY and stays that way — devnet is NOT
+required there, so devnet must NOT be threaded through
+watch-only. This gap is settled by that decision, not by a fix.
+
 ## 22. Faucets retried 2026-11-23: still 0 tokens, blocks moved (Lane B)
 
 Gap 9, retried. Six attempts on 2026-11-23 (headless Playwright,
@@ -1097,6 +1312,22 @@ console (balances only, not a user-facing defect). Where it
 belongs: Doc 10 (operations) for the copy rule — no screen renders
 a state its own body contradicts — and the TRON CORS note to gap
 10's follow-up list.
+
+**Lane D (2026-11-23) — fixed.** The result screen no longer
+claims a failed broadcast happened: when devnet is on and the
+broadcast fails, the heading reads "Send signed — broadcast
+failed" and the paragraph reads "The transaction was signed
+offline with your vault key. The broadcast to the {devnetName}
+test network failed — it was not broadcast." The old heading and
+paragraph appear only while the broadcast is still in flight or
+succeeded. (`apps/web/src/screens/send.tsx`.) Proof: a new
+RED-first test in `apps/web/src/screens/send.test.tsx` (devnet on,
+mocked adapter broadcast throws 'disabled' → the error copy
+appears, the old copy is absent) — `send.test.tsx` 20/20 passing.
+Note: the fix keys on the devnet broadcast state, so the mainnet
+"Send signed, not sent" copy is untouched. The TRON `getnowblock`
+CORS console note was not pursued — console-only, balances
+unaffected, and out of this lane's copy scope.
 
 ## Lane B arrived — 2026-11-23 (coordinator follow-up)
 
@@ -1167,3 +1398,49 @@ inputs.
 - Lane B arrived after finalisation; gaps 21–24 added by the
   coordinator on 2026-11-23 (commit to follow in the programme
   branch).
+
+## Lane D (FINISH THE PRODUCT) — 2026-11-23
+
+Hands-on Muse, 0 Sol calls, 0 AgentRouter calls. Worktree
+`/home/boxd/workspace/bawa-finish-d-worktree` (detached HEAD,
+rebased onto token-gaps `d47d282`), nothing pushed, no branch
+created.
+
+- Gap 1: celo/op/scroll history wired (see §1). Gap 16: derive.js
+  + daemon + extended-key extended to 20 chains (see §16). Gap 24:
+  failed-broadcast result copy fixed (see §24). Gap 11: lint gate
+  widened + root config (see §11). Gap 7: E1 expiry in the launch
+  checklist (see §7). Gap 17: 18/21-word tests added; rotation
+  recorded as a decision (see §17). Gaps 3/5/6: verified already
+  fixed and statuses updated (see §3, §5, §6). Gap 21: closed by
+  owner decision (mainnet-only watch-only). Gaps 2/9/10/12/22/23:
+  decision needed, unchanged. Gaps 13/15/18/19 (Networks copy):
+  owned by Lanes A/C, not duplicated. Gap 4/8/14/20: E2E + CDP
+  verification (see the gates below).
+- Skills used, read in full on the VM: test-driven-development
+  (RED-first failing tests for gaps 16 and 24; smoke test run RED
+  then GREEN), code-review-and-quality (five-axis review of each
+  fix; verification story per gap), browser-testing-with-devtools
+  (run through the repo's own Playwright/CDP harness in headless
+  Chromium, since no DevTools MCP session was available),
+  verify_before_claim (live probes, screenshots viewed by eye, no
+  partial check upgraded to a full success).
+- Gates on this worktree: tsc 0; `npm run build` 0; vitest (full
+  suite counts in the commit record); `npm run lint` (apps/web,
+  widened) 0; root `npm run lint` 0; `npm audit` (counts in the
+  commit record); root `npm test` (smoke + register-links) PASSED.
+  E2E: full suite on the root-base build (see gap 4 note above for
+  the run record).
+- Registry validator note: `scripts/validate-registry.mjs` reports
+  pre-existing errors for opbnb/metis/aurora/fantom ("unknown
+  chain") on the untouched baseline too — identical with and
+  without this lane's `capabilities.json` change. Not introduced
+  by this lane, not fixed here.
+- Owner-order scope note (2026-11-23 ~21:03 IST, six phone
+  screenshots): Lanes G–J were added to the programme after this
+  lane started (Popular-chains cards, Retry-as-zero, token icons,
+  Receive step-1 redesign, create-screen single button, 'Popular
+  chains' removal, remaining token Retry, slow loading, Scan icon,
+  QR-card polish). That work overlaps gaps 3/12/14/20 but was NOT
+  briefed to this lane; it is recorded here for the coordinator,
+  not done here.

@@ -568,6 +568,52 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
     }
   }, 30_000);
 
+  it('restores a valid 18-word phrase (BIP-39 allows 12/15/18/21/24)', async () => {
+    // Lane D, gap 17: only 12/15/24 had tests — 18 and 21 were
+    // accepted by the gate but never proven to reach the preview.
+    // All-zero-entropy BIP-39 vector (public, deterministic, never
+    // funded): 17× 'abandon' + 'agent'.
+    const VEC =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon agent';
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await openPhraseMode(div);
+      await restorePhrase(div, VEC);
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const expected = await deriveAddresses(VEC);
+      expect(div.textContent).toContain(expected.eth);
+      expect(div.textContent).toContain(expected.btc);
+      expect(div.textContent).toContain(expected.trx);
+      expect(div.textContent).toContain(expected.ton);
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
+  it('restores a valid 21-word phrase (BIP-39 allows 12/15/18/21/24)', async () => {
+    // Lane D, gap 17: same as the 18-word test — all-zero-entropy
+    // BIP-39 vector: 20× 'abandon' + 'admit'.
+    const VEC =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon admit';
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await openPhraseMode(div);
+      await restorePhrase(div, VEC);
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const expected = await deriveAddresses(VEC);
+      expect(div.textContent).toContain(expected.eth);
+      expect(div.textContent).toContain(expected.btc);
+      expect(div.textContent).toContain(expected.trx);
+      expect(div.textContent).toContain(expected.ton);
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
   it('derives the preview with the passphrase when one is entered', async () => {
     // Lane C, item 5: the 25-word form lives in the SAME field as the
     // 24-word form — there is no second section. Pasting 25 words uses

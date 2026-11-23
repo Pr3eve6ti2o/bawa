@@ -2,10 +2,13 @@
  * tools/hdwallet-gen/extended-key.js
  * Shared, pure extended-key validation before WASM and diagnostic redaction.
  *
- * BTC/ETH/TRX xpubs share version 0488b21e, so an xpub carries no chain tag.
- * Cross-chain xpub misuse between those three cannot be detected from
- * serialisation alone; this module catches every version-distinguishable
- * mismatch plus all checksum/payload defects.
+ * BTC/ETH/TRX and the fifteen EVM chains share the xpub version 0488b21e,
+ * so an xpub carries no chain tag. Cross-chain xpub misuse between those
+ * chains cannot be detected from serialisation alone; this module catches
+ * every version-distinguishable mismatch plus all checksum/payload
+ * defects. LTC is Ltub (019da462); DOGE is dpub (02fda926) or dgub
+ * (02facafd) — the app exports dpub, older imports used dgub, and both
+ * serialise the same account key family, so both are accepted.
  */
 
 "use strict";
@@ -23,10 +26,29 @@ const PRIVATE_VERSIONS = new Set([
   "045f18bc",
 ]);
 
+const EVM_PUBLIC_VERSIONS = new Set(["0488b21e"]);
+
 const PUBLIC_VERSIONS = Object.freeze({
   btc: new Set(["0488b21e", "049d7cb2", "04b24746"]),
   eth: new Set(["0488b21e"]),
   trx: new Set(["0488b21e"]),
+  ltc: new Set(["019da462"]),
+  doge: new Set(["02facafd", "02fda926"]),
+  bsc: EVM_PUBLIC_VERSIONS,
+  matic: EVM_PUBLIC_VERSIONS,
+  arb: EVM_PUBLIC_VERSIONS,
+  op: EVM_PUBLIC_VERSIONS,
+  base: EVM_PUBLIC_VERSIONS,
+  avax: EVM_PUBLIC_VERSIONS,
+  gnosis: EVM_PUBLIC_VERSIONS,
+  celo: EVM_PUBLIC_VERSIONS,
+  linea: EVM_PUBLIC_VERSIONS,
+  mantle: EVM_PUBLIC_VERSIONS,
+  scroll: EVM_PUBLIC_VERSIONS,
+  opbnb: EVM_PUBLIC_VERSIONS,
+  metis: EVM_PUBLIC_VERSIONS,
+  aurora: EVM_PUBLIC_VERSIONS,
+  fantom: EVM_PUBLIC_VERSIONS,
 });
 
 // Exported sets describe the policy; caller mutation must not weaken validation.
@@ -35,6 +57,23 @@ const publicVersionLookup = Object.freeze({
   btc: new Set(PUBLIC_VERSIONS.btc),
   eth: new Set(PUBLIC_VERSIONS.eth),
   trx: new Set(PUBLIC_VERSIONS.trx),
+  ltc: new Set(PUBLIC_VERSIONS.ltc),
+  doge: new Set(PUBLIC_VERSIONS.doge),
+  bsc: new Set(PUBLIC_VERSIONS.bsc),
+  matic: new Set(PUBLIC_VERSIONS.matic),
+  arb: new Set(PUBLIC_VERSIONS.arb),
+  op: new Set(PUBLIC_VERSIONS.op),
+  base: new Set(PUBLIC_VERSIONS.base),
+  avax: new Set(PUBLIC_VERSIONS.avax),
+  gnosis: new Set(PUBLIC_VERSIONS.gnosis),
+  celo: new Set(PUBLIC_VERSIONS.celo),
+  linea: new Set(PUBLIC_VERSIONS.linea),
+  mantle: new Set(PUBLIC_VERSIONS.mantle),
+  scroll: new Set(PUBLIC_VERSIONS.scroll),
+  opbnb: new Set(PUBLIC_VERSIONS.opbnb),
+  metis: new Set(PUBLIC_VERSIONS.metis),
+  aurora: new Set(PUBLIC_VERSIONS.aurora),
+  fantom: new Set(PUBLIC_VERSIONS.fantom),
 });
 
 const BASE58_ALPHABET =
@@ -265,7 +304,7 @@ function validateExtendedKey(input, chain) {
     // Never echo an arbitrary chain argument: it could itself contain a key.
     const chainLabel =
       allowed === null
-        ? "an unsupported chain (expected btc, eth or trx)"
+        ? "an unsupported chain (expected btc, eth, trx, ltc, doge or one of the fifteen EVM chains)"
         : chainName;
 
     return failure(

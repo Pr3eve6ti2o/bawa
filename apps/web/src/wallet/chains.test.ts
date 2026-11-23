@@ -260,7 +260,7 @@ describe('chains registry', () => {
     ]);
   });
 
-  it('lists all twenty-two chains for balance, seven chains for history, and three for fee-quote', () => {
+  it('lists all twenty-two chains for balance, ten chains for history, and three for fee-quote', () => {
     // Token discovery (2026-11-22): balance adapters now exist for all
     // 22 chains, so availableFor('balance') is the full registry.
     // UI/UX fixes item 14 (2026-11-23): the nine new EVM chains use
@@ -291,16 +291,22 @@ describe('chains registry', () => {
     ]);
     // Lane C, item 16 (2026-11-23): ltc/doge/sol history is verified —
     // adapters + live mainnet cross-check 2026-11-23 (second source).
-    // The five non-ETH EVM chains stay blocked: no keyless public
-    // history indexer exists for them (owner decision: keyed indexer).
+    // Lane D, gap 1 (2026-11-23): celo/op/scroll history is verified —
+    // keyless history hosts probed live 2026-11-23 (single source, the
+    // host itself). The other twelve non-ETH EVM chains stay blocked:
+    // no keyless public history indexer answers for them (owner
+    // decision: keyed indexer).
     expect(availableFor('history')).toEqual([
       'btc',
       'eth',
       'trx',
       'ton',
       'sol',
+      'op',
       'ltc',
       'doge',
+      'celo',
+      'scroll',
     ]);
     // TON fee-quote stays blocked: it needs the unsigned message (Phase 4).
     expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
@@ -366,9 +372,14 @@ describe('chains registry', () => {
       }
       // Lane C, item 16 (2026-11-23): history is verified for sol/ltc/
       // doge (adapters + live mainnet cross-check 2026-11-23, second
-      // source) and stays blocked for the five non-ETH EVM chains —
-      // no keyless public history indexer exists for them.
+      // source). Lane D, gap 1 (2026-11-23): history is verified for op
+      // too (keyless host probed live 2026-11-23) and stays blocked for
+      // the other four token-discovery EVM chains — no keyless public
+      // history indexer answers for them.
       if (chain === 'sol' || chain === 'ltc' || chain === 'doge') {
+        expect(caps.history.status).toBe('verified');
+        expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
+      } else if (chain === 'op') {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
       } else {
@@ -397,7 +408,6 @@ describe('chains registry', () => {
       expect(caps.balance.status).toBe('verified');
       expect(caps.balance.evidence).toContain('live mainnet cross-check 2026-11-23');
       for (const capability of [
-        'history',
         'fee-quote',
         'unsigned-plan',
         'local-sign',
@@ -405,6 +415,16 @@ describe('chains registry', () => {
       ] as const) {
         expect(caps[capability].status).toBe('blocked');
         expect(caps[capability].evidence).toContain('never faked');
+      }
+      // Lane D, gap 1 (2026-11-23): history is verified for celo and
+      // scroll (keyless hosts probed live 2026-11-23) and stays blocked
+      // for the other seven item-14 chains.
+      if (chain === 'celo' || chain === 'scroll') {
+        expect(caps.history.status).toBe('verified');
+        expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
+      } else {
+        expect(caps.history.status).toBe('blocked');
+        expect(caps.history.evidence).toContain('never faked');
       }
     }
     expect(capabilitiesFor('ton')['fee-quote'].status).toBe('blocked');
@@ -1417,9 +1437,12 @@ describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => 
           // Phase 2 chains were cross-checked 2026-11-19, the nine
           // token-discovery chains 2026-11-22, the nine UI/UX-fixes
           // item-14 chains 2026-11-23, the ltc/doge/sol history
-          // adapters 2026-11-23. Any of the dates is accepted; the rule
-          // that a verified balance/history needs a dated cross-check
-          // stays intact.
+          // adapters 2026-11-23, the celo/op/scroll history hosts
+          // 2026-11-23 (live host response cross-checked against the
+          // adapter's Blockscout-shaped parser; single source — the
+          // host itself, stated in the evidence). Any of the dates is
+          // accepted; the rule that a verified balance/history needs a
+          // dated cross-check stays intact.
           expect(entry.evidence).toMatch(
             /live mainnet cross-check 2026-11-(19|22|23)/,
           );

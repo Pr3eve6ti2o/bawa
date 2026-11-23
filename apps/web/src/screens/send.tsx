@@ -1309,12 +1309,18 @@ export function SendScreen() {
       {step === 'result' && signState.status === 'signed' && (
         <section aria-labelledby="send-result-heading" className="space-y-4">
           <h2 id="send-result-heading" className="text-lg font-semibold">
-            {devnetEnabled ? 'Send broadcast to the test network' : 'Send signed, not sent'}
+            {devnetEnabled && devnetBroadcast.status === 'error'
+              ? 'Send signed — broadcast failed'
+              : devnetEnabled
+                ? 'Send broadcast to the test network'
+                : 'Send signed, not sent'}
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {devnetEnabled
-              ? `The transaction was signed offline with your vault key and broadcast to the ${devnetChainConfig(chain).devnetName} test network. Test tokens have no value.`
-              : 'The transaction was signed offline with your vault key. It was not sent anywhere. Sending funds is switched off until it is separately approved.'}
+            {devnetEnabled && devnetBroadcast.status === 'error'
+              ? `The transaction was signed offline with your vault key. The broadcast to the ${devnetChainConfig(chain).devnetName} test network failed — it was not broadcast. Test tokens have no value.`
+              : devnetEnabled
+                ? `The transaction was signed offline with your vault key and broadcast to the ${devnetChainConfig(chain).devnetName} test network. Test tokens have no value.`
+                : 'The transaction was signed offline with your vault key. It was not sent anywhere. Sending funds is switched off until it is separately approved.'}
           </p>
           {devnetEnabled && devnetBroadcast.status === 'broadcasting' && (
             <p aria-live="polite" className="text-sm text-muted-foreground">

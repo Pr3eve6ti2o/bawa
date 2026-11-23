@@ -51,8 +51,12 @@ const dogeDgub =
 
 // Lane C: Wallet Core serialisations of the ripple fixture's LTC/DOGE
 // account keys (public test vector). The dpub is what
-// getAccountExtendedPublicKey returns for DOGE; the dgub above is the
-// same key in the other serialisation.
+// getAccountExtendedPublicKey returns for DOGE. The dgub above is NOT the
+// same key in another serialisation — it is the DOGE account key of the
+// abandon test-vector mnemonic (TEST_VECTOR_MNEMONIC), verified against
+// bip_utils: abandon derives DBus3bam…, ripple derives DTkd5Z…. (Lane D,
+// 2026-11-23: the earlier comment claimed they were one key; both oracles
+// prove they are two keys from two mnemonics.)
 const rippleLtcLtub =
   'Ltub2YwB7k9sjn5JgCMHzxRYAWdTwJcaxjLSoaCpYjJZ2xN1bh9BdB1y3BXBiSobcrSnHj4WnopzaoK8J5L5nJzeqmJhkeDVCb52cb2WM3UaH4h';
 const rippleDogeDpub =

@@ -119,7 +119,7 @@ describe('chain registry — token discovery', () => {
     }
   });
 
-  it('keeps fee-quote and send blocked for the 9 new chains, and history blocked except sol, ltc and doge', () => {
+  it('keeps fee-quote and send blocked for the 9 new chains, and history blocked except sol, ltc, doge and op', () => {
     for (const chain of ['sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge'] as const) {
       const caps = capabilitiesFor(chain);
       for (const capability of ['fee-quote', 'unsigned-plan', 'local-sign', 'post-sign-verify'] as const) {
@@ -128,9 +128,11 @@ describe('chain registry — token discovery', () => {
       }
       // Lane C, item 16 (2026-11-23): history is verified for sol/ltc/
       // doge (adapters + live mainnet cross-check 2026-11-23, second
-      // source) and stays blocked for the five non-ETH EVM chains —
-      // no keyless public history indexer exists for them.
-      if (chain === 'sol' || chain === 'ltc' || chain === 'doge') {
+      // source). Lane D, gap 1 (2026-11-23): history is verified for
+      // op too (keyless host probed live 2026-11-23) and stays blocked
+      // for the other four token-discovery EVM chains — no keyless
+      // public history indexer answers for them.
+      if (chain === 'sol' || chain === 'ltc' || chain === 'doge' || chain === 'op') {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
       } else {

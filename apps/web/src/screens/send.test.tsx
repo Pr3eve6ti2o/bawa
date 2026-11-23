@@ -316,6 +316,34 @@ describe('send screen', () => {
     }
   });
 
+  it('a failed devnet broadcast says so in the heading, not that it was broadcast (gap 24)', async () => {
+    // Devnet mode on: the mocked adapter's broadcast throws 'disabled',
+    // so broadcastSignedDevnet fails and the result screen must not
+    // claim the transaction "was broadcast to the test network".
+    setWallet({ devnetEnabled: true });
+    const mounted = await mountScreen();
+    try {
+      await reachReview(mounted.div);
+      await click(mounted.div, 'Sign offline');
+      await waitForText(mounted.div, 'Send signed — broadcast failed');
+      expect(mounted.div.textContent).toContain(
+        'Send signed — broadcast failed',
+      );
+      expect(mounted.div.textContent).not.toContain(
+        'Send broadcast to the test network',
+      );
+      expect(mounted.div.textContent).toContain(
+        'The broadcast to the Ethereum Sepolia test network failed — it was not broadcast.',
+      );
+      expect(mounted.div.textContent).not.toContain(
+        'was signed offline with your vault key and broadcast to the',
+      );
+      expect(mounted.div.textContent).toContain('0xhash1234');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('refuses to sign while the vault is locked', async () => {
     setWallet({ vaultState: 'locked' });
     const mounted = await mountScreen();

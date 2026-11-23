@@ -290,7 +290,7 @@ For a dedicated TRON app, prefer a maintained TRON SDK or Wallet Core’s TRON f
 **Why this, and what breaks if you change it:** TRON and Ethereum share the key but not the address encoding. If you paste one chain’s address text into the other’s field, validation fails and no transfer can be constructed. If you “convert” by editing the prefix, you produce an address that belongs to nobody.
 ## 6. TON
 
-Single-address generation plus a public-key-only watch-only route via derive-ton.js (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive-daemon.js` support `btc`, `eth` and `trx` only.
+Single-address generation plus a public-key-only watch-only route via derive-ton.js (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive-daemon.js` support twenty chains (`btc`, `eth`, `trx`, `ltc`, `doge` and the fifteen EVM chains); TON and SOL have no xpub and stay out.
 
 [TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md) is the authority for wallet mnemonic schemes, Ed25519 keys, wallet smart contracts and subwallet/wallet-ID behaviour. Use the full compatibility model:
 

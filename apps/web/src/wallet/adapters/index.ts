@@ -20,6 +20,50 @@ import { createSolanaAdapter } from './sol';
 import { createLtcAdapter } from './ltc';
 import { createDogeAdapter } from './doge';
 
+/**
+ * EVM history sources, wired 2026-11-23 (gap 1, Lane D). These are the
+ * three non-ETH EVM chains whose hosts answer the Blockscout
+ * `?module=account&action=txlist` shape with real transactions, probed
+ * live from gray-pinee on 2026-11-23 against
+ * 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 (and a second address to
+ * prove the filter):
+ * - Celo: https://celo.blockscout.com/api — 200, real txs.
+ * - Optimism: https://explorer.optimism.io/api — 200 (the
+ *   optimism.blockscout.com host 301s to explorer.optimism.io).
+ * - Scroll: https://scrollscan.com/api — 200 (scroll.blockscout.com
+ *   301s to scrollscan.com).
+ * The other twelve non-ETH EVM chains stay unwired, with the probe
+ * result per host: base/polygon/arbitrum 403 (Cloudflare "Just a
+ * moment"), gnosis 301 to gnosisscan.io which 403s, and
+ * bsc/avalanche/linea/mantle/opbnb/metis/aurora/fantom 404 ("default
+ * backend"). An Etherscan-family keyed API would cover those — that is
+ * an owner decision (keyed service), not a Lane D fix.
+ */
+export const EVM_HISTORY_SOURCES: Record<
+  string,
+  {
+    historyBaseUrl: string;
+    historyExplorerBase: string;
+    historySource: string;
+  }
+> = {
+  celo: {
+    historyBaseUrl: 'https://celo.blockscout.com/api',
+    historyExplorerBase: 'https://celo.blockscout.com',
+    historySource: 'blockscout',
+  },
+  op: {
+    historyBaseUrl: 'https://explorer.optimism.io/api',
+    historyExplorerBase: 'https://explorer.optimism.io',
+    historySource: 'optimism-explorer',
+  },
+  scroll: {
+    historyBaseUrl: 'https://scrollscan.com/api',
+    historyExplorerBase: 'https://scrollscan.com',
+    historySource: 'scrollscan',
+  },
+};
+
 const adapters = new Map<ChainId, ChainAdapter>();
 
 export function registerAdapter(adapter: ChainAdapter): void {
@@ -69,11 +113,14 @@ export function registerAllAdapters(): void {
   }
   // EVM natives from the registry: the RPC is pinned once, in chains.ts,
   // and the adapter config is derived from it — never duplicated here.
+  // History: only celo/op/scroll have a wired keyless source
+  // (EVM_HISTORY_SOURCES above); the other twelve stay unavailable.
   for (const chain of ['bsc', 'matic', 'arb', 'op', 'base', 'avax', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom'] as const) {
     if (adapters.has(chain)) continue;
     const config = CHAINS[chain];
     const rpcUrl = config.rpcEndpoints[0];
     if (rpcUrl === undefined || config.evmChainId === null) continue;
+    const history = EVM_HISTORY_SOURCES[chain];
     registerAdapter(
       createEvmAdapter(
         {
@@ -84,6 +131,7 @@ export function registerAllAdapters(): void {
           chainName: config.displayName,
           nativeSymbol: config.symbol,
           source: 'publicnode',
+          ...(history !== undefined ? history : {}),
         },
         { rpcUrls: () => resolveRpcEndpoints(chain) },
       ),

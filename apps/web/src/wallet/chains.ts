@@ -166,7 +166,7 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
     history: {
       status: 'blocked',
       evidenceLevel: 'probe-only',
-      evidence: `No ${chain} adapter in this lane; history is blocked, never faked.`,
+      evidence: `No keyless history source for ${chain} in this lane; history is blocked, never faked.`,
     },
     'fee-quote': {
       status: 'blocked',
@@ -212,10 +212,21 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  *
  * Lane C, item 16 (2026-11-23): historyVerified is true only for sol,
  * ltc and doge, whose adapters now have unit tests plus a live mainnet
- * cross-check 2026-11-23 (second source) for history. The five non-ETH
- * EVM chains stay blocked: no keyless public history indexer exists
- * for them (owner decision: Etherscan API key or another indexer).
+ * cross-check 2026-11-23 (second source) for history. Lane D, gap 1
+ * (2026-11-23): historyVerified is also true for celo, op and scroll,
+ * whose keyless history hosts were probed live 2026-11-23 (single
+ * source — the host itself, with the address filter proven on a second
+ * address; see EVM_HISTORY_SOURCES in adapters/index.ts). The other
+ * twelve non-ETH EVM chains stay blocked: no keyless public history
+ * indexer answers for them (owner decision: Etherscan API key or
+ * another indexer).
  */
+const HISTORY_EVIDENCE_2026_11_23 =
+  'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Blockscout-shaped history) + '
+  + 'live mainnet cross-check 2026-11-23: the history host returns real transactions for a known address and a '
+  + 'different real transaction for a second address (address filter proven), and the live response matches the '
+  + 'Blockscout shape the adapter parses. Single source — the host itself, no second indexer answers keyless.';
+
 const BALANCE_EVIDENCE_2026_11_23 =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
   + 'live mainnet cross-check 2026-11-23 (two independent RPC endpoints agree '
@@ -225,6 +236,7 @@ function capabilitiesForBalanceChain(
   chain: ChainId,
   balanceEvidence?: string,
   historyVerified = false,
+  historyEvidence?: string,
 ): Capabilities {
   const base = capabilitiesForExtendedChain(chain);
   return {
@@ -242,6 +254,7 @@ function capabilitiesForBalanceChain(
           status: 'verified',
           evidenceLevel: 'mainnet-confirmed',
           evidence:
+            historyEvidence ??
             `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
             `mainnet cross-check 2026-11-23 (second source) for history.`,
         }
@@ -491,7 +504,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://optimism-rpc.publicnode.com', 'https://mainnet.optimism.io'],
     evmChainId: 10,
-    capabilities: capabilitiesForBalanceChain('op'),
+    capabilities: capabilitiesForBalanceChain('op', undefined, true, HISTORY_EVIDENCE_2026_11_23),
   },
   base: {
     id: 'base',
@@ -589,7 +602,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://celo-rpc.publicnode.com',
       'https://forno.celo.org'],
     evmChainId: 42220,
-    capabilities: capabilitiesForBalanceChain('celo', BALANCE_EVIDENCE_2026_11_23),
+    capabilities: capabilitiesForBalanceChain('celo', BALANCE_EVIDENCE_2026_11_23, true, HISTORY_EVIDENCE_2026_11_23),
   },
   linea: {
     id: 'linea',
@@ -640,7 +653,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://scroll-rpc.publicnode.com',
       'https://rpc.scroll.io'],
     evmChainId: 534352,
-    capabilities: capabilitiesForBalanceChain('scroll', BALANCE_EVIDENCE_2026_11_23),
+    capabilities: capabilitiesForBalanceChain('scroll', BALANCE_EVIDENCE_2026_11_23, true, HISTORY_EVIDENCE_2026_11_23),
   },
   opbnb: {
     id: 'opbnb',

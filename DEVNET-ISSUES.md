@@ -156,7 +156,20 @@ BTC send still needs a funded testnet4 UTXO.
   the link resolves on TonViewer (a message hash resolves to its
   transaction there).
 
-### 5. [OPEN] TON first send from a fresh wallet cannot deploy — wallet defect (missing state init)
+### 5. [CLOSED] TON first send from a fresh wallet cannot deploy — wallet defect (missing state init)
+
+Lane D (2026-11-23): closed per `docs/DECISIONS.md` §13 — the
+2026-11-22 missing-init inference was wrong (that decode was of a
+garbage-seqno BOC). The state init IS present in the app-signed BOC
+(code hash `feb5ff68...`, V4R2, init address == wallet C's address
+exactly; TonViewer tx `4f35a862...fe4a42c0`, contract deploy, C uninit
+to active). At seqno 0 Wallet Core 4.9.3 sets valid_until to
+UINT32_MAX, so the first-send message is deterministic and never
+expires. The vendored-BOC-builder fix sketch is not needed. No
+app code carries a `state_init` field — Wallet Core sets it
+internally (verified by grep on this tree, 2026-11-23); the full
+transaction hash is not recorded in the repo, so the on-chain tx was
+not independently re-verified by this lane.
 
 - Chain: TON. What failed: send from an uninitialized wallet.
   Evidence: the app's signed BOC for wallet A (uninit) contains no
@@ -174,7 +187,13 @@ BTC send still needs a funded testnet4 UTXO.
   by the network). The app currently has no BOC builder vendored;
   that is the work to size.
 
-### 6. [OPEN] /track cannot resolve a TON message hash — tracking gap
+### 6. [FIXED] /track cannot resolve a TON message hash — tracking gap
+
+Lane D (2026-11-23): fixed in place per `docs/DECISIONS.md` §13 and
+verified in code on this tree — `apps/web/src/wallet/tracker.ts`
+lines 300–305 match the lookup target against both the transaction
+hash and the base64 `in_msg.hash` (the external message hash the
+send result screen displays), for 0x-prefixed and base64 forms.
 
 - Chain: TON. What failed: tracking. Evidence: pasting the message
   hash the app itself displays as "Transaction"
@@ -231,7 +250,22 @@ key). Full log: `/home/boxd/workspace/bawa-captcha-faucet/LANE-C-ATTEMPTS.md`.
   needs a non-hosting IP). Until then BTC/ETH/TRX send and receive stay
   NOT PROVEN.
 
-### 8. [ADAPTER GAP] 9 derive-only chains and 6 logo-only ERC-20 tokens are not testable
+### 8. [ADAPTER GAP — MAINNET PART CLOSED] 9 derive-only chains and 6 logo-only ERC-20 tokens are not testable
+
+Lane D (2026-11-23): the mainnet adapter half is closed — all nine
+chains are registered with balance adapters
+(`apps/web/src/wallet/adapters/index.ts` `registerAllAdapters`: the
+generic EVM adapter for the six EVM chains, plus Solana, Litecoin
+and Dogecoin adapters; `availableFor('balance')` is all 22 chains)
+and the six ERC-20 logos ARE displayed by the token rows
+(`apps/web/src/screens/asset-rows.tsx` renders `TokenLogo` per
+token, and the six tokens are in `DEFAULT_TOKENS`). History is
+verified for SOL/LTC/DOGE plus Celo, Optimism and Scroll (gap 1,
+this lane); fee-quote and send stay blocked for all nine — send is
+disabled by owner decision until separately authorised, not by a
+missing adapter. What remains is the devnet half: no devnet
+equivalent exists for these chains, so they stay untestable on
+devnet by design of this programme.
 
 - Chains SOL, BNB Smart Chain, Polygon, Arbitrum One, OP Mainnet,
   Base, Avalanche C-Chain, Litecoin, Dogecoin: the registry has them
