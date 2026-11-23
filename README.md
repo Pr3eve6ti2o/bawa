@@ -2,8 +2,42 @@
 
 [![CI (static-checks)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Amain)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Pr3eve6ti2o/bawa?style=social)](https://github.com/Pr3eve6ti2o/bawa/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Pr3eve6ti2o/bawa?style=social)](https://github.com/Pr3eve6ti2o/bawa/fork)
+[![Last commit](https://img.shields.io/github/last-commit/Pr3eve6ti2o/bawa/main)](https://github.com/Pr3eve6ti2o/bawa/commits/main)
+[![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://pr3eve6ti2o.github.io/bawa)
 
-Bawa is an HD-wallet reference and command-line launcher for generating encrypted seed files, deriving watch-only addresses, and security and recovery checks, with AI-guided build routes.
+Bawa is an HD-wallet reference and command-line launcher for generating encrypted seed files, deriving watch-only addresses, and security and recovery checks, with AI-guided build routes. It is written for two readers: a developer — or an AI agent — building HD-wallet tooling from scratch, and anyone who wants to understand how a self-custodial wallet actually works. If you want a wallet to hold funds, this is not it — use a production wallet application instead. Unlike a generated wallet tutorial, every step resolves to something real — a tool in this repo, a guide, or a public-root derivation. Nothing in the guide is a placeholder. Built on Trust Wallet Core 4.9.3 (WebAssembly), with Python tooling and a Node.js generator.
+
+**[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the saved adopt-proper-based build; the example wallet itself is developed on `panel-rebuild/token-gaps`, not on `main`.
+
+**136 checks** passing (smoke) · **48 launcher tests** · **26 make_wallet tests** · **0 funds ever sent** — no signing or broadcast code on `main`.
+
+## Showcase
+
+Real screenshots of the example web wallet running from the active development branch (`panel-rebuild/token-gaps`), taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. Both shots show the dashboard, the wallet homepage.
+
+<!-- To extend this grid, add a row to the table below: one image per cell, height="360" on every image so all shots render at the same height. -->
+
+| Dashboard (desktop) | Dashboard (mobile) |
+| --- | --- |
+| <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" height="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" height="360"> |
+| Portfolio, assets and recent activity. | The same wallet on mobile. |
+
+### Create your own
+
+Prefer to build one yourself? Follow [Create the example web wallet](docs/CREATE-EXAMPLE-WALLET.md) — or run it straight from a terminal:
+
+```sh
+git clone --branch panel-rebuild/token-gaps https://github.com/Pr3eve6ti2o/bawa.git
+cd bawa
+cd apps/web
+npm ci
+npm run build
+npm run preview
+```
+
+Then open <http://localhost:4173>. No account, no API key, no funds needed — everything runs locally, and broadcast stays disabled so the wallet cannot send funds.
 
 ![Bawa architecture: guide, HD core, vault, providers, flows and storage](docs/diagrams/architecture.svg)
 
@@ -11,14 +45,15 @@ Bawa is an HD-wallet reference and command-line launcher for generating encrypte
 
 How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
 
-### Screenshots
+**Ask yourself:**
 
-Real screenshots of the current example web wallet, taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. The example web wallet is developed on the active development branch (`panel-rebuild/token-gaps`); these shots show its current state.
+1. Where do your wallet's keys live — on your machine, or on someone else's server?
+2. Could your wallet send funds without you meaning it to?
+3. Where does each balance come from — a real public endpoint, or a number something made up?
 
-| Dashboard (desktop) | Dashboard (mobile) | Receive (desktop) | Receive (mobile) |
-| --- | --- | --- | --- |
-| <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" width="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" width="180"> | <img src="docs/images/web-wallet-receive-desktop.png" alt="Receive screen of the Bawa web wallet on desktop" width="360"> | <img src="docs/images/web-wallet-receive-mobile.png" alt="Receive screen of the Bawa web wallet on mobile" width="180"> |
-| Portfolio, assets and recent activity. | The same wallet on mobile. | The QR card with its three templates: address, payment request and share link. | The QR card, amount and full address. |
+Bawa exists so you can answer the first two from the code, not from a promise. Keys are generated locally by `tools/make_wallet.py` and stored encrypted; the launcher only prints routes and never executes them, and there is no signing or broadcast code on `main`, so nothing can be sent. Balances are out of scope on `main` — use a wallet application for balances, signing or broadcast.
+
+> If Bawa helped you, please give it a star. ⭐ It costs nothing, it tells other builders this reference is worth their time, and it is the simplest way to support an open-source project maintained by one person. Thank you.
 
 ## Quickstart
 
@@ -79,7 +114,7 @@ Do not treat these checks as a mainnet or production-readiness claim.
 
 On `main` at HEAD `667527e` (verified 2026-11-20), Bawa's launcher prints routes and never executes them. Secret-handling tools sit inside a trust boundary; public-roots-only tools, documentation routes and unavailable printed routes sit outside it.
 
-*Diagrams are rendered as static SVG images so they display in every viewer, including the GitHub mobile app; the editable Mermaid sources are in [docs/diagrams/](docs/diagrams/).*
+*The two diagrams above are static SVG images so they display in every viewer, including the GitHub mobile app.*
 
 
 The CLI prints routes without executing them; secret-handling tools sit inside a trust boundary: M uses Trust Wallet Core 4.9.3 WASM and writes encrypted seed.enc.json using AES-256-GCM with AAD nova-shop-seed-v1 and file mode 0600; G exports verifySeedBundle and readDataKeyFromFd; D defaults to secrets/seed.enc.json. Outside the boundary, H lives in tools/hdwallet-gen/ and holds public-roots-only tools: derive_daemon.js is a JSONL daemon; compare.js compares addresses from public roots; the paths are BTC m/84'/0'/0'/0'/i, ETH m/44'/60'/0'/0'/i and TRX m/44'/195'/0'/0'/i; extended-key.js validates extended keys before WASM. Also outside the boundary, the AI-guided documentation route covers guides 01 to 16, and three launcher targets are unavailable.
@@ -156,9 +191,20 @@ Use the full catalogue for individual document links rather than duplicating it 
 ## Contributing
 
 - Open an issue first.
+- Report bugs through [GitHub Issues](https://github.com/Pr3eve6ti2o/bawa/issues).
 - Fork the repository and submit a pull request to `main`.
 - Run the checks in the [canonical command list in CONTRIBUTING.md](CONTRIBUTING.md) before requesting review.
 - Link the issue in your pull request.
+
+## Contributors
+
+Thanks to everyone who has contributed to Bawa.
+
+<a href="https://github.com/Pr3eve6ti2o/bawa/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Pr3eve6ti2o/bawa" alt="Bawa contributors" />
+</a>
+
+New contributors: open an issue first (see [CONTRIBUTING.md](CONTRIBUTING.md)). You will be listed here.
 
 ## Help
 
