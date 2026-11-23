@@ -564,7 +564,14 @@ export interface QrCardPngDetails {
 const QR_CARD_WIDTH = 640;
 const QR_CARD_PAD = 36;
 const QR_CARD_QR = 360;
+// Lane H: the QR sits in a bordered tile (the on-screen card's
+// tile), the token + chain badges overlap the tile's bottom edge,
+// and the label is text-only below the address — the same order as
+// the on-screen card: tile + badges, amount, address, label.
+const QR_CARD_TILE_PAD = 16;
+const QR_CARD_TILE_BORDER = 4;
 const QR_CARD_LOGO = 44;
+const QR_CARD_CHAIN_LOGO = 28;
 const QR_CARD_INK = '#2B2B2B';
 
 /**
@@ -635,27 +642,27 @@ export async function qrCardToPngBlob(
     contentWidth,
     (text) => measureCtx.measureText!(text).width,
   );
-  measureCtx.font = '600 28px system-ui, sans-serif';
-  const labelWidth = measureCtx.measureText(details.tokenLabel).width;
-  const logoSpan =
-    (tokenLogo === null ? 0 : QR_CARD_LOGO + 12) +
-    (chainLogo === null ? 0 : 12 + QR_CARD_LOGO);
-  const tokenRowWidth = logoSpan + labelWidth;
 
   // Rows, top to bottom — the same order as the on-screen card:
-  // QR, amount, address, token + chain. All gaps are fixed; only
-  // the address height varies.
+  // tile + badges, amount, address, label. All gaps are fixed; only
+  // the address height varies. The tile is the QR plus its pad; the
+  // badges ride on the tile's bottom edge, so the badge overhang
+  // (the chain mark's 28 px) is part of the height.
+  const tileSize = QR_CARD_QR + QR_CARD_TILE_PAD * 2;
+  const badgeOverhang = QR_CARD_CHAIN_LOGO;
   const amountHeight = 44;
   const addressHeight = addressLines.length * 28;
+  const labelHeight = 44;
   const height =
     QR_CARD_PAD +
-    QR_CARD_QR +
-    24 +
+    tileSize +
+    badgeOverhang +
+    16 +
     amountHeight +
     16 +
     addressHeight +
     20 +
-    QR_CARD_LOGO +
+    labelHeight +
     QR_CARD_PAD;
 
   canvas.width = QR_CARD_WIDTH;
@@ -669,10 +676,53 @@ export async function qrCardToPngBlob(
   ctx.fillStyle = QR_CARD_INK;
   ctx.textBaseline = 'top';
 
-  const qrX = (QR_CARD_WIDTH - QR_CARD_QR) / 2;
-  ctx.drawImage(qrImage, qrX, QR_CARD_PAD, QR_CARD_QR, QR_CARD_QR);
+  // The tile: paper fill, then a 4 px ink frame drawn as four bars
+  // (fillRect, not strokeRect — the same calls the measured tests
+  // can observe), then the QR centred inside it. The hard offset
+  // shadow (Oishi, --bawa-shadow) is an ink rect 8 px down-right
+  // behind the tile, drawn first so the tile covers all but the
+  // offset strip; it ends inside the badge gap, so the height is
+  // unchanged.
+  const tileX = (QR_CARD_WIDTH - tileSize) / 2;
+  const tileY = QR_CARD_PAD;
+  ctx.fillStyle = QR_CARD_INK;
+  ctx.fillRect(tileX + 8, tileY + 8, tileSize, tileSize);
+  ctx.fillStyle = QR_PAPER_COLOR;
+  ctx.fillRect(tileX, tileY, tileSize, tileSize);
+  ctx.fillStyle = QR_CARD_INK;
+  ctx.fillRect(tileX, tileY, tileSize, QR_CARD_TILE_BORDER);
+  ctx.fillRect(tileX, tileY + tileSize - QR_CARD_TILE_BORDER, tileSize, QR_CARD_TILE_BORDER);
+  ctx.fillRect(tileX, tileY, QR_CARD_TILE_BORDER, tileSize);
+  ctx.fillRect(tileX + tileSize - QR_CARD_TILE_BORDER, tileY, QR_CARD_TILE_BORDER, tileSize);
+  const qrX = tileX + QR_CARD_TILE_PAD;
+  const qrY = tileY + QR_CARD_TILE_PAD;
+  ctx.drawImage(qrImage, qrX, qrY, QR_CARD_QR, QR_CARD_QR);
 
-  let y = QR_CARD_PAD + QR_CARD_QR + 24;
+  // The badges overlap the tile's bottom edge: the token mark
+  // centred on it, the chain mark at its lower right. A logo that
+  // failed to load is skipped — the card draws without it.
+  const tileBottom = tileY + tileSize;
+  const badgeCenterX = QR_CARD_WIDTH / 2;
+  if (tokenLogo !== null) {
+    ctx.drawImage(
+      tokenLogo,
+      badgeCenterX - QR_CARD_LOGO / 2,
+      tileBottom - QR_CARD_LOGO / 2,
+      QR_CARD_LOGO,
+      QR_CARD_LOGO,
+    );
+  }
+  if (chainLogo !== null) {
+    ctx.drawImage(
+      chainLogo,
+      badgeCenterX + QR_CARD_LOGO / 2 - 14,
+      tileBottom,
+      QR_CARD_CHAIN_LOGO,
+      QR_CARD_CHAIN_LOGO,
+    );
+  }
+
+  let y = tileBottom + badgeOverhang + 16;
   ctx.font = '700 36px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(details.amountText, QR_CARD_WIDTH / 2, y);
@@ -685,21 +735,12 @@ export async function qrCardToPngBlob(
   }
   y += 20;
 
-  // Token row: logos flank the label, the whole row centred.
+  // The label, centred and text-only — the logos already ride on
+  // the tile above, so the label does not repeat them.
   ctx.font = '600 28px system-ui, sans-serif';
-  let rowX = (QR_CARD_WIDTH - tokenRowWidth) / 2;
-  if (tokenLogo !== null) {
-    ctx.drawImage(tokenLogo, rowX, y, QR_CARD_LOGO, QR_CARD_LOGO);
-    rowX += QR_CARD_LOGO + 12;
-  }
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(details.tokenLabel, rowX, y + QR_CARD_LOGO / 2);
-  rowX += labelWidth;
-  if (chainLogo !== null) {
-    rowX += 12;
-    ctx.drawImage(chainLogo, rowX, y, QR_CARD_LOGO, QR_CARD_LOGO);
-  }
+  ctx.fillText(details.tokenLabel, QR_CARD_WIDTH / 2, y + labelHeight / 2);
 
   return canvasToPngBlob(canvas);
 }

@@ -16,17 +16,22 @@
 @source "../**/*.{ts,tsx}";
 
 :root {
-  /* Bawa design tokens, formalised on the Linework structure
-     (instalanding.ai systems/linework, RESEARCH.md §6): paper, ink,
-     accent, and mono annotation — paper is the only surface, ink is
-     the only text/border colour, coral and sun are the two accents
-     (one job each: coral = primary action / danger, sun = highlight /
-     selected), and the mono face is reserved for technical
-     annotations (addresses, hashes, contracts). Cards sit on the
-     paper with a real ink border and a hard offset shadow (the Oishi
-     treatment, systems/oishi): flat cards looked crossed-out and
-     placeholder-grade, so a card is never border-only. Only Ink is
-     text on Paper. */
+  /* Bawa design tokens — formalised after instalanding.ai's Linework
+     system (dot-grid paper, architectural line drawing, 66 tokens):
+     Linework's structure is paper / ink / accent / mono annotation;
+     Bawa's four colours do the same jobs under a hard 4-colour cap,
+     and the Fintech palette system (uupm.cc) maps them as
+     Background / Text+Border / CTA / Selected. One colour, one job:
+     - Paper (#FFFDF7): the background — the page and every card.
+     - Ink (#2B2B2B): the only text colour, and every border and
+       line. Ink on paper is 13.9:1, ink on sun 10.3:1 — both clear
+       the 4.5:1 bar (ui-ux-pro-max checklist).
+     - Coral (#FF6B4A): the CTA — the primary action only, never
+       body text (ink on coral is 5.0:1, still passing).
+     - Sun (#FFD93B): Selected — the current choice, highlight.
+     The shadow is the Oishi system's hard offset shadow (cream
+     paper, ink borders, hard offset shadows): one fixed offset in
+     ink, never a blur. */
   --bawa-paper: #FFFDF7;
   --bawa-ink: #2B2B2B;
   --bawa-coral: #FF6B4A;
@@ -35,9 +40,9 @@
   --bawa-stroke: 2px;
   --bawa-border: 2px solid var(--bawa-ink);
   --bawa-border-dashed: 2px dashed var(--bawa-ink);
+  --bawa-shadow: 4px 4px 0 var(--bawa-ink);
   --bawa-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
   --bawa-radius-sm: 15px 225px 15px 255px / 255px 15px 225px 15px;
-  --bawa-shadow: 4px 4px 0 var(--bawa-ink);
 
   --background: var(--bawa-paper);
   --card: var(--bawa-paper);

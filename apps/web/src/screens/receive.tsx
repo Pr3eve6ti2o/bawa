@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../state/wallet-context';
@@ -16,6 +16,7 @@ import {
   type TokenRecord,
 } from '../wallet/tokens';
 import { AddTokenDialog } from './add-token';
+import { filterChains } from './chain-search-select';
 import { QrCard, qrCardTokenLabel } from './qr-card';
 import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
 import { Alert, AlertDescription } from '../ui/components/alert';
@@ -27,6 +28,115 @@ import { Label } from '../ui/components/label';
 // Item 20: the three QR templates — plain address, payment request,
 // Bawa web link.
 type QrTemplate = 'address' | 'payment' | 'link';
+
+// Lane H: the popular networks — the same four the dashboard's
+// PopularChainsStrip uses (the four original adapter chains). They
+// are the picker's first section, so the chains people actually
+// receive on are one tap away without scrolling through all 22.
+export const POPULAR_RECEIVE_CHAINS: readonly ChainId[] = [
+  'btc',
+  'eth',
+  'trx',
+  'ton',
+];
+
+/**
+ * A chain's real mark: the bundled Trust Wallet logo where the repo
+ * has one (chainLogoFor, else the symbol's token logo — BTC, ETH,
+ * TRX, TON), and a ticker badge where it has none (Gnosis, Celo,
+ * Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom). Never a
+ * broken image, never an empty box — the same fallback the QR card
+ * uses. The old picker drew every chain as a hand-drawn blob with
+ * symbol text, so BNB Smart Chain and Avalanche read as bare
+ * initials; the real marks are what the owner asked the token rows
+ * to use.
+ */
+function ChainMark({ chain }: { chain: ChainId }) {
+  const [failed, setFailed] = useState(false);
+  const config = chainConfig(chain);
+  const src =
+    chainLogoFor(chain) ?? tokenLogoFor(config.symbol);
+  if (src !== undefined && !failed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        width={32}
+        height={32}
+        decoding="async"
+        className="size-8 shrink-0 rounded-full"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-sun text-[10px] font-bold uppercase text-ink"
+    >
+      {config.symbol.trim().slice(0, 4) || '?'}
+    </span>
+  );
+}
+
+/**
+ * One network row in the picker: mark, name + symbol, chevron.
+ * A full-width row, not a grid cell — the name is never truncated
+ * ("BNB Smart Chain …", "Avalanche C-Chai…" in the old 2-column
+ * grid) and the selected row reads as the current choice.
+ *
+ * Row anatomy follows Ivy Wallet's account rows (icon + name + one
+ * action, no second control) and the OJO 8-state model: default
+ * (paper), hover (sun — the repo's established row hover),
+ * selected (sun), focus (coral ring). The chevron is an inline SVG,
+ * not a text glyph (ui-ux-pro-max checklist: SVG icons only).
+ */
+function ChainRow({
+  chain,
+  selected,
+  onSelect,
+}: {
+  chain: ChainId;
+  selected: boolean;
+  onSelect: (chain: ChainId) => void;
+}) {
+  const config = chainConfig(chain);
+  return (
+    <li
+      className={`rounded-bawa-sm border-2 border-ink ${
+        selected ? 'bg-sun' : 'bg-paper'
+      }`}
+    >
+      <button
+        type="button"
+        aria-pressed={selected}
+        title={config.displayName}
+        onClick={() => onSelect(chain)}
+        className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-bawa-sm p-2 text-left text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+      >
+        <ChainMark chain={chain} />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+          {config.displayName}{' '}
+          <span className="font-normal">{config.symbol}</span>
+        </span>
+        <svg
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          className="size-4 shrink-0 -rotate-90"
+        >
+          <path
+            d="M3 6l5 5 5-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    </li>
+  );
+}
 
 export function ReceiveScreen() {
   const {
@@ -54,6 +164,13 @@ export function ReceiveScreen() {
   // Item 20: stepped flow — network, then token, then amount + QR.
   const [step, setStep] = useState<'chain' | 'token' | 'details'>('chain');
   const [template, setTemplate] = useState<QrTemplate | null>(null);
+  // Lane H: the network picker — a search query, and whether the
+  // grouped "All networks" list is open. Both reset when a network
+  // is picked (selectChain below), so the next visit starts clean.
+  const [chainQuery, setChainQuery] = useState('');
+  const [allNetworksOpen, setAllNetworksOpen] = useState(false);
+  // The picker's section, for the search keyboard nav below.
+  const pickerRef = useRef<HTMLElement | null>(null);
   const [isRotating, setIsRotating] = useState(false);
   const qrRef = useRef<HTMLDivElement | null>(null);
 
@@ -94,7 +211,46 @@ export function ReceiveScreen() {
     setSelectedToken(null);
     setSelectedChain(next);
     setTemplate(null);
+    setChainQuery('');
+    setAllNetworksOpen(false);
     setStep('token');
+  }
+
+  // Lane H: the picker's sections. Popular first (only the ones this
+  // screen can receive on), the rest grouped behind "All networks".
+  // A search query replaces both sections with a flat filtered list
+  // across all 22 — the same filterChains the watch-only chain
+  // search uses (name, symbol or id, case-insensitive).
+  const popularChains = POPULAR_RECEIVE_CHAINS.filter((entry) =>
+    chains.includes(entry),
+  );
+  const otherChains = chains.filter(
+    (entry) => !POPULAR_RECEIVE_CHAINS.includes(entry),
+  );
+  const chainSearch = chainQuery.trim();
+  const searchedChains =
+    chainSearch === '' ? [] : filterChains(chains, chainSearch);
+
+  // Lane H (COSS Combobox): the search is a combobox, not a plain
+  // filter — ArrowDown moves focus into the results, Enter picks
+  // the first match, Escape clears the query. Tab still reaches
+  // every row (they are native buttons); these keys are the
+  // shortcut regulars expect from a search-over-list (Ivy Wallet's
+  // feature/search is the model).
+  function handleChainSearchKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      const firstRow = pickerRef.current?.querySelector('ul li button');
+      (firstRow as HTMLButtonElement | null)?.focus();
+    } else if (event.key === 'Enter') {
+      if (chainSearch !== '' && searchedChains.length > 0) {
+        event.preventDefault();
+        const first = searchedChains[0];
+        if (first !== undefined) selectChain(first);
+      }
+    } else if (event.key === 'Escape') {
+      setChainQuery('');
+    }
   }
 
   // A null token is the selected network's native coin.
@@ -229,7 +385,6 @@ export function ReceiveScreen() {
     qrTemplates.find((candidate) => candidate.id === effectiveTemplate)?.value ??
     address ??
     '';
-  const smallQrs = qrTemplates.filter((candidate) => candidate.id !== effectiveTemplate);
 
   async function copyText(value: string, okMessage: string): Promise<void> {
     setCopyStatus('');
@@ -404,46 +559,109 @@ export function ReceiveScreen() {
       )}
 
       {step === 'chain' && (
-      <section aria-labelledby="receive-addresses-heading" className="space-y-3">
+      <section ref={pickerRef} aria-labelledby="receive-addresses-heading" className="space-y-3">
         {/* Round 2, item 8: the step label above ("Step 1 of 3: Network")
             is the visible title; the heading stays for screen readers. */}
         <h2 id="receive-addresses-heading" className="sr-only">
           Choose a network
         </h2>
-        {/* Round 2, item 8: the 22-row list scrolled past the viewport.
-            One-line buttons (name + symbol inline) in a two-column
-            grid fit all 22 networks on one screen at 390 px — the same
-            text per button, so the step still reads as a network picker. */}
-        <ul className="grid grid-cols-2 gap-1.5">
-          {chains.map((available) => {
-            const listConfig = chainConfig(available);
-            const selected = available === chain;
-            return (
-              <li
-                key={available}
-                className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
-                  selected ? 'bg-sun' : 'bg-paper'
-                }`}
-              >
+        {/* Lane H: a sleek network picker, not the 22-button grid.
+            Search at the top; Popular first as full-width rows with
+            the real chain marks (names never truncated); the rest
+            grouped behind "All networks", collapsed by default, so
+            the popular chains are reachable without scrolling
+            through all 22. Searching replaces both sections with a
+            flat filtered list. Built on the watch-only chain search
+            (filterChains), not a second copy of it. */}
+        <div className="space-y-1">
+          <Label htmlFor="receive-chain-search" className="sr-only">
+            Search networks
+          </Label>
+          <Input
+            id="receive-chain-search"
+            type="text"
+            value={chainQuery}
+            onChange={(event) => setChainQuery(event.target.value)}
+            onKeyDown={handleChainSearchKeyDown}
+            placeholder="Search networks — e.g. Solana"
+            className="h-11"
+          />
+        </div>
+        {chainSearch !== '' ? (
+          <div className="space-y-3">
+            <p role="status" className="text-sm text-ink">
+              {searchedChains.length === 0
+                ? `No networks match “${chainSearch}”.`
+                : `${searchedChains.length} ${
+                    searchedChains.length === 1 ? 'network' : 'networks'
+                  } found`}
+            </p>
+            <ul className="space-y-2">
+              {searchedChains.map((available) => (
+                <ChainRow
+                  key={available}
+                  chain={available}
+                  selected={available === chain}
+                  onSelect={selectChain}
+                />
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-ink">Popular</h3>
+            <ul className="space-y-2">
+              {popularChains.map((available) => (
+                <ChainRow
+                  key={available}
+                  chain={available}
+                  selected={available === chain}
+                  onSelect={selectChain}
+                />
+              ))}
+            </ul>
+            {otherChains.length > 0 && (
+              <div className="space-y-2">
                 <button
                   type="button"
-                  aria-pressed={selected}
-                  title={listConfig.displayName}
-                  onClick={() => selectChain(available)}
-                  className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                  aria-expanded={allNetworksOpen}
+                  onClick={() => setAllNetworksOpen((open) => !open)}
+                  className="flex w-full cursor-pointer items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper p-2 text-left text-sm font-semibold text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                 >
-                  {/* Lane G: the real chain mark — the hand-drawn blob
-                      with the ticker text inside rendered as a
-                      crossed-out logo. */}
-                  <ChainLogo chain={available} size={24} />
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight">
-                    {listConfig.displayName} {listConfig.symbol}
+                  <span>
+                    All networks ({otherChains.length})
                   </span>
+                  <svg
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    className={`size-4 shrink-0 motion-safe:transition-transform ${allNetworksOpen ? 'motion-safe:rotate-180' : ''}`}
+                  >
+                    <path
+                      d="M3 6l5 5 5-5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </button>
-              </li>
-            );
-          })}
-        </ul>
+                {allNetworksOpen && (
+                  <ul className="space-y-2">
+                    {otherChains.map((available) => (
+                      <ChainRow
+                        key={available}
+                        chain={available}
+                        selected={available === chain}
+                        onSelect={selectChain}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </section>
       )}
 
@@ -595,41 +813,55 @@ export function ReceiveScreen() {
                 link below still carries the amount.)
               </p>
             )}
-            {/* Lane 7: the three QR templates, named — the main QR
-                above is the named one, the other two sit below it at
-                64 px, and tapping one swaps it into the main slot. */}
+            {/* Lane H (COSS Segmented Control + Aceternity Animated
+                Tabs, re-skinned to ink borders and sun): the three
+                QR templates are one control with three segments, not
+                two loose buttons — the active segment stays in the
+                control, marked sun with aria-pressed, instead of
+                leaving the row. Tapping another segment swaps it
+                into the main slot. The unavailable payment segment
+                stays disabled with its reason, never a dead box. */}
             <p className="w-full text-center text-sm font-semibold text-ink">
               {`QR type: ${effectiveLabel} — tap another to switch`}
-            </p>            <div className="flex items-start justify-center gap-2">
-              {smallQrs.map((candidate) => (
-                <button
-                  key={candidate.id}
-                  type="button"
-                  disabled={candidate.value === null}
-                  aria-label={`Show ${candidate.label.toLowerCase()} QR`}
-                  onClick={() => setTemplate(candidate.id)}
-                  className="flex flex-col items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-50"
-                >
-                  {candidate.value !== null ? (
-                    <QRCodeSVG
-                      value={candidate.value}
-                      size={64}
-                      marginSize={2}
-                      level="H"
-                      fgColor="#2B2B2B"
-                      bgColor="#FFFDF7"
-                      title={candidate.value}
-                    />
-                  ) : (
-                    <span className="flex h-16 w-16 items-center justify-center border-2 border-dashed border-ink text-center">
-                      {candidate.id === 'payment' && paymentNeedsAmount
-                        ? 'Needs amount'
-                        : 'Not available'}
-                    </span>
-                  )}
-                  <span>{candidate.label}</span>
-                </button>
-              ))}
+            </p>
+            <div
+              role="group"
+              aria-label="QR type"
+              className="flex w-full gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
+            >
+              {qrTemplates.map((candidate) => {
+                const active = candidate.id === effectiveTemplate;
+                return (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    disabled={candidate.value === null}
+                    aria-pressed={active}
+                    aria-label={`Show ${candidate.label.toLowerCase()} QR`}
+                    onClick={() => setTemplate(candidate.id)}
+                    className={`flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-bawa-sm p-1 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'bg-sun' : 'hover:bg-sun'}`}
+                  >
+                    {candidate.value !== null ? (
+                      <QRCodeSVG
+                        value={candidate.value}
+                        size={64}
+                        marginSize={2}
+                        level="H"
+                        fgColor="#2B2B2B"
+                        bgColor="#FFFDF7"
+                        title={candidate.value}
+                      />
+                    ) : (
+                      <span className="flex h-16 w-16 items-center justify-center border-2 border-dashed border-ink text-center">
+                        {candidate.id === 'payment' && paymentNeedsAmount
+                          ? 'Needs amount'
+                          : 'Not available'}
+                      </span>
+                    )}
+                    <span className="text-[10px] leading-tight">{candidate.label}</span>
+                  </button>
+                );
+              })}
             </div>
             {paymentHint !== null && (
               <p className="w-full text-center text-xs text-ink">{paymentHint}</p>

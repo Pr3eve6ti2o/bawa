@@ -136,6 +136,38 @@ describe('QrCard', () => {
     }
   });
 
+  it('frames the QR in a bordered tile with the token and chain badges on its edge', async () => {
+    const mounted = await mountCard({
+      qrValue: 'ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&uint256=25000000',
+      amountText: '25 USDC',
+      address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      token: token(),
+      chain: 'base',
+    });
+    try {
+      // Lane H: the QR sits in its own bordered tile, and the token +
+      // chain marks ride on the tile's edge as one badge — the card's
+      // one memorable element is the QR, framed.
+      const tile = mounted.div.querySelector('[data-testid="qr-card-tile"]');
+      expect(tile).not.toBeNull();
+      expect(tile?.querySelector('#qr-card-qr svg')).not.toBeNull();
+      // Lane H (Oishi hard offset shadow): the tile carries the
+      // shadow token, so the card reads as a physical card, not a
+      // flat printout.
+      expect(tile?.className).toContain('shadow-[var(--bawa-shadow)]');
+      const badge = mounted.div.querySelector('[data-testid="qr-card-badge"]');
+      expect(badge).not.toBeNull();
+      expect(badge?.querySelector('img[alt="USDC logo"]')).not.toBeNull();
+      expect(badge?.querySelector('img[alt="Base logo"]')).not.toBeNull();
+      // The address reads in its own framed strip, full and untruncated.
+      const strip = mounted.div.querySelector('[data-testid="qr-card-address"]');
+      expect(strip).not.toBeNull();
+      expect(strip?.textContent).toContain('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows Any amount when no amount is set, and the network for a native coin', async () => {
     const mounted = await mountCard({
       qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',

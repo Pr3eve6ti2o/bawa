@@ -627,23 +627,29 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1)', () =
     expect(file.name).toBe('bawa-receive-base-usdc.png');
     expect(file.type).toBe('image/png');
     // 640 wide; one address line at 10px a character (42 chars fit
-    // the 568px content width): 36 + 360 + 24 + 44 + 16 + 28 + 20 +
-    // 44 + 36 = 608 tall.
+    // the 568px content width): 36 + 392 + 28 + 16 + 44 + 16 + 28 +
+    // 20 + 44 + 36 = 660 tall. The QR sits in a 392px tile (360px QR
+    // + 16px pad each side) with the token + chain badges overlapping
+    // its bottom edge; the badge overhang (28px) is part of the height.
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(608);
+    expect(fakes.canvas.height).toBe(660);
     // Paper painted first, over the whole card.
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 608);
-    // The QR is drawn 360px wide, centred, at the top.
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 660);
+    // Lane H (Oishi hard offset shadow): an ink rect offset 8 px
+    // down-right behind the tile.
+    expect(fakes.fillRect).toHaveBeenCalledWith(132, 44, 392, 392);
+    // The QR is drawn 360px wide, centred, inside its tile at the top.
     const qrDraw = fakes.drawImage.mock.calls[0]!;
     expect(qrDraw[1]).toBe(140);
-    expect(qrDraw[2]).toBe(36);
+    expect(qrDraw[2]).toBe(52);
     expect(qrDraw[3]).toBe(360);
     expect(qrDraw[4]).toBe(360);
-    // Both logos are drawn 44px, flanking the label.
+    // The badges overlap the tile's bottom edge: the token mark 44px,
+    // the chain mark 28px at its lower right.
     const logoDraws = fakes.drawImage.mock.calls.slice(1);
     expect(logoDraws).toHaveLength(2);
     expect(logoDraws[0]![3]).toBe(44);
-    expect(logoDraws[1]![3]).toBe(44);
+    expect(logoDraws[1]![3]).toBe(28);
     // The card's facts, in the on-screen order: amount, address, label.
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
     expect(texts).toEqual(['25 USDC', ADDRESS, 'usdc (base)']);
@@ -660,7 +666,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1)', () =
     );
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
     expect(texts).toEqual(['0.5 BTC', longAddress.slice(0, 56), longAddress.slice(56), 'Bitcoin']);
-    expect(fakes.canvas.height).toBe(608 + 28);
+    expect(fakes.canvas.height).toBe(660 + 28);
   });
 
   it('still shares the card when both logos fail to load', async () => {

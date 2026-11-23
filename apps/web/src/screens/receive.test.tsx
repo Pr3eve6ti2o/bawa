@@ -109,6 +109,23 @@ async function clickButton(div: HTMLDivElement, text: string): Promise<void> {
   });
 }
 
+async function fillInput(input: HTMLInputElement, value: string): Promise<void> {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value',
+    )?.set;
+    setter?.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+const ALL_CHAINS: ChainKey[] = [
+  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base',
+  'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll',
+  'opbnb', 'metis', 'aurora', 'fantom',
+];
+
 // Item 20: drive the stepped flow to the details step — pick the
 // Ethereum chain, then its native asset.
 async function reachDetails(div: HTMLDivElement): Promise<void> {
@@ -390,10 +407,11 @@ describe('receive screen', () => {
     }
   });
 
-  it('keeps every step compact: chain grid, 136 px QR card, truncated share link', async () => {
-    // Round 2, item 8: the chain step is a two-column grid (not a
-    // 22-row list), the QR card's code is 136 px, and the long share link shows as
-    // one truncated line — each step fits the viewport without scrolling
+  it('keeps every step compact: searchable picker, 136 px QR card, truncated share link', async () => {
+    // Lane H: the chain step is a searchable picker (Popular first,
+    // the rest behind All networks), not a 22-button grid; the QR
+    // card's code is 136 px, and the long share link shows as one
+    // truncated line — each step fits the viewport without scrolling
     // to reach the next control. Layout heights are asserted in CDP;
     // this test locks the structure that makes them fit. (The 136 px
     // value is D2's; the Round-2 merge kept A2's 192 px QrCard and the
@@ -402,11 +420,12 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      const chainList = mounted.div.querySelector(
-        'section[aria-labelledby="receive-addresses-heading"] ul',
+      const chainSection = mounted.div.querySelector(
+        'section[aria-labelledby="receive-addresses-heading"]',
       );
-      expect(chainList).not.toBeNull();
-      expect(chainList?.className).toContain('grid-cols-2');
+      expect(chainSection).not.toBeNull();
+      expect(chainSection?.querySelector('#receive-chain-search')).not.toBeNull();
+      expect(chainSection?.textContent).toContain('Popular');
       await reachDetails(mounted.div);
       const qrSvg = mounted.div.querySelector('#receive-qr svg');
       expect(qrSvg).not.toBeNull();
@@ -434,6 +453,30 @@ describe('receive screen', () => {
       // are 64 px, and the unavailable payment template says why
       // instead of sitting there as a dead box.
       expect(mounted.div.textContent).toContain('QR type: Address');
+      // Lane H (COSS Segmented Control): the switcher is one control
+      // with all three templates as segments — the active one is
+      // marked, not missing from the row.
+      const switcher = mounted.div.querySelector(
+        '[role="group"][aria-label="QR type"]',
+      );
+      expect(switcher).not.toBeNull();
+      const addressSegment = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.getAttribute('aria-label') === 'Show address QR',
+      );
+      expect(addressSegment).not.toBeUndefined();
+      expect(addressSegment?.getAttribute('aria-pressed')).toBe('true');
+      expect(addressSegment?.className).toContain('bg-sun');
+      // Lane H (checklist: badges reflow without clipping): the
+      // longest segment label fits on one line at 390 px, so the
+      // control stays one row tall.
+      const paymentSegment = [...mounted.div.querySelectorAll('button')].find(
+        (button) =>
+          button.getAttribute('aria-label') === 'Show payment request QR',
+      );
+      expect(paymentSegment?.textContent).toContain('Payment request');
+      expect(paymentSegment?.querySelector('span:last-child')?.className).toContain(
+        'text-[10px]',
+      );
       const linkQr = [...mounted.div.querySelectorAll('button')].find(
         (button) =>
           button.getAttribute('aria-label') === 'Show share link QR',
@@ -501,9 +544,14 @@ describe('receive screen', () => {
         setter?.call(amountInput, '25');
         amountInput.dispatchEvent(new Event('input', { bubbles: true }));
       });
-      // The amount makes the payment request the main QR, so it leaves
-      // the small row; the hint goes away with it.
-      expect(findSmall('Show payment request QR')).toBeUndefined();
+      // The amount makes the payment request the main QR: its segment
+      // is now the marked one in the switcher (Lane H — the active
+      // template stays in the control, marked, instead of leaving
+      // the row), and the hint goes away with it.
+      const paymentSegment = findSmall('Show payment request QR');
+      expect(paymentSegment).not.toBeUndefined();
+      expect(paymentSegment?.getAttribute('aria-pressed')).toBe('true');
+      expect(paymentSegment?.className).toContain('bg-sun');
       expect(mounted.div.textContent).not.toContain(
         'Payment request needs an amount',
       );
@@ -645,6 +693,9 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen();
     try {
+      // Lane H: Solana is not a popular chain, so it sits behind
+      // "All networks" in the picker.
+      await clickButton(mounted.div, 'All networks (1)');
       await clickButton(mounted.div, 'Solana');
       await clickButton(mounted.div, 'Solana · SOL');
       expect(mounted.div.textContent).toContain(
@@ -679,6 +730,142 @@ describe('receive screen', () => {
           (candidate) => candidate.textContent === 'New address',
         ),
       ).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('receive screen — network picker (Lane H)', () => {
+  it('shows the popular chains first, with the rest behind All networks', async () => {
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      // Popular first, reachable without scrolling through all 22.
+      expect(mounted.div.textContent).toContain('Popular');
+      expect(mounted.div.textContent).toContain('Bitcoin');
+      expect(mounted.div.textContent).toContain('Ethereum');
+      expect(mounted.div.textContent).toContain('TRON');
+      expect(mounted.div.textContent).toContain('TON');
+      // The rest are grouped, not listed: Fantom is behind the toggle.
+      expect(mounted.div.textContent).not.toContain('Fantom');
+      expect(mounted.div.textContent).toContain('All networks (18)');
+      await clickButton(mounted.div, 'All networks (18)');
+      expect(mounted.div.textContent).toContain('Fantom');
+      // Picking a grouped chain still advances the flow.
+      await clickButton(mounted.div, 'Fantom');
+      expect(mounted.div.textContent).toContain('Step 2 of 3: Token');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('searches all 22 networks by name, symbol or id', async () => {
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const input = mounted.div.querySelector(
+        '#receive-chain-search',
+      ) as HTMLInputElement;
+      expect(input).not.toBeNull();
+      await fillInput(input, 'sol');
+      expect(mounted.div.textContent).toContain('Solana');
+      expect(mounted.div.textContent).not.toContain('Bitcoin');
+      await fillInput(input, 'zzz-no-such-chain');
+      expect(mounted.div.textContent).toContain('No networks match');
+      // Clearing the search brings the Popular section back.
+      await fillInput(input, '');
+      expect(mounted.div.textContent).toContain('Popular');
+      expect(mounted.div.textContent).not.toContain('Fantom');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('hides the All networks toggle when every chain is popular', async () => {
+    vi.mocked(availableFor).mockReturnValue(['btc', 'eth', 'trx', 'ton']);
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Popular');
+      expect(mounted.div.textContent).not.toContain('All networks');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('moves focus to the first chain with ArrowDown and picks the first match with Enter', async () => {
+    // Lane H (COSS Combobox): the search is a combobox — ArrowDown
+    // moves focus into the results, Enter picks the first match.
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const input = mounted.div.querySelector(
+        '#receive-chain-search',
+      ) as HTMLInputElement;
+      await fillInput(input, 'sol');
+      await act(async () => {
+        input.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+        );
+      });
+      const solanaButton = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.textContent?.includes('Solana'),
+      );
+      expect(document.activeElement).toBe(solanaButton);
+      input.focus();
+      await act(async () => {
+        input.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+        );
+      });
+      expect(mounted.div.textContent).toContain('Step 2 of 3: Token');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('clears the chain search with Escape', async () => {
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const input = mounted.div.querySelector(
+        '#receive-chain-search',
+      ) as HTMLInputElement;
+      await fillInput(input, 'sol');
+      expect(mounted.div.textContent).not.toContain('Popular');
+      await act(async () => {
+        input.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+        );
+      });
+      expect(input.value).toBe('');
+      expect(mounted.div.textContent).toContain('Popular');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('uses SVG chevrons on the picker rows, never a text glyph', async () => {
+    // Lane H (ui-ux-pro-max checklist): SVG icons only — the old
+    // '›' text chevron is an inline SVG now.
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const chainSection = mounted.div.querySelector(
+        'section[aria-labelledby="receive-addresses-heading"]',
+      );
+      expect(chainSection).not.toBeNull();
+      expect(chainSection?.textContent).not.toContain('›');
+      const rowButton = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.textContent?.includes('Ethereum'),
+      );
+      expect(rowButton?.querySelector('svg')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

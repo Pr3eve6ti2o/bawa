@@ -1,20 +1,38 @@
-// QR card (UI/UX Round 2, item 1): the Receive QR shown like the
-// front of a card — the QR, then the amount, then the address, then
-// the token name with the chain beside it, plus that chain's and
-// token's logo.
+// QR card (UI/UX Round 2, item 1; Lane H redesign): the Receive QR
+// shown like the front of a card — the QR, then the amount, then the
+// address, then the token name with the chain beside it, plus that
+// chain's and token's logo.
 //
 // The same content is what gets shared: qrCardToPngFile
 // (wallet/payment-links) draws this exact card to a PNG, so the
 // shared image is the card, not a bare QR.
 //
 // Design (frontend-design skill, read on the VM): one memorable
-// element — the QR itself — with the payment facts as plain rows
-// under it; no new colours, no new typefaces, the card reuses the
-// app's paper/ink/border treatment. The token row reads like the
-// owner's example: 'pengu (base)', 'pengu (bnb)' — the token
-// symbol in lower case with the short chain tag beside it. A
-// payment is only complete when coin, network and address agree,
-// so all three are on the card itself, not around it.
+// element — the QR itself, framed in its own bordered tile — with
+// the payment facts as plain rows under it; no new colours, no new
+// typefaces, the card reuses the app's paper/ink/border treatment.
+// The token row reads like the owner's example: 'pengu (base)',
+// 'pengu (bnb)' — the token symbol in lower case with the short
+// chain tag beside it. A payment is only complete when coin,
+// network and address agree, so all three are on the card itself,
+// not around it.
+//
+// Mined patterns (read-only web research, no code copied):
+// - Trust Wallet Receive: QR on top, address below it, Copy / Set
+//   Amount / Share — the QR is the screen, the facts sit under it.
+// - MetaMask Receive / Account details: QR + full address, the
+//   network named at the top, the account mark on the QR.
+// - BlueWallet Receive: QR + address, tap the address to copy,
+//   Set amount folds the amount into the QR, Share beside Copy.
+// - RainbowKit account modal: the QR in a white rounded card with
+//   the address + copy beside it.
+// Taken from them: the framed QR tile with the coin mark riding on
+// its edge (MetaMask/Trust Wallet), the amount as the big figure
+// under the code (BlueWallet), the address in its own framed strip
+// (RainbowKit's card-within-card). The three-template behaviour
+// (Address / Payment request / Share link) is untouched — the card
+// shows whichever template is selected, and Share/Download send
+// this same card.
 //
 // Logos are the in-repo Trust Wallet assets (screens/token-logo):
 // the token's mark, with the chain's mark overlapping it, and a
@@ -62,23 +80,28 @@ function LogoImage({
   alt,
   fallback,
   overlap = false,
+  size = 'md',
 }: {
   src: string | undefined;
   alt: string;
   fallback: string;
   /** The chain mark overlaps the token mark, with a paper ring cutting it out. */
   overlap?: boolean;
+  /** md is the 32 px token mark; sm is the 20 px chain mark riding on it. */
+  size?: 'md' | 'sm';
 }): React.ReactElement {
   const [failed, setFailed] = useState(false);
+  const sizeClass = size === 'sm' ? 'size-5' : 'size-8';
+  const textClass = size === 'sm' ? 'text-[8px]' : 'text-[10px]';
   if (src !== undefined && !failed) {
     return (
       <img
         src={src}
         alt={alt}
-        width={32}
-        height={32}
+        width={size === 'sm' ? 20 : 32}
+        height={size === 'sm' ? 20 : 32}
         decoding="async"
-        className={`size-8 shrink-0 rounded-full ${overlap ? '-ml-3 border-2 border-paper' : ''}`}
+        className={`${sizeClass} shrink-0 rounded-full ${overlap ? '-ml-2 border-2 border-paper' : ''}`}
         onError={() => setFailed(true)}
       />
     );
@@ -87,7 +110,7 @@ function LogoImage({
     <span
       role="img"
       aria-label={alt}
-      className={`flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-sun text-[10px] font-bold uppercase text-ink ${overlap ? '-ml-3' : ''}`}
+      className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full border-2 border-ink bg-sun ${textClass} font-bold uppercase text-ink ${overlap ? '-ml-2' : ''}`}
     >
       {fallback}
     </span>
@@ -118,44 +141,67 @@ export function QrCard({ qrValue, amountText, address, token, chain }: QrCardPro
       data-testid="qr-card"
       className="flex flex-col items-center gap-1.5 rounded-bawa-sm border-2 border-ink bg-paper p-3"
     >
-      {/* Paper card is the QR surround: ink modules on paper, same as
-          the bare QR had — no second border inside the card. */}
-      <div id="qr-card-qr" className="shrink-0">
-        {/* 136 px, not 192: Round 2 item 8 sized the details QR at 136
-            so the Copy/Share/Download row clears the bottom nav at
-            390x844. The 192 value was A2's QrCard size, kept by the
-            Round-2 merge; the deep audit re-measured the merged tree
-            at scrollH 1446 with the actions below the fold. */}
-        <QRCodeSVG
-          value={qrValue}
-          size={136}
-          marginSize={4}
-          level="H"
-          fgColor="#2B2B2B"
-          bgColor="#FFFDF7"
-          title={qrValue}
-        />
+      {/* Lane H: the QR in its own bordered tile — the tile's ink
+          frame is what makes the code read as a card, not a bare
+          printout — with the token + chain badge riding on the
+          tile's bottom edge. The badge overlaps the tile by 16 px
+          (-mt-4), so it reads as pinned to the code, not floating
+          under it. The tile carries the hard offset shadow
+          (Oishi system, formalised as --bawa-shadow): one fixed
+          ink offset, no blur, no gradient — the Aceternity 3D
+          Card / Card Spotlight structure (elevation on the focal
+          card) re-skinned to Bawa's tokens. */}
+      <div
+        data-testid="qr-card-tile"
+        className="rounded-bawa-sm border-2 border-ink bg-paper p-2 shadow-[var(--bawa-shadow)]"
+      >
+        <div id="qr-card-qr" className="shrink-0">
+          {/* 136 px, not 192: Round 2 item 8 sized the details QR at 136
+              so the Copy/Share/Download row clears the bottom nav at
+              390x844. The 192 value was A2's QrCard size, kept by the
+              Round-2 merge; the deep audit re-measured the merged tree
+              at scrollH 1446 with the actions below the fold. */}
+          <QRCodeSVG
+            value={qrValue}
+            size={136}
+            marginSize={4}
+            level="H"
+            fgColor="#2B2B2B"
+            bgColor="#FFFDF7"
+            title={qrValue}
+          />
+        </div>
+      </div>
+      <div data-testid="qr-card-badge" className="-mt-4 flex justify-center">
+        <span className="flex items-center rounded-full border-2 border-ink bg-paper p-1">
+          <LogoImage
+            src={tokenLogo}
+            alt={`${tokenSymbol} logo`}
+            fallback={tokenSymbol.trim().slice(0, 4) || '?'}
+          />
+          <LogoImage
+            src={chainLogo}
+            alt={`${config.displayName} logo`}
+            fallback={chainShortLabel(chain).slice(0, 2)}
+            overlap
+            size="sm"
+          />
+        </span>
       </div>
       <p className="text-center font-display text-2xl text-ink">
         {amountText ?? 'Any amount'}
       </p>
-      <p className="w-full break-all text-center font-mono text-xs text-ink">
+      {/* The address in its own framed strip: the full string, never
+          truncated — a receiver who cannot see the whole address
+          cannot check it. The strip's border is the frame; the card
+          stays paper throughout (no new colours). */}
+      <p
+        data-testid="qr-card-address"
+        className="w-full break-all rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1.5 text-center font-mono text-xs text-ink"
+      >
         {address}
       </p>
-      <p className="flex items-center gap-2">
-        <LogoImage
-          src={tokenLogo}
-          alt={`${tokenSymbol} logo`}
-          fallback={tokenSymbol.trim().slice(0, 4) || '?'}
-        />
-        <LogoImage
-          src={chainLogo}
-          alt={`${config.displayName} logo`}
-          fallback={chainShortLabel(chain).slice(0, 2)}
-          overlap
-        />
-        <span className="text-sm font-semibold text-ink">{label}</span>
-      </p>
+      <p className="text-center text-sm font-semibold text-ink">{label}</p>
       <p className="text-center text-sm text-ink">{subline}</p>
     </div>
   );
