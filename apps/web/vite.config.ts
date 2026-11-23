@@ -17,17 +17,30 @@ import {
 //    frame-ancestors, which only the HTTP header enforces).
 // Dev server headers are deliberately minimal (no CSP): localhost dev is not
 // a deployment target, and a dev CSP would break HMR without protecting users.
+// GitHub Pages (panel-rebuild/pages-base): the <base> tag must match the
+// build base, or relative URLs (e.g. wallet-core.wasm) resolve to the
+// domain root instead of /bawa/. Captured from the resolved config.
+let resolvedBase = '/'
+
 export default defineConfig({
+  // GitHub Pages (panel-rebuild/pages-base): served under /bawa/ —
+  // Vite rewrites asset URLs to this prefix (the plugin below rewrites <base>).
+  base: '/bawa/',
   plugins: [
     react(),
     tailwindcss(),
     {
       name: 'bawa-csp-meta',
+      configResolved(config) {
+        resolvedBase = config.base
+      },
       transformIndexHtml(html, ctx) {
         if (ctx.server) return html
         const meta =
           `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`
-        return html.replace('</head>', `${meta}\n  </head>`)
+        return html
+          .replace('<base href="/" />', `<base href="${resolvedBase}" />`)
+          .replace('</head>', `${meta}\n  </head>`)
       },
     },
   ],
