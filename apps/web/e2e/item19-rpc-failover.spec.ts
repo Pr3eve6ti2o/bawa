@@ -26,16 +26,23 @@ const SOL_BACKUP = '**public.rpc.solanavibestation.com**';
 const ETH_PRIMARY = '**ethereum-rpc.publicnode.com**';
 const ETH_BACKUP_HOST = '1rpc.io';
 
-// Asset rows show the symbol only ("SOL", not "Solana"). A settled
-// row is a link to /assets/<chain>; a failed row is a plain <li>
-// with no link — so rows are located inside the Assets region by
-// the symbol at the start of the row text. (The Popular-chains
-// strip above the list also links to /assets/<chain>, so an
-// unscoped href locator would measure the strip, not the row.)
+// Asset rows show the display name first ("Solana", not "SOL") since
+// Lane A item 12, with the symbol underneath. A settled row is a link
+// to /assets/<chain>; a failed row is a plain <li> with no link — so
+// rows are located inside the Assets region by the display name at the
+// start of the row text. (The Popular-chains strip above the list also
+// links to /assets/<chain>, so an unscoped href locator would measure
+// the strip, not the row.)
+const DISPLAY_NAMES: Record<string, string> = {
+  SOL: 'Solana',
+  ETH: 'Ethereum',
+  BTC: 'Bitcoin',
+};
 function row(page: Page, symbol: string) {
+  const name = DISPLAY_NAMES[symbol] ?? symbol;
   return page
     .getByRole('region', { name: 'Assets' })
-    .locator('li', { hasText: new RegExp(`^${symbol}\\b`) })
+    .locator('li', { hasText: new RegExp(`^${name}\\b`) })
     .first();
 }
 

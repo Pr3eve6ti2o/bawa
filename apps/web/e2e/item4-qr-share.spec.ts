@@ -115,6 +115,9 @@ test('E2E-04 shared/downloaded QR is a real PNG encoding the payment URI', async
   await createTestWallet(page);
   await gotoInApp(page, 'Receive');
   await page.getByRole('button', { name: /Ethereum · ETH/ }).click();
+  // Item 20 stepped flow: the chain button lands on the token step;
+  // the native coin opens the details step where the QR renders.
+  await page.getByRole('button', { name: /Ethereum · ETH/ }).click();
 
   // Ground truth: the payment URI the on-screen QR was rendered from.
   const qrTitle = page.locator('div.bg-paper svg title').first();

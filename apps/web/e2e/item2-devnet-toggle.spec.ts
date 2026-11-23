@@ -13,7 +13,14 @@ import { createTestWallet, gotoInApp, setupMaskedScreenshots } from './helpers';
 setupMaskedScreenshots();
 
 async function btcAddress(page: Page): Promise<string> {
-  await gotoInApp(page, 'Receive');
+  // Full load: the Receive screen keeps its step in SPA state, so a
+  // second visit would land on the details step with no chain button.
+  // A reload resets the stepped flow to step 1; the vault auto-unlocks
+  // and the devnet flag persists.
+  await page.goto('/receive');
+  await page.getByRole('button', { name: /Bitcoin · BTC/ }).click();
+  // Item 20 stepped flow: the chain button lands on the token step;
+  // the native coin opens the details step where the QR address shows.
   await page.getByRole('button', { name: /Bitcoin · BTC/ }).click();
   // The QR card shows the selected chain's address as a mono paragraph.
   const address = page.locator('p.font-mono', { hasText: /^(bc1q|tb1q)/ }).first();
