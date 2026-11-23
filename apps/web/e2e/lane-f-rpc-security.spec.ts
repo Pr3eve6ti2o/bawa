@@ -22,7 +22,7 @@ import { createTestWallet, gotoInApp, setupMaskedScreenshots } from './helpers';
 setupMaskedScreenshots();
 
 const ETH_PRIMARY_HOST = 'ethereum-rpc.publicnode.com';
-const ETH_BACKUP_HOST = '1rpc.io';
+const ETH_BACKUP_HOST = 'eth.drpc.org'; // Lane A: 1rpc.io answers -32001 usage-limit from this egress; backup is now dRPC (2026-11-24).
 const FLASHBOTS_HOST = 'rpc.flashbots.net';
 
 /** The RPC-manager row for a chain: the Mainnet card rows never mention Primary. */
@@ -90,12 +90,12 @@ test('E2E-LANE-F switching Ethereum to its backup refreshes the balance from the
   // straggler may legitimately precede it, so the test asserts the
   // backup is asked at all, which only the switch can cause.)
   expect(ethHostsAfter(requests, clickMs)).toContain(ETH_BACKUP_HOST);
-  // The badge follows the switch: 1rpc.io is Primary now.
+  // The badge follows the switch: eth.drpc.org is Primary now.
   await expect(ethRow).toContainText(ETH_BACKUP_HOST);
   const primary = ethRow.locator('span', { exact: true, hasText: 'Primary' });
   await expect(primary.first()).toBeVisible();
   // The row names the host that actually answered the last balance.
-  await expect(ethRow).toContainText(/Last balance from (1rpc\.io|ethereum-rpc\.publicnode\.com)/, {
+  await expect(ethRow).toContainText(/Last balance from (eth\.drpc\.org|ethereum-rpc\.publicnode\.com)/, {
     timeout: 60_000,
   });
 });
@@ -150,7 +150,7 @@ test('E2E-LANE-F a one-tap custom RPC takes effect live', async ({ page }) => {
   // switch can cause a request there.
   expect(ethHostsAfter(requests, clickMs)).toContain(FLASHBOTS_HOST);
   await expect(ethRow).toContainText(
-    /Last balance from (rpc\.flashbots\.net|ethereum-rpc\.publicnode\.com|1rpc\.io)/,
+    /Last balance from (rpc\.flashbots\.net|ethereum-rpc\.publicnode\.com|eth\.drpc\.org)/,
     { timeout: 60_000 },
   );
 });

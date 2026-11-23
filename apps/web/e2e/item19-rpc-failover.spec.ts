@@ -16,6 +16,9 @@
 // Proofs in this spec: ETH falls back to 1rpc, Solana falls back to
 // Vibe Station, blocking both of a pair fails honestly while Bitcoin
 // is unaffected, and the RPC manager adds/removes a custom RPC.
+// Correction 2026-11-24 (FIX-ALL Lane A + merge lane): the ETH backup
+// is now https://eth.drpc.org — 1rpc.io answers -32001 "usage limit"
+// from this egress (twice). The assertions below now expect dRPC.
 import { expect, test, type Page } from '@playwright/test';
 import { createTestWallet, gotoInApp, setupMaskedScreenshots } from './helpers';
 
@@ -24,7 +27,7 @@ setupMaskedScreenshots();
 const SOL_PRIMARY = '**solana-rpc.publicnode.com**';
 const SOL_BACKUP = '**public.rpc.solanavibestation.com**';
 const ETH_PRIMARY = '**ethereum-rpc.publicnode.com**';
-const ETH_BACKUP_HOST = '1rpc.io';
+const ETH_BACKUP_HOST = 'eth.drpc.org';
 
 // Asset rows show the display name first ("Solana", not "SOL") since
 // Lane A item 12, with the symbol underneath. A settled row is a link
