@@ -9,6 +9,12 @@
 
 **One plain request in, a real, buildable wallet project out.**
 
+![Bawa architecture: purpose, HD core, vault, providers, outputs, send flow and storage](docs/diagrams/architecture.svg)
+
+![One phrase, one account, 22 chains](docs/diagrams/explainer.svg)
+
+How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
+
 **[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of this branch.
 
 **22 chains** enabled in the example wallet · **168 chains** in the guide · **21 default tokens** · **440 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
@@ -38,12 +44,6 @@ npm run preview
 ```
 
 Then open <http://localhost:4173>. No account, no API key, no funds needed — everything runs locally, and broadcast stays disabled so the wallet cannot send funds.
-
-![Bawa architecture: guide, HD core, vault, providers, flows and storage](docs/diagrams/architecture.svg)
-
-![One phrase, one account, 22 chains](docs/diagrams/explainer.svg)
-
-How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
 
 Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. Give it one plain request — "Create a Web wallet" — and it produces a real project from resources that actually exist: real derivation, real balances and prices from public endpoints, no invented figures, no fake money. The example wallet cannot send funds: broadcast stays disabled. It is written for two readers: a developer — or an AI agent — building a wallet from scratch, and anyone who wants to understand how a self-custodial wallet actually works. If you want a wallet to hold funds, this is not it — see [If you want a wallet to use](#if-you-want-a-wallet-to-use). Unlike a generated wallet tutorial, every step resolves to something real — a file in this repo, an entry in the registry, or a public endpoint. Nothing in the guide is a placeholder. What it cannot do is stated as plainly as what it can: the [mainnet gap assessment](docs/archive/mainnet-gap-assessment.md) and [Security and honest limits](#security-and-honest-limits) list the gaps instead of hiding them.
 

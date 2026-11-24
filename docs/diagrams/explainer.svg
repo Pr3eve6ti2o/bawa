@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="400" height="660" viewBox="0 0 400 660" role="img" aria-labelledby="expTitle expDesc">
   <title id="expTitle">One phrase, one account, 22 chains</title>
-  <desc id="expDesc">One 24-word recovery phrase creates one HD wallet account, which derives one address on each of 22 chains. The 16 EVM chains all derive m/44'/60'/0'/0/0, so they share one address; the other six have their own paths. TON and SOL use Ed25519, the rest use secp256k1 — one literal pubkey for all chains is impossible in any standards-compliant wallet. Chain labels use the wallet registry's own native symbols.</desc>
+  <desc id="expDesc">Bawa is an HD-wallet reference and AI Wallet Builder: one 24-word recovery phrase creates one HD wallet account, which derives one address on each of 22 chains. The 16 EVM chains all derive m/44'/60'/0'/0/0, so they share one address; the other six have their own paths. TON and SOL use Ed25519, the rest use secp256k1 — one literal pubkey for all chains is impossible in any standards-compliant wallet. Chain labels use the wallet registry's own native symbols. The web wallet is one example output — the HD wallet stands alone; Android and more wallets are planned.</desc>
   <style>
     .t { font-family: "Baloo 2", "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
     .b { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
@@ -20,79 +20,79 @@
 
   <rect x="0" y="0" width="400" height="660" fill="#FFFDF7"/>
 
-  <text class="t" x="200" y="28" font-size="17.5" font-weight="700" text-anchor="middle">One phrase → one account → 22 chains</text>
-  <path d="M120,38 q10,-4 20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0" fill="none" stroke="#FF6B4A" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Purpose line -->
+  <text class="t" x="200" y="26" font-size="14.5" font-weight="700" text-anchor="middle">Bawa — an HD-wallet reference + AI Wallet Builder</text>
+  <text class="b" x="200" y="42" font-size="10.5" text-anchor="middle">One 24-word phrase, one account, 22 chains.</text>
+  <path d="M120,50 q10,-4 20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0" fill="none" stroke="#FF6B4A" stroke-width="2.5" stroke-linecap="round"/>
 
   <!-- Phrase card -->
-  <rect class="card" x="16" y="50" width="368" height="64" rx="12"/>
-  <rect x="30" y="61" width="11" height="11" rx="2" fill="#FF6B4A"/>
-  <text class="t" x="48" y="72" font-size="13.5" font-weight="700">24-word recovery phrase</text>
-  <text class="b" x="30" y="90" font-size="10.5">BIP-39 · made in your browser, never leaves it</text>
+  <rect class="card" x="16" y="58" width="368" height="64" rx="12"/>
+  <rect x="30" y="69" width="11" height="11" rx="2" fill="#FF6B4A"/>
+  <text class="t" x="48" y="80" font-size="13.5" font-weight="700">24-word recovery phrase</text>
+  <text class="b" x="30" y="98" font-size="10.5">BIP-39 · made in your browser, never leaves it</text>
   <g fill="#FFD93B" stroke="#2B2B2B" stroke-width="1">
-    <rect x="30" y="98" width="8" height="8" rx="2"/><rect x="43" y="98" width="8" height="8" rx="2"/><rect x="56" y="98" width="8" height="8" rx="2"/><rect x="69" y="98" width="8" height="8" rx="2"/><rect x="82" y="98" width="8" height="8" rx="2"/><rect x="95" y="98" width="8" height="8" rx="2"/><rect x="108" y="98" width="8" height="8" rx="2"/><rect x="121" y="98" width="8" height="8" rx="2"/><rect x="134" y="98" width="8" height="8" rx="2"/><rect x="147" y="98" width="8" height="8" rx="2"/><rect x="160" y="98" width="8" height="8" rx="2"/><rect x="173" y="98" width="8" height="8" rx="2"/><rect x="186" y="98" width="8" height="8" rx="2"/><rect x="199" y="98" width="8" height="8" rx="2"/><rect x="212" y="98" width="8" height="8" rx="2"/><rect x="225" y="98" width="8" height="8" rx="2"/><rect x="238" y="98" width="8" height="8" rx="2"/><rect x="251" y="98" width="8" height="8" rx="2"/><rect x="264" y="98" width="8" height="8" rx="2"/><rect x="277" y="98" width="8" height="8" rx="2"/><rect x="290" y="98" width="8" height="8" rx="2"/><rect x="303" y="98" width="8" height="8" rx="2"/><rect x="316" y="98" width="8" height="8" rx="2"/><rect x="329" y="98" width="8" height="8" rx="2"/>
+    <rect x="30" y="106" width="8" height="8" rx="2"/><rect x="43" y="106" width="8" height="8" rx="2"/><rect x="56" y="106" width="8" height="8" rx="2"/><rect x="69" y="106" width="8" height="8" rx="2"/><rect x="82" y="106" width="8" height="8" rx="2"/><rect x="95" y="106" width="8" height="8" rx="2"/><rect x="108" y="106" width="8" height="8" rx="2"/><rect x="121" y="106" width="8" height="8" rx="2"/><rect x="134" y="106" width="8" height="8" rx="2"/><rect x="147" y="106" width="8" height="8" rx="2"/><rect x="160" y="106" width="8" height="8" rx="2"/><rect x="173" y="106" width="8" height="8" rx="2"/><rect x="186" y="106" width="8" height="8" rx="2"/><rect x="199" y="106" width="8" height="8" rx="2"/><rect x="212" y="106" width="8" height="8" rx="2"/><rect x="225" y="106" width="8" height="8" rx="2"/><rect x="238" y="106" width="8" height="8" rx="2"/><rect x="251" y="106" width="8" height="8" rx="2"/><rect x="264" y="106" width="8" height="8" rx="2"/><rect x="277" y="106" width="8" height="8" rx="2"/><rect x="290" y="106" width="8" height="8" rx="2"/><rect x="303" y="106" width="8" height="8" rx="2"/><rect x="316" y="106" width="8" height="8" rx="2"/><rect x="329" y="106" width="8" height="8" rx="2"/>
   </g>
 
   <!-- Arrow 1 -->
-  <path class="arrow" d="M200,114 L200,132" marker-end="url(#ah2)"/>
-  <text class="lbl" x="208" y="127" font-size="10.5">derives</text>
+  <path class="arrow" d="M200,122 L200,140" marker-end="url(#ah2)"/>
+  <text class="lbl" x="208" y="135" font-size="10.5">derives</text>
 
   <!-- Account card -->
-  <rect class="card" x="16" y="134" width="368" height="68" rx="12"/>
-  <rect x="30" y="145" width="11" height="11" rx="2" fill="#FFD93B" stroke="#2B2B2B" stroke-width="1.5"/>
-  <text class="t" x="48" y="156" font-size="13.5" font-weight="700">One account — one HD wallet</text>
-  <text class="m" x="30" y="176" font-size="10.5">createWallet(passphrase = '') · 32 random bytes</text>
-  <text class="m" x="30" y="193" font-size="10.5">HDWallet.createWithEntropy(entropy, passphrase)</text>
+  <rect class="card" x="16" y="142" width="368" height="68" rx="12"/>
+  <rect x="30" y="153" width="11" height="11" rx="2" fill="#FFD93B" stroke="#2B2B2B" stroke-width="1.5"/>
+  <text class="t" x="48" y="164" font-size="13.5" font-weight="700">One account — one HD wallet</text>
+  <text class="m" x="30" y="184" font-size="10.5">createWallet(passphrase = '') · 32 random bytes</text>
+  <text class="m" x="30" y="201" font-size="10.5">HDWallet.createWithEntropy(entropy, passphrase)</text>
 
   <!-- Arrow 2 -->
-  <path class="arrow" d="M200,202 L200,220" marker-end="url(#ah2)"/>
-  <text class="lbl" x="208" y="215" font-size="10.5">22 addresses</text>
+  <path class="arrow" d="M200,210 L200,228" marker-end="url(#ah2)"/>
+  <text class="lbl" x="208" y="223" font-size="10.5">22 addresses</text>
 
   <!-- Derivation panel -->
-  <rect class="card" x="16" y="222" width="368" height="96" rx="12"/>
-  <text class="t" x="30" y="242" font-size="12.5" font-weight="700">Derivation — one HDWallet, one address per chain</text>
-  <text class="m" x="30" y="261" font-size="10.5">16 EVM · m/44'/60'/0'/0/0 — one shared address</text>
-  <text class="m" x="30" y="277" font-size="10.5">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0</text>
-  <text class="m" x="30" y="293" font-size="10.5">DOGE m/44'/3'/0'/0/0 · TRX m/44'/195'/0'/0/0</text>
-  <text class="m" x="30" y="309" font-size="10.5">TON m/44'/607'/0' · SOL m/44'/501'/0' — Ed25519</text>
+  <rect class="card" x="16" y="230" width="368" height="96" rx="12"/>
+  <text class="t" x="30" y="250" font-size="12.5" font-weight="700">Derivation — one HDWallet, one address per chain</text>
+  <text class="m" x="30" y="269" font-size="10.5">16 EVM · m/44'/60'/0'/0/0 — one shared address</text>
+  <text class="m" x="30" y="285" font-size="10.5">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0</text>
+  <text class="m" x="30" y="301" font-size="10.5">DOGE m/44'/3'/0'/0/0 · TRX m/44'/195'/0'/0/0</text>
+  <text class="m" x="30" y="317" font-size="10.5">TON m/44'/607'/0' · SOL m/44'/501'/0' — Ed25519</text>
 
   <!-- Chains -->
-  <text class="t" x="16" y="340" font-size="13.5" font-weight="700">22 chains</text>
-  <text class="b" x="384" y="340" font-size="10.5" text-anchor="end">pale yellow = EVM · one shared address</text>
+  <text class="t" x="16" y="348" font-size="13.5" font-weight="700">22 chains</text>
+  <text class="b" x="384" y="348" font-size="10.5" text-anchor="end">pale yellow = EVM · one shared address</text>
   <g font-size="9.5">
-    <rect class="chip" x="16" y="348" width="180" height="14" rx="6"/><text class="b" x="24" y="358.5">Bitcoin · BTC</text>
-    <rect class="chipEvm" x="204" y="348" width="180" height="14" rx="6"/><text class="b" x="212" y="358.5">Ethereum · ETH</text>
-    <rect class="chip" x="16" y="364" width="180" height="14" rx="6"/><text class="b" x="24" y="374.5">TRON · TRX</text>
-    <rect class="chip" x="204" y="364" width="180" height="14" rx="6"/><text class="b" x="212" y="374.5">TON · TON</text>
-    <rect class="chip" x="16" y="380" width="180" height="14" rx="6"/><text class="b" x="24" y="390.5">Solana · SOL</text>
-    <rect class="chipEvm" x="204" y="380" width="180" height="14" rx="6"/><text class="b" x="212" y="390.5">BNB Smart Chain · BNB</text>
-    <rect class="chipEvm" x="16" y="396" width="180" height="14" rx="6"/><text class="b" x="24" y="406.5">Polygon · POL</text>
-    <rect class="chipEvm" x="204" y="396" width="180" height="14" rx="6"/><text class="b" x="212" y="406.5">Arbitrum One · ETH</text>
-    <rect class="chipEvm" x="16" y="412" width="180" height="14" rx="6"/><text class="b" x="24" y="422.5">OP Mainnet · ETH</text>
-    <rect class="chipEvm" x="204" y="412" width="180" height="14" rx="6"/><text class="b" x="212" y="422.5">Base · ETH</text>
-    <rect class="chipEvm" x="16" y="428" width="180" height="14" rx="6"/><text class="b" x="24" y="438.5">Avalanche C-Chain · AVAX</text>
-    <rect class="chip" x="204" y="428" width="180" height="14" rx="6"/><text class="b" x="212" y="438.5">Litecoin · LTC</text>
-    <rect class="chip" x="16" y="444" width="180" height="14" rx="6"/><text class="b" x="24" y="454.5">Dogecoin · DOGE</text>
-    <rect class="chipEvm" x="204" y="444" width="180" height="14" rx="6"/><text class="b" x="212" y="454.5">Gnosis · XDAI</text>
-    <rect class="chipEvm" x="16" y="460" width="180" height="14" rx="6"/><text class="b" x="24" y="470.5">Celo · CELO</text>
-    <rect class="chipEvm" x="204" y="460" width="180" height="14" rx="6"/><text class="b" x="212" y="470.5">Linea · ETH</text>
-    <rect class="chipEvm" x="16" y="476" width="180" height="14" rx="6"/><text class="b" x="24" y="486.5">Mantle · MNT</text>
-    <rect class="chipEvm" x="204" y="476" width="180" height="14" rx="6"/><text class="b" x="212" y="486.5">Scroll · ETH</text>
-    <rect class="chipEvm" x="16" y="492" width="180" height="14" rx="6"/><text class="b" x="24" y="502.5">opBNB · BNB</text>
-    <rect class="chipEvm" x="204" y="492" width="180" height="14" rx="6"/><text class="b" x="212" y="502.5">Metis · METIS</text>
-    <rect class="chipEvm" x="16" y="508" width="180" height="14" rx="6"/><text class="b" x="24" y="518.5">Aurora · ETH</text>
-    <rect class="chipEvm" x="204" y="508" width="180" height="14" rx="6"/><text class="b" x="212" y="518.5">Fantom · FTM</text>
+    <rect class="chip" x="16" y="356" width="180" height="14" rx="6"/><text class="b" x="24" y="366.5">Bitcoin · BTC</text>
+    <rect class="chipEvm" x="204" y="356" width="180" height="14" rx="6"/><text class="b" x="212" y="366.5">Ethereum · ETH</text>
+    <rect class="chip" x="16" y="372" width="180" height="14" rx="6"/><text class="b" x="24" y="382.5">TRON · TRX</text>
+    <rect class="chip" x="204" y="372" width="180" height="14" rx="6"/><text class="b" x="212" y="382.5">TON · TON</text>
+    <rect class="chip" x="16" y="388" width="180" height="14" rx="6"/><text class="b" x="24" y="398.5">Solana · SOL</text>
+    <rect class="chipEvm" x="204" y="388" width="180" height="14" rx="6"/><text class="b" x="212" y="398.5">BNB Smart Chain · BNB</text>
+    <rect class="chipEvm" x="16" y="404" width="180" height="14" rx="6"/><text class="b" x="24" y="414.5">Polygon · POL</text>
+    <rect class="chipEvm" x="204" y="404" width="180" height="14" rx="6"/><text class="b" x="212" y="414.5">Arbitrum One · ETH</text>
+    <rect class="chipEvm" x="16" y="420" width="180" height="14" rx="6"/><text class="b" x="24" y="430.5">OP Mainnet · ETH</text>
+    <rect class="chipEvm" x="204" y="420" width="180" height="14" rx="6"/><text class="b" x="212" y="430.5">Base · ETH</text>
+    <rect class="chipEvm" x="16" y="436" width="180" height="14" rx="6"/><text class="b" x="24" y="446.5">Avalanche C-Chain · AVAX</text>
+    <rect class="chip" x="204" y="436" width="180" height="14" rx="6"/><text class="b" x="212" y="446.5">Litecoin · LTC</text>
+    <rect class="chip" x="16" y="452" width="180" height="14" rx="6"/><text class="b" x="24" y="462.5">Dogecoin · DOGE</text>
+    <rect class="chipEvm" x="204" y="452" width="180" height="14" rx="6"/><text class="b" x="212" y="462.5">Gnosis · XDAI</text>
+    <rect class="chipEvm" x="16" y="468" width="180" height="14" rx="6"/><text class="b" x="24" y="478.5">Celo · CELO</text>
+    <rect class="chipEvm" x="204" y="468" width="180" height="14" rx="6"/><text class="b" x="212" y="478.5">Linea · ETH</text>
+    <rect class="chipEvm" x="16" y="484" width="180" height="14" rx="6"/><text class="b" x="24" y="494.5">Mantle · MNT</text>
+    <rect class="chipEvm" x="204" y="484" width="180" height="14" rx="6"/><text class="b" x="212" y="494.5">Scroll · ETH</text>
+    <rect class="chipEvm" x="16" y="500" width="180" height="14" rx="6"/><text class="b" x="24" y="510.5">opBNB · BNB</text>
+    <rect class="chipEvm" x="204" y="500" width="180" height="14" rx="6"/><text class="b" x="212" y="510.5">Metis · METIS</text>
+    <rect class="chipEvm" x="16" y="516" width="180" height="14" rx="6"/><text class="b" x="24" y="526.5">Aurora · ETH</text>
+    <rect class="chipEvm" x="204" y="516" width="180" height="14" rx="6"/><text class="b" x="212" y="526.5">Fantom · FTM</text>
   </g>
 
   <!-- Honest limit -->
-  <rect class="limit" x="16" y="536" width="368" height="58" rx="10"/>
-  <text class="b" x="30" y="556" font-size="10.5">One literal pubkey for all chains is impossible in any</text>
-  <text class="b" x="30" y="570" font-size="10.5">standards-compliant wallet: TON and SOL use Ed25519;</text>
-  <text class="b" x="30" y="584" font-size="10.5">the others use secp256k1, with different address formats.</text>
+  <rect class="limit" x="16" y="544" width="368" height="58" rx="10"/>
+  <text class="b" x="30" y="564" font-size="10.5">One literal pubkey for all chains is impossible in any</text>
+  <text class="b" x="30" y="578" font-size="10.5">standards-compliant wallet: TON and SOL use Ed25519;</text>
+  <text class="b" x="30" y="592" font-size="10.5">the others use secp256k1, with different address formats.</text>
 
-  <!-- Features -->
-  <g font-size="11">
-    <text class="b" x="16" y="612"><tspan fill="#FF6B4A" font-weight="700">✓</tspan> Self-custodial — keys stay on your device</text>
-    <text class="b" x="16" y="629"><tspan fill="#FF6B4A" font-weight="700">✓</tspan> Real balances &amp; prices — never invented</text>
-    <text class="b" x="16" y="646"><tspan fill="#FF6B4A" font-weight="700">✓</tspan> Broadcast disabled — it cannot move funds</text>
-  </g>
+  <!-- Footer -->
+  <text class="b" x="16" y="620" font-size="10.5">Web wallet is one example output — the HD wallet stands alone;</text>
+  <text class="b" x="16" y="634" font-size="10.5">Android + more wallets planned.</text>
+  <text class="b" x="16" y="652" font-size="10.5">Self-custodial · Real balances &amp; prices · Broadcast disabled</text>
 </svg>
