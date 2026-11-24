@@ -1,0 +1,1 @@
+function e(e){return typeof e[0]==`string`?n(e):t(e)}function t(e){let t=0;for(let n of e)t+=n.length;let n=new Uint8Array(t),r=0;for(let t of e)n.set(t,r),r+=t.length;return n}function n(e){let t=``;for(let n of e)t+=n.startsWith(`0x`)?n.slice(2):n.replace(`0x`,``);return`0x${t}`}export{n,e as t};
