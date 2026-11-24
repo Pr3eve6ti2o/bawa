@@ -853,134 +853,251 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshBalances = useCallback(async () => {
+    // Lane PERF: do not load the adapters chunk when no chain can fetch.
+    // loadAdapters() pulls in the ~294 KB adapters chunk (viem + all
+    // adapters); the old code called it before any per-chain check, so
+    // a refresh with no fetchable chain - no verified adapter plus an
+    // address - downloaded the chunk only to resolve every chain to
+    // 'unavailable' with zero network calls. The check below mirrors
+    // the per-chain gate exactly (verified capability + a real address),
+    // so the early return resolves every chain the same way the full
+    // path would have, without the chunk.
+    const addressFor = (chain: ChainId): string | undefined =>
+      current.current.vaultAddresses[chain][0] ??
+      current.current.addresses[chain][0]?.address;
+    const canFetch = ALL_CHAIN_IDS.some(
+      (chain) => availableFor('balance').includes(chain) && Boolean(addressFor(chain)),
+    );
+    if (!canFetch) {
+      const startMerge: Partial<Record<ChainId, BalanceState>> = {};
+      for (const chain of ALL_CHAIN_IDS) {
+        startMerge[chain] = !availableFor('balance').includes(chain)
+          ? { status: 'unavailable', reason: 'no-adapter' }
+          : { status: 'unavailable', reason: 'no-address' };
+      }
+      update(previous => ({
+        ...previous,
+        balances: { ...previous.balances, ...startMerge },
+      }));
+      return;
+    }
     const { resolveAdapter } = await loadAdapters();
     // Every chain in the registry resolves out of the initial 'loading'
     // state here — not just the four balance chains — so no chain is left
     // showing a first-load skeleton forever. Chains without a verified
     // balance adapter resolve to unavailable/no-adapter below.
-    await Promise.all(ALL_CHAIN_IDS.map(async (chain) => {
+    //
+    // Lane PERF: batch the state writes. The old code called update()
+    // once per chain at start (loading/refreshing) and once per chain as
+    // each fetch landed - up to ~44 provider updates per refresh, each
+    // re-rendering every consumer (all 43 dashboard rows). Now one
+    // update carries the start states + immediate resolutions, and one
+    // update merges all fetched results. The per-chain request counters
+    // still guard every write: a result merges only if its chain's
+    // counter has not moved on since the fetch started.
+    const requests: Partial<Record<ChainId, number>> = {};
+    const startMerge: Partial<Record<ChainId, BalanceState>> = {};
+    const results: Partial<Record<ChainId, BalanceState>> = {};
+    const pending: Array<Promise<void> | null> = ALL_CHAIN_IDS.map((chain) => {
       const request = ++balanceRequests.current[chain];
-      const setBalance = (balance: BalanceState) => {
-        if (request !== balanceRequests.current[chain]) return;
-        update(previous => ({
-          ...previous,
-          balances: { ...previous.balances, [chain]: balance },
-        }));
-      };
+      requests[chain] = request;
       if (!availableFor('balance').includes(chain)) {
-        setBalance({ status: 'unavailable', reason: 'no-adapter' });
-        return;
+        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
+        return null;
       }
       const adapter = resolveAdapter(chain);
       if (!adapter) {
-        setBalance({ status: 'unavailable', reason: 'no-adapter' });
-        return;
+        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
+        return null;
       }
       const address =
         current.current.vaultAddresses[chain][0] ??
         current.current.addresses[chain][0]?.address;
       if (!address) {
-        setBalance({ status: 'unavailable', reason: 'no-address' });
-        return;
+        startMerge[chain] = { status: 'unavailable', reason: 'no-address' };
+        return null;
       }
       const previous = current.current.balances[chain];
       const hasLastGood = previous.status === 'available' || previous.status === 'zero';
       if (hasLastGood) {
-        setBalance({ ...previous, refreshing: true, stale: false });
+        startMerge[chain] = { ...previous, refreshing: true, stale: false };
       } else if (previous.status !== 'loading') {
-        setBalance({ status: 'loading' });
+        startMerge[chain] = { status: 'loading' };
       }
-      const result = await refreshLimiter.current.run(() =>
-        fetchWithRetry(() => adapter.getBalance(address)),
-      );
-      if (request !== balanceRequests.current[chain]) return;
-      if (result.status === 'ok') {
-        const fetchedAtMs = Date.now();
-        // Lane F (FIX-ALL): keep the answering host on the state, so
-        // the Networks screen can show which RPC served this balance
-        // (result.source is the adapter's answering endpoint — the
-        // failover loop reports its own hostname, never the primary).
-        const next = {
-          ...balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs),
-          source: result.source,
-        };
-        setBalance(next);
-        try {
-          const cached = readCachedBalances();
-          cached[chain] = {
-            address,
-            status: next.status === 'zero' ? 'zero' : 'available',
-            value: next.value ?? '0',
-            fetchedAtMs,
+      return (async () => {
+        const result = await refreshLimiter.current.run(() =>
+          fetchWithRetry(() => adapter.getBalance(address)),
+        );
+        if (request !== balanceRequests.current[chain]) return;
+        if (result.status === 'ok') {
+          const fetchedAtMs = Date.now();
+          // Lane F (FIX-ALL): keep the answering host on the state, so
+          // the Networks screen can show which RPC served this balance
+          // (result.source is the adapter's answering endpoint — the
+          // failover loop reports its own hostname, never the primary).
+          const next = {
+            ...balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs),
+            source: result.source,
           };
-          saveCachedBalances(cached);
-        } catch {
-          // Cache writes are best-effort.
+          results[chain] = next;
+          try {
+            const cached = readCachedBalances();
+            cached[chain] = {
+              address,
+              status: next.status === 'zero' ? 'zero' : 'available',
+              value: next.value ?? '0',
+              fetchedAtMs,
+            };
+            saveCachedBalances(cached);
+          } catch {
+            // Cache writes are best-effort.
+          }
+        } else if (hasLastGood) {
+          results[chain] = { ...previous, refreshing: false, stale: true, reason: result.reason };
+        } else if (result.status === 'unavailable') {
+          results[chain] = { status: 'unavailable', reason: result.reason };
+        } else {
+          results[chain] = { status: 'error', reason: result.reason };
         }
-      } else if (hasLastGood) {
-        setBalance({ ...previous, refreshing: false, stale: true, reason: result.reason });
-      } else if (result.status === 'unavailable') {
-        setBalance({ status: 'unavailable', reason: result.reason });
-      } else {
-        setBalance({ status: 'error', reason: result.reason });
+      })();
+    });
+    // Immediate resolutions + start states land in one update, before
+    // any fetch completes - a chain with no adapter/address resolves at
+    // once, exactly as before, instead of waiting behind the slowest
+    // fetch.
+    if (Object.keys(startMerge).length > 0) {
+      update(previous => ({
+        ...previous,
+        balances: { ...previous.balances, ...startMerge },
+      }));
+    }
+    const settled = await Promise.allSettled(
+      pending.filter((task): task is Promise<void> => task !== null),
+    );
+    // Merge only chains whose request counter has not moved on since
+    // their fetch started; a newer refresh owns those chains now.
+    const freshResults: Partial<Record<ChainId, BalanceState>> = {};
+    for (const chain of ALL_CHAIN_IDS) {
+      const result = results[chain];
+      if (result !== undefined && balanceRequests.current[chain] === requests[chain]) {
+        freshResults[chain] = result;
       }
-    }));
+    }
+    if (Object.keys(freshResults).length > 0) {
+      update(previous => ({
+        ...previous,
+        balances: { ...previous.balances, ...freshResults },
+      }));
+    }
+    // Preserve the old rejection contract: a chain whose fetch threw
+    // rejects the refresh (callers catch it), but only after the other
+    // chains' results have landed.
+    for (const entry of settled) {
+      if (entry.status === 'rejected') throw entry.reason;
+    }
   }, [update, loadAdapters]);
 
   const refreshHistory = useCallback(async () => {
+    // Lane PERF: same no-fetch early return as refreshBalances - do not
+    // load the adapters chunk when no chain has a verified history
+    // capability plus a real address.
+    const addressFor = (chain: ChainId): string | undefined =>
+      current.current.vaultAddresses[chain][0] ??
+      current.current.addresses[chain][0]?.address;
+    const canFetch = ALL_CHAIN_IDS.some(
+      (chain) => availableFor('history').includes(chain) && Boolean(addressFor(chain)),
+    );
+    if (!canFetch) {
+      const startMerge: Partial<Record<ChainId, HistoryState>> = {};
+      for (const chain of ALL_CHAIN_IDS) {
+        startMerge[chain] = !availableFor('history').includes(chain)
+          ? { status: 'unavailable', reason: 'no-adapter', txs: [] }
+          : { status: 'unavailable', reason: 'no-address', txs: [] };
+      }
+      update(previous => ({
+        ...previous,
+        history: { ...previous.history, ...startMerge },
+      }));
+      return;
+    }
     const { resolveAdapter } = await loadAdapters();
     // See refreshBalances: every chain resolves out of 'loading' here.
-    await Promise.all(ALL_CHAIN_IDS.map(async (chain) => {
+    // Lane PERF: same batching as refreshBalances - one update for the
+    // start states + immediate resolutions, one for all fetched results.
+    const requests: Partial<Record<ChainId, number>> = {};
+    const startMerge: Partial<Record<ChainId, HistoryState>> = {};
+    const results: Partial<Record<ChainId, HistoryState>> = {};
+    const pending: Array<Promise<void> | null> = ALL_CHAIN_IDS.map((chain) => {
       const request = ++historyRequests.current[chain];
-      const setHistory = (history: HistoryState) => {
-        if (request !== historyRequests.current[chain]) return;
-        update(previous => ({
-          ...previous,
-          history: { ...previous.history, [chain]: history },
-        }));
-      };
+      requests[chain] = request;
       if (!availableFor('history').includes(chain)) {
-        setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
-        return;
+        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter', txs: [] };
+        return null;
       }
       const adapter = resolveAdapter(chain);
       if (!adapter) {
-        setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
-        return;
+        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter', txs: [] };
+        return null;
       }
       const address =
         current.current.vaultAddresses[chain][0] ??
         current.current.addresses[chain][0]?.address;
       if (!address) {
-        setHistory({ status: 'unavailable', reason: 'no-address', txs: [] });
-        return;
+        startMerge[chain] = { status: 'unavailable', reason: 'no-address', txs: [] };
+        return null;
       }
       const previous = current.current.history[chain];
       const hasLastGood = previous.status === 'loaded' || previous.status === 'empty';
       if (hasLastGood) {
-        setHistory({ ...previous, refreshing: true, stale: false });
+        startMerge[chain] = { ...previous, refreshing: true, stale: false };
       } else if (previous.status !== 'loading') {
-        setHistory({ status: 'loading', txs: [] });
+        startMerge[chain] = { status: 'loading', txs: [] };
       }
-      const result = await refreshLimiter.current.run(() =>
-        fetchWithRetry(() => adapter.getHistory(address, 25)),
-      );
-      if (request !== historyRequests.current[chain]) return;
-      if (result.status === 'ok') {
-        const fetchedAtMs = Date.now();
-        setHistory(
-          result.data.length === 0
-            ? { status: 'empty', txs: [], fetchedAtMs }
-            : { status: 'loaded', txs: result.data, fetchedAtMs },
+      return (async () => {
+        const result = await refreshLimiter.current.run(() =>
+          fetchWithRetry(() => adapter.getHistory(address, 25)),
         );
-      } else if (hasLastGood) {
-        setHistory({ ...previous, refreshing: false, stale: true, reason: result.reason });
-      } else if (result.status === 'unavailable') {
-        setHistory({ status: 'unavailable', reason: result.reason, txs: [] });
-      } else {
-        setHistory({ status: 'error', reason: result.reason, txs: [] });
+        if (request !== historyRequests.current[chain]) return;
+        if (result.status === 'ok') {
+          const fetchedAtMs = Date.now();
+          results[chain] =
+            result.data.length === 0
+              ? { status: 'empty', txs: [], fetchedAtMs }
+              : { status: 'loaded', txs: result.data, fetchedAtMs };
+        } else if (hasLastGood) {
+          results[chain] = { ...previous, refreshing: false, stale: true, reason: result.reason };
+        } else if (result.status === 'unavailable') {
+          results[chain] = { status: 'unavailable', reason: result.reason, txs: [] };
+        } else {
+          results[chain] = { status: 'error', reason: result.reason, txs: [] };
+        }
+      })();
+    });
+    if (Object.keys(startMerge).length > 0) {
+      update(previous => ({
+        ...previous,
+        history: { ...previous.history, ...startMerge },
+      }));
+    }
+    const settled = await Promise.allSettled(
+      pending.filter((task): task is Promise<void> => task !== null),
+    );
+    const freshResults: Partial<Record<ChainId, HistoryState>> = {};
+    for (const chain of ALL_CHAIN_IDS) {
+      const result = results[chain];
+      if (result !== undefined && historyRequests.current[chain] === requests[chain]) {
+        freshResults[chain] = result;
       }
-    }));
+    }
+    if (Object.keys(freshResults).length > 0) {
+      update(previous => ({
+        ...previous,
+        history: { ...previous.history, ...freshResults },
+      }));
+    }
+    for (const entry of settled) {
+      if (entry.status === 'rejected') throw entry.reason;
+    }
   }, [update, loadAdapters]);
 
   // Token balances (token discovery): the 7 default tokens plus the
@@ -1003,76 +1120,102 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // are bumped first so an in-flight mainnet refresh cannot land
     // after this and overwrite the devnet state.
     if (devnetEnabledRef.current) {
+      // Lane PERF: one update for all devnet tokens, not one per token.
       const devnetTokens = [...DEFAULT_TOKENS, ...current.current.customTokens];
+      const devnetUnavailable: Record<string, BalanceState> = {};
       for (const token of devnetTokens) {
         const key = tokenKeyOf(token);
         tokenBalanceRequests.current[key] =
           (tokenBalanceRequests.current[key] ?? 0) + 1;
-        update((previous) => ({
-          ...previous,
-          tokenBalances: {
-            ...previous.tokenBalances,
-            [key]: { status: 'unavailable', reason: 'devnet-no-tokens' },
-          },
-        }));
+        devnetUnavailable[key] = { status: 'unavailable', reason: 'devnet-no-tokens' };
       }
+      update((previous) => ({
+        ...previous,
+        tokenBalances: { ...previous.tokenBalances, ...devnetUnavailable },
+      }));
       return;
     }
     const { fetchTokenBalance } = await import('../wallet/adapters/token-balances');
     const tokens = [...DEFAULT_TOKENS, ...current.current.customTokens];
-    await Promise.all(tokens.map(async (token) => {
+    // Lane PERF: same batching as refreshBalances - one update for the
+    // start states + immediate resolutions, one for all fetched results.
+    const requests: Record<string, number> = {};
+    const startMerge: Record<string, BalanceState> = {};
+    const results: Record<string, BalanceState> = {};
+    const pending: Array<Promise<void> | null> = tokens.map((token) => {
       const key = tokenKeyOf(token);
       const request = (tokenBalanceRequests.current[key] ?? 0) + 1;
       tokenBalanceRequests.current[key] = request;
-      const setTokenBalance = (balance: BalanceState) => {
-        if (request !== tokenBalanceRequests.current[key]) return;
-        update(previous => ({
-          ...previous,
-          tokenBalances: { ...previous.tokenBalances, [key]: balance },
-        }));
-      };
+      requests[key] = request;
       if (!current.current.enabledChains.includes(token.chain)) {
-        setTokenBalance({ status: 'unavailable', reason: 'disabled' });
-        return;
+        startMerge[key] = { status: 'unavailable', reason: 'disabled' };
+        return null;
       }
       const address =
         current.current.vaultAddresses[token.chain][0] ??
         current.current.addresses[token.chain][0]?.address;
       if (!address) {
-        setTokenBalance({ status: 'unavailable', reason: 'no-address' });
-        return;
+        startMerge[key] = { status: 'unavailable', reason: 'no-address' };
+        return null;
       }
       const previous = current.current.tokenBalances[key];
       const hasLastGood =
         previous !== undefined &&
         (previous.status === 'available' || previous.status === 'zero');
       if (hasLastGood) {
-        setTokenBalance({ ...previous, refreshing: true, stale: false });
+        startMerge[key] = { ...previous, refreshing: true, stale: false };
       } else if (previous === undefined || previous.status !== 'loading') {
-        setTokenBalance({ status: 'loading' });
+        startMerge[key] = { status: 'loading' };
       }
-      const result = await refreshLimiter.current.run(() =>
-        fetchWithRetry(() =>
-          fetchTokenBalance({
-            chain: token.chain,
-            contract: token.contract,
-            ownerAddress: address,
-            decimals: token.decimals,
-          }),
-        ),
-      );
-      if (request !== tokenBalanceRequests.current[key]) return;
-      if (result.status === 'ok') {
-        const next = balanceStateFromValue(result.data.valueBaseUnits, Date.now());
-        setTokenBalance(next);
-      } else if (hasLastGood && previous !== undefined) {
-        setTokenBalance({ ...previous, refreshing: false, stale: true, reason: result.reason });
-      } else if (result.status === 'unavailable') {
-        setTokenBalance({ status: 'unavailable', reason: result.reason });
-      } else {
-        setTokenBalance({ status: 'error', reason: result.reason });
+      return (async () => {
+        const result = await refreshLimiter.current.run(() =>
+          fetchWithRetry(() =>
+            fetchTokenBalance({
+              chain: token.chain,
+              contract: token.contract,
+              ownerAddress: address,
+              decimals: token.decimals,
+            }),
+          ),
+        );
+        if (request !== tokenBalanceRequests.current[key]) return;
+        if (result.status === 'ok') {
+          const next = balanceStateFromValue(result.data.valueBaseUnits, Date.now());
+          results[key] = next;
+        } else if (hasLastGood && previous !== undefined) {
+          results[key] = { ...previous, refreshing: false, stale: true, reason: result.reason };
+        } else if (result.status === 'unavailable') {
+          results[key] = { status: 'unavailable', reason: result.reason };
+        } else {
+          results[key] = { status: 'error', reason: result.reason };
+        }
+      })();
+    });
+    if (Object.keys(startMerge).length > 0) {
+      update(previous => ({
+        ...previous,
+        tokenBalances: { ...previous.tokenBalances, ...startMerge },
+      }));
+    }
+    const settled = await Promise.allSettled(
+      pending.filter((task): task is Promise<void> => task !== null),
+    );
+    const freshResults: Record<string, BalanceState> = {};
+    for (const key of Object.keys(results)) {
+      const result = results[key];
+      if (result !== undefined && tokenBalanceRequests.current[key] === requests[key]) {
+        freshResults[key] = result;
       }
-    }));
+    }
+    if (Object.keys(freshResults).length > 0) {
+      update(previous => ({
+        ...previous,
+        tokenBalances: { ...previous.tokenBalances, ...freshResults },
+      }));
+    }
+    for (const entry of settled) {
+      if (entry.status === 'rejected') throw entry.reason;
+    }
   }, [update]);
 
   // Adding or removing a watch-only wallet re-fetches balances (and
@@ -1739,6 +1882,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         await refreshVaultAccounts().catch(() => {});
       }
     })();
+    // Lane PERF: skip the boot refresh when there is nothing for it
+    // to do. The guard reads STATE, not storage: a stored xpub that
+    // fails validation never becomes an in-state wallet, yet the
+    // initial state still starts that chain at 'loading', and only the
+    // boot refresh resolves it out to 'unavailable'
+    // (wallet-context-lane-g.test: "starts at loading when a stored
+    // xpub may yield an address"). A storage-based guard was tried
+    // first and broke that test: the persistence effect (declared
+    // above, same hydrated commit) overwrites the stored xpubs with
+    // the in-state ones - all null for the invalid key - before this
+    // effect reads storage, so the guard saw "nothing stored" and
+    // skipped the refresh that would have resolved the chain.
+    // The state itself encodes the need: initialWalletState starts
+    // balances/history at 'loading' exactly when a fetch may run, at
+    // 'unavailable' when none can, and restores cached balances as
+    // stale - so a refresh is needed iff some chain is loading or
+    // holds a stale cached value. In the pure no-wallet case every
+    // chain is 'unavailable' with no stale value, so skipping changes
+    // nothing; the re-derivation path above refreshes on its own when
+    // it derives addresses, and a wallet created or added later
+    // refreshes through its own callers (createVaultAccounts, addXpub),
+    // never this effect.
+    const needsBootRefresh = ALL_CHAIN_IDS.some((chain) => {
+      const balance = current.current.balances[chain];
+      const history = current.current.history[chain];
+      return (
+        balance.status === 'loading' ||
+        balance.stale === true ||
+        history.status === 'loading' ||
+        history.stale === true
+      );
+    });
+    if (!needsBootRefresh) return;
     void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
   }, [hydrated, refreshBalances, refreshHistory, refreshVaultAccounts]);
 

@@ -4,10 +4,22 @@
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
-@import "@fontsource-variable/noto-sans/index.css";
-@import "@fontsource/noto-sans-sc/400.css";
-@import "@fontsource/noto-sans-sc/600.css";
-@import "@fontsource/noto-sans-sc/700.css";
+/* Lane PERF: Noto Sans SC ships latin-only subsets (see below). The full
+   weight files carry ~101 @font-face rules each (~105 KB of CSS per
+   weight, ~315 KB total) for CJK/emoji unicode blocks the English-only
+   UI never renders; the built stylesheet was 368 KB, render-blocking
+   on every cold load. Latin glyphs stay (Inter is first in the stack,
+   Noto Sans SC latin is its fallback); any CJK glyph now falls through
+   to system-ui instead of the Noto Sans SC webfont - still rendered,
+   just not in that face. Revert by restoring the three full-weight
+   imports if CJK webfont rendering is ever wanted back.
+   The @fontsource-variable/noto-sans import is dropped too: the
+   "Noto Sans" family is referenced by no font stack in this file
+   (stacks use Inter, Noto Sans SC, Baloo 2), so its 8 @font-face
+   rules were dead CSS. */
+@import "@fontsource/noto-sans-sc/latin-400.css";
+@import "@fontsource/noto-sans-sc/latin-600.css";
+@import "@fontsource/noto-sans-sc/latin-700.css";
 @import "@fontsource-variable/baloo-2/index.css";
 
 @import "tw-animate-css";
