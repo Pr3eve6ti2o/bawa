@@ -96,7 +96,7 @@ P22 stays blocked from here. Its live options remain: retry on
   `utils/challengeWait.ts`, plus the two utils the solvers import
   (`utils/detect.ts`, `utils/deadline.ts`) and `utils/anubis.ts` (imported by
   `detect.ts`). Needs `patchright` + `linkedom` at runtime (see
-  `run-captcha-check/package.json`).
+  `package.json`).
 - `vendors/ytdlnis/` — WebView login + cookie export from YTDLnis (`main`).
   `ui/more/cookies/` (WebViewActivity, incognito variant, CookiesFragment),
   `database/viewmodel/CookieViewModel.kt`, `core/RuntimeManager.kt`,
@@ -106,7 +106,7 @@ P22 stays blocked from here. Its live options remain: retry on
   Video Downloader (`master`). `ui/main/home/browser/` (CustomWebViewClient,
   BrowserFragment, CustomWebChromeClient, `webTab/`), `ui/component/widget/`
   (NestedWebView), `util/CookieUtils.kt`.
-- `run-captcha-check/` — the general runner (`test-captcha.ts`, `package.json`)
+- `run-captcha-check/` — the general runner (`test-captcha.ts`, dependencies in `package.json`)
   and the evidence from the 2026-11-17 TronScan worked example.
 - `licenses/` — full licence texts for the vendored code.
 
