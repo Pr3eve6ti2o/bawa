@@ -1,66 +1,187 @@
 "use client"
 
 import * as React from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { createPortal } from "react-dom"
 
 import { cn } from "../lib/utils"
 import { BawaIcon } from "./icons"
 
+// Minimal dialog (merge lane, bundle-size gate, 2026-11-24): replaces
+// @radix-ui/react-dialog (stub-measured saving 26,572 bytes minified;
+// the Radix tree pulled in remove-scroll, roving-focus,
+// dismissable-layer, focus-scope and friends, all used only by this
+// one dialog — the Add Token dialog). Same exports, same visuals,
+// same open/close behaviour: Escape closes, clicking the overlay
+// closes, focus is trapped while open and returned on close, body
+// scroll is locked while open, and the content portals to
+// document.body. The open animation classes still apply (data-state
+// is "open" while rendered); there is no close animation — the dialog
+// disappears at once instead of fading out over 200 ms.
+
+type DialogContextValue = {
+  open: boolean
+  setOpen: (open: boolean) => void
+  titleId: string
+  descriptionId: string
+}
+
+const DialogContext = React.createContext<DialogContextValue | null>(null)
+
+function useDialogContext(): DialogContextValue | null {
+  return React.useContext(DialogContext)
+}
+
 function Dialog({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange,
+  children,
+}: {
+  open?: boolean
+  defaultOpen?: boolean
+  onOpenChange?: (open: boolean) => void
+  children?: React.ReactNode
+}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen)
+  const controlled = openProp !== undefined
+  const open = controlled ? openProp : uncontrolledOpen
+  const titleId = React.useId()
+  const descriptionId = React.useId()
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (!controlled) setUncontrolledOpen(next)
+      onOpenChange?.(next)
+    },
+    [controlled, onOpenChange]
+  )
+  const value = React.useMemo(
+    () => ({ open, setOpen, titleId, descriptionId }),
+    [open, setOpen, titleId, descriptionId]
+  )
+  return <DialogContext.Provider value={value}>{children}</DialogContext.Provider>
 }
 
 function DialogTrigger({
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+}: React.ComponentProps<"button">) {
+  const ctx = useDialogContext()
+  return (
+    <button
+      type="button"
+      data-slot="dialog-trigger"
+      onClick={() => ctx?.setOpen(true)}
+      {...props}
+    />
+  )
 }
 
-function DialogPortal({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+function DialogPortal({ children }: { children?: React.ReactNode }) {
+  return <>{children}</>
 }
 
 function DialogClose({
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Close>) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
+}: React.ComponentProps<"button">) {
+  const ctx = useDialogContext()
+  return (
+    <button
+      type="button"
+      data-slot="dialog-close"
+      onClick={() => ctx?.setOpen(false)}
+      {...props}
+    />
+  )
 }
 
 function DialogOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+}: React.ComponentProps<"div">) {
+  const ctx = useDialogContext()
   return (
-    <DialogPrimitive.Overlay
+    <div
       data-slot="dialog-overlay"
+      data-state="open"
+      aria-hidden="true"
       className={cn(
         "fixed inset-0 z-50",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
+      onClick={() => ctx?.setOpen(false)}
       {...props}
     />
   )
 }
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+}: React.ComponentProps<"div"> & {
   showCloseButton?: boolean
 }) {
-  return (
-    <DialogPortal>
+  const ctx = useDialogContext()
+  const contentRef = React.useRef<HTMLDivElement | null>(null)
+
+  React.useEffect(() => {
+    if (!ctx?.open) return
+    const content = contentRef.current
+    if (!content) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    content.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation()
+        ctx.setOpen(false)
+        return
+      }
+      if (event.key !== "Tab") return
+      const focusable = Array.from(content.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
+        (el) => (el as HTMLElement).offsetParent !== null || el === document.activeElement
+      ) as HTMLElement[]
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (first === undefined || last === undefined) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener("keydown", onKeyDown, true)
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true)
+      document.body.style.overflow = previousOverflow
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus()
+      }
+    }
+  }, [ctx?.open])
+
+  if (!ctx?.open) return null
+  return createPortal(
+    <>
       <DialogOverlay />
-      <DialogPrimitive.Content
+      <div
+        ref={contentRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={ctx.titleId}
+        aria-describedby={ctx.descriptionId}
         data-slot="dialog-content"
+        data-state="open"
+        tabIndex={-1}
         className={cn(
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 p-6 sm:max-w-lg",
           "rounded-bawa border-2 border-ink bg-paper text-ink",
@@ -73,16 +194,19 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close
+          <button
+            type="button"
             data-slot="dialog-close"
             className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-bawa-sm text-ink transition-colors hover:bg-sun disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0"
+            onClick={() => ctx.setOpen(false)}
           >
             <BawaIcon name="close" className="size-4" aria-hidden="true" />
             <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
+          </button>
         )}
-      </DialogPrimitive.Content>
-    </DialogPortal>
+      </div>
+    </>,
+    document.body
   )
 }
 
@@ -121,9 +245,11 @@ function DialogFooter({
 function DialogTitle({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+}: React.ComponentProps<"h2">) {
+  const ctx = useDialogContext()
   return (
-    <DialogPrimitive.Title
+    <h2
+      id={ctx?.titleId}
       data-slot="dialog-title"
       className={cn(
         "font-display text-lg leading-none font-semibold text-ink",
@@ -137,9 +263,11 @@ function DialogTitle({
 function DialogDescription({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+}: React.ComponentProps<"p">) {
+  const ctx = useDialogContext()
   return (
-    <DialogPrimitive.Description
+    <p
+      id={ctx?.descriptionId}
       data-slot="dialog-description"
       className={cn("text-sm text-ink", className)}
       {...props}
