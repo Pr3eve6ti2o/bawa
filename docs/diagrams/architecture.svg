@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="770" viewBox="0 0 900 770" role="img" aria-labelledby="archTitle archDesc">
-  <title id="archTitle">Bawa architecture — guide, HD core, vault, providers, send flow and storage</title>
-  <desc id="archDesc">The guide and registry build the example web wallet through scripts/build-wallet.mjs. The wallet runs on Trust Wallet Core 4.9.3 (WASM). One 24-word phrase derives addresses on 22 chains; the phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from 9 public adapter modules and prices from CoinGecko with fallbacks. Send builds an intent and signs offline; mainnet broadcast is always disabled, and only the devnet path can submit. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
+  <title id="archTitle">Bawa architecture — HD core, vault, providers, outputs, send</title>
+  <desc id="archDesc">Bawa is an HD-wallet reference and AI Wallet Builder: one 24-word phrase, one account, 22 chains. The guide and registry build the example web wallet through scripts/build-wallet.mjs. The wallet runs on Trust Wallet Core 4.9.3 (WASM). One 24-word phrase derives addresses on 22 chains; the phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from 9 public adapter modules and prices from CoinGecko with fallbacks — every chain has a second source. Send builds an intent and signs offline; mainnet broadcast is always disabled, and only the devnet path can submit. Android and further wallets are planned, not built. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
   <style>
     .t { font-family: "Baloo 2", "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
     .b { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
@@ -8,6 +8,7 @@
     .panel { fill: #FFFDF7; stroke: #2B2B2B; stroke-width: 2; }
     .tintC { fill: #FFE9E3; stroke: #2B2B2B; stroke-width: 2; }
     .tintS { fill: #FFF3C4; stroke: #2B2B2B; stroke-width: 2; }
+    .planned { fill: #FFFDF7; stroke: #2B2B2B; stroke-width: 2; stroke-dasharray: 7,4; }
     .diamond { fill: #FFD93B; stroke: #2B2B2B; stroke-width: 2; }
     .accent { fill: #FF6B4A; }
     .sun { fill: #FFD93B; }
@@ -22,134 +23,143 @@
 
   <rect x="0" y="0" width="900" height="770" fill="#FFFDF7"/>
 
-  <!-- Title -->
-  <text class="t" x="16" y="32" font-size="23" font-weight="700">How Bawa fits together</text>
+  <!-- Purpose banner -->
+  <rect class="tintS" x="16" y="10" width="868" height="48" rx="10"/>
+  <text class="t" x="30" y="30" font-size="15.5" font-weight="700">Bawa — an HD-wallet reference + AI Wallet Builder</text>
   <text class="b" x="884" y="30" font-size="11.5" text-anchor="end">Trust Wallet Core 4.9.3 · 22 chains · mainnet</text>
-  <path d="M16,42 q12,-5 24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0" fill="none" stroke="#FF6B4A" stroke-width="2.5" stroke-linecap="round"/>
+  <text class="b" x="30" y="48" font-size="11.5">One 24-word phrase, one account, 22 chains. The guide and builder turn this core into real wallets.</text>
 
   <!-- Row 1 : Build -->
-  <rect class="panel" x="16" y="56" width="250" height="92" rx="12"/>
-  <rect class="accent" x="30" y="72" width="11" height="11" rx="2"/>
-  <text class="t" x="48" y="83" font-size="14" font-weight="700">Guide + registry</text>
-  <text class="b" x="30" y="102" font-size="11">docs/ 01–16 · registry/*.json</text>
-  <text class="b" x="30" y="119" font-size="11">WALLET_BUILDER.md — entry point</text>
-  <text class="b" x="30" y="136" font-size="11">Guide: 168 chains · wallet ships 22</text>
+  <rect class="panel" x="16" y="66" width="420" height="64" rx="12"/>
+  <rect class="accent" x="30" y="80" width="11" height="11" rx="2"/>
+  <text class="t" x="48" y="91" font-size="14" font-weight="700">Guide + registry</text>
+  <text class="b" x="30" y="107" font-size="11">docs/ 01–16 · WALLET_BUILDER.md — entry point</text>
+  <text class="b" x="30" y="122" font-size="11">Guide: 168 chains · wallet ships 22</text>
 
-  <path class="arrow" d="M266,102 L306,102" marker-end="url(#ah)"/>
-  <text class="lbl" x="286" y="92" font-size="10.5" text-anchor="middle">builds</text>
+  <path class="arrow" d="M436,98 L476,98" marker-end="url(#ah)"/>
+  <text class="lbl" x="456" y="88" font-size="10.5" text-anchor="middle">builds</text>
 
-  <rect class="panel" x="314" y="56" width="200" height="92" rx="12"/>
-  <rect class="sun" x="328" y="72" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
-  <text class="t" x="346" y="83" font-size="14" font-weight="700">Builder</text>
-  <text class="m" x="328" y="102" font-size="10.5">scripts/build-wallet.mjs</text>
-  <text class="m" x="328" y="119" font-size="10.5">tools/bawa_cli.py</text>
-  <text class="b" x="328" y="136" font-size="11">one prompt → a real project</text>
+  <rect class="panel" x="484" y="66" width="400" height="64" rx="12"/>
+  <rect class="sun" x="498" y="80" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
+  <text class="t" x="516" y="91" font-size="14" font-weight="700">Builder</text>
+  <text class="m" x="498" y="107" font-size="10.5">scripts/build-wallet.mjs · tools/bawa_cli.py</text>
+  <text class="b" x="498" y="122" font-size="11">one prompt → a real project</text>
 
-  <path class="arrow" d="M514,102 L554,102" marker-end="url(#ah)"/>
-  <text class="lbl" x="534" y="92" font-size="10.5" text-anchor="middle">outputs</text>
-
-  <rect class="panel" x="562" y="56" width="322" height="92" rx="12"/>
-  <rect class="accent" x="576" y="72" width="11" height="11" rx="2"/>
-  <text class="t" x="594" y="83" font-size="14" font-weight="700">Example web wallet — apps/web</text>
-  <text class="b" x="576" y="102" font-size="11">Dashboard — 22 natives + 21 tokens = 43 rows</text>
-  <text class="m" x="576" y="119" font-size="10.5">npm ci → npm run build → npm run preview</text>
-  <text class="b" x="576" y="136" font-size="11">No account, no API key, no funds needed</text>
-
-  <!-- Arrow Row 1 -> Row 2 : wallet creates the phrase -->
-  <path class="arrow" d="M723,148 L723,164" marker-end="url(#ah)"/>
-  <text class="lbl" x="715" y="160" font-size="10.5" text-anchor="end">creates the phrase</text>
+  <!-- Arrow Build -> Core : builder outputs the wallet -->
+  <path class="arrow" d="M684,130 L684,150" marker-end="url(#ah)"/>
+  <text class="lbl" x="676" y="145" font-size="10.5" text-anchor="end">builds the wallet</text>
 
   <!-- Row 2 : Keys -->
-  <rect class="panel" x="16" y="164" width="440" height="176" rx="12"/>
-  <rect class="sun" x="30" y="180" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
-  <text class="t" x="48" y="191" font-size="15.5" font-weight="700">HD core — one phrase, 22 addresses</text>
-  <text class="m" x="30" y="212" font-size="10.5">via Trust Wallet Core 4.9.3 (WASM) — loadCore()</text>
-  <text class="m" x="30" y="229" font-size="10.5">createWallet(passphrase = '') — 32 random bytes → 24 words</text>
-  <text class="m" x="30" y="246" font-size="10.5">deriveAddresses(mnemonic, passphrase = '') — one HDWallet</text>
-  <text class="m" x="30" y="263" font-size="10.5">wallet.getAddressForCoin(coin) — once per chain</text>
-  <text class="m" x="30" y="280" font-size="10.5">16 EVM · m/44'/60'/0'/0/0 — one shared address</text>
-  <text class="m" x="30" y="297" font-size="10.5">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0 · DOGE m/44'/3'/0'/0/0</text>
-  <text class="m" x="30" y="314" font-size="10.5">TRX m/44'/195'/0'/0/0 · TON m/44'/607'/0' · SOL m/44'/501'/0'</text>
-  <text class="m" x="30" y="331" font-size="10.5">Rotate: deriveAddressesAt(mnemonic, passphrase, account, index)</text>
+  <rect class="panel" x="16" y="150" width="440" height="142" rx="12"/>
+  <rect class="sun" x="30" y="160" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
+  <text class="t" x="48" y="171" font-size="15.5" font-weight="700">HD core — one phrase, 22 addresses</text>
+  <text class="m" x="30" y="186" font-size="10.5">via Trust Wallet Core 4.9.3 (WASM) — loadCore()</text>
+  <text class="m" x="30" y="200" font-size="10.5">createWallet(passphrase = '') — 32 random bytes → 24 words</text>
+  <text class="m" x="30" y="214" font-size="10.5">deriveAddresses(mnemonic, passphrase = '') — one HDWallet</text>
+  <text class="m" x="30" y="228" font-size="10.5">wallet.getAddressForCoin(coin) — once per chain</text>
+  <text class="m" x="30" y="242" font-size="10.5">16 EVM · m/44'/60'/0'/0/0 — one shared address</text>
+  <text class="m" x="30" y="256" font-size="10.5">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0 · DOGE m/44'/3'/0'/0/0</text>
+  <text class="m" x="30" y="270" font-size="10.5">TRX m/44'/195'/0'/0/0 · TON m/44'/607'/0' · SOL m/44'/501'/0'</text>
+  <text class="m" x="30" y="284" font-size="10.5">Rotate: deriveAddressesAt(mnemonic, passphrase, account, index)</text>
 
-  <rect class="panel" x="472" y="164" width="412" height="176" rx="12"/>
-  <rect class="accent" x="486" y="180" width="11" height="11" rx="2"/>
-  <text class="t" x="504" y="191" font-size="15.5" font-weight="700">Vault — keys never leave the device</text>
-  <text class="b" x="486" y="212" font-size="11">password → deriveKey(password, salt, 600_000)</text>
-  <text class="b" x="486" y="228" font-size="11">→ AES-GCM-256 key (salt 16 B · IV 12 B · key 256 bit)</text>
-  <text class="m" x="486" y="248" font-size="10.5">bawa-vault = { version,</text>
-  <text class="m" x="486" y="264" font-size="10.5">  kdf: { PBKDF2, SHA-256, 600_000, saltB64 },</text>
-  <text class="m" x="486" y="280" font-size="10.5">  ivB64, ciphertextB64, profileIds }</text>
-  <text class="b" x="486" y="300" font-size="11">bawa-vault-key — raw key, auto-unlock only</text>
-  <text class="b" x="486" y="316" font-size="11">bawa-vault-backup · bawa-vault-accounts:v1</text>
-  <text class="b" x="486" y="332" font-size="11">Watch-only: bawa-watch-only-xpubs — public keys only</text>
+  <rect class="panel" x="472" y="150" width="412" height="142" rx="12"/>
+  <rect class="accent" x="486" y="160" width="11" height="11" rx="2"/>
+  <text class="t" x="504" y="171" font-size="15.5" font-weight="700">Vault — keys never leave the device</text>
+  <text class="b" x="486" y="186" font-size="11">password → deriveKey(password, salt, 600_000)</text>
+  <text class="b" x="486" y="200" font-size="11">→ AES-GCM-256 key (salt 16 B · IV 12 B · key 256 bit)</text>
+  <text class="m" x="486" y="214" font-size="10.5">bawa-vault = { version,</text>
+  <text class="m" x="486" y="228" font-size="10.5">  kdf: { PBKDF2, SHA-256, 600_000, saltB64 },</text>
+  <text class="m" x="486" y="242" font-size="10.5">  ivB64, ciphertextB64, profileIds }</text>
+  <text class="b" x="486" y="256" font-size="11">bawa-vault-key — raw key, auto-unlock only</text>
+  <text class="b" x="486" y="270" font-size="11">bawa-vault-backup · bawa-vault-accounts:v1</text>
+  <text class="b" x="486" y="284" font-size="11">Watch-only: bawa-watch-only-xpubs — public keys only</text>
 
   <!-- Arrow Row 2 -> Row 3 : addresses feed balances -->
-  <path class="arrow" d="M236,340 L236,356" marker-end="url(#ah)"/>
-  <text class="lbl" x="228" y="352" font-size="10.5" text-anchor="end">22 addresses → balances</text>
+  <path class="arrow" d="M236,292 L236,312" marker-end="url(#ah)"/>
+  <text class="lbl" x="228" y="307" font-size="10.5" text-anchor="end">22 addresses → balances</text>
 
   <!-- Row 3 : Providers -->
-  <rect class="panel" x="16" y="356" width="440" height="104" rx="12"/>
-  <rect class="sun" x="30" y="372" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
-  <text class="t" x="48" y="383" font-size="15.5" font-weight="700">Balances — public RPCs</text>
-  <text class="b" x="30" y="403" font-size="11">9 adapter modules: btc eth evm trx ton sol ltc doge</text>
-  <text class="b" x="30" y="420" font-size="11">+ token-balances · eth.ts + evm.ts serve the 16 EVM chains</text>
-  <text class="b" x="30" y="437" font-size="11">resolveRpcEndpoints(chain) — up to 3 per chain</text>
-  <text class="b" x="30" y="454" font-size="11">refreshBalances() — a failed fetch shows as unavailable</text>
+  <rect class="panel" x="16" y="312" width="440" height="84" rx="12"/>
+  <rect class="sun" x="30" y="328" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
+  <text class="t" x="48" y="333" font-size="15.5" font-weight="700">Balances — public RPCs</text>
+  <text class="b" x="30" y="349" font-size="11">9 adapter modules: btc eth evm trx ton sol ltc doge</text>
+  <text class="b" x="30" y="362" font-size="11">+ token-balances · eth.ts + evm.ts serve the 16 EVM chains</text>
+  <text class="b" x="30" y="375" font-size="11">resolveRpcEndpoints(chain) — up to 2 per chain</text>
+  <text class="b" x="30" y="388" font-size="11">refreshBalances() — a failed fetch shows as unavailable</text>
 
-  <rect class="panel" x="472" y="356" width="412" height="104" rx="12"/>
-  <rect class="accent" x="486" y="372" width="11" height="11" rx="2"/>
-  <text class="t" x="504" y="383" font-size="15.5" font-weight="700">Prices — CoinGecko + fallbacks</text>
-  <text class="b" x="486" y="403" font-size="11">api.coingecko.com/api/v3 · 10-minute cache</text>
-  <text class="b" x="486" y="420" font-size="11">CoinLore · Coinbase (LTC) · DexScreener · TonAPI</text>
-  <text class="b" x="486" y="437" font-size="11">20 of 22 chains have a fallback — Gnosis (XDAI)</text>
-  <text class="b" x="486" y="454" font-size="11">+ Mantle (MNT) are CoinGecko-only · no source = unavailable</text>
+  <rect class="panel" x="472" y="312" width="412" height="84" rx="12"/>
+  <rect class="accent" x="486" y="328" width="11" height="11" rx="2"/>
+  <text class="t" x="504" y="333" font-size="15.5" font-weight="700">Prices — CoinGecko + fallbacks</text>
+  <text class="b" x="486" y="349" font-size="11">api.coingecko.com/api/v3 · 10-minute cache</text>
+  <text class="b" x="486" y="362" font-size="11">CoinLore · Coinbase (LTC) · DexScreener · TonAPI</text>
+  <text class="b" x="486" y="375" font-size="11">All 22 chains have a fallback — none is CoinGecko-only</text>
+  <text class="b" x="486" y="388" font-size="11">CoinLore 19 chains · DexScreener 13 · no source = unavailable</text>
 
-  <!-- Arrow Row 3 -> Row 4 : balances + prices feed Send -->
-  <path class="arrow" d="M460,460 L460,476" marker-end="url(#ah)"/>
-  <text class="lbl" x="452" y="472" font-size="10.5" text-anchor="end">balances + prices → send</text>
+  <!-- Outputs row -->
+  <text class="t" x="16" y="414" font-size="13.5" font-weight="700">Outputs — what the core becomes</text>
+
+  <rect class="panel" x="16" y="420" width="300" height="64" rx="10"/>
+  <rect class="accent" x="28" y="434" width="11" height="11" rx="2"/>
+  <text class="t" x="44" y="445" font-size="12.5" font-weight="700">Web wallet — example — optional</text>
+  <text class="b" x="28" y="460" font-size="10.5">Dashboard — 22 natives + 21 tokens = 43 rows</text>
+  <text class="b" x="28" y="474" font-size="10.5">Guide + registry → Builder → apps/web</text>
+
+  <rect class="planned" x="328" y="420" width="272" height="64" rx="10"/>
+  <text class="t" x="340" y="445" font-size="12.5" font-weight="700">Android wallet — PLANNED</text>
+  <text class="b" x="340" y="460" font-size="10.5">Not built yet — same HD core underneath</text>
+  <text class="b" x="340" y="474" font-size="10.5">planned, not started</text>
+
+  <rect class="planned" x="612" y="420" width="272" height="64" rx="10"/>
+  <text class="t" x="624" y="445" font-size="12.5" font-weight="700">Further wallets — PLANNED</text>
+  <text class="b" x="624" y="460" font-size="10.5">More wallets from the same core</text>
+  <text class="b" x="624" y="474" font-size="10.5">planned, not started</text>
 
   <!-- Row 4 : Send flow -->
-  <text class="t" x="16" y="494" font-size="13.5" font-weight="700">Send — build it, sign it offline, then the broadcast guard</text>
+  <text class="t" x="16" y="502" font-size="13.5" font-weight="700">Send — build it, sign it offline, then the broadcast guard</text>
 
-  <rect class="panel" x="16" y="516" width="210" height="64" rx="10"/>
-  <text class="t" x="28" y="538" font-size="12" font-weight="700">1 · Build intent</text>
-  <text class="m" x="28" y="554" font-size="9">createTransactionIntent(chain,</text>
-  <text class="m" x="28" y="568" font-size="9">to, amountBaseUnits, sequence)</text>
+  <rect class="panel" x="16" y="510" width="210" height="56" rx="10"/>
+  <text class="t" x="28" y="530" font-size="12" font-weight="700">1 · Build intent</text>
+  <text class="m" x="28" y="544" font-size="9">createTransactionIntent(chain,</text>
+  <text class="m" x="28" y="557" font-size="9">to, amountBaseUnits, sequence)</text>
 
-  <path class="arrow" d="M226,548 L242,548" marker-end="url(#ah)"/>
+  <path class="arrow" d="M226,538 L242,538" marker-end="url(#ah)"/>
 
-  <rect class="panel" x="242" y="516" width="210" height="64" rx="10"/>
-  <text class="t" x="254" y="538" font-size="12" font-weight="700">2 · Sign offline</text>
-  <text class="m" x="254" y="554" font-size="9">signEthOffline · signBtcOffline</text>
-  <text class="m" x="254" y="568" font-size="9">signTrxOffline · signTonOffline</text>
+  <rect class="panel" x="242" y="510" width="210" height="56" rx="10"/>
+  <text class="t" x="254" y="530" font-size="12" font-weight="700">2 · Sign offline</text>
+  <text class="m" x="254" y="544" font-size="9">signEthOffline · signBtcOffline</text>
+  <text class="m" x="254" y="557" font-size="9">signTrxOffline · signTonOffline</text>
 
-  <path class="arrow" d="M452,548 L468,548" marker-end="url(#ah)"/>
+  <path class="arrow" d="M452,538 L468,538" marker-end="url(#ah)"/>
 
-  <polygon class="diamond" points="524,512 580,548 524,584 468,548"/>
-  <text class="t" x="524" y="544" font-size="11" font-weight="700" text-anchor="middle">Broadcast</text>
-  <text class="t" x="524" y="558" font-size="11" font-weight="700" text-anchor="middle">allowed?</text>
+  <polygon class="diamond" points="524,506 580,538 524,570 468,538"/>
+  <text class="t" x="524" y="534" font-size="11" font-weight="700" text-anchor="middle">Broadcast</text>
+  <text class="t" x="524" y="548" font-size="11" font-weight="700" text-anchor="middle">allowed?</text>
 
-  <path class="arrow" d="M524,584 L236,600" marker-end="url(#ah)"/>
-  <text class="lbl" x="380" y="594" font-size="10.5" text-anchor="middle">No — mainnet</text>
-  <path class="arrow" d="M524,584 L664,600" marker-end="url(#ah)"/>
-  <text class="lbl" x="594" y="594" font-size="10.5" text-anchor="middle">Yes — devnet</text>
+  <path class="arrow" d="M524,570 L236,586" marker-end="url(#ah)"/>
+  <text class="lbl" x="380" y="582" font-size="10.5" text-anchor="middle">No — mainnet</text>
+  <path class="arrow" d="M524,570 L664,586" marker-end="url(#ah)"/>
+  <text class="lbl" x="594" y="582" font-size="10.5" text-anchor="middle">Yes — devnet</text>
 
-  <rect class="tintC" x="16" y="600" width="428" height="74" rx="10"/>
-  <text class="t" x="28" y="620" font-size="12" font-weight="700">× Mainnet — blocked</text>
-  <text class="m" x="28" y="637" font-size="9.5">broadcastSigned() → { status: 'disabled' }</text>
-  <text class="b" x="28" y="652" font-size="10.5">'Sending funds is switched off until it is separately approved.'</text>
-  <text class="b" x="28" y="667" font-size="10.5">guard: isBroadcastAllowedFor(provenance) — test accounts barred</text>
+  <rect class="tintC" x="16" y="586" width="428" height="66" rx="10"/>
+  <text class="t" x="28" y="604" font-size="12" font-weight="700">× Mainnet — blocked</text>
+  <text class="m" x="28" y="619" font-size="9.5">broadcastSigned() → { status: 'disabled' }</text>
+  <text class="b" x="28" y="633" font-size="10.5">'Sending funds is switched off until it is separately approved.'</text>
+  <text class="b" x="28" y="646" font-size="10.5">guard: isBroadcastAllowedFor(provenance) — test accounts barred</text>
 
-  <rect class="tintS" x="456" y="600" width="428" height="74" rx="10"/>
-  <text class="t" x="468" y="620" font-size="12" font-weight="700">✓ Devnet only — submitted</text>
-  <text class="m" x="468" y="637" font-size="9.5">broadcastSignedDevnet(chain, signedTx, options)</text>
-  <text class="b" x="468" y="652" font-size="10.5">3 gates, in order: devnet on · not a test account · devnet network id</text>
-  <text class="m" x="468" y="667" font-size="9.5">→ { status: 'submitted', txHash }</text>
+  <rect class="tintS" x="456" y="586" width="428" height="66" rx="10"/>
+  <text class="t" x="468" y="604" font-size="12" font-weight="700">✓ Devnet only — submitted</text>
+  <text class="m" x="468" y="619" font-size="9.5">broadcastSignedDevnet(chain, signedTx, options)</text>
+  <text class="b" x="468" y="633" font-size="10.5">3 gates, in order: devnet on · not a test account · devnet network id</text>
+  <text class="m" x="468" y="646" font-size="9.5">→ { status: 'submitted', txHash }</text>
 
   <!-- Row 5 : Storage strip -->
-  <rect class="panel" x="16" y="690" width="868" height="72" rx="12"/>
-  <text class="t" x="30" y="712" font-size="13" font-weight="700">Stored on your device — localStorage</text>
-  <text class="m" x="30" y="732" font-size="10.5">Vault + watch-only: bawa-vault · bawa-vault-key · bawa-vault-backup · bawa-vault-accounts:v1 · bawa-watch-only-xpubs</text>
-  <text class="m" x="30" y="748" font-size="10.5">Caches + devnet: bawa:prices-cache:v1 · bawa:token-prices-cache:v2 · bawa:custom-tokens:v1 · bawa-devnet-enabled</text>
+  <rect class="panel" x="16" y="660" width="868" height="56" rx="12"/>
+  <text class="t" x="30" y="680" font-size="13" font-weight="700">Stored on your device — localStorage</text>
+  <text class="m" x="30" y="696" font-size="10.5">Vault + watch-only: bawa-vault · bawa-vault-key · bawa-vault-backup · bawa-vault-accounts:v1 · bawa-watch-only-xpubs</text>
+  <text class="m" x="30" y="710" font-size="10.5">Caches + devnet: bawa:prices-cache:v1 · bawa:token-prices-cache:v2 · bawa:custom-tokens:v1 · bawa-devnet-enabled</text>
+
+  <!-- Honest limits -->
+  <rect class="tintS" x="16" y="722" width="868" height="46" rx="10"/>
+  <text class="b" x="30" y="741" font-size="11"><tspan font-weight="700">Honest limits — </tspan>mainnet broadcast stays disabled; a failed fetch shows as unavailable,</text>
+  <text class="b" x="30" y="756" font-size="11">never an invented figure. Watch-only holds public keys only — it cannot spend.</text>
 </svg>
