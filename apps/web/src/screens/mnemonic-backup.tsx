@@ -181,7 +181,7 @@ export function MnemonicBackupScreen() {
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-xl">
+      <Card radius="xl">
         <CardHeader>
           <CardTitle>Mnemonic backup</CardTitle>
           <CardDescription>
@@ -197,7 +197,7 @@ export function MnemonicBackupScreen() {
                 Create a wallet or restore one from its recovery phrase
                 first.
               </p>
-              <Button asChild className="h-auto whitespace-normal py-3 text-center">
+              <Button asChild size="wrap">
                 <Link to="/create-wallet">Create a wallet</Link>
               </Button>
             </>
@@ -316,7 +316,7 @@ export function MnemonicBackupScreen() {
                   disabled={isVerifying}
                   aria-invalid={passwordError !== null}
                   aria-describedby={passwordError ? 'reveal-error' : undefined}
-                  className="h-12"
+                 
                 />
               </div>
 
@@ -357,7 +357,7 @@ export function MnemonicBackupScreen() {
                           onClick={() =>
                             handleQuizPick(questionIndex, optionIndex)
                           }
-                          className="h-auto justify-start whitespace-normal py-3 text-left"
+                          size="wrap-start"
                         >
                           {option}
                           {correct ? ' — Correct' : ''}

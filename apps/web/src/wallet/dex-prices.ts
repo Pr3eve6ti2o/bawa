@@ -45,7 +45,7 @@
  * for known tokens there (WXDAI, GNO, USDC on Gnosis). Tokens on those
  * chains stay "Price unavailable" unless CoinGecko lists them.
  */
-import Decimal from 'decimal.js';
+import { divideToString, parseDecimalString } from './decimal';
 import type { ChainId } from '../engine/boundary';
 import { isRecord, ownValue } from './guards';
 import {
@@ -168,12 +168,12 @@ export function parseDexScreenerResponse(
         }
         let implied: string | null = null;
         try {
-          const ratio = new Decimal(String(basePrice)).div(
-            new Decimal(String(priceNative)),
+          // Exact BigInt division at Decimal's default 20 significant
+          // digits; null when the ratio is not a finite positive number.
+          implied = divideToString(
+            parseDecimalString(String(basePrice)),
+            parseDecimalString(String(priceNative)),
           );
-          if (ratio.isFinite() && ratio.gt(0)) {
-            implied = ratio.toString();
-          }
         } catch {
           implied = null;
         }

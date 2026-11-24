@@ -10,9 +10,17 @@ import {
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountInstruction,
+  createTransferCheckedInstruction,
   decodeTransferCheckedInstruction,
 } from '@solana/spl-token';
-import { SystemInstruction, SystemProgram, Transaction } from '@solana/web3.js';
+import {
+  Keypair,
+  PublicKey,
+  SystemInstruction,
+  SystemProgram,
+  Transaction,
+} from '@solana/web3.js';
 import {
   validateRecipient,
   previewSendAmount,
@@ -44,6 +52,15 @@ import { chainConfig } from './chains';
 import { DEFAULT_TOKENS, EVM_TOKEN_CHAINS, type TokenRecord } from './tokens';
 import type { ChainId } from '../engine/boundary';
 import { decodeBase58 } from '../engine/address-codecs';
+import {
+  SOL_ASSOCIATED_TOKEN_PROGRAM_ID,
+  SOL_SYSTEM_PROGRAM_ID,
+  SOL_TOKEN_PROGRAM_ID,
+  SolPublicKey,
+  SolTransaction,
+  solKeypairPublicKey,
+  solSystemTransferInstruction,
+} from './solana-tx';
 import { deriveAssociatedTokenAddress } from './adapters/token-balances';
 import {
   createWallet,
@@ -2431,13 +2448,15 @@ describe('signTrc20Offline (Lane 2)', () => {
   });
 });
 
-describe('Solana signing with @solana/web3.js (expansion Lane SOL)', () => {
+describe('Solana signing with the minimal wire module (Lane C)', () => {
   // The fix for Lane 2's refusal: Wallet Core 4.9.3's Solana signer
   // returns an `encoded` transaction that does not parse as a Solana
-  // wire transaction. These tests prove the replacement path — a
-  // web3.js Transaction built from the derived ed25519 keypair — by
-  // parsing the produced transaction back with Transaction.from and
-  // verifying its signatures, the exact step the old signer failed.
+  // wire transaction. These tests prove the replacement path — a legacy
+  // transaction built by the minimal ./solana-tx module from the derived
+  // ed25519 keypair — by parsing the produced transaction back with
+  // web3.js Transaction.from and verifying its signatures, the exact
+  // step the old signer failed. @solana/web3.js is the reference
+  // implementation here, not a runtime dependency (Lane C).
   // A real recent blockhash (PublicNode, 2026-11-24); signing does not
   // check freshness, only that it is 32 bytes base58.
   const BLOCKHASH = 'FyuXxRoUgru9MrwnmRkfFzZiyZ5WR4JePH98mcqPpgHM';
@@ -2758,6 +2777,196 @@ describe('Solana signing with @solana/web3.js (expansion Lane SOL)', () => {
       feeBaseUnits: '5000',
       rentBaseUnits: '0',
     });
+  });
+});
+
+describe('Solana wire format byte-identity (Lane C)', () => {
+  // The contract for ./solana-tx: its serialised bytes must be identical
+  // to @solana/web3.js for the same inputs. A fixed test-only seed (never
+  // a real wallet) drives both constructions, so any drift in message
+  // compilation, account ordering or signing fails here.
+  const SEED = new Uint8Array([
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+  ]);
+  const BLOCKHASH = 'FyuXxRoUgru9MrwnmRkfFzZiyZ5WR4JePH98mcqPpgHM';
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+  function toBase64(bytes: Uint8Array): string {
+    return Buffer.from(bytes).toString('base64');
+  }
+
+  it('derives the same public key as Keypair.fromSeed', () => {
+    const keypair = Keypair.fromSeed(SEED);
+    expect(solKeypairPublicKey(SEED).toBase58()).toBe(
+      keypair.publicKey.toBase58(),
+    );
+  });
+
+  it('serialises a native transfer identically to web3.js', () => {
+    const keypair = Keypair.fromSeed(SEED);
+    const from = keypair.publicKey.toBase58();
+    const recipient = Keypair.fromSeed(
+      new Uint8Array(32).fill(9),
+    ).publicKey.toBase58();
+    const mine = new SolTransaction({
+      feePayer: new SolPublicKey(from),
+      recentBlockhash: BLOCKHASH,
+    });
+    mine.add(
+      solSystemTransferInstruction(
+        new SolPublicKey(from),
+        new SolPublicKey(recipient),
+        1000000n,
+      ),
+    );
+    mine.sign(SEED);
+    const reference = new Transaction({
+      feePayer: new PublicKey(from),
+      recentBlockhash: BLOCKHASH,
+    });
+    reference.add(
+      SystemProgram.transfer({
+        fromPubkey: new PublicKey(from),
+        toPubkey: new PublicKey(recipient),
+        lamports: 1000000n,
+      }),
+    );
+    reference.sign(keypair);
+    expect(toBase64(mine.serialize())).toBe(
+      toBase64(reference.serialize()),
+    );
+    const parsed = SolTransaction.from(mine.serialize());
+    expect(parsed.verifySignatures()).toBe(true);
+    expect(parsed.feePayer.toBase58()).toBe(from);
+    expect(parsed.recentBlockhash).toBe(BLOCKHASH);
+    expect(parsed.signature).not.toBeNull();
+    expect(parsed.instructions).toHaveLength(1);
+    expect(parsed.instructions[0]!.programId.toBase58()).toBe(
+      SOL_SYSTEM_PROGRAM_ID.toBase58(),
+    );
+  });
+
+  it('serialises an SPL TransferChecked identically to web3.js', () => {
+    const keypair = Keypair.fromSeed(SEED);
+    const from = keypair.publicKey.toBase58();
+    const recipient = Keypair.fromSeed(
+      new Uint8Array(32).fill(9),
+    ).publicKey.toBase58();
+    const senderAta = deriveAssociatedTokenAddress(from, USDC_MINT)!;
+    const recipientAta = deriveAssociatedTokenAddress(recipient, USDC_MINT)!;
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint8(0, 12);
+    view.setBigUint64(1, 25000000n, true);
+    view.setUint8(9, 6);
+    const mine = new SolTransaction({
+      feePayer: new SolPublicKey(from),
+      recentBlockhash: BLOCKHASH,
+    });
+    mine.add({
+      keys: [
+        { pubkey: new SolPublicKey(senderAta), isSigner: false, isWritable: true },
+        { pubkey: new SolPublicKey(USDC_MINT), isSigner: false, isWritable: false },
+        { pubkey: new SolPublicKey(recipientAta), isSigner: false, isWritable: true },
+        { pubkey: new SolPublicKey(from), isSigner: true, isWritable: false },
+      ],
+      programId: SOL_TOKEN_PROGRAM_ID,
+      data,
+    });
+    mine.sign(SEED);
+    const reference = new Transaction({
+      feePayer: new PublicKey(from),
+      recentBlockhash: BLOCKHASH,
+    });
+    reference.add(
+      createTransferCheckedInstruction(
+        new PublicKey(senderAta),
+        new PublicKey(USDC_MINT),
+        new PublicKey(recipientAta),
+        new PublicKey(from),
+        25000000n,
+        6,
+      ),
+    );
+    reference.sign(keypair);
+    expect(toBase64(mine.serialize())).toBe(
+      toBase64(reference.serialize()),
+    );
+    const parsed = SolTransaction.from(mine.serialize());
+    expect(parsed.verifySignatures()).toBe(true);
+    expect(parsed.instructions).toHaveLength(1);
+  });
+
+  it('serialises an SPL transfer with ATA creation identically to web3.js', () => {
+    const keypair = Keypair.fromSeed(SEED);
+    const from = keypair.publicKey.toBase58();
+    const recipient = Keypair.fromSeed(
+      new Uint8Array(32).fill(9),
+    ).publicKey.toBase58();
+    const senderAta = deriveAssociatedTokenAddress(from, USDC_MINT)!;
+    const recipientAta = deriveAssociatedTokenAddress(recipient, USDC_MINT)!;
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint8(0, 12);
+    view.setBigUint64(1, 25000000n, true);
+    view.setUint8(9, 6);
+    const mine = new SolTransaction({
+      feePayer: new SolPublicKey(from),
+      recentBlockhash: BLOCKHASH,
+    });
+    mine.add({
+      keys: [
+        { pubkey: new SolPublicKey(from), isSigner: true, isWritable: true },
+        { pubkey: new SolPublicKey(recipientAta), isSigner: false, isWritable: true },
+        { pubkey: new SolPublicKey(recipient), isSigner: false, isWritable: false },
+        { pubkey: new SolPublicKey(USDC_MINT), isSigner: false, isWritable: false },
+        { pubkey: SOL_SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SOL_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ],
+      programId: SOL_ASSOCIATED_TOKEN_PROGRAM_ID,
+      data: new Uint8Array(0),
+    });
+    mine.add({
+      keys: [
+        { pubkey: new SolPublicKey(senderAta), isSigner: false, isWritable: true },
+        { pubkey: new SolPublicKey(USDC_MINT), isSigner: false, isWritable: false },
+        { pubkey: new SolPublicKey(recipientAta), isSigner: false, isWritable: true },
+        { pubkey: new SolPublicKey(from), isSigner: true, isWritable: false },
+      ],
+      programId: SOL_TOKEN_PROGRAM_ID,
+      data,
+    });
+    mine.sign(SEED);
+    const reference = new Transaction({
+      feePayer: new PublicKey(from),
+      recentBlockhash: BLOCKHASH,
+    });
+    reference.add(
+      createAssociatedTokenAccountInstruction(
+        new PublicKey(from),
+        new PublicKey(recipientAta),
+        new PublicKey(recipient),
+        new PublicKey(USDC_MINT),
+      ),
+    );
+    reference.add(
+      createTransferCheckedInstruction(
+        new PublicKey(senderAta),
+        new PublicKey(USDC_MINT),
+        new PublicKey(recipientAta),
+        new PublicKey(from),
+        25000000n,
+        6,
+      ),
+    );
+    reference.sign(keypair);
+    expect(toBase64(mine.serialize())).toBe(
+      toBase64(reference.serialize()),
+    );
+    const parsed = SolTransaction.from(mine.serialize());
+    expect(parsed.verifySignatures()).toBe(true);
+    expect(parsed.instructions).toHaveLength(2);
   });
 });
 

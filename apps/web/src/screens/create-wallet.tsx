@@ -211,7 +211,7 @@ export function CreateWalletScreen() {
   if (vaultExists) {
     return (
       <section aria-labelledby="create-wallet-title" className="space-y-6 lg:mx-auto lg:max-w-2xl">
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle id="create-wallet-title">A wallet already exists</CardTitle>
             <CardDescription>
@@ -232,10 +232,10 @@ export function CreateWalletScreen() {
               the wallet.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button asChild className="h-auto whitespace-normal py-3 text-center">
+              <Button asChild size="wrap">
                 <Link to="/wallets">Go to Wallets</Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto whitespace-normal py-3 text-center">
+              <Button asChild variant="outline" size="wrap">
                 <Link to="/security">Go to security settings</Link>
               </Button>
             </div>
@@ -247,7 +247,7 @@ export function CreateWalletScreen() {
 
   return (
     <section aria-labelledby="create-wallet-title" className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
-      <Card className="rounded-xl lg:col-span-2 lg:sticky lg:top-6">
+      <Card radius="xl" className="lg:col-span-2 lg:sticky lg:top-6">
         <CardHeader>
           <CardTitle id="create-wallet-title">Create a wallet</CardTitle>
           <CardDescription>
@@ -350,7 +350,7 @@ export function CreateWalletScreen() {
       )}
 
       {step === 1 && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>Vault password</CardTitle>
             <CardDescription>
@@ -400,7 +400,7 @@ export function CreateWalletScreen() {
                     not your vault password.
                   </p>
                 </div>
-                <Button type="submit" className="h-auto whitespace-normal py-3 text-center">
+                <Button type="submit" size="wrap">
                   {isBusy ? (progress ?? 'Generating…') : 'Generate recovery phrase'}
                 </Button>
               </fieldset>
@@ -418,7 +418,7 @@ export function CreateWalletScreen() {
 
 
       {step === 2 && mnemonic !== null && !riskAcknowledged && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>Check the risks first</CardTitle>
             <CardDescription>
@@ -445,7 +445,7 @@ export function CreateWalletScreen() {
                   />
                   <Label
                     htmlFor={`risk-check-${index}`}
-                    className="text-sm font-normal leading-relaxed"
+                    weight="normal"
                   >
                     {text}
                   </Label>
@@ -460,7 +460,7 @@ export function CreateWalletScreen() {
             <Button
               type="button"
               disabled={!allRisksChecked}
-              className="h-auto whitespace-normal py-3 text-center"
+              size="wrap"
               onClick={() => setRiskAcknowledged(true)}
             >
               I understand — show my recovery phrase
@@ -468,7 +468,7 @@ export function CreateWalletScreen() {
             <Button
               type="button"
               variant="outline"
-              className="h-auto whitespace-normal py-3 text-center"
+              size="wrap"
               onClick={() => {
                 setMnemonic(null);
                 setRiskChecks([false, false, false]);
@@ -483,7 +483,7 @@ export function CreateWalletScreen() {
       )}
 
       {step === 2 && mnemonic !== null && riskAcknowledged && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle><span className="bawa-marker">Write down</span> your recovery phrase</CardTitle>
             <CardDescription>
@@ -522,7 +522,7 @@ export function CreateWalletScreen() {
             </div>
             <Button
               type="button"
-              className="h-auto whitespace-normal py-3 text-center"
+              size="wrap"
               onClick={() => setStep(3)}
             >
               I have written them down
@@ -532,7 +532,7 @@ export function CreateWalletScreen() {
       )}
 
       {step === 3 && mnemonic !== null && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>Confirm your recovery phrase</CardTitle>
             <CardDescription>
@@ -560,7 +560,7 @@ export function CreateWalletScreen() {
                     />
                   </div>
                 ))}
-                <Button type="submit" className="h-auto whitespace-normal py-3 text-center">
+                <Button type="submit" size="wrap">
                   {isBusy ? (progress ?? 'Saving…') : 'Confirm and create wallet'}
                 </Button>
               </fieldset>
@@ -570,7 +570,7 @@ export function CreateWalletScreen() {
       )}
 
       {step === 4 && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>Your wallet is ready</CardTitle>
             <CardDescription>

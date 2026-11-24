@@ -287,7 +287,7 @@ export function WalletManagementScreen() {
         because no private key is stored here.
       </p>
 
-      <Card className="rounded-xl">
+      <Card radius="xl">
         <CardHeader>
           <CardTitle>Your accounts</CardTitle>
         </CardHeader>
@@ -345,7 +345,7 @@ export function WalletManagementScreen() {
                       value={countInput}
                       onChange={(event) => setCountInput(event.target.value)}
                       disabled={isCreating}
-                      className="w-28"
+                      width="sm"
                     />
                     <Button
                       type="button"
@@ -436,7 +436,7 @@ export function WalletManagementScreen() {
                     value={accountInput}
                     onChange={(event) => setAccountInput(event.target.value)}
                     disabled={isDeriving}
-                    className="w-28"
+                    width="sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -451,7 +451,7 @@ export function WalletManagementScreen() {
                     value={indexInput}
                     onChange={(event) => setIndexInput(event.target.value)}
                     disabled={isDeriving}
-                    className="w-28"
+                    width="sm"
                   />
                 </div>
                 <Button
@@ -608,8 +608,8 @@ export function WalletManagementScreen() {
 
             return (
               <li key={id}>
-                <Card className="rounded-xl">
-                  <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <Card radius="xl">
+                  <CardHeader gap="md" className="sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
                       <ChainLogo chain={id} />
                       <div className="min-w-0 space-y-1">

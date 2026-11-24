@@ -4,17 +4,21 @@
  * they are different settings.
  */
 
-import Decimal from 'decimal.js';
-import { dinero, add, toDecimal } from 'dinero.js';
-import { USD } from 'dinero.js/currencies';
+import {
+  multiplyByPowerOfTen,
+  multiplyParts,
+  parseDecimalString,
+  toFixedHalfUp,
+} from './decimal';
 
 // Display/fiat only: never use these results as transaction or adapter inputs.
 const MAX_SAFE_MINOR_UNITS = 9_007_199_254_740_991n;
 const MAX_DECIMAL_PLACES = 1_000_000_000;
 const MAX_DISPLAY_DECIMAL_PLACES = 100;
-// Bound the digit strings used in Decimal arithmetic: an unbounded
-// digit string is unbounded CPU (100k digits measured at ~7s). 1,000
-// digits is >12x the largest real value (a 256-bit integer, 78 digits).
+// Bound the digit strings used in BigInt decimal arithmetic: an
+// unbounded digit string is unbounded CPU (100k digits measured at
+// ~7s). 1,000 digits is >12x the largest real value (a 256-bit
+// integer, 78 digits).
 const MAX_INTEGER_STRING_LENGTH = 1_000;
 
 const MONEY_ERROR_MESSAGES = {
@@ -36,17 +40,9 @@ const MONEY_ERROR_MESSAGES = {
   sumFiatUSDTotal: 'sumFiatUSD total exceeds the safe integer range',
 } as const;
 
-// Two bounded operands need at most 2,000 significant digits for an exact
-// product; this also covers the 1,000-digit fee input. Pin arithmetic and
-// exponent settings so global Decimal configuration cannot affect helpers.
-const ExactDecimal = Decimal.clone({
-  precision: MAX_INTEGER_STRING_LENGTH * 2,
-  rounding: Decimal.ROUND_HALF_UP,
-  toExpNeg: -7,
-  toExpPos: 21,
-  minE: -9_000_000_000_000_000,
-  maxE: 9_000_000_000_000_000,
-});
+// The arithmetic in ./decimal is exact BigInt, so no precision
+// setting is needed: the 2,000-digit Decimal clone this replaced
+// existed only to keep the same operations exact.
 
 function assertIntegerString(value: string, label: string): void {
   if (
@@ -114,9 +110,10 @@ export function formatFeePreview(
   }
 
   // Power-of-ten division preserves the input's significant digits.
-  const fixed = new ExactDecimal(valueBaseUnits)
-    .dividedBy(`1e${decimals}`)
-    .toFixed(displayDecimals, Decimal.ROUND_HALF_UP);
+  const fixed = toFixedHalfUp(
+    multiplyByPowerOfTen(parseDecimalString(valueBaseUnits), -decimals),
+    displayDecimals,
+  );
 
   const amount = fixed.includes('.')
     ? fixed.replace(/0+$/, '').replace(/\.$/, '')
@@ -134,14 +131,18 @@ export function fiatMinorUnits(
   assertDecimalPlaces(chainDecimals, 'chainDecimals');
   assertIntegerString(priceMinorUnitsPerWhole, 'priceMinorUnitsPerWhole');
 
-  // Shared precision covers the sum of both operand lengths, keeping the
-  // product exact without arithmetic on JS numbers or global config changes.
-  const wholeUnits = new ExactDecimal(balanceBaseUnits).dividedBy(
-    `1e${chainDecimals}`,
+  // Exact BigInt arithmetic (no precision setting, no JS numbers):
+  // balance / 10^chainDecimals * price, rounded half-up to an integer.
+  const roundedMinorUnits = toFixedHalfUp(
+    multiplyParts(
+      multiplyByPowerOfTen(
+        parseDecimalString(balanceBaseUnits),
+        -chainDecimals,
+      ),
+      parseDecimalString(priceMinorUnitsPerWhole),
+    ),
+    0,
   );
-  const roundedMinorUnits = wholeUnits
-    .times(priceMinorUnitsPerWhole)
-    .toFixed(0, Decimal.ROUND_HALF_UP);
 
   const integerMinorUnits = BigInt(roundedMinorUnits);
   if (
@@ -151,16 +152,22 @@ export function fiatMinorUnits(
     throw new Error(MONEY_ERROR_MESSAGES.fiatMinorUnitsResult);
   }
 
-  // Dinero's default calculator requires JS-number minor units. This is the
-  // sole string-to-number conversion, after an exact BigInt safety proof.
+  // The string-to-number conversion, after an exact BigInt safety proof.
   return Number(roundedMinorUnits);
+}
+
+// Integer minor units (cents) as a dollars string with two fractional
+// digits, e.g. 12345n -> "123.45". Replaces dinero's toDecimal(); the
+// value is already an exact integer, so no library is needed.
+function minorUnitsToUsdDecimal(minorUnits: bigint): string {
+  const dollars = minorUnits / 100n;
+  const cents = minorUnits % 100n;
+  return `${dollars.toString()}.${cents.toString().padStart(2, '0')}`;
 }
 
 export function formatFiatUSD(minorUnits: number): string {
   assertSafeMinorUnits(minorUnits, 'minorUnits');
-  return formatUsdDecimal(
-    toDecimal(dinero({ amount: minorUnits, currency: USD })),
-  );
+  return formatUsdDecimal(minorUnitsToUsdDecimal(BigInt(minorUnits)));
 }
 
 export function sumFiatUSD(minorUnitsList: readonly number[]): string {
@@ -168,20 +175,16 @@ export function sumFiatUSD(minorUnitsList: readonly number[]): string {
     throw new Error(MONEY_ERROR_MESSAGES.minorUnitsList);
   }
 
-  let total = dinero({ amount: 0, currency: USD });
   let checkedTotal = 0n;
 
   for (const minorUnits of minorUnitsList) {
     assertSafeMinorUnits(minorUnits, 'minorUnitsList entry');
 
-    // Guard before add() can construct an unsafe numeric Dinero result.
     checkedTotal += BigInt(minorUnits);
     if (checkedTotal > MAX_SAFE_MINOR_UNITS) {
       throw new Error(MONEY_ERROR_MESSAGES.sumFiatUSDTotal);
     }
-
-    total = add(total, dinero({ amount: minorUnits, currency: USD }));
   }
 
-  return formatUsdDecimal(toDecimal(total));
+  return formatUsdDecimal(minorUnitsToUsdDecimal(checkedTotal));
 }

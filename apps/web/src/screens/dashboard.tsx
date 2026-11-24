@@ -440,7 +440,7 @@ export function DashboardScreen() {
                   type="button"
                   onClick={() => setAddTokenOpen(true)}
                   variant="outline"
-                  className="h-11 shrink-0 rounded-[22px] px-3 text-sm font-medium"
+                  size="pill"
                 >
                   Add token
                 </Button>
@@ -449,7 +449,7 @@ export function DashboardScreen() {
                   aria-pressed={hideZero}
                   onClick={() => setHideZero((current) => !current)}
                   variant={hideZero ? 'default' : 'outline'}
-                  className="h-11 shrink-0 rounded-[22px] px-3 text-sm font-medium"
+                  size="pill"
                 >
                   Hide zero balances
                 </Button>

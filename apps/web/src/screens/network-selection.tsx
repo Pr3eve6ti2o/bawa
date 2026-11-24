@@ -50,7 +50,7 @@ export function NetworkSelectionScreen() {
         </p>
       </header>
 
-      <Card className="rounded-xl">
+      <Card radius="xl">
         <CardHeader>
           <CardTitle>Mainnet</CardTitle>
         </CardHeader>
@@ -294,7 +294,7 @@ function RpcEndpointManager() {
   );
 
   return (
-    <Card className="rounded-xl">
+    <Card radius="xl">
       <CardHeader>
         <CardTitle>RPC endpoints</CardTitle>
       </CardHeader>
@@ -595,7 +595,7 @@ function PriceSourcesCard() {
           )
           .join(', ')}.`;
   return (
-    <Card className="rounded-xl">
+    <Card radius="xl">
       <CardHeader>
         <CardTitle>Prices</CardTitle>
       </CardHeader>

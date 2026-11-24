@@ -50,7 +50,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isPlainObject, ownValue } from './guards';
 import { applyPriceFallbacks } from './price-fallbacks';
-import Decimal from 'decimal.js';
+import {
+  multiplyByPowerOfTen,
+  parseDecimalString,
+  toFixedHalfUp,
+  type DecimalParts,
+} from './decimal';
 import type { ChainId } from '../engine/boundary';
 import { CHAIN_DECIMALS } from './chain-amount-format';
 import { SUPPORTED_CHAINS } from './chains';
@@ -792,22 +797,18 @@ export async function fetchPrices(
 export function usdPriceToMinorUnitsPerWhole(usdPrice: string): string {
   const invalidMessage =
     'Invalid USD price: expected a finite decimal string greater than zero.';
-  let price: Decimal;
+  let price: DecimalParts;
   try {
-    price = new Decimal(usdPrice);
+    price = parseDecimalString(usdPrice);
   } catch {
     throw new Error(invalidMessage);
   }
-  if (!price.isFinite() || !price.gt('0')) {
+  if (price.isZero || price.neg) {
     throw new Error(invalidMessage);
   }
 
-  const ExactDecimal = Decimal.clone({
-    precision: Math.max(Decimal.precision, price.precision() + 2),
-  });
-  return new ExactDecimal(usdPrice)
-    .times('100')
-    .toFixed(0, Decimal.ROUND_HALF_UP);
+  // Exact BigInt arithmetic: price * 100, rounded half-up to an integer.
+  return toFixedHalfUp(multiplyByPowerOfTen(price, 2), 0);
 }
 
 // Per-unit price for display (Lane A): the price of one whole unit of the
@@ -838,26 +839,19 @@ export function formatUnitPriceUsd(usdPrice: string): string {
     throw new Error(invalidPriceMessage);
   }
 
-  const PriceDecimal = Decimal.clone({
-    precision: Math.max(40, usdPrice.length + 8),
-    rounding: Decimal.ROUND_HALF_UP,
-  });
-
-  let price: Decimal;
+  let price: DecimalParts;
   try {
-    price = new PriceDecimal(usdPrice);
+    price = parseDecimalString(usdPrice);
   } catch {
     throw new Error(invalidPriceMessage);
   }
 
-  if (!price.isFinite() || !price.gt(0)) {
+  if (price.isZero || price.neg) {
     throw new Error(invalidPriceMessage);
   }
 
-  const fixed = price.toFixed(
-    price.gte(1) ? 2 : 6,
-    PriceDecimal.ROUND_HALF_UP,
-  );
+  // Exact BigInt arithmetic: two decimals at or above $1, six below.
+  const fixed = toFixedHalfUp(price, price.exp >= 0 ? 2 : 6);
   const [whole = '0', fraction = ''] = fixed.split('.');
   const groupedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const trimmedFraction = fraction.replace(/0+$/, '').padEnd(2, '0');

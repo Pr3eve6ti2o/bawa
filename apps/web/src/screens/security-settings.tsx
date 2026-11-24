@@ -41,7 +41,7 @@ export function SecuritySettingsScreen() {
 
       <AutoLockSetting />
 
-      <Card className="rounded-xl lg:col-span-2">
+      <Card radius="xl" className="lg:col-span-2">
         <CardHeader>
           <CardTitle>Connections</CardTitle>
         </CardHeader>
@@ -60,7 +60,7 @@ export function SecuritySettingsScreen() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl lg:col-span-2">
+      <Card radius="xl" className="lg:col-span-2">
         <CardHeader>
           <CardTitle><span className="bawa-marker">Backup</span> procedure</CardTitle>
         </CardHeader>
@@ -81,7 +81,7 @@ export function SecuritySettingsScreen() {
       </Card>
 
       {vaultState !== 'no-vault' && (
-        <Card className="rounded-xl border-destructive/40">
+        <Card radius="xl" borderTone="destructive">
           <CardHeader>
             <CardTitle>Delete vault</CardTitle>
           </CardHeader>

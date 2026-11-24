@@ -1,40 +1,48 @@
+// sonner.tsx — minimal Toaster (Lane C, token-verify programme).
+//
+// Replaces the sonner <Toaster> with a rendering of the toast store in
+// ./toast. The visuals are the same as the sonner configuration this
+// file carried: top-right, rounded-bawa, 2 px ink border, paper
+// background, ink text, no shadow; success and warning toasts use the
+// sun background, error toasts use the coral border. Only the enter
+// animation is gone (toasts appear at once); the auto-dismiss timing
+// (4 s) and the placement are unchanged.
 import { cn } from '../lib/utils'
-import { Toaster as Sonner, type ToasterProps } from 'sonner'
+import { useToasts, type ToastKind } from './toast'
 
-function Toaster({ className, ...props }: ToasterProps) {
+const KIND_CLASSES: Record<ToastKind, string> = {
+  success: 'border-ink bg-sun text-ink',
+  warning: 'border-ink bg-sun text-ink',
+  error: 'border-coral bg-paper text-ink',
+  info: 'border-ink bg-paper text-ink',
+  normal: 'border-ink bg-paper text-ink',
+}
+
+function Toaster({ className }: { className?: string }) {
+  const toasts = useToasts()
+  if (toasts.length === 0) return null
   return (
-    <Sonner
+    <div
       data-slot="toaster"
-      data-design-audit-allow="third-party-theme-vars"
-      position="top-right"
-      className={cn('toaster group', className)}
-      toastOptions={{
-        classNames: {
-          toast:
-            'group toast group-[.toaster]:rounded-bawa group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-paper group-[.toaster]:text-ink group-[.toaster]:shadow-none',
-          description: 'group-[.toast]:text-ink',
-          actionButton: 'group-[.toast]:bg-coral group-[.toast]:text-ink',
-          cancelButton:
-            'group-[.toast]:border-2 group-[.toast]:border-ink group-[.toast]:bg-paper group-[.toast]:text-ink',
-          success:
-            'group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-sun group-[.toaster]:text-ink',
-          error:
-            'group-[.toaster]:border-2 group-[.toaster]:border-coral group-[.toaster]:bg-paper group-[.toaster]:text-ink',
-          warning:
-            'group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-sun group-[.toaster]:text-ink',
-          info:
-            'group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-paper group-[.toaster]:text-ink',
-        },
-      }}
-      style={
-        {
-          '--normal-bg': 'var(--bawa-paper)',
-          '--normal-text': 'var(--bawa-ink)',
-          '--normal-border': 'var(--bawa-ink)',
-        } as React.CSSProperties
-      }
-      {...props}
-    />
+      aria-live="polite"
+      className={cn(
+        'toaster group fixed right-4 top-4 z-[100] flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-2',
+        className,
+      )}
+    >
+      {toasts.map((item) => (
+        <div
+          key={item.id}
+          role="status"
+          className={cn(
+            'toast rounded-bawa border-2 px-4 py-3 text-sm shadow-none',
+            KIND_CLASSES[item.kind],
+          )}
+        >
+          {item.message}
+        </div>
+      ))}
+    </div>
   )
 }
 

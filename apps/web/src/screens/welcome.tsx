@@ -80,7 +80,7 @@ export function WelcomeScreen() {
       </div>
 
       <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
-        <Card className="flex flex-col rounded-xl bg-card text-foreground">
+        <Card radius="xl" tone="card">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>
             <CardDescription>
@@ -89,12 +89,12 @@ export function WelcomeScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild className="h-10 w-full">
+            <Button asChild className="w-full">
               <Link to="/create-wallet">Create a wallet</Link>
             </Button>
           </CardContent>
         </Card>
-        <Card className="flex flex-col rounded-xl bg-card text-foreground">
+        <Card radius="xl" tone="card">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Import a wallet</CardTitle>
             <CardDescription>
@@ -105,7 +105,7 @@ export function WelcomeScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild variant="outline" className="h-10 w-full">
+            <Button asChild variant="outline" className="w-full">
               <Link to="/import-wallet">Import a wallet</Link>
             </Button>
           </CardContent>

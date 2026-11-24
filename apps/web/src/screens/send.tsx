@@ -1283,7 +1283,7 @@ export function SendScreen() {
                   variant={candidate === chain ? 'default' : 'outline'}
                   disabled={!hasWallet}
                   aria-pressed={candidate === chain}
-                  className="h-9"
+                  size="compact"
                   title={
                     hasWallet
                       ? undefined

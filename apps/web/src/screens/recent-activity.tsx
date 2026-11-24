@@ -178,7 +178,7 @@ export function RecentActivity() {
                     type="button"
                     variant="outline"
                     onClick={() => void refreshHistory()}
-                    className="h-11 shrink-0"
+                    size="tall"
                   >
                     Retry
                   </Button>
@@ -188,7 +188,7 @@ export function RecentActivity() {
             {isLocked && unavailableChains.length > 0 && (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3">
                 <p className="text-sm text-panel-text-soft">Locked. Unlock to see activity.</p>
-                <Button type="button" variant="outline" asChild className="h-11 shrink-0">
+                <Button type="button" variant="outline" asChild size="tall">
                   <Link to="/lock">Unlock</Link>
                 </Button>
               </div>

@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import jsQR from 'jsqr';
 import { Button } from '../ui/components/button';
+
+type JsQR = typeof import('jsqr').default;
+
+// Lane C (bundle-size gate): jsQR (130 KB) loads on demand — on
+// the first decode, not at boot. The scanner chunk is separate
+// from the send chunk; the camera loop and the image upload both
+// go through decodeQrImageData, so one cached import covers both.
+let jsQRPromise: Promise<JsQR> | null = null;
+function loadJsQR(): Promise<JsQR> {
+  jsQRPromise ??= import('jsqr').then((module) => module.default);
+  return jsQRPromise;
+}
 
 export interface QrScannerProps {
   /** Called exactly once, with the decoded QR payload. */
@@ -12,11 +23,12 @@ export interface QrScannerProps {
  * Decode raw RGBA pixels into a QR payload, or null when no code is
  * found. The camera loop and the image upload share this step.
  */
-export function decodeQrImageData(
+export async function decodeQrImageData(
   data: Uint8ClampedArray,
   width: number,
   height: number,
-): string | null {
+): Promise<string | null> {
+  const jsQR = await loadJsQR();
   return jsQR(data, width, height)?.data ?? null;
 }
 
@@ -175,12 +187,17 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
         if (!ctx) return;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = decodeQrImageData(image.data, image.width, image.height);
-        if (code) {
-          scannedRef.current = true;
-          setScanned(true);
-          callbacksRef.current.onScan(code);
-        }
+        // The decoder loads on demand (see loadJsQR above); the
+        // scan callback fires when it resolves, guarded by the
+        // same flags.
+        void decodeQrImageData(image.data, image.width, image.height).then(
+          (code) => {
+            if (cancelled || scannedRef.current || !code) return;
+            scannedRef.current = true;
+            setScanned(true);
+            callbacksRef.current.onScan(code);
+          },
+        );
       };
       raf = requestAnimationFrame(loop);
     }
