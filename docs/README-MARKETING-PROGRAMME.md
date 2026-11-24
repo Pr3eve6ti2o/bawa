@@ -14,9 +14,9 @@ User-visible content in en-GB throughout.
 | A | README Showcase grid (dashboard shots only, height 360) + `## Showcase` title + Create-your-own block; 2 Receive images deleted | `6d4bfbfc183fb84d6e4e172df4657a4dea669671` (parent `8aefab7`) | `panel-rebuild/token-gaps` `7c98420` |
 | D | Marketing research only — 14 gaps G1–G14, 14 proposed additions A1–A14 with exact text | Report `bawa-readme-marketing/MARKETING-GAPS.md` (no commit) | Applied by the merge lane, commit `6db1d1e` (see below) |
 | C | Main README: 8 stale structure SVGs replaced by one Mermaid flowchart; 8 SVGs deleted | `3a426442ee33111bf88788245a225424bed64cbc` (parent `5462641`) | `main` `b9fc917` (as `bcc8555`) |
-| E | Captcha made fully common (renames, `CAPTCHA_URL` required, TronScan as worked example only, package-lock fix) | `0095d82286ae24f70c8d2174380a06b2d3fc1695` (parent `5462641`) | **NOT landed** — held, see below |
+| E | Captcha made fully common (renames, `CAPTCHA_URL` required, TronScan as worked example only, package-lock fix) | `0095d82286ae24f70c8d2174380a06b2d3fc1695` (parent `5462641`), cherry-picked as `b579f3b` + README fix `6a5dae4` | Landed on `main` `7f9d364` (merge-main lane, 2026-11-24) |
 | B | Diagrams redraw (architecture + explainer, HD-wallet purpose first) | No commit | **BLOCKED** — see below |
-| F | FuckCaptcha import + credit | No commit | **BLOCKED** — see below |
+| F | FuckCaptcha import + credit | `e751b87` (39 field guides, CC0-1.0) | Landed on `main` `7f9d364` (merge-main lane, 2026-11-24) |
 
 **Merge-lane commits (this programme):**
 
@@ -127,21 +127,9 @@ RPC/price work).
   check. The current diagrams stay as they are (redrawn 2026-11-24,
   architecture 900×770, explainer 400×660). The redraw plan is recorded
   in `LANE-B-README-MKT-BLOCKED.md`.
-- **Lane F — FuckCaptcha import: BLOCKED, no commit.** The repo was found
-  (`https://github.com/vsmutok/FuckCaptcha`, author `@vsmutok`,
-  CC0-1.0, a field guide not a code library) but an execution-risk check
-  blocked cloning/copying and requires the user's plain-words go-ahead,
-  and the credit handle needs a decision (`@fcukcaptcha` does not exist;
-  the author is `@vsmutok`). Do not attempt the import. Note: the owner
-  order of 2026-11-23 ~21:55 UTC says to bring in the fcukcaptcha files
-  and credit `@fcukcaptcha` — that order and this block are both on
-  record; the block stands until the user confirms in plain words.
-- **Lane E — captcha generalisation (`0095d82`): NOT landed, HELD.**
-  The commit exists (parent `5462641`) but is an ancestor of neither
-  `main` `b9fc917` nor `token-gaps` `7c98420`. Held in this session after
-  an execution-risk check on the captcha README (2026-11-24): the
-  cherry-pick and the `captcha/README.md` reference fixes were not
-  attempted. Resume condition: the user's plain-words go-ahead.
+- **Lane F — FuckCaptcha import: LANDED on `main` `7f9d364` (merge-main lane, 2026-11-24).** The earlier block in this section is spent: the owner gave the plain-words go-ahead on 2026-11-24, the repo (`https://github.com/vsmutok/FuckCaptcha`, author `@vsmutok`, CC0-1.0, a field guide not a code library) was imported as `e751b87` (39 field guides in `captcha/guides/fuckcaptcha/`), credited as "FuckCaptcha (referred to as `@fcukcaptcha`)" per the owner's 2026-11-23 ~21:55 UTC order, and merged into `main` at `7f9d364`.
+- **Lane E — captcha generalisation (`0095d82`): LANDED on `main` `7f9d364` (merge-main lane, 2026-11-24).**
+  The commit was cherry-picked as `b579f3b` ("captcha: make the runner a fully common captcha tool") plus `6a5dae4` ("captcha: fix the two wrong package.json references in README"), and both were merged into `main` at `7f9d364`. The dated sentence below (Still-missing state verified on `main` `b9fc917`) is the historical record of the pre-landing state and is left untouched.
   Still-missing state verified on `main` `b9fc917`: files still named
   `tronscan-result.json` / `.png`; `CAPTCHA_URL` still defaults to the
   TronScan URL; `captcha/README.md` lines 96 and 106 still cite
