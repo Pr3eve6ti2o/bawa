@@ -32,6 +32,8 @@
     "@radix-ui/react-switch": "1.2.6",
     "@radix-ui/react-tabs": "1.1.13",
     "@scure/bip39": "2.4.0",
+    "@solana/spl-token": "0.4.15",
+    "@solana/web3.js": "1.99.0",
     "@trustwallet/wallet-core": "4.9.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",

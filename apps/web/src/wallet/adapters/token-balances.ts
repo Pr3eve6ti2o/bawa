@@ -616,8 +616,11 @@ export async function fetchTokenBalance(
 // Read-only JSON-RPC against the SOL endpoints (primary + fallback,
 // item-19 sweep): the mint account proves the mint exists and carries
 // the decimals; the Metaplex metadata account carries the name/symbol;
-// getTokenAccountsByOwner sums the owner's token accounts. No ATA PDA
-// math is needed — the RPC finds the accounts by owner + mint filter.
+// the balance is read from the owner's associated token account
+// (ATA) via getAccountInfo — getTokenAccountsByOwner is an indexed
+// method PublicNode refuses (-32602, "Indexed requests require a
+// personal token", probed live 2026-11-24) and the fallback endpoint
+// is down, so the indexed read cannot work here at all.
 
 const SOL_TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 const SOL_TOKEN_2022_PROGRAM = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
@@ -778,48 +781,62 @@ export async function fetchSplTokenMetadata(input: {
 }
 
 /** SPL balanceOf: sums the owner's token accounts for the mint. */
+/**
+ * SPL balanceOf: the owner's associated token account (ATA) for the
+ * mint, read with getAccountInfo (jsonParsed). The ATA derivation is
+ * the verified pure-PDA function below; no indexed RPC is involved.
+ * No account at the ATA means the owner holds none of this token —
+ * an exact zero, not an error. The send path spends from this same
+ * ATA, so this is the spendable balance (auxiliary non-ATA token
+ * accounts are out of scope: the wallet only ever receives into the
+ * ATA). A token account whose parsed owner is not the queried owner
+ * is a derivation drift, not a balance — it fails loudly.
+ */
 async function fetchSplTokenBalance(input: {
   contract: string;
   ownerAddress: string;
   decimals?: number;
   transport?: FetchTransport;
 }): Promise<AdapterResult<AdapterBalance>> {
+  const ata = deriveAssociatedTokenAddress(input.ownerAddress, input.contract);
+  if (ata === null) {
+    return {
+      status: 'error',
+      reason: 'Invalid Solana owner or token mint address.',
+    };
+  }
   const client = solRpcClient(input.transport);
   try {
     const raw = await client.request({
-      method: 'getTokenAccountsByOwner',
-      params: [
-        input.ownerAddress,
-        { mint: input.contract },
-        { encoding: 'jsonParsed' },
-      ],
+      method: 'getAccountInfo',
+      params: [ata, { encoding: 'jsonParsed' }],
     });
-    const list = isRecord(raw) ? raw['value'] : undefined;
-    if (!Array.isArray(list)) {
-      return { status: 'error', reason: 'Invalid response: expected a balance' };
-    }
-    let total = 0n;
-    for (const entry of list) {
-      const data = isRecord(entry)
-        ? isRecord(entry['account'])
-          ? isRecord(entry['account']['data'])
-            ? entry['account']['data']['parsed']
-            : undefined
-          : undefined
-        : undefined;
-      const info = isRecord(data) ? data['info'] : undefined;
+    const value = isRecord(raw) ? raw['value'] : undefined;
+    let amount = 0n;
+    if (isRecord(value)) {
+      const data = isRecord(value['data']) ? value['data'] : undefined;
+      const parsed = isRecord(data) ? data['parsed'] : undefined;
+      const info = isRecord(parsed) ? parsed['info'] : undefined;
       const tokenAmount = isRecord(info) ? info['tokenAmount'] : undefined;
-      const amount =
+      const amountStr =
         isRecord(tokenAmount) && typeof tokenAmount['amount'] === 'string'
           ? tokenAmount['amount']
           : undefined;
-      if (amount === undefined || !/^[0-9]+$/.test(amount)) {
+      const owner =
+        isRecord(info) && typeof info['owner'] === 'string'
+          ? info['owner']
+          : undefined;
+      if (
+        amountStr === undefined ||
+        !/^[0-9]+$/.test(amountStr) ||
+        owner !== input.ownerAddress
+      ) {
         return {
           status: 'error',
           reason: 'Invalid response: expected a balance',
         };
       }
-      total += BigInt(amount);
+      amount = BigInt(amountStr);
     }
     let decimals = input.decimals;
     if (decimals === undefined) {
@@ -842,7 +859,7 @@ async function fetchSplTokenBalance(input: {
         chain: 'sol',
         address: input.ownerAddress,
         networkId: CHAINS.sol.networkId,
-        valueBaseUnits: total.toString(),
+        valueBaseUnits: amount.toString(),
         decimals,
         source,
         fetchedAt: Date.now(),
@@ -1206,9 +1223,9 @@ export async function fetchJettonWalletAddress(input: {
 // getTokenAccountsByOwner, which PublicNode refuses (-32602, indexed
 // methods need a personal token, probed live 2026-11-24) and whose
 // fallback endpoint is down. The derivation is used by the balance
-// read and is kept for the Receive flow; the SPL send path was
-// removed (Lane 2): the Solana signer cannot produce a valid signed
-// transaction, so no SPL transfer can be built on it.
+// read (fetchSplTokenBalance reads the ATA with getAccountInfo) and
+// by the SPL send path (expansion Lane SOL: signSplOffline spends
+// from the sender ATA and creates the recipient ATA when missing).
 
 /** Associated Token Program id (the program that owns ATAs). */
 export const SOL_ASSOCIATED_TOKEN_PROGRAM =

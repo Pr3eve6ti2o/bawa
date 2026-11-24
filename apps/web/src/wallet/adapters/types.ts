@@ -67,6 +67,16 @@ export type TxInput =
   | { kind: 'nonce'; nonce: number }
   | { kind: 'account'; balanceSun: string }
   | {
+      kind: 'blockhash';
+      /**
+       * Solana recent blockhash (base58, 32 bytes): the transaction's
+       * expiry proof, fetched live via getLatestBlockhash. A legacy
+       * Solana transaction is only valid against a recent blockhash,
+       * so the signer takes it as an input exactly like an EVM nonce.
+       */
+      blockhash: string;
+    }
+  | {
       kind: 'seqno';
       seqno: number;
       /**
