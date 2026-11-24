@@ -26,6 +26,7 @@ const CHAINS = {
   eth: { displayName: 'Ethereum', symbol: 'ETH' },
   base: { displayName: 'Base', symbol: 'ETH' },
   bsc: { displayName: 'BNB Smart Chain', symbol: 'BNB' },
+  zora: { displayName: 'Zora', symbol: 'ETH' },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;
@@ -281,7 +282,7 @@ describe('QrCard', () => {
     }
   });
 
-  it('falls back to a ticker badge when a token has no logo', async () => {
+  it('falls back to an empty ring when a token has no logo', async () => {
     const mounted = await mountCard({
       qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
       amountText: '10 PENGU',
@@ -302,11 +303,44 @@ describe('QrCard', () => {
         mounted.div.querySelector('[data-testid="qr-card-subtitle"]')?.textContent,
       ).toBe('Only BNB Smart Chain network assets can be received here.');
       expect(mounted.div.textContent).toContain('PENGU');
-      // No USDC-style logo for PENGU — a badge with the ticker instead.
+      // No USDC-style logo for PENGU — an honest empty ring, not the
+      // yellow ticker badge (Lane B: badge removed 2026-11-23).
       expect(mounted.div.querySelector('img[alt="PENGU logo"]')).toBeNull();
-      expect(mounted.div.querySelector('[aria-label="PENGU logo"]')).not.toBeNull();
+      const empty = mounted.div.querySelector('[aria-label="PENGU logo"]');
+      expect(empty).not.toBeNull();
+      expect(empty?.textContent).toBe('');
+      expect(empty?.className).not.toContain('bg-sun');
       // The centre mark falls back to the network's mark, never a broken image.
       expect(mounted.div.querySelector('#qr-card-qr svg image')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows an empty ring, not a ticker badge or the Ethereum logo, for an icon-less chain', async () => {
+    // Lane B (token-verify, 2026-11-24): Zora's native coin is ETH
+    // and Zora has no chain logo — the old chain badge rendered the
+    // yellow "ZO" ticker badge. The token mark is honestly the ETH
+    // logo; the chain badge must be the empty ring.
+    const mounted = await mountCard({
+      qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+      amountText: null,
+      address: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+      token: null,
+      chain: 'zora',
+    });
+    try {
+      expect(mounted.div.querySelector('[data-testid="qr-card-title"]')?.textContent).toBe(
+        'Receive ETH',
+      );
+      const header = mounted.div.querySelector('[data-testid="qr-card-header"]');
+      expect(header).not.toBeNull();
+      expect(header?.querySelector('img[alt="ETH logo"]')).not.toBeNull();
+      const chainBadge = header?.querySelector('[aria-label="Zora logo"]');
+      expect(chainBadge).not.toBeNull();
+      expect(chainBadge?.textContent).toBe('');
+      expect(chainBadge?.className).not.toContain('bg-sun');
+      expect(header?.textContent).not.toContain('ZO');
     } finally {
       await mounted.cleanup();
     }

@@ -514,3 +514,57 @@ describe('tracker — Blockscout v2 chains (Lane B)', () => {
     ).toMatchObject({ status: 'unsupported' });
   });
 });
+
+// Lane B (token-verify, 2026-11-24): the ten expanded chains whose
+// Blockscout v2 API hash-matched live (mode, manta, ronin, fuse,
+// syscoin, songbird, etc, flare, zetachain, hemi) are looked up from
+// their own host, like the eight original chains. The wiring lane
+// set their historyExplorerBase but never extended the lookup gate,
+// so /track answered "not supported" for all ten.
+describe('tracker — Blockscout v2 expanded chains (Lane B)', () => {
+  const queue: unknown[] = [];
+
+  beforeEach(() => {
+    queue.length = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => queue.shift(),
+    })));
+  });
+
+  it.each([
+    { chain: 'mode' as const, host: 'explorer.mode.network', networkId: 'eip155:34443' },
+    { chain: 'manta' as const, host: 'pacific-explorer.manta.network', networkId: 'eip155:169' },
+    { chain: 'ronin' as const, host: 'explorer.roninchain.com', networkId: 'eip155:2020' },
+    { chain: 'fuse' as const, host: 'explorer.fuse.io', networkId: 'eip155:122' },
+    { chain: 'syscoin' as const, host: 'explorer.syscoin.org', networkId: 'eip155:57' },
+    { chain: 'songbird' as const, host: 'songbird-explorer.flare.network', networkId: 'eip155:19' },
+    { chain: 'etc' as const, host: 'etc.blockscout.com', networkId: 'eip155:61' },
+    { chain: 'flare' as const, host: 'flare-explorer.flare.network', networkId: 'eip155:14' },
+    { chain: 'zetachain' as const, host: 'zetascan.com', networkId: 'eip155:7000' },
+    { chain: 'hemi' as const, host: 'explorer.hemi.xyz', networkId: 'eip155:43111' },
+  ])('looks up a $chain transaction from its own Blockscout host', async ({ chain, host, networkId }) => {
+    queue.push(ETH_TX);
+    const result = await lookupTransaction(chain, ETH_TX.hash);
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { chain, networkId, status: 'confirmed' },
+    });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain(
+      `${host}/api/v2/transactions/${ETH_TX.hash}`,
+    );
+  });
+
+  it('rejects a malformed hash for an expanded Blockscout chain', async () => {
+    expect(await lookupTransaction('mode', 'not-a-hash')).toMatchObject({
+      status: 'error',
+    });
+  });
+
+  it('reports lookup mainnet-only for an expanded chain in devnet mode', async () => {
+    expect(
+      await lookupTransaction('mode', ETH_TX.hash, { devnet: true }),
+    ).toMatchObject({ status: 'unsupported' });
+  });
+});

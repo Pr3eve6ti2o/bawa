@@ -48,6 +48,7 @@ import {
   fetchTokenBalance,
 } from './adapters/token-balances';
 import { deriveAssociatedTokenAddress } from './adapters/token-balances';
+import { normalizeEvmAddress } from './adapters/evm';
 import {
   fetchSolanaAccountExists,
   fetchSolanaMinimumBalanceForRentExemption,
@@ -1033,6 +1034,13 @@ export async function signEvmOffline(
     };
   }
 
+  // Lane B (token-verify, 2026-11-24): a Ronin recipient arrives in
+  // the wallet's own `ronin:` form — validateRecipient accepts it —
+  // but viem only serialises 0x, so restore the 0x here. Without
+  // this the sign fails after the user approved ("Invalid Ronin
+  // transaction input."). Every other chain passes through unchanged.
+  const toAddress = normalizeEvmAddress(to);
+
   let from: string;
   try {
     from = devnet
@@ -1052,11 +1060,11 @@ export async function signEvmOffline(
     };
   }
 
-  const intent = createTransactionIntent(chain, to, amountBaseUnits, nonce);
+  const intent = createTransactionIntent(chain, toAddress, amountBaseUnits, nonce);
   try {
     assertIntentMatchesTransaction(intent, {
       chain,
-      to,
+      to: toAddress,
       amountBaseUnits,
       sequence: nonce,
     });
@@ -1074,7 +1082,7 @@ export async function signEvmOffline(
     nonce: BigInt(nonce) as unknown as number,
     gasPrice: BigInt(gasPriceBaseUnits),
     gas: 21000n,
-    to: to as `0x${string}`,
+    to: toAddress as `0x${string}`,
     value: BigInt(amountBaseUnits),
     data: '0x' as const,
   };
@@ -2115,7 +2123,10 @@ export async function signEvmTokenOffline(
   }
   let calldata: string;
   try {
-    calldata = buildErc20TransferData(to, amountBaseUnits);
+    // Lane B (token-verify, 2026-11-24): same Ronin normalisation
+    // as signEvmOffline — a `ronin:` recipient is valid input and
+    // must not fail the ERC-20 calldata build below.
+    calldata = buildErc20TransferData(normalizeEvmAddress(to), amountBaseUnits);
   } catch {
     return {
       ok: false,

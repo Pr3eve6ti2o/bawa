@@ -97,8 +97,12 @@ export interface EvmAdapterOverrides {
  * adapter boundary, and the adapter serves Ronin exactly like the
  * other 0x EVM chains. A `ronin:0x…` spelling is accepted too.
  * Every other chain passes through unchanged.
+ * Exported for the send path (wallet/send.ts): the UI validates a
+ * `ronin:` recipient as correct — it is the wallet's own address
+ * form — so signing must accept it too instead of failing on the
+ * non-0x `to` (Lane B, token-verify, 2026-11-24).
  */
-function normalizeEvmAddress(address: string): string {
+export function normalizeEvmAddress(address: string): string {
   const trimmed = address.trim();
   if (!trimmed.startsWith('ronin:')) return trimmed;
   const stripped = trimmed.slice('ronin:'.length);
