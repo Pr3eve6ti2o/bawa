@@ -121,12 +121,7 @@ RPC/price work).
 
 ## Still missing / blocked — resume conditions
 
-- **Lane B — diagrams redraw: BLOCKED, no commit.** An execution-risk
-  check requires the user's plain-words go-ahead before the redraw can
-  run. Do not attempt the redraw and do not re-dispatch it to evade the
-  check. The current diagrams stay as they are (redrawn 2026-11-24,
-  architecture 900×770, explainer 400×660). The redraw plan is recorded
-  in `LANE-B-README-MKT-BLOCKED.md`.
+- **Lane B — diagrams redraw: LANDED on `token-gaps` `6c93e66` (expansion programme, 2026-11-24).** The diagrams were redrawn purpose-first (commit `460b8f9`, merge `738c666`): banner "One 24-word phrase, one account, 84 chains", HD core centre, web wallet labelled "example — optional", Android + further wallets dashed as PLANNED. Rendered with real Baloo 2 + Inter, viewed at 900/400/390 px. The earlier block in this section is spent: the owner gave the plain-words go-ahead on 2026-11-24.
 - **Lane F — FuckCaptcha import: LANDED on `main` `7f9d364` (merge-main lane, 2026-11-24).** The earlier block in this section is spent: the owner gave the plain-words go-ahead on 2026-11-24, the repo (`https://github.com/vsmutok/FuckCaptcha`, author `@vsmutok`, CC0-1.0, a field guide not a code library) was imported as `e751b87` (39 field guides in `captcha/guides/fuckcaptcha/`), credited as "FuckCaptcha (referred to as `@fcukcaptcha`)" per the owner's 2026-11-23 ~21:55 UTC order, and merged into `main` at `7f9d364`.
 - **Lane E — captcha generalisation (`0095d82`): LANDED on `main` `7f9d364` (merge-main lane, 2026-11-24).**
   The commit was cherry-picked as `b579f3b` ("captcha: make the runner a fully common captcha tool") plus `6a5dae4` ("captcha: fix the two wrong package.json references in README"), and both were merged into `main` at `7f9d364`. The dated sentence below (Still-missing state verified on `main` `b9fc917`) is the historical record of the pre-landing state and is left untouched.
@@ -137,14 +132,14 @@ RPC/price work).
   real one is `captcha/package.json`); `captcha/package-lock.json`
   still contains `bawa-captcha-tronscan-check` (2×).
 
-## Known stale line (flagged, not fixed)
+## Known stale line (fixed 2026-11-25)
 
 - Token-gaps README, Project history: the FIX-ALL programme bullet added
-  by fix-all Lane I says "work on `panel-rebuild/fix-all-i`, not yet
-  merged into `token-gaps`". That was true when written and is stale now
-  that fix-all has merged (tip `7c98420`). Left untouched per the
-  do-not-overwrite-fix-all instruction; for the owner/coordinator to
-  correct.
+  by fix-all Lane I said "work on `panel-rebuild/fix-all-i`, not yet
+  merged into `token-gaps`". That was true when written and went stale
+  once fix-all merged (tip `7c98420`). Fixed 2026-11-25 on token-gaps:
+  the bullet now records the merge (`7c98420`) and links
+  [docs/FIX-ALL-PROGRAMME.md](FIX-ALL-PROGRAMME.md).
 
 ## Verification (merge lane, first-hand)
 

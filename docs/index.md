@@ -2,7 +2,7 @@
 
 This index is the single entry point for Bawa documentation; the root [README.md](../README.md), [WALLET_BUILDER.md](../WALLET_BUILDER.md), and [docs/README.md](README.md) each point here.
 
-This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with the 20 November 2026 re-verifications and the 23 November 2026 re-verifications named below (engine smoke 217, web vitest 90 files, 1718 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 25 November 2026 named below (engine smoke 440, web vitest 99 files, 2,799 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -43,7 +43,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [FAQ](FAQ.md) — `DOCUMENTED_NOT_TESTED`: common questions, via the reference catalogue.
 - [FURTHER-READING](FURTHER-READING.md) — `DOCUMENTED_NOT_TESTED`: supporting reading, via the reference catalogue.
 - [References](REFERENCES.md) — `DOCUMENTED_NOT_TESTED`: supporting sources.
-- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 217 checks pass (verified 2026-11-23 on this tree); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
+- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 440 checks pass (README proof strip, verified 2026-11-24); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
 - [External tools](EXTERNAL-TOOLS.md) — `DOCUMENTED_NOT_TESTED`: evaluated external repositories and packages for building with Bawa.
 - [UI/UX catalogue](UI-UX-CATALOGUE.md) — `DOCUMENTED_NOT_TESTED`: design reference and the route into `docs/ui-ux-assets/`.
 - [UI template registry](UI-TEMPLATE-REGISTRY.yaml) — `DOCUMENTED_NOT_TESTED`: template metadata.
@@ -65,6 +65,15 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [UI/UX Round 2 programme](UI-UX-ROUND2-PROGRAMME.md) — programme record: 10 items, merged into `panel-rebuild/token-gaps` (merge commit `6147b74`).
 - [Reverify + Professional Polish programme](REVERIFY-PROGRAMME.md) — programme record: 5 lanes, merged into `panel-rebuild/token-gaps`.
 - [Reverify checklist](REVERIFY-CHECKLIST.md) — every owner order from 2026-11-22 through 2026-11-23 ~18:14 IST, with a verdict and evidence per order.
+- [Marketing Fix + Found-Bugs programme](MARKETING-FIX-PROGRAMME.md) — programme record: first-impression defects, found bugs, value proposition, README rewrite, architecture diagrams, branch cleanup, QR templates, browser-first re-verification; merged into `panel-rebuild/token-gaps` (merge commit `571f0fb`).
+- [Fix-All programme](FIX-ALL-PROGRAMME.md) — programme record: 10 lanes, branches under 4, file renames, 980 px breakpoint, docs to the new state; merged into `panel-rebuild/token-gaps` (merge commit `7c98420`).
+- [README Marketing programme](README-MARKETING-PROGRAMME.md) — programme record: Showcase grid, Create-your-own block, marketing gaps; 7 of 10 landed, 3 blocked items later landed via the expansion programme; merged into `panel-rebuild/token-gaps` (commit `f065128`).
+- [BSC Send Fix](BSC-SEND-FIX.md) — fix record: generalised EVM signer to chainId 56; merged into `panel-rebuild/token-gaps` (commit `31012a6`).
+- [Token Everywhere programme](TOKEN-EVERYWHERE-PROGRAMME.md) — programme record: Add Token by ticker, verified marks, token send/receive, full names, QR card; merged into `panel-rebuild/token-gaps` (commit `047232e`).
+- [Devnet Send Crash Fix](DEVNET-SEND-CRASH-FIX.md) — fix record: picker offers only devnet chains in devnet mode; merged into `panel-rebuild/token-gaps` (commit `89a5804`).
+- [Scan QR Fix](SCAN-QR-FIX.md) — fix record: bare-address scan advances and prefills; merged into `panel-rebuild/token-gaps` (merge commit `2e8f128`).
+- [Expansion programme](EXPANSION-PROGRAMME.md) — programme record: diagrams redrawn, captcha merge + FuckCaptcha import onto `main`, Solana sending, 22 → 84 chains, cold-load −43%; merged into `token-gaps` (commit `6c93e66`); `main` `7f9d364`.
+- [Token Verify programme](TOKEN-VERIFY-PROGRAMME.md) — programme record: token verification by contract address, new-chains bug hunt, bundle gate kept, npm audit 9 → 0, all 28 icon-less chains get real icons; merged into `token-gaps` (commit `7f12de4`).
 
 ## The builder
 
@@ -76,7 +85,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [UI candidates](../research/ui-candidates.md) — `PROPOSED`: candidate research, not implementation evidence.
 - [Web template upstream](../templates/web/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
 - [Android template upstream](../templates/android/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
-- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/`, web vitest 90 files, 1718 passed + 5 skipped (verified 2026-11-23 on this tree) and a successful build (Round 2 gates, 2026-11-23).
+- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/`, web vitest 99 files, 2,799 passed + 5 skipped (verified 2026-11-24 on this tree) and a successful build (token-verify gates, 2026-11-24).
 - [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 57 `@Test` annotations counted across 5 test files (re-counted 2026-11-20); the executed passing count was NOT re-established here — no Android SDK on this machine, so Gradle tests are `NOT-RUN`. The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`.
 - [Contracts](../packages/contracts/src/index.ts) — `IMPLEMENTED_AND_VERIFIED` for compilation: imported by `apps/web` and checked by the web typecheck and build. One consumer today (`apps/web`); see `ARCHITECTURE.md`.
 - Scripts — `IMPLEMENTED_AND_VERIFIED` for the exercised workflow: [setup](../scripts/setup.mjs), [build](../scripts/build-platforms.mjs), [test](../scripts/run-test-suites.mjs) and [wallet build](../scripts/build-wallet.mjs) (web 3/3, multi-chain 6/6 steps VERIFIED).
@@ -116,9 +125,8 @@ The registry covers 84 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, bas
 
 ## Project structure
 
-Verified against the `panel-rebuild/fix-all` tree at `62abe11`
-(Lane J, FIX-ALL programme, 2026-11-24). Counts are tracked
-files (`git ls-files`).
+Verified against the `panel-rebuild/token-gaps` tree at `4bfd181`
+(2026-11-25). Counts are tracked files (`git ls-files`).
 
 ```text
 bawa/
@@ -133,11 +141,11 @@ bawa/
     devnet issues log, performance and security-findings records, and
     the dated 2026-11-18 research reports.
   apps/
-    web/            (302 files) The wallet web app: React 19 + TypeScript
+    web/            (435 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
                     (routing, shell), `src/screens` (58 files, one
                     screen per route), `src/state` (wallet context; the refresh lives
-                    in wallet-context), `src/wallet` (85 files: chains, vault,
+                    in wallet-context), `src/wallet` (94 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
                     (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),
@@ -148,7 +156,7 @@ bawa/
     android/        (30 files) The Android starter (Kotlin): app, core
                     (derivation/confirmation policy, key validation),
                     ui screens and ViewModel.
-  docs/             (219 files) The guide and programme records, in
+  docs/             (225 files) The guide and programme records, in
                     Diátaxis order (see the sections above): numbered
                     docs 01-16, platform guides, reference, evidence,
                     archive. The single entry point is this index.

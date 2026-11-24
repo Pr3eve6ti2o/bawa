@@ -1,5 +1,7 @@
 # Bawa capability map — lane D1 audit
 
+> **2026-11-25 update:** engine smoke is now 440 checks (README proof strip, verified 2026-11-24); the example wallet has 84 chains (22 enabled by default); web vitest 99 files, 2,799 passed + 5 skipped on token-gaps `7f12de4`. The 2026-11-20 block below is the historical record of that refresh.
+
 > **2026-11-20 update — base `e493720`:** Refreshed on `panel-rebuild/org-docs`, based on `panel-rebuild/adopt-proper`. The launcher exists. The web suite passed all 457 tests in 40 files; engine tests passed 217 smoke checks plus register-links checks (both exit 0). Desktop/phone live-browser previews have been screenshot-checked. Web-count and `docs/11`/main-pin discrepancies are resolved. Still open: seven Web registry gaps, including live-browser balance/history; Android's executed passing count and stale guide build claim; the classifier's code-pinned refusal sentence, which still says testnet-default (needs a code change); and recovery rehearsal. M-35 funding was declined on 2026-11-13; rehearsal addresses were retired.
 
 - **Repository:** `Pr3eve6ti2o/bawa`
@@ -60,7 +62,7 @@ Evidence labels follow AGENTS.md §5; this file does not define a separate statu
 
 **No broadcast, no send, and no funded execution have ever happened from this repo.**
 
-**Test provenance:** The 31 `tests/*.mjs` files are **not run by CI**. The named suites are `tests/mainnet-unsigned-tx.test.mjs`, `tests/mainnet-signing.test.mjs`, `tests/mainnet-guards.test.mjs` and `tests/mainnet-fees.test.mjs` (verified first-hand from the `tests/` listing); their counts are counted `test()` declarations, not executed results. The H9 baseline was 130 checks, 0 fail at `0b2aa295`; that is historical evidence, and its “no transaction construction/signing” statement predates the T33/T35 modules. The current engine suite is 217 smoke checks, 0 fail (verified 2026-11-20 on this tree).
+**Test provenance:** The 31 `tests/*.mjs` files are **not run by CI**. The named suites are `tests/mainnet-unsigned-tx.test.mjs`, `tests/mainnet-signing.test.mjs`, `tests/mainnet-guards.test.mjs` and `tests/mainnet-fees.test.mjs` (verified first-hand from the `tests/` listing); their counts are counted `test()` declarations, not executed results. The H9 baseline was 130 checks, 0 fail at `0b2aa295`; that is historical evidence, and its “no transaction construction/signing” statement predates the T33/T35 modules. The current engine suite is 440 smoke checks, 0 fail (README proof strip, verified 2026-11-24).
 
 - **Unsigned native-asset builders — UNVERIFIED.** `tools/mainnet-tx/unsigned-tx.mjs`: offline, public-input-only BTC P2WPKH, ETH legacy/EIP-1559, TRON TransferContract and TON V4 R2 construction. No network, signing or broadcast; broadcast/send/token/contract stubs always throw.  
   **Tests/CI:** `mainnet-unsigned-tx` suite in `tests/*.mjs`—24 declarations, no CI. `test/test_unsigned_serialization.py` also exists; no executed result or stated CI run is supplied.  
