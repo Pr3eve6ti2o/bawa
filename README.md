@@ -9,7 +9,7 @@
 
 **One plain request in, a real, buildable wallet project out.**
 
-**[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the saved adopt-proper-based build, not this branch; to preview this branch, check it out and run the web starter locally (see [Quickstart](#quickstart)).
+**[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of this branch.
 
 **22 chains** enabled in the example wallet · **168 chains** in the guide · **21 default tokens** · **440 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
 
