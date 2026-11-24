@@ -24,7 +24,11 @@ import {
   useWallet,
 } from '../state/wallet-context';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
-import { DEVNET_CHAIN_CONFIGS, devnetChainConfig } from '../wallet/devnet-endpoints';
+import {
+  DEVNET_CHAIN_CONFIGS,
+  DEVNET_CHAINS,
+  devnetChainConfigOrUndefined,
+} from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { formatFeePreview } from '../wallet/money';
 import {
@@ -162,7 +166,15 @@ export function SendScreen() {
   const [chosenAccount, setChosenAccount] = useState<number | null>(null);
   const [switchingAccount, setSwitchingAccount] = useState(false);
   const [chooserError, setChooserError] = useState<string | null>(null);
-  const chainsWithWallet: ChainId[] = SUPPORTED_CHAINS.filter(
+  // Devnet mode: only the four devnet chains can send — the other 18
+  // have no test network, and offering one used to crash the details
+  // step (devnetChainConfig throws for them). Mainnet offers all chains.
+  // chainsWithWallet follows the same list, so the starting chain is
+  // always a devnet chain in devnet mode.
+  const offeredChains: readonly ChainId[] = devnetEnabled
+    ? DEVNET_CHAINS
+    : SUPPORTED_CHAINS;
+  const chainsWithWallet: ChainId[] = offeredChains.filter(
     (chain) => (vaultAddresses[chain] ?? []).length > 0,
   );
   const [chain, setChain] = useState<ChainId>(
@@ -198,6 +210,14 @@ export function SendScreen() {
 
   const from = (vaultAddresses[chain] ?? [])[0] ?? '';
   const config = chainConfig(chain);
+  // Devnet test-network name, or undefined when this chain has no
+  // test network. The picker never offers such a chain, but a shared
+  // send link can force one (applyPrefill sets the chain and jumps to
+  // the details step), so the render paths below must never throw
+  // for it — the old devnetChainConfig call did, and the screen unmounted.
+  const devnetName = devnetEnabled
+    ? devnetChainConfigOrUndefined(chain)?.devnetName
+    : undefined;
   const balance = balances[chain] ?? { status: 'unavailable', reason: 'no-adapter' } as const;
   const tokenBalance =
     selectedToken === null
@@ -1060,7 +1080,9 @@ export function SendScreen() {
           className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
         >
           {devnetEnabled
-            ? `Devnet test mode. This send broadcasts to the ${devnetChainConfig(chain).devnetName} test network only. Test tokens have no value.`
+            ? devnetName
+              ? `Devnet test mode. This send broadcasts to the ${devnetName} test network only. Test tokens have no value.`
+              : `Devnet test mode. ${config.displayName} has no test network — pick a chain with one.`
             : 'Sending funds is switched off until it is separately approved. This flow signs offline only. Nothing here sends cryptocurrency anywhere.'}
         </p>
         )}
@@ -1166,7 +1188,7 @@ export function SendScreen() {
             aria-label="Chain"
             className="flex flex-wrap gap-2"
           >
-            {SUPPORTED_CHAINS.map((candidate) => {
+            {offeredChains.map((candidate) => {
               const hasWallet = (vaultAddresses[candidate] ?? []).length > 0;
               return (
                 <Button
@@ -1453,9 +1475,7 @@ export function SendScreen() {
             tokenContract={selectedToken?.contract}
             disabledReason={BROADCAST_DISABLED_MESSAGE}
             stage={approvalStage}
-            devnetNetworkName={
-              devnetEnabled ? devnetChainConfig(chain).devnetName : undefined
-            }
+            devnetNetworkName={devnetName}
             onBack={() => setStep('details')}
             onSign={() => void handleSign()}
           />
@@ -1493,9 +1513,9 @@ export function SendScreen() {
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {devnetEnabled && devnetBroadcast.status === 'error'
-              ? `The transaction was signed offline with your vault key. The broadcast to the ${devnetChainConfig(chain).devnetName} test network failed — it was not broadcast. Test tokens have no value.`
+              ? `The transaction was signed offline with your vault key. The broadcast to the ${devnetName ?? config.displayName} test network failed — it was not broadcast. Test tokens have no value.`
               : devnetEnabled
-                ? `The transaction was signed offline with your vault key and broadcast to the ${devnetChainConfig(chain).devnetName} test network. Test tokens have no value.`
+                ? `The transaction was signed offline with your vault key and broadcast to the ${devnetName ?? config.displayName} test network. Test tokens have no value.`
                 : 'The transaction was signed offline with your vault key. It was not sent anywhere. Sending funds is switched off until it is separately approved.'}
           </p>
           {devnetEnabled && devnetBroadcast.status === 'broadcasting' && (

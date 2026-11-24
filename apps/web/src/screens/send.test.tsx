@@ -459,6 +459,93 @@ describe('send screen', () => {
     }
   });
 
+  it('in devnet mode the chain picker offers only the four devnet chains', async () => {
+    // The crash: in devnet mode the picker offered all 22 chains, and
+    // picking a non-devnet chain (BSC) crashed the details step
+    // (devnetChainConfig throws for it). The picker now offers only the
+    // chains with a test network.
+    setWallet({
+      devnetEnabled: true,
+      vaultAddresses: {
+        btc: [FROM],
+        eth: [FROM],
+        trx: [FROM],
+        ton: [FROM],
+        bsc: [FROM],
+        sol: [FROM],
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      const chips = [
+        ...mounted.div.querySelectorAll(
+          '[role="group"][aria-label="Chain"] button',
+        ),
+      ].map((button) => button.textContent?.trim());
+      expect(chips).toEqual(['Bitcoin', 'Ethereum', 'TRON', 'TON']);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('in devnet mode a non-devnet starting chain falls back to a devnet chain', async () => {
+    // selectedChain can be a non-devnet chain (the wallet remembers the
+    // last chain). Before the fix the chain-step banner called
+    // devnetChainConfig on it at mount and the screen unmounted.
+    setWallet({
+      devnetEnabled: true,
+      selectedChain: 'bsc',
+      vaultAddresses: {
+        btc: [FROM],
+        eth: [FROM],
+        trx: [],
+        ton: [],
+        bsc: [FROM],
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Devnet test mode. This send broadcasts to the Bitcoin testnet4 test network only.',
+      );
+      expect(mounted.div.textContent).not.toContain('BNB Smart Chain');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('a devnet-mode send link for a non-devnet chain shows an honest message, not a crash', async () => {
+    // A shared send link can force a non-devnet chain in devnet mode
+    // (applyPrefill sets the chain and jumps to the details step).
+    // The banner must say the chain has no test network instead of
+    // throwing and unmounting the screen.
+    setWallet({
+      devnetEnabled: true,
+      vaultAddresses: {
+        btc: [FROM],
+        eth: [FROM],
+        trx: [],
+        ton: [],
+        bsc: [FROM],
+      },
+    });
+    const mounted = await mountScreen([
+      `/send?chain=bsc&to=${RECIPIENT}`,
+    ]);
+    try {
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect(amount).not.toBeNull();
+      expect(mounted.div.textContent).toContain(
+        'Devnet test mode. BNB Smart Chain has no test network — pick a chain with one.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Step 3 of 6: Address & amount',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('refuses to sign while the vault is locked', async () => {
     setWallet({ vaultState: 'locked' });
     const mounted = await mountScreen();
