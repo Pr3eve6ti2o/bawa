@@ -28,7 +28,153 @@ export interface TokenRecord {
   coingeckoId: string | null;
   /** Epoch ms the token was added (0 for the built-in defaults). */
   addedAtMs: number;
+  /**
+   * Which trusted list verified this token (token-verify Lane A,
+   * 2026-11-24), or null when it is unverified. Set at add time by
+   * resolveTokenListVerification / the CoinGecko contract lookup —
+   * never by name/symbol alone, so a copycat contract with the same
+   * name and symbol stays unverified. Older records (added before
+   * this lane) have no field and are unverified unless a CoinGecko
+   * id is set.
+   */
+  verifiedSource?: VerifiedSource | null;
+  /**
+   * Resolved icon URL for this token, or null when no source had one.
+   * The row shows an empty ring instead — never an invented icon.
+   */
+  iconUrl?: string | null;
+  /** Which source the icon URL came from (see TokenIconSource). */
+  iconSource?: TokenIconSource | null;
 }
+
+/**
+ * The trusted lists that can verify a token (token-verify Lane A).
+ * Membership is always checked by exact chain + contract — never by
+ * name or symbol, which fakes copy.
+ */
+export type VerifiedSource =
+  | 'curated'
+  | 'coingecko'
+  | 'jupiter-strict'
+  | 'one-inch'
+  | 'uniswap-default'
+  | 'pancakeswap';
+
+/** Where a token's icon URL came from (token-verify Lane A). */
+export type TokenIconSource = 'trustwallet' | 'coingecko' | 'token-list';
+
+/** Human-readable name for a verification source (en-GB, user-visible). */
+export function verifiedSourceLabel(source: VerifiedSource): string {
+  switch (source) {
+    case 'curated':
+      return 'Curated list';
+    case 'coingecko':
+      return 'CoinGecko';
+    case 'jupiter-strict':
+      return 'Jupiter Strict';
+    case 'one-inch':
+      return '1inch';
+    case 'uniswap-default':
+      return 'Uniswap Default';
+    case 'pancakeswap':
+      return 'PancakeSwap';
+  }
+}
+
+/** Human-readable name for an icon source (en-GB, user-visible). */
+export function iconSourceLabel(source: TokenIconSource): string {
+  switch (source) {
+    case 'trustwallet':
+      return 'Trust Wallet Assets';
+    case 'coingecko':
+      return 'CoinGecko';
+    case 'token-list':
+      return 'Token list';
+  }
+}
+
+/**
+ * CoinGecko platform slug per token chain (token-verify Lane A,
+ * 2026-11-24) — the single canonical map. The EVM rows were built by
+ * joining CoinGecko's /asset_platforms (fetched live 2026-11-24, 476
+ * platforms) on chain_identifier, the EVM chain id; the three
+ * non-EVM rows are the platform ids themselves (solana, tron,
+ * the-open-network). Every EVM chain the wallet supports has a
+ * platform except Bob (60808), which CoinGecko does not list as a
+ * platform at all — a Bob token can still be verified by 1inch /
+ * Uniswap, just never by CoinGecko. This map also corrects the old
+ * Metis slug: 'metis' does not exist in /asset_platforms (the
+ * contract endpoint 404s/rate-limits on it); the real slug for chain
+ * 1088 is 'metis-andromeda' — verified live 2026-11-24 against the
+ * METIS contract (200 on metis-andromeda). The previous per-file
+ * copies (Add Token, token-search, token-balances) all read from
+ * here now, so the three can never drift apart again.
+ */
+export const COINGECKO_PLATFORM_FOR_CHAIN: Partial<Record<ChainId, string>> = {
+  eth: 'ethereum',
+  trx: 'tron',
+  bsc: 'binance-smart-chain',
+  matic: 'polygon-pos',
+  arb: 'arbitrum-one',
+  op: 'optimistic-ethereum',
+  base: 'base',
+  avax: 'avalanche',
+  sol: 'solana',
+  gnosis: 'xdai',
+  celo: 'celo',
+  linea: 'linea',
+  mantle: 'mantle',
+  scroll: 'scroll',
+  opbnb: 'opbnb',
+  metis: 'metis-andromeda',
+  aurora: 'aurora',
+  fantom: 'fantom',
+  ton: 'the-open-network',
+  zksync: 'zksync',
+  cronos: 'cronos',
+  kava: 'kava',
+  filecoin: 'filecoin',
+  zora: 'zora-network',
+  mode: 'mode',
+  fraxtal: 'fraxtal',
+  berachain: 'berachain',
+  sei: 'sei-v2',
+  arbnova: 'arbitrum-nova',
+  worldchain: 'world-chain',
+  manta: 'manta-pacific',
+  unichain: 'unichain',
+  ink: 'ink',
+  abstract: 'abstract',
+  soneium: 'soneium',
+  apechain: 'apechain',
+  sonic: 'sonic',
+  hyperevm: 'hyperevm',
+  monad: 'monad',
+  ronin: 'ronin',
+  immutable: 'immutable',
+  fuse: 'fuse',
+  velas: 'velas',
+  syscoin: 'syscoin',
+  theta: 'theta',
+  iotex: 'iotex',
+  xlayer: 'x-layer',
+  boba: 'boba',
+  taiko: 'taiko',
+  astar: 'astar',
+  telos: 'telos',
+  conflux: 'conflux',
+  core: 'core',
+  songbird: 'songbird',
+  rootstock: 'rootstock',
+  pulsechain: 'pulsechain',
+  xdc: 'xdc-network',
+  chiliz: 'chiliz',
+  etc: 'ethereum-classic',
+  flare: 'flare-network',
+  zetachain: 'zetachain',
+  hemi: 'hemi',
+  flowevm: 'flow-evm',
+};
 
 export const DEFAULT_TOKENS: TokenRecord[] = [
   {
@@ -257,24 +403,48 @@ export function isDefaultToken(record: TokenRecord): boolean {
 }
 
 /**
- * Verified-tick rule (token gaps, item 2; Lane 1) — the definition of
- * "verified", written down so every surface can share it:
+ * Verified-tick rule (token gaps, item 2; Lane 1; token-verify Lane A)
+ * — the definition of "verified", written down so every surface can
+ * share it:
  *
  * A token is VERIFIED only when it is one of the curated in-repo
- * defaults (verified twice: in-repo + live CoinGecko) or when its
+ * defaults (verified twice: in-repo + live CoinGecko), when its
  * contract resolved to a real CoinGecko listing at add time
  * (coingeckoId set by the contract endpoint for that exact chain +
- * contract). Anything else is UNVERIFIED and shows "Unverified" —
- * never a tick: a user-added token by raw contract with no CoinGecko
- * listing gets no tick, and a token whose listing lookup failed is
- * unverified until the lookup succeeds, not verified on trust.
+ * contract), or when a trusted list verified it at add time
+ * (verifiedSource set — Jupiter Strict, 1inch, Uniswap Default or
+ * PancakeSwap; see wallet/token-verification.ts). Anything else is
+ * UNVERIFIED and shows "Unverified" — never a tick: a user-added
+ * token by raw contract with no listing gets no tick, a copycat
+ * contract with the same name/symbol as a listed token gets no tick,
+ * and a token whose listing lookup failed is unverified until the
+ * lookup succeeds, not verified on trust.
  * Pattern: Uniswap token-lists (membership in a curated list is the
  * verification; identity is chainId + address) and Trust Wallet
  * assets (a reviewed listing with logo + info.json is the
  * verification).
  */
 export function isVerifiedToken(record: TokenRecord): boolean {
-  return isDefaultToken(record) || record.coingeckoId !== null;
+  return (
+    isDefaultToken(record) ||
+    record.coingeckoId !== null ||
+    (record.verifiedSource !== undefined && record.verifiedSource !== null)
+  );
+}
+
+/**
+ * Which source verified this record, for display ("✓ Verified ·
+ * CoinGecko"). A default with no recorded source is 'curated'; a
+ * record with a CoinGecko id but no recorded source (added before
+ * Lane A) is 'coingecko'. Null when unverified.
+ */
+export function verificationSourceOf(record: TokenRecord): VerifiedSource | null {
+  if (record.verifiedSource !== undefined && record.verifiedSource !== null) {
+    return record.verifiedSource;
+  }
+  if (isDefaultToken(record)) return 'curated';
+  if (record.coingeckoId !== null) return 'coingecko';
+  return null;
 }
 
 /**
@@ -653,6 +823,23 @@ export function writeEnabledChains(chains: readonly ChainId[], store?: TokenStor
   }
 }
 
+/** The known verification sources, for record validation. */
+const VERIFIED_SOURCES: readonly VerifiedSource[] = [
+  'curated',
+  'coingecko',
+  'jupiter-strict',
+  'one-inch',
+  'uniswap-default',
+  'pancakeswap',
+];
+
+/** The known icon sources, for record validation. */
+const TOKEN_ICON_SOURCES: readonly TokenIconSource[] = [
+  'trustwallet',
+  'coingecko',
+  'token-list',
+];
+
 function isValidTokenRecord(value: unknown): value is TokenRecord {
   if (!isRecord(value)) return false;
   if (typeof value.chain !== 'string' || !(SUPPORTED_CHAINS as readonly string[]).includes(value.chain)) {
@@ -667,6 +854,30 @@ function isValidTokenRecord(value: unknown): value is TokenRecord {
   }
   if (value.coingeckoId !== null && typeof value.coingeckoId !== 'string') return false;
   if (typeof value.addedAtMs !== 'number' || !Number.isFinite(value.addedAtMs)) return false;
+  // Lane A: the new optional fields, validated when present — a
+  // record with a bogus source or a non-HTTPS icon URL is corrupt
+  // and is dropped on read, like any other invalid record.
+  if (
+    value.verifiedSource !== undefined &&
+    value.verifiedSource !== null &&
+    !VERIFIED_SOURCES.includes(value.verifiedSource as VerifiedSource)
+  ) {
+    return false;
+  }
+  if (
+    value.iconUrl !== undefined &&
+    value.iconUrl !== null &&
+    (typeof value.iconUrl !== 'string' || !value.iconUrl.startsWith('https://'))
+  ) {
+    return false;
+  }
+  if (
+    value.iconSource !== undefined &&
+    value.iconSource !== null &&
+    !TOKEN_ICON_SOURCES.includes(value.iconSource as TokenIconSource)
+  ) {
+    return false;
+  }
   return true;
 }
 

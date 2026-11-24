@@ -3,8 +3,9 @@
 // Resolves a ticker or name through CoinGecko's keyless public API:
 // /search for candidate coins, then /coins/{id} for each hit's
 // contract addresses per platform (detail_platforms, which carries
-// decimal_place). Only platforms this wallet supports are kept
-// (EVM chains + TRON + Solana — the chains tokenStandardFor offers); a
+// decimal_place). Only platforms this wallet supports are kept — the
+// canonical map in wallet/tokens.ts (all 84 chains: 60 EVM platforms
+// + Solana + TRON + TON; Bob has no CoinGecko platform); a
 // platform without known decimals is skipped rather than invented.
 // A query that resolves to nothing returns not-found honestly.
 //
@@ -26,6 +27,7 @@
 // the local registry first, then this remote search.
 import type { ChainId } from './chains';
 import { isRecord } from './guards';
+import { COINGECKO_PLATFORM_FOR_CHAIN, type TokenIconSource } from './tokens';
 
 export interface TokenSearchCandidate {
   chain: ChainId;
@@ -37,6 +39,12 @@ export interface TokenSearchCandidate {
   /** Lane 1: true for every remote candidate — its contract was
    * confirmed by CoinGecko for this exact coin (see the header). */
   verified: boolean;
+  /** Lane A: the CoinGecko token image (image.small), when the
+   * detail response carries one — the candidate's icon, shown in
+   * the search results instead of the empty ring. */
+  iconUrl?: string | null;
+  /** Lane A: which source the icon came from. */
+  iconSource?: TokenIconSource | null;
 }
 
 export type TokenSearchResult =
@@ -44,28 +52,19 @@ export type TokenSearchResult =
   | { status: 'not-found' }
   | { status: 'error'; reason: string };
 
-/** CoinGecko platform id -> wallet chain (inverse of the Add Token flow's map). */
-const CHAIN_FOR_PLATFORM: Partial<Record<string, ChainId>> = {
-  ethereum: 'eth',
-  tron: 'trx',
-  'binance-smart-chain': 'bsc',
-  'polygon-pos': 'matic',
-  'arbitrum-one': 'arb',
-  'optimistic-ethereum': 'op',
-  base: 'base',
-  avalanche: 'avax',
-  // UI/UX fixes, item 13: SPL on Solana + ERC-20 on the 9 new EVM chains.
-  solana: 'sol',
-  xdai: 'gnosis',
-  celo: 'celo',
-  linea: 'linea',
-  mantle: 'mantle',
-  scroll: 'scroll',
-  opbnb: 'opbnb',
-  metis: 'metis',
-  aurora: 'aurora',
-  fantom: 'fantom',
-};
+/**
+ * CoinGecko platform id -> wallet chain (inverse of the canonical
+ * map in wallet/tokens.ts — the single source of truth, so a new
+ * chain's platform is added once and search, Add Token and the
+ * contract lookup all see it). Bob (60808) has no CoinGecko
+ * platform, so it never appears here.
+ */
+const CHAIN_FOR_PLATFORM: Partial<Record<string, ChainId>> = Object.fromEntries(
+  Object.entries(COINGECKO_PLATFORM_FOR_CHAIN).map(([chain, platform]) => [
+    platform as string,
+    chain as ChainId,
+  ]),
+);
 
 /** At most this many search hits get a detail fetch (bounds the calls). */
 const MAX_DETAIL_FETCHES = 3;
@@ -165,6 +164,11 @@ export async function searchTokensByNameOrTicker(
           ? detail['symbol'].toUpperCase()
           : '';
     if (name === '' || symbol === '') continue;
+    // Lane A: the CoinGecko token image, when the detail carries
+    // one — the search candidate's icon (source: CoinGecko).
+    const image = isRecord(detail['image']) ? detail['image']['small'] : undefined;
+    const iconUrl =
+      typeof image === 'string' && image !== '' ? image : null;
     for (const [platform, info] of Object.entries(platforms)) {
       const chain = CHAIN_FOR_PLATFORM[platform];
       if (chain === undefined) continue;
@@ -178,7 +182,7 @@ export async function searchTokensByNameOrTicker(
       if (seen.has(key)) continue;
       seen.add(key);
       // Lane 1: CoinGecko-confirmed contract — verified (see header).
-      candidates.push({ chain, contract, name, symbol, decimals, coingeckoId: id, verified: true });
+      candidates.push({ chain, contract, name, symbol, decimals, coingeckoId: id, verified: true, iconUrl, iconSource: iconUrl === null ? null : 'coingecko' });
     }
   }
   if (candidates.length === 0) {

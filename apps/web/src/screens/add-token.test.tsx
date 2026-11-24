@@ -11,6 +11,11 @@ import {
   verifySplToken,
   verifyTronToken,
 } from '../wallet/adapters/token-balances';
+import {
+  isBannedToken,
+  resolveTokenIcon,
+  resolveTokenListVerification,
+} from '../wallet/token-verification';
 import type { TokenRecord } from '../wallet/tokens';
 
 vi.mock('../state/wallet-context', () => ({
@@ -23,6 +28,12 @@ vi.mock('../wallet/adapters/token-balances', () => ({
   verifySplToken: vi.fn(),
   verifyJettonToken: vi.fn(),
   resolveTokenCoingeckoId: vi.fn(),
+}));
+
+vi.mock('../wallet/token-verification', () => ({
+  isBannedToken: vi.fn(),
+  resolveTokenListVerification: vi.fn(),
+  resolveTokenIcon: vi.fn(),
 }));
 
 const testGlobal = globalThis as typeof globalThis & {
@@ -142,7 +153,10 @@ async function submitForm(root: ParentNode): Promise<void> {
 beforeEach(() => {
   vi.clearAllMocks();
   mockAddCustomToken.mockReturnValue({ ok: true });
-  vi.mocked(resolveTokenCoingeckoId).mockResolvedValue('usd-coin');
+  vi.mocked(resolveTokenCoingeckoId).mockResolvedValue({ id: 'usd-coin', image: null });
+  vi.mocked(isBannedToken).mockResolvedValue(false);
+  vi.mocked(resolveTokenListVerification).mockResolvedValue({ verified: false, source: null, logoUri: null });
+  vi.mocked(resolveTokenIcon).mockResolvedValue({ iconUrl: null, iconSource: null });
   vi.mocked(verifyEvmToken).mockResolvedValue({
     ok: true,
     metadata: { name: 'USD Coin', symbol: 'USDC', decimals: 6 },
@@ -264,7 +278,7 @@ describe('AddTokenDialog — add token mode', () => {
 
   it('resolves a Jetton CoinGecko id via the-open-network', async () => {
     const NOT_MASTER = 'EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT';
-    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue('notcoin');
+    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue({ id: 'notcoin', image: null });
     vi.mocked(verifyJettonToken).mockResolvedValue({
       ok: true,
       metadata: { name: 'Notcoin', symbol: 'NOT', decimals: 9 },
@@ -352,6 +366,83 @@ describe('AddTokenDialog — add token mode', () => {
       expect(document.body.textContent).toContain('Token added');
       // Lane 1: no listing, no tick — the result says Unverified.
       expect(document.body.textContent).toContain('Token added — Unverified');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Lane A (token-verify): a token CoinGecko does not list is still
+  // Verified when a trusted list holds it — here the 1inch list —
+  // and the add result names the list.
+  it('verifies a token via 1inch when CoinGecko has no listing for it', async () => {
+    const AAMPL_CONTRACT = '0x1e6bb68acec8fefbd87d192be09bb274170a0548';
+    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue(null);
+    vi.mocked(resolveTokenListVerification).mockResolvedValue({
+      verified: true,
+      source: 'one-inch',
+      logoUri: null,
+    });
+    vi.mocked(verifyEvmToken).mockResolvedValue({
+      ok: true,
+      metadata: { name: 'Aave interest bearing AMPL', symbol: 'aAMPL', decimals: 9 },
+      balanceBaseUnits: '0',
+    });
+    const mounted = await mountDialog();
+    try {
+      const input = document.querySelector<HTMLInputElement>('#add-token-contract');
+      setInputValue(input!, AAMPL_CONTRACT);
+      await submitForm(document);
+      expect(resolveTokenListVerification).toHaveBeenCalledTimes(1);
+      const listCall = vi.mocked(resolveTokenListVerification).mock.calls[0]?.[0];
+      expect(listCall?.chain).toBe('eth');
+      // The contract is checksummed by validation; compare case-insensitively.
+      expect(listCall?.contract.toLowerCase()).toBe(AAMPL_CONTRACT);
+      expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
+      const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
+      expect(record.coingeckoId).toBeNull();
+      expect(record.verifiedSource).toBe('one-inch');
+      expect(document.body.textContent).toContain('Token added — ✓ Verified (1inch)');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Lane A (token-verify): a mint on Jupiter's banned list is refused
+  // outright — it is never added, so it can never show a tick.
+  it('refuses a banned Solana mint', async () => {
+    const BANNED_MINT = '3mXx1bNiB5bhgwznk4eeqM9eoy6DU3CeCkm1LPabeoEh';
+    setWallet({
+      vaultAddresses: {
+        eth: [ETH_ADDRESS],
+        trx: [TRON_ADDRESS],
+        sol: [SOL_ADDRESS],
+        ton: [TON_ADDRESS],
+        btc: [],
+        bsc: [],
+        matic: [],
+        arb: [],
+        op: [],
+        base: [],
+        avax: [],
+        ltc: [],
+        doge: [],
+      },
+    });
+    vi.mocked(isBannedToken).mockResolvedValue(true);
+    const mounted = await mountDialog();
+    try {
+      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
+      setSelectValue(select!, 'sol');
+      const input = document.querySelector<HTMLInputElement>('#add-token-contract');
+      setInputValue(input!, BANNED_MINT);
+      await submitForm(document);
+      expect(verifySplToken).toHaveBeenCalledTimes(1);
+      expect(isBannedToken).toHaveBeenCalledWith({
+        chain: 'sol',
+        contract: BANNED_MINT,
+      });
+      expect(mockAddCustomToken).not.toHaveBeenCalled();
+      expect(document.body.textContent).toContain("banned-token list");
     } finally {
       await mounted.cleanup();
     }
@@ -807,7 +898,7 @@ describe('AddTokenDialog — ticker in the contract field', () => {
       [{ id: 'sushi', name: 'Sushi', symbol: 'SUSHI' }],
       { sushi: SUSHI_DETAIL },
     );
-    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue('sushi');
+    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue({ id: 'sushi', image: null });
     vi.mocked(verifyEvmToken).mockResolvedValue({
       ok: true,
       metadata: { name: 'Sushi', symbol: 'SUSHI', decimals: 18 },

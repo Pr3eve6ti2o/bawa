@@ -723,35 +723,42 @@ export async function fetchSplTokenMetadata(input: {
   if (decimals === undefined) {
     return { ok: false, error: UNREADABLE_TOKEN };
   }
-  let accounts: unknown;
+  // Lane A: the metadata account is read by its program-derived
+  // address (seeds ["metadata", program, mint]) with a plain
+  // getAccountInfo — NOT getProgramAccounts. The wallet's primary
+  // Solana RPC (PublicNode) refuses indexed requests ("Indexed
+  // requests require a personal token", -32602), so the old
+  // getProgramAccounts lookup failed for EVERY mint, real or fake,
+  // and no SPL token could ever be added by contract (found live,
+  // 2026-11-24: real BONK refused with "Could not read this token").
+  // The PDA derivation is the same pure math as the ATA derivation
+  // below (deriveAssociatedTokenAddress) — no new dependency, and
+  // the balance read already avoided indexed methods for the same
+  // reason (see the getTokenAccountsByOwner note in the tests).
+  const metadataAddress = deriveMetaplexMetadataAddress(contract);
+  if (metadataAddress === null) {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  let metadataAccount: unknown;
   try {
-    accounts = await client.request({
-      method: 'getProgramAccounts',
-      params: [
-        METAPLEX_METADATA_PROGRAM,
-        {
-          encoding: 'base64',
-          filters: [{ memcmp: { offset: 33, bytes: contract } }],
-        },
-      ],
+    metadataAccount = await client.request({
+      method: 'getAccountInfo',
+      params: [metadataAddress, { encoding: 'base64' }],
     });
   } catch {
     return { ok: false, error: UNREADABLE_TOKEN };
   }
-  // getProgramAccounts returns a bare array (unlike getAccountInfo /
-  // getTokenAccountsByOwner, whose result is { context, value }).
-  const list = Array.isArray(accounts) ? accounts : undefined;
-  if (list === undefined || list.length === 0) {
+  const metadataValue = isRecord(metadataAccount)
+    ? metadataAccount['value']
+    : undefined;
+  if (metadataValue === null || metadataValue === undefined) {
     return {
       ok: false,
       error: 'No Metaplex metadata found for this mint',
     };
   }
-  const first = list[0];
-  const accountData = isRecord(first)
-    ? isRecord(first['account'])
-      ? first['account']['data']
-      : undefined
+  const accountData = isRecord(metadataValue)
+    ? metadataValue['data']
     : undefined;
   if (
     !Array.isArray(accountData) ||
@@ -761,8 +768,9 @@ export async function fetchSplTokenMetadata(input: {
   }
   const bytes = decodeBase64(accountData[0]);
   // Metaplex MetadataV1: 1-byte key (4), 32-byte update authority,
-  // 32-byte mint, then length-prefixed name, symbol, uri. The memcmp
-  // filter above already constrains the account to this mint.
+  // 32-byte mint, then length-prefixed name, symbol, uri. The PDA
+  // seeds include this mint, so the account can only be this mint's
+  // metadata.
   if (bytes === null || bytes.length < 69 || bytes[0] !== 4) {
     return { ok: false, error: UNREADABLE_TOKEN };
   }
@@ -1120,37 +1128,21 @@ export async function verifyTronToken(input: {
  * 404 (unknown token) → null: the token is still added, its price shows
  * "Price unavailable" unless the DexScreener / TonAPI fallback has it
  * (see token-prices). Never throws: network failure also yields null.
- * Platform ids are CoinGecko's per-chain slugs (ethereum, tron,
- * binance-smart-chain, polygon-pos, arbitrum-one, optimistic-ethereum,
- * base, avalanche, solana, xdai, celo, linea, mantle, scroll, opbnb,
- * metis, aurora, fantom, the-open-network). The endpoint accepts the
- * lowercased address for every platform — verified live 2026-11-23 for
- * Solana, TRON and TON (the friendly EQ… form lowercased still resolves).
+ * Platform ids are CoinGecko's per-chain slugs — the canonical map is
+ * COINGECKO_PLATFORM_FOR_CHAIN in wallet/tokens.ts (token-verify Lane A:
+ * 59 EVM chains + solana/tron/the-open-network; 'metis-andromeda', not
+ * the nonexistent 'metis'). The endpoint accepts the lowercased
+ * address for every platform — verified live 2026-11-23 for Solana,
+ * TRON and TON (the friendly EQ… form lowercased still resolves).
+ * The response's image.small is returned alongside the id: it is the
+ * token's CoinGecko image, the second icon source after Trust Wallet
+ * Assets (see resolveTokenIcon in wallet/token-verification.ts).
  */
 export async function resolveTokenCoingeckoId(input: {
-  platform:
-    | 'ethereum'
-    | 'tron'
-    | 'binance-smart-chain'
-    | 'polygon-pos'
-    | 'arbitrum-one'
-    | 'optimistic-ethereum'
-    | 'base'
-    | 'avalanche'
-    | 'solana'
-    | 'xdai'
-    | 'celo'
-    | 'linea'
-    | 'mantle'
-    | 'scroll'
-    | 'opbnb'
-    | 'metis'
-    | 'aurora'
-    | 'fantom'
-    | 'the-open-network';
+  platform: string;
   contract: string;
   fetchFn?: typeof fetch;
-}): Promise<string | null> {
+}): Promise<{ id: string; image: string | null } | null> {
   const fetchFn = input.fetchFn ?? globalThis.fetch;
   if (typeof fetchFn !== 'function') return null;
   // CoinGecko contract endpoints take the lowercase hex address.
@@ -1163,7 +1155,11 @@ export async function resolveTokenCoingeckoId(input: {
     if (!response.ok) return null;
     const payload: unknown = await response.json();
     if (isRecord(payload) && typeof payload['id'] === 'string') {
-      return payload['id'];
+      const image = isRecord(payload['image']) ? payload['image']['small'] : undefined;
+      return {
+        id: payload['id'],
+        image: typeof image === 'string' && image !== '' ? image : null,
+      };
     }
     return null;
   } catch {
@@ -1285,6 +1281,39 @@ function isOffEd25519Curve(candidate: Uint8Array): boolean {
 }
 
 /**
+ * Solana program-derived address (find_program_address): the first
+ * bump, 255 down to 0, whose sha256(seeds + bump + program +
+ * "ProgramDerivedAddress") is off the ed25519 curve wins. Pure math,
+ * no RPC — shared by the ATA and the Metaplex metadata derivations.
+ */
+function findProgramAddress(
+  seeds: Uint8Array[],
+  programId: string,
+): string | null {
+  const program = decodeBase58(programId);
+  if (program === null || program.length !== 32) return null;
+  let seedBytes = 0;
+  for (const seed of seeds) seedBytes += seed.length;
+  const suffix = new TextEncoder().encode('ProgramDerivedAddress');
+  for (let bump = 255; bump >= 0; bump -= 1) {
+    const input = new Uint8Array(seedBytes + 1 + 32 + suffix.length);
+    let at = 0;
+    for (const seed of seeds) {
+      input.set(seed, at);
+      at += seed.length;
+    }
+    input[at] = bump;
+    at += 1;
+    input.set(program, at);
+    at += 32;
+    input.set(suffix, at);
+    const hash = hexToBytes(sha256(input));
+    if (isOffEd25519Curve(hash)) return encodeBase58(hash);
+  }
+  return null;
+}
+
+/**
  * Derive an associated token account (ATA) address — pure PDA math,
  * no RPC. Seeds are [owner, token program, mint], the program is the
  * Associated Token Program, and the bump runs 255 down to 0
@@ -1300,36 +1329,45 @@ export function deriveAssociatedTokenAddress(
   const owner = decodeBase58(ownerAddress);
   const mint = decodeBase58(mintAddress);
   const program = decodeBase58(tokenProgramId);
-  const associatedProgram = decodeBase58(SOL_ASSOCIATED_TOKEN_PROGRAM);
   if (
     owner === null ||
     owner.length !== 32 ||
     mint === null ||
     mint.length !== 32 ||
     program === null ||
-    program.length !== 32 ||
-    associatedProgram === null ||
-    associatedProgram.length !== 32
+    program.length !== 32
   ) {
     return null;
   }
-  const suffix = new TextEncoder().encode('ProgramDerivedAddress');
-  for (let bump = 255; bump >= 0; bump -= 1) {
-    const input = new Uint8Array(32 + 32 + 32 + 1 + 32 + suffix.length);
-    let at = 0;
-    input.set(owner, at);
-    at += 32;
-    input.set(program, at);
-    at += 32;
-    input.set(mint, at);
-    at += 32;
-    input[at] = bump;
-    at += 1;
-    input.set(associatedProgram, at);
-    at += 32;
-    input.set(suffix, at);
-    const hash = hexToBytes(sha256(input));
-    if (isOffEd25519Curve(hash)) return encodeBase58(hash);
+  return findProgramAddress(
+    [owner, program, mint],
+    SOL_ASSOCIATED_TOKEN_PROGRAM,
+  );
+}
+
+/**
+ * Derive a mint's Metaplex metadata account — pure PDA math, no RPC.
+ * Seeds are ["metadata", metadata program, mint], the program is the
+ * Metaplex Token Metadata program. Verified against the live chain:
+ * BONK's metadata account is FDZZbyY9XGpL3CNKUZxLk3wFTTQYL3TkDiDzqxrizcPN
+ * (api.mainnet-beta.solana.com getProgramAccounts, 2026-11-24; see
+ * token-balances.test.ts). Returns null on a malformed mint.
+ */
+export function deriveMetaplexMetadataAddress(
+  mintAddress: string,
+): string | null {
+  const mint = decodeBase58(mintAddress);
+  const program = decodeBase58(METAPLEX_METADATA_PROGRAM);
+  if (
+    mint === null ||
+    mint.length !== 32 ||
+    program === null ||
+    program.length !== 32
+  ) {
+    return null;
   }
-  return null;
+  return findProgramAddress(
+    [new TextEncoder().encode('metadata'), program, mint],
+    METAPLEX_METADATA_PROGRAM,
+  );
 }

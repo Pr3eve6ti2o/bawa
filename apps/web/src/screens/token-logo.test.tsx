@@ -112,6 +112,66 @@ describe('TokenLogo', () => {
     }
   });
 
+  it('prefers a resolved iconUrl over the bundled symbol logo', () => {
+    // Lane A: a custom token's recorded icon wins — a fake USDC must
+    // not wear the real USDC mark just because it shares the symbol.
+    const iconUrl = 'https://example.invalid/bonk.png';
+    act(() => {
+      root.render(
+        <MemoryRouter>
+          <TokenLogo symbol="USDC" iconUrl={iconUrl} allowSymbolLogo={false} />
+        </MemoryRouter>,
+      );
+    });
+    const img = div.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toBe(iconUrl);
+  });
+
+  it('falls back to the empty ring when a resolved icon fails and no symbol logo is allowed', () => {
+    // Lane A: a custom token whose icon 404s shows the honest ring —
+    // never the bundled logo of a different token with the same symbol.
+    const iconUrl = 'https://example.invalid/gone.png';
+    act(() => {
+      root.render(
+        <MemoryRouter>
+          <TokenLogo symbol="USDC" iconUrl={iconUrl} allowSymbolLogo={false} />
+        </MemoryRouter>,
+      );
+    });
+    const img = div.querySelector('img');
+    expect(img).not.toBeNull();
+    act(() => {
+      img?.dispatchEvent(new Event('error'));
+    });
+    expect(div.querySelector('img')).toBeNull();
+    const empty = div.querySelector('span[role="img"]');
+    expect(empty).not.toBeNull();
+    expect(empty?.getAttribute('aria-label')).toBe('USDC logo unavailable');
+  });
+
+  it('falls back to the bundled symbol logo when a resolved icon fails and it is allowed', () => {
+    // Lane A: a default token whose remote icon fails still shows its
+    // bundled mark — its symbol IS its identity.
+    const iconUrl = 'https://example.invalid/gone.png';
+    act(() => {
+      root.render(
+        <MemoryRouter>
+          <TokenLogo symbol="USDC" iconUrl={iconUrl} allowSymbolLogo />
+        </MemoryRouter>,
+      );
+    });
+    const img = div.querySelector('img');
+    expect(img?.getAttribute('src')).toBe(iconUrl);
+    act(() => {
+      img?.dispatchEvent(new Event('error'));
+    });
+    const fallback = div.querySelector('img');
+    expect(fallback).not.toBeNull();
+    expect(fallback?.getAttribute('src')).not.toBe(iconUrl);
+    expect(fallback?.getAttribute('src')).not.toBe('');
+  });
+
   it('maps on-chain variant symbols to the USDT / USDT0 logos', () => {
     // Lane G: the chains report these spellings on-chain (Arbitrum
     // USDT0 is USD₮0, Avalanche USDT is USDt) — the rows showed the

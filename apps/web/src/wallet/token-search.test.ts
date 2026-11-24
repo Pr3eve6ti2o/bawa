@@ -74,6 +74,8 @@ describe('searchTokensByNameOrTicker', () => {
           decimals: 6,
           coingeckoId: 'usd-coin',
           verified: true,
+          iconUrl: null,
+          iconSource: null,
         },
         {
           chain: 'base',
@@ -83,6 +85,8 @@ describe('searchTokensByNameOrTicker', () => {
           decimals: 6,
           coingeckoId: 'usd-coin',
           verified: true,
+          iconUrl: null,
+          iconSource: null,
         },
       ],
     });
