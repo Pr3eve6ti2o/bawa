@@ -550,12 +550,21 @@ function TableRow({ model }: { model: AssetRowModel }) {
               <span className="block text-[15px] font-bold text-foreground">
                 {model.title}
                 {/* Lane 1: the wide table's failed row had no mark at
-                    all — the list variant already showed it. */}
+                    all — the list variant already showed it. Merge: the
+                    tick never splits from its label, as on the other
+                    rows. */}
                 {model.verified === true ? (
-                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
                 ) : model.verified === false ? (
-                  <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
+                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
                 ) : null}
+              </span>
+              {/* Merge: the subtitle (symbol · chain · contract) stays
+                  visible on a failed table row too — the ListRow already
+                  shows it, and without it the symbol appears nowhere on
+                  the row once the title is the full token name. */}
+              <span className="block text-xs text-muted-foreground">
+                {model.subtitle}
               </span>
               <span className="block text-xs text-muted-foreground">
                 {model.statusText}
