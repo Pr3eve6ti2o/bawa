@@ -4,7 +4,7 @@ This index is the single entry point for Bawa documentation on `main`; the root 
 
 The AI Wallet Builder itself — registries, starters, scripts, and the example web wallet — lives on the active development branch (`panel-rebuild/token-gaps`); this index lists only what exists on `main`.
 
-This index maps Bawa's wallet reference and guide: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with the 20 November 2026 re-verifications and the 23 November 2026 re-verifications named below (engine smoke 217, web vitest 90 files, 1718 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and guide: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 25 November 2026 named below (engine smoke 440, web vitest 99 files, 2,799 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -55,6 +55,12 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [UI/UX Round 2 programme](UI-UX-ROUND2-PROGRAMME.md) — programme record: 10 items, merged into `panel-rebuild/token-gaps` (merge commit `6147b74`).
 - [Reverify + Professional Polish programme](REVERIFY-PROGRAMME.md) — programme record: 5 lanes, merged into `panel-rebuild/token-gaps`.
 - [Reverify checklist](REVERIFY-CHECKLIST.md) — every owner order from 2026-11-22 through 2026-11-23 ~18:14 IST, with a verdict and evidence per order.
+- [Marketing Fix + Found-Bugs programme](MARKETING-FIX-PROGRAMME.md) — programme record: first-impression defects, found bugs, value proposition, README rewrite, architecture diagrams, branch cleanup, QR templates, browser-first re-verification; merged into `panel-rebuild/token-gaps` (merge commit `571f0fb`).
+- [Fix-All programme](FIX-ALL-PROGRAMME.md) — programme record: 10 lanes, branches under 4, file renames, 980 px breakpoint, docs to the new state; merged into `panel-rebuild/token-gaps` (merge commit `7c98420`).
+- [README Marketing programme](README-MARKETING-PROGRAMME.md) — programme record: Showcase grid, Create-your-own block, marketing gaps; 7 of 10 landed, 3 blocked items later landed via the expansion programme; merged into `panel-rebuild/token-gaps` (commit `f065128`).
+- [Token Everywhere programme](TOKEN-EVERYWHERE-PROGRAMME.md) — programme record: Add Token by ticker, verified marks, token send/receive, full names, QR card; merged into `panel-rebuild/token-gaps` (commit `047232e`).
+- [Expansion programme](EXPANSION-PROGRAMME.md) — programme record: diagrams redrawn, captcha merge + FuckCaptcha import onto `main`, Solana sending, 22 → 84 chains, cold-load −43%; merged into `token-gaps` (commit `6c93e66`); `main` `7f9d364`.
+- [Token Verify programme](TOKEN-VERIFY-PROGRAMME.md) — programme record: token verification by contract address, new-chains bug hunt, bundle gate kept, npm audit 9 → 0, all 28 icon-less chains get real icons; merged into `token-gaps` (commit `7f12de4`).
 
 ## Evidence and gates
 
