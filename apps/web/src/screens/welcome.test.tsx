@@ -5,7 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
 import { WelcomeScreen } from './welcome';
 import { useWallet } from '../state/wallet-context';
-import { usePrices } from '../wallet/prices';
+import { idlePriceEntries, usePrices } from '../wallet/prices';
 import type { BalanceState } from '../state/wallet-context';
 import type { PriceEntry, PricesState } from '../wallet/prices';
 
@@ -85,14 +85,6 @@ function balancesFor(
   return { ...base, ...overrides };
 }
 
-function idleEntries(): Record<ChainKey, PriceEntry> {
-  const entries = {} as Record<ChainKey, PriceEntry>;
-  for (const chain of ALL_CHAINS) {
-    entries[chain] = { status: 'unavailable', reason: 'missing' };
-  }
-  return entries;
-}
-
 function freshQuote(
   chain: ChainKey,
   usdPrice: string,
@@ -167,7 +159,7 @@ describe('welcome screen \u2014 Popular chains strip removed (Lane J)', () => {
     const refresh = vi.fn();
     setWallet('no-vault', balancesFor({}));
     setPrices(
-      { status: 'idle', entries: idleEntries(), lastFetchedAtMs: null },
+      { status: 'idle', entries: idlePriceEntries(), lastFetchedAtMs: null },
       refresh,
     );
     const mounted = await mountScreen();
@@ -209,7 +201,7 @@ describe('welcome screen \u2014 Popular chains strip removed (Lane J)', () => {
         ton: { status: 'unavailable', reason: 'no-adapter' },
       }),
     );
-    const entries = idleEntries();
+    const entries = idlePriceEntries();
     entries.btc = freshQuote('btc', '61706');
     entries.eth = freshQuote('eth', '1741.66');
     entries.trx = freshQuote('trx', '0.306439');
@@ -239,7 +231,7 @@ describe('welcome screen — introduction (Lane C, item 9)', () => {
   async function mountIntro() {
     setWallet('no-vault', balancesFor({}));
     setPrices(
-      { status: 'idle', entries: idleEntries(), lastFetchedAtMs: null },
+      { status: 'idle', entries: idlePriceEntries(), lastFetchedAtMs: null },
       () => {},
     );
     return mountScreen();
@@ -256,10 +248,10 @@ describe('welcome screen — introduction (Lane C, item 9)', () => {
       expect(text).toContain(
         'Bawa is a self-custodial wallet that runs in your browser',
       );
-      expect(text).toContain('22 chains');
+      expect(text).toContain('84 chains');
       expect(text).toContain('Bawa is also a guide for humans and AI agents');
       expect(text).toContain('What this wallet does');
-      expect(text).toContain('Receive on 22 chains');
+      expect(text).toContain('Receive on 84 chains');
       expect(text).toContain('Real balances and prices');
       expect(text).toContain('Watch any wallet');
       expect(text).toContain('Add tokens');

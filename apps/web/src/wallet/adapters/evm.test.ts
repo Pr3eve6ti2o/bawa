@@ -90,6 +90,66 @@ describe('evm adapter — balance', () => {
   });
 });
 
+describe('evm adapter — Ronin ronin: prefix (Lane 80-APP, 2026-11-24)', () => {
+  const RONIN: EvmAdapterConfig = {
+    chain: 'ronin',
+    networkId: 'eip155:2020',
+    rpcUrl: 'https://api.roninchain.com/rpc',
+    evmChainId: 2020,
+    chainName: 'Ronin',
+    nativeSymbol: 'RON',
+    source: 'roninchain',
+  };
+  // The real Ronin form: the prefix REPLACES the 0x (not prepended).
+  const RONIN_ADDRESS = 'ronin:A3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7';
+
+  it('loads a balance for a ronin: address (the prefix is stripped before the RPC call)', async () => {
+    const adapter = createEvmAdapter(RONIN, {
+      client: mockClient({ getChainId: vi.fn(async () => 2020) }),
+    });
+    const result = await adapter.getBalance(RONIN_ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('2000000000000000000');
+      expect(result.data.chain).toBe('ronin');
+      expect(result.data.networkId).toBe('eip155:2020');
+    }
+  });
+
+  it('loads a balance for the ronin:0x spelling too', async () => {
+    const adapter = createEvmAdapter(RONIN, {
+      client: mockClient({ getChainId: vi.fn(async () => 2020) }),
+    });
+    const result = await adapter.getBalance('ronin:0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7');
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('2000000000000000000');
+    }
+  });
+
+  it('loads a balance for the bare 0x form too', async () => {
+    const adapter = createEvmAdapter(RONIN, {
+      client: mockClient({ getChainId: vi.fn(async () => 2020) }),
+    });
+    const result = await adapter.getBalance('0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7');
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('2000000000000000000');
+    }
+  });
+
+  it('reads tx inputs for a ronin: address', async () => {
+    const adapter = createEvmAdapter(RONIN, {
+      client: mockClient({ getChainId: vi.fn(async () => 2020) }),
+    });
+    const result = await adapter.getTxInputs(RONIN_ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toEqual({ kind: 'nonce', nonce: 4 });
+    }
+  });
+});
+
 describe('evm adapter — fee and tx inputs', () => {
   it('estimates a native-transfer fee at 21000 gas', async () => {
     const adapter = createEvmAdapter(BSC, { client: mockClient() });

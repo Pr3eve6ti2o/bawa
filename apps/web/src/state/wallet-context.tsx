@@ -62,7 +62,7 @@ export { ensureAdapters, ensureDevnetAdapters };
 // for any other chain (e.g. SOL) was persisted but dropped on every
 // reload — the Wallets screen showed "No wallets imported" and the
 // Assets row stayed "Balance unavailable" until the wallet was
-// re-added. Hydration now covers all 22 registry chains
+// re-added. Hydration now covers all 84 registry chains
 // (ALL_CHAIN_IDS), like the initial-state checks above it.
 // Maximum wallet-label length enforced at the storage boundary (T43
 // r2b Fix (b)). The shortest 12-word English BIP-39 mnemonic is 47
@@ -76,37 +76,18 @@ export { ensureAdapters, ensureDevnetAdapters };
 const STORAGE_KEY = 'bawa-watch-only-xpubs';
 export const LABEL_MAX_LENGTH = 40;
 type PerChain<T> = Record<ChainId, T>;
-const perChain = <T,>(make: () => T): PerChain<T> => ({
-  btc: make(),
-  eth: make(),
-  trx: make(),
-  ton: make(),
-  sol: make(),
-  bsc: make(),
-  matic: make(),
-  arb: make(),
-  op: make(),
-  base: make(),
-  avax: make(),
-  gnosis: make(),
-  celo: make(),
-  linea: make(),
-  mantle: make(),
-  scroll: make(),
-  opbnb: make(),
-  metis: make(),
-  aurora: make(),
-  fantom: make(),
-  ltc: make(),
-  doge: make(),
-});
 // Kept as a literal list, not SUPPORTED_CHAINS: the screen tests mock
 // '../wallet/chains' with only {availableFor, chainConfig}, so importing
 // SUPPORTED_CHAINS here breaks those suites at load time. Must stay in
 // step with SUPPORTED_CHAINS (chains.test.ts pins that list).
 const ALL_CHAIN_IDS = [
-  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom',
+  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom', 'zksync', 'cronos', 'kava', 'filecoin', 'zora', 'mode', 'fraxtal', 'berachain', 'sei', 'arbnova', 'worldchain', 'manta', 'unichain', 'ink', 'abstract', 'soneium', 'apechain', 'sonic', 'hyperevm', 'monad', 'ronin', 'immutable', 'fuse', 'velas', 'syscoin', 'theta', 'iotex', 'xlayer', 'boba', 'taiko', 'astar', 'telos', 'conflux', 'core', 'songbird', 'rootstock', 'pulsechain', 'xdc', 'chiliz', 'etc', 'flare', 'zetachain', 'hemi', 'bob', 'flowevm', 'cosmos', 'osmosis', 'xrp', 'stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera', 'injective', 'celestia', 'dydx', 'seicosmos', 'axelar', 'noble', 'juno',
 ] as const;
+
+// Built from ALL_CHAIN_IDS (not SUPPORTED_CHAINS — see the note above):
+// every chain gets a fresh value from make().
+const perChain = <T,>(make: () => T): PerChain<T> =>
+  Object.fromEntries(ALL_CHAIN_IDS.map((chain) => [chain, make()])) as PerChain<T>;
 
 // 'locked' is reachable only with auto-lock enabled or before the first
 // unlock of a vault with no stored key.
@@ -208,9 +189,10 @@ export interface WalletContextValue extends WalletState {
   addXpub(chain: ChainId, xpub: string, label: string): Promise<void>;
   /**
    * Lane B (Finish the Product): add a plain public address watch-only.
-   * The address fans out to every chain in its family (all sixteen EVM
-   * chains for a 0x address; the chain itself for SOL/TRX/BTC/LTC/DOGE/
-   * TON). Chains that already have a watch-only entry are skipped, never
+   * The address fans out to every chain in its family (all fifty-nine
+   * 0x EVM chains for a 0x address — Lane 80-APP; the chain itself for
+   * SOL/TRX/BTC/LTC/DOGE/TON and for the non-0x expanded chains).
+   * Chains that already have a watch-only entry are skipped, never
    * overwritten — an existing extended-key entry keeps deriving its five
    * addresses. Returns which chains were added and which were skipped.
    */
@@ -1122,7 +1104,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Lane B (Finish the Product): add a plain public address watch-only,
   // fanned out to every chain in its family. One 0x address is the same
-  // address on all sixteen EVM chains, so importing it watches all of
+  // address on all fifty-nine 0x EVM chains (Lane 80-APP), so importing
+  // it watches all of
   // them; every other address family is a single chain. The stored value
   // is the address itself (derivedCount 1): refreshChain derives it via
   // the address branch of engine/boundary.ts deriveAddress, and the
@@ -1324,30 +1307,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     if (request !== vaultDerivations.current) return;
-    const addresses: PerChain<string[]> = {
-      btc: [derived.btc],
-      eth: [derived.eth],
-      trx: [derived.trx],
-      ton: [derived.ton],
-      sol: [derived.sol],
-      bsc: [derived.bsc],
-      matic: [derived.matic],
-      arb: [derived.arb],
-      op: [derived.op],
-      base: [derived.base],
-      avax: [derived.avax],
-      gnosis: [derived.gnosis],
-      celo: [derived.celo],
-      linea: [derived.linea],
-      mantle: [derived.mantle],
-      scroll: [derived.scroll],
-      opbnb: [derived.opbnb],
-      metis: [derived.metis],
-      aurora: [derived.aurora],
-      fantom: [derived.fantom],
-      ltc: [derived.ltc],
-      doge: [derived.doge],
-    };
+    const addresses = Object.fromEntries(
+      ALL_CHAIN_IDS.map((chain) => [chain, [derived[chain]]]),
+    ) as PerChain<string[]>;
     update(previous => ({
       ...previous,
       vaultState,

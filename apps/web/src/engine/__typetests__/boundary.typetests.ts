@@ -107,6 +107,8 @@ void function boundaryTypeContracts(
   // and the two 'sol' rejections below are updated to the merged truth.
   // UI/UX fixes item 14 (2026-11-23): nine more EVM chains join the
   // registry, so the pin is 22 chains.
+  // Lane 80-APP (2026-11-24): sixty-two more chains join the registry,
+  // so the pin is 84 chains.
   expectTypeOf<ChainId>().toEqualTypeOf<
     | 'btc'
     | 'eth'
@@ -130,6 +132,68 @@ void function boundaryTypeContracts(
     | 'metis'
     | 'aurora'
     | 'fantom'
+    | 'zksync'
+    | 'cronos'
+    | 'kava'
+    | 'filecoin'
+    | 'zora'
+    | 'mode'
+    | 'fraxtal'
+    | 'berachain'
+    | 'sei'
+    | 'arbnova'
+    | 'worldchain'
+    | 'manta'
+    | 'unichain'
+    | 'ink'
+    | 'abstract'
+    | 'soneium'
+    | 'apechain'
+    | 'sonic'
+    | 'hyperevm'
+    | 'monad'
+    | 'ronin'
+    | 'immutable'
+    | 'fuse'
+    | 'velas'
+    | 'syscoin'
+    | 'theta'
+    | 'iotex'
+    | 'xlayer'
+    | 'boba'
+    | 'taiko'
+    | 'astar'
+    | 'telos'
+    | 'conflux'
+    | 'core'
+    | 'songbird'
+    | 'rootstock'
+    | 'pulsechain'
+    | 'xdc'
+    | 'chiliz'
+    | 'etc'
+    | 'flare'
+    | 'zetachain'
+    | 'hemi'
+    | 'bob'
+    | 'flowevm'
+    | 'cosmos'
+    | 'osmosis'
+    | 'xrp'
+    | 'stellar'
+    | 'polkadot'
+    | 'near'
+    | 'aptos'
+    | 'tezos'
+    | 'algorand'
+    | 'hedera'
+    | 'injective'
+    | 'celestia'
+    | 'dydx'
+    | 'seicosmos'
+    | 'axelar'
+    | 'noble'
+    | 'juno'
   >();
   expectTypeOf<ChainId>().toEqualTypeOf<import('@bawa/contracts').ChainId>();
 
@@ -139,7 +203,7 @@ void function boundaryTypeContracts(
   expectTypeOf<'ton'>().toMatchTypeOf<ChainId>();
 
   // @ts-expect-error -- Unsupported chains must not be assignable to ChainId.
-  expectTypeOf<'xrp'>().toMatchTypeOf<ChainId>();
+  expectTypeOf<'not-a-chain'>().toMatchTypeOf<ChainId>();
 
   expectTypeOf<ExtendedKeyValidation>().toEqualTypeOf<
     ExpectedExtendedKeyValidation
@@ -189,7 +253,7 @@ void function boundaryTypeContracts(
   >();
 
   // @ts-expect-error -- deriveAddress rejects unsupported chains.
-  deriveAddress('xrp', xpub, index);
+  deriveAddress('not-a-chain', xpub, index);
 
   // @ts-expect-error -- An address index must be a number, not a string.
   deriveAddress(chain, xpub, stringIndex);

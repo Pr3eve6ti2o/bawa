@@ -85,7 +85,7 @@ const chains: ChainId[] = [
 // Token gaps, item 6 + item 8: the picker used to list only the first
 // four chains even though validation (validateWatchOnlyImport), address
 // derivation (deriveAddresses, incl. the single-address SOL/TON path)
-// and the input labels below already cover all 22 registry chains. A
+// and the input labels below already cover all 84 registry chains. A
 // Solana or Dogecoin address could not be watched at all.
 
 type ImportInputConfig = {
@@ -96,7 +96,10 @@ type ImportInputConfig = {
 const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   // Lane B (Finish the Product): every chain accepts a plain public
   // address as well as its extended key. An address fans out to every
-  // chain in its family (one 0x address covers all 16 EVM chains).
+  // chain in its family (one 0x address covers all 59 0x EVM chains —
+  // Lane 80-APP; Ronin keeps its ronin: prefix and Filecoin its f1
+  // form, so neither joins the 0x family). The seven Ed25519 chains
+  // accept an address only: they have no extended public key.
   btc: { label: 'Bitcoin address or account public key (xpub / zpub)', placeholder: 'bc1… or xpub…' },
   eth: { label: 'Ethereum address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
   trx: { label: 'TRON address (T…) or account public key (xpub)', placeholder: 'T… or xpub…' },
@@ -124,6 +127,68 @@ const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   // Lane C: both DOGE serialisations are accepted (dpub, what Trust
   // Wallet Core emits, and dgub, what bip_utils emits) — same key.
   doge: { label: 'Dogecoin address or account public key (dpub or dgub)', placeholder: 'D… or dpub…' },
+  zksync: { label: 'ZKsync Era address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  cronos: { label: 'Cronos address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  kava: { label: 'Kava address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  filecoin: { label: 'Filecoin address (f1…) or account public key (xpub)', placeholder: 'f1… or xpub…' },
+  zora: { label: 'Zora address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  mode: { label: 'Mode address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  fraxtal: { label: 'Fraxtal address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  berachain: { label: 'Berachain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  sei: { label: 'Sei address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  arbnova: { label: 'Arbitrum Nova address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  worldchain: { label: 'World Chain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  manta: { label: 'Manta Pacific address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  unichain: { label: 'Unichain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  ink: { label: 'Ink address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  abstract: { label: 'Abstract address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  soneium: { label: 'Soneium address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  apechain: { label: 'ApeChain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  sonic: { label: 'Sonic address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  hyperevm: { label: 'HyperEVM address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  monad: { label: 'Monad address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  ronin: { label: 'Ronin address (ronin:…) or account public key (xpub)', placeholder: 'ronin:… or xpub…' },
+  immutable: { label: 'Immutable zkEVM address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  fuse: { label: 'Fuse address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  velas: { label: 'Velas address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  syscoin: { label: 'Syscoin address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  theta: { label: 'Theta address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  iotex: { label: 'IoTeX address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  xlayer: { label: 'X Layer address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  boba: { label: 'Boba Network address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  taiko: { label: 'Taiko address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  astar: { label: 'Astar address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  telos: { label: 'Telos address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  conflux: { label: 'Conflux eSpace address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  core: { label: 'Core address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  songbird: { label: 'Songbird address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  rootstock: { label: 'Rootstock address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  pulsechain: { label: 'PulseChain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  xdc: { label: 'XDC Network address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  chiliz: { label: 'Chiliz address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  etc: { label: 'Ethereum Classic address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  flare: { label: 'Flare address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  zetachain: { label: 'ZetaChain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  hemi: { label: 'Hemi address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  bob: { label: 'BOB address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  flowevm: { label: 'Flow EVM address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  cosmos: { label: 'Cosmos Hub address (cosmos1…) or account public key (xpub)', placeholder: 'cosmos1… or xpub…' },
+  osmosis: { label: 'Osmosis address (osmo1…) or account public key (xpub)', placeholder: 'osmo1… or xpub…' },
+  xrp: { label: 'XRP Ledger address (r…) or account public key (xpub)', placeholder: 'r… or xpub…' },
+  stellar: { label: 'Stellar public address', placeholder: 'GB3J…' },
+  polkadot: { label: 'Polkadot public address', placeholder: '14E9…' },
+  near: { label: 'NEAR Protocol public address', placeholder: '5510…' },
+  aptos: { label: 'Aptos public address', placeholder: '0xeb…' },
+  tezos: { label: 'Tezos public address', placeholder: 'tz1…' },
+  algorand: { label: 'Algorand public address', placeholder: 'EP2D…' },
+  hedera: { label: 'Hedera public address', placeholder: '0.0.…' },
+  injective: { label: 'Injective address (inj1…) or account public key (xpub)', placeholder: 'inj1… or xpub…' },
+  celestia: { label: 'Celestia address (celestia1…) or account public key (xpub)', placeholder: 'celestia1… or xpub…' },
+  dydx: { label: 'dYdX address (dydx1…) or account public key (xpub)', placeholder: 'dydx1… or xpub…' },
+  seicosmos: { label: 'Sei (Cosmos) address (sei1…) or account public key (xpub)', placeholder: 'sei1… or xpub…' },
+  axelar: { label: 'Axelar address (axelar1…) or account public key (xpub)', placeholder: 'axelar1… or xpub…' },
+  noble: { label: 'Noble address (noble1…) or account public key (xpub)', placeholder: 'noble1… or xpub…' },
+  juno: { label: 'Juno address (juno1…) or account public key (xpub)', placeholder: 'juno1… or xpub…' },
 };
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -397,7 +462,7 @@ export function ImportWalletScreen() {
         return;
       }
       // Lane B: a plain address fans out to every chain in its family
-      // (one 0x address covers all 16 EVM chains); an extended key
+      // (one 0x address covers all 59 EVM chains); an extended key
       // watches one chain, as before.
       if (validation.kind === 'address') {
         const { added, skipped } = await addWatchOnlyAddress(chain, publicKey, label.trim());
@@ -745,7 +810,7 @@ export function ImportWalletScreen() {
              <Alert>
      <AlertDescription>
        Watch-only accounts cannot sign transactions. A public address
-       watches every chain it belongs to — one 0x address covers all 16
+       watches every chain it belongs to — one 0x address covers all 59
        EVM chains. An extended public key watches one chain.
      </AlertDescription>
    </Alert>

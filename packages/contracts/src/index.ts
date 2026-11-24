@@ -1,7 +1,12 @@
-// Chains in the registry: xpub derivation for btc/eth/trx, the fifteen
-// EVM chains, ltc and doge; public-address import only for TON and SOL
-// (no xpub: fully hardened Ed25519, one address per wallet).
-export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom';
+// Chains in the registry (Lane 80-APP, 2026-11-24: 84 chains): xpub
+// derivation for btc/eth/trx, the sixty EVM chains, ltc and doge, and
+// the secp256k1 non-EVM chains (Filecoin, Cosmos-family, XRP,
+// Injective); public-address import only for TON, SOL and the seven
+// Ed25519 expanded chains (no xpub: fully hardened Ed25519, one
+// address per wallet). This union must stay identical to
+// apps/web/src/engine/boundary.ts ChainId — the two are structurally
+// compared wherever PerChain state meets engine values.
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom' | 'zksync' | 'cronos' | 'kava' | 'filecoin' | 'zora' | 'mode' | 'fraxtal' | 'berachain' | 'sei' | 'arbnova' | 'worldchain' | 'manta' | 'unichain' | 'ink' | 'abstract' | 'soneium' | 'apechain' | 'sonic' | 'hyperevm' | 'monad' | 'ronin' | 'immutable' | 'fuse' | 'velas' | 'syscoin' | 'theta' | 'iotex' | 'xlayer' | 'boba' | 'taiko' | 'astar' | 'telos' | 'conflux' | 'core' | 'songbird' | 'rootstock' | 'pulsechain' | 'xdc' | 'chiliz' | 'etc' | 'flare' | 'zetachain' | 'hemi' | 'bob' | 'flowevm' | 'cosmos' | 'osmosis' | 'xrp' | 'stellar' | 'polkadot' | 'near' | 'aptos' | 'tezos' | 'algorand' | 'hedera' | 'injective' | 'celestia' | 'dydx' | 'seicosmos' | 'axelar' | 'noble' | 'juno';
 
 // Alias for chains supported by the watch-only starter.
 export type SupportedChain = ChainId;

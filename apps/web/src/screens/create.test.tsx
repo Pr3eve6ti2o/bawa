@@ -76,7 +76,7 @@ describe('CreateScreen', () => {
     // wallet, 22 chains.
     expect(container.textContent).toContain('Create a wallet');
     expect(container.textContent).toContain('One recovery phrase');
-    expect(container.textContent).toContain('22 chains');
+    expect(container.textContent).toContain('84 chains');
     expect(container.textContent).toContain('24-word recovery phrase');
   });
 

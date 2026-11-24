@@ -66,7 +66,78 @@
           "base",
           "avax",
           "ltc",
-          "doge"
+          "doge",
+          "gnosis",
+          "celo",
+          "linea",
+          "mantle",
+          "scroll",
+          "opbnb",
+          "metis",
+          "aurora",
+          "fantom",
+          "zksync",
+          "cronos",
+          "kava",
+          "filecoin",
+          "zora",
+          "mode",
+          "fraxtal",
+          "berachain",
+          "sei",
+          "arbnova",
+          "worldchain",
+          "manta",
+          "unichain",
+          "ink",
+          "abstract",
+          "soneium",
+          "apechain",
+          "sonic",
+          "hyperevm",
+          "monad",
+          "ronin",
+          "immutable",
+          "fuse",
+          "velas",
+          "syscoin",
+          "theta",
+          "iotex",
+          "xlayer",
+          "boba",
+          "taiko",
+          "astar",
+          "telos",
+          "conflux",
+          "core",
+          "songbird",
+          "rootstock",
+          "pulsechain",
+          "xdc",
+          "chiliz",
+          "etc",
+          "flare",
+          "zetachain",
+          "hemi",
+          "bob",
+          "flowevm",
+          "cosmos",
+          "osmosis",
+          "xrp",
+          "stellar",
+          "polkadot",
+          "near",
+          "aptos",
+          "tezos",
+          "algorand",
+          "hedera",
+          "injective",
+          "celestia",
+          "dydx",
+          "seicosmos",
+          "axelar",
+          "noble",
+          "juno"
         ]
       },
       "additionalProperties": {
@@ -110,16 +181,36 @@
             ],
             "additionalProperties": false,
             "properties": {
-              "create": { "$ref": "#/definitions/operationStatus" },
-              "derive": { "$ref": "#/definitions/operationStatus" },
-              "restore": { "$ref": "#/definitions/operationStatus" },
-              "receive": { "$ref": "#/definitions/operationStatus" },
-              "balance": { "$ref": "#/definitions/operationStatus" },
-              "history": { "$ref": "#/definitions/operationStatus" },
-              "fee-quote": { "$ref": "#/definitions/operationStatus" },
-              "plan-transfer": { "$ref": "#/definitions/operationStatus" },
-              "local-sign": { "$ref": "#/definitions/operationStatus" },
-              "verify-signature": { "$ref": "#/definitions/operationStatus" }
+              "create": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "derive": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "restore": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "receive": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "balance": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "history": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "fee-quote": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "plan-transfer": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "local-sign": {
+                "$ref": "#/definitions/operationStatus"
+              },
+              "verify-signature": {
+                "$ref": "#/definitions/operationStatus"
+              }
             }
           }
         }

@@ -21,6 +21,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
+    // Lane 80-APP: apps/web/node_modules is a symlink at the token-gaps
+    // worktree, so @bawa/contracts would resolve to that worktree's
+    // 22-chain copy. Point it at this worktree's contracts instead —
+    // the package is types-only, so this affects tsc only; vitest
+    // never loads it at runtime.
+    "paths": {
+      "@bawa/contracts": ["../../packages/contracts/src/index.ts"]
+    },
     "types": [
       "vite/client"
     ]

@@ -39,9 +39,9 @@ const TEST_PROFILES = [
   'bawa-ton-v4r2-v1',
 ];
 
-// Every distinct derivation profile across all 22 supported chains —
+// Every distinct derivation profile across all 84 supported chains —
 // the same dedup the create and import flows store in the vault.
-const ALL_SEVEN_PROFILES = [
+const ALL_PROFILES = [
   'bawa-btc-bip84-v1',
   'bawa-evm-bip44-v1',
   'bawa-trx-bip44-v1',
@@ -49,6 +49,23 @@ const ALL_SEVEN_PROFILES = [
   'bawa-sol-bip44-v1',
   'bawa-ltc-bip84-v1',
   'bawa-doge-bip44-v1',
+  'bawa-cosmos-bip44-v1',
+  'bawa-osmosis-bip44-v1',
+  'bawa-xrp-bip44-v1',
+  'bawa-stellar-bip44-v1',
+  'bawa-polkadot-bip44-v1',
+  'bawa-near-bip44-v1',
+  'bawa-aptos-bip44-v1',
+  'bawa-tezos-bip44-v1',
+  'bawa-algorand-bip44-v1',
+  'bawa-hedera-bip44-v1',
+  'bawa-injective-bip44-v1',
+  'bawa-celestia-bip44-v1',
+  'bawa-dydx-bip44-v1',
+  'bawa-seicosmos-bip44-v1',
+  'bawa-axelar-bip44-v1',
+  'bawa-noble-bip44-v1',
+  'bawa-juno-bip44-v1',
 ];
 
 async function mountBackupScreen() {
@@ -224,7 +241,7 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
     const { div, cleanup } = await mountBackupScreen();
     try {
       const text = div.textContent ?? '';
-      // The fifteen EVM chains share one profile, so Ethereum appears once.
+      // The fifty-nine EVM chains share one profile, so Ethereum appears once.
       expect((text.match(/Ethereum/g) ?? []).length).toBe(1);
       // Solana, Litecoin and Dogecoin have their own profiles: they get
       // their own rows. A vault created with only the original four
@@ -236,23 +253,23 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       expect(text).toContain('bawa-ltc-bip84-v1');
       expect(text).toContain('bawa-doge-bip44-v1');
       const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
-      expect(profiles?.querySelectorAll('li').length).toBe(7);
+      expect(profiles?.querySelectorAll('li').length).toBe(24);
     } finally {
       await cleanup();
     }
   });
 
-  it('marks all seven profiles stored for a vault created with them', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, ALL_SEVEN_PROFILES);
+  it('marks all twenty-four profiles stored for a vault created with them', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, ALL_PROFILES);
     const { div, cleanup } = await mountBackupScreen();
     try {
       const text = div.textContent ?? '';
-      for (const profileId of ALL_SEVEN_PROFILES) {
+      for (const profileId of ALL_PROFILES) {
         expect(text).toContain(profileId);
       }
       expect(text).not.toContain('Not stored with this vault');
       const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
-      expect(profiles?.querySelectorAll('li').length).toBe(7);
+      expect(profiles?.querySelectorAll('li').length).toBe(24);
     } finally {
       await cleanup();
     }

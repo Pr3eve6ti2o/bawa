@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { DashboardScreen } from './dashboard';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
+import type { ChainId } from '../engine/boundary';
 import type { BalanceState } from '../state/wallet-context';
 
 vi.mock('../state/wallet-context', async (importOriginal) => ({
@@ -127,7 +128,7 @@ beforeEach(() => {
   mockRefreshBalances.mockResolvedValue(undefined);
   vi.mocked(availableFor).mockReturnValue(['btc', 'eth', 'trx', 'ton']);
   vi.mocked(chainConfig).mockImplementation(
-    (chain: ChainKey) => CHAINS[chain] as unknown as ReturnType<typeof chainConfig>,
+    (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
   );
 });
 

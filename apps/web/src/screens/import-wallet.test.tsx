@@ -965,7 +965,7 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
     }
   });
 
-  it('fans one EVM address out to 16 chains and reports it', async () => {
+  it('fans one EVM address out to 59 chains and reports it', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {
       await clickTabTrigger(div, 'Watch-only');
@@ -979,13 +979,13 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
       await act(async () => {
         for (
           let i = 0;
-          i < 40 && !div.textContent?.includes('Watching this address on 16 chains');
+          i < 40 && !div.textContent?.includes('Watching this address on 59 chains');
           i++
         ) {
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
       });
-      expect(div.textContent).toContain('Watching this address on 16 chains.');
+      expect(div.textContent).toContain('Watching this address on 59 chains.');
       // One grouped row: the truncated address once, with the family badges.
       expect(div.textContent).toContain('0x9858EfFD23');
       expect(div.textContent).toContain('EcaEda94');
@@ -1013,7 +1013,7 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
       await act(async () => {
         for (
           let i = 0;
-          i < 40 && !div.textContent?.includes('Watching this address on 16 chains');
+          i < 40 && !div.textContent?.includes('Watching this address on 59 chains');
           i++
         ) {
           await new Promise((resolve) => setTimeout(resolve, 50));
@@ -1032,7 +1032,7 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
       });
-      expect(div.textContent).toContain('already watched on all 16 chains');
+      expect(div.textContent).toContain('already watched on all 59 chains');
     } finally {
       await cleanup();
     }

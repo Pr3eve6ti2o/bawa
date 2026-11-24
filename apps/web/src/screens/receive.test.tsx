@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { ReceiveScreen } from './receive';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
+import type { ChainId } from '../engine/boundary';
 
 vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
@@ -169,7 +170,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(availableFor).mockReturnValue(['btc', 'eth', 'trx', 'ton']);
   vi.mocked(chainConfig).mockImplementation(
-    (chain: ChainKey) => CHAINS[chain] as unknown as ReturnType<typeof chainConfig>,
+    (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
   );
 });
 

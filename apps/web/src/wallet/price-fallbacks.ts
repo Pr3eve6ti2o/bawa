@@ -76,8 +76,8 @@
  *   Binance US / CoinPaprika FTM ($0.48 frozen), Kraken (no FTM
  *   pair, no CORS) and Coinbase MNT/XDAI/FTM (404) stay rejected.
  *
- * Coverage after this module: 22 of 22 chains have at least one
- * fallback. Fantom — the flagged "Price expired" case — is
+ * Coverage after this module: 77 of 84 chains have at least one
+ * fallback (7 are CoinGecko-only). Fantom — the flagged "Price expired" case — is
  * covered twice: CoinLore Sonic (S) first, then the DexScreener
  * implied price. CoinGecko's `fantom` id was ~8h stale live
  * (last_updated_at 1795417691 vs now 1795446545), so its quote
@@ -166,6 +166,59 @@ export const COINLORE_NATIVE_IDS: Partial<Record<ChainId, string>> = {
   gnosis: '32417',
   mantle: '121595',
   fantom: '148191',
+  zksync: '80',
+  cronos: '33819',
+  kava: '64675',
+  filecoin: '32607',
+  zora: '80',
+  mode: '80',
+  berachain: '150197',
+  sei: '100427',
+  arbnova: '80',
+  worldchain: '80',
+  manta: '80',
+  unichain: '80',
+  ink: '80',
+  abstract: '80',
+  soneium: '80',
+  apechain: '45930',
+  sonic: '148191',
+  hyperevm: '148109',
+  ronin: '64703',
+  immutable: '121593',
+  fuse: '44502',
+  syscoin: '41',
+  theta: '33768',
+  iotex: '32719',
+  xlayer: '33531',
+  boba: '80',
+  taiko: '80',
+  astar: '62661',
+  conflux: '121599',
+  core: '120829',
+  chiliz: '34391',
+  etc: '118',
+  flare: '84965',
+  hemi: '80',
+  bob: '80',
+  flowevm: '48589',
+  cosmos: '33830',
+  osmosis: '64669',
+  xrp: '58',
+  stellar: '89',
+  polkadot: '45219',
+  near: '48563',
+  aptos: '111341',
+  tezos: '3682',
+  algorand: '34406',
+  hedera: '48555',
+  injective: '46183',
+  celestia: '136105',
+  dydx: '54377',
+  seicosmos: '100427',
+  axelar: '99333',
+  noble: '33285',
+  juno: '56297',
 };
 
 /**
@@ -243,21 +296,72 @@ export const NATIVE_WRAPPED_TOKENS: Partial<
   },
 };
 
-/** Coinbase product id per chain (LTC only — TonAPI covers TON and DexScreener covers Polygon, the other two chains CoinLore misses). */
+/** Coinbase product id per chain (Lane 80-APP, 2026-11-24: the 44 expanded chains with a Coinbase product join LTC — TonAPI covers TON and DexScreener covers Polygon, the other chains CoinLore misses). */
 const COINBASE_PRODUCT_IDS: Partial<Record<ChainId, string>> = {
   ltc: 'LTC-USD',
+  zksync: 'ETH-USD',
+  cronos: 'CRO-USD',
+  kava: 'KAVA-USD',
+  filecoin: 'FIL-USD',
+  zora: 'ETH-USD',
+  mode: 'ETH-USD',
+  berachain: 'BERA-USD',
+  sei: 'SEI-USD',
+  arbnova: 'ETH-USD',
+  worldchain: 'ETH-USD',
+  manta: 'ETH-USD',
+  unichain: 'ETH-USD',
+  ink: 'ETH-USD',
+  abstract: 'ETH-USD',
+  soneium: 'ETH-USD',
+  apechain: 'APE-USD',
+  sonic: 'S-USD',
+  hyperevm: 'HYPE-USD',
+  monad: 'MON-USD',
+  immutable: 'IMX-USD',
+  iotex: 'IOTX-USD',
+  boba: 'ETH-USD',
+  taiko: 'ETH-USD',
+  chiliz: 'CHZ-USD',
+  etc: 'ETC-USD',
+  flare: 'FLR-USD',
+  zetachain: 'ZETA-USD',
+  hemi: 'ETH-USD',
+  bob: 'ETH-USD',
+  flowevm: 'FLOW-USD',
+  cosmos: 'ATOM-USD',
+  osmosis: 'OSMO-USD',
+  xrp: 'XRP-USD',
+  stellar: 'XLM-USD',
+  polkadot: 'DOT-USD',
+  near: 'NEAR-USD',
+  aptos: 'APT-USD',
+  tezos: 'XTZ-USD',
+  algorand: 'ALGO-USD',
+  hedera: 'HBAR-USD',
+  injective: 'INJ-USD',
+  celestia: 'TIA-USD',
+  seicosmos: 'SEI-USD',
+  axelar: 'AXL-USD',
 };
 
 /**
  * The price sources the wallet tries, in order, for one chain
  * (Lane F, FIX-ALL, 2026-11-24). CoinGecko is always first; CoinLore
- * second where it has the chain (19 chains); DexScreener third where a
+ * second where it has the chain (72 chains); DexScreener third where a
  * wrapped contract is verified (13 chains); TonAPI for TON, Coinbase
- * for LTC, and DexScreener for Polygon — the three chains CoinLore
- * cannot cover. Every chain has a verified second source (FIX-ALL
- * Lane B added CoinLore for Gnosis, Mantle and Fantom) — none is
- * CoinGecko-alone. The Networks screen's Prices card states the same
- * order in words; keep the two in step when the maps change.
+ * where it has the chain (45 chains), and DexScreener for Polygon —
+ * the chains CoinLore cannot cover. 77 of 84 chains have a verified
+ * second source (FIX-ALL Lane B added CoinLore for Gnosis, Mantle
+ * and Fantom; Lane 80-APP, 2026-11-24, added the expanded chains).
+ * Seven are CoinGecko-alone — Fraxtal, Velas, Telos, Songbird,
+ * Rootstock, PulseChain and XDC: no CoinLore id, no Coinbase product
+ * and no verified DexScreener leg answers for them. (Telos and
+ * PulseChain have DexScreener chain slugs for token lookups, but no
+ * verified wrapped-native contract, so no native-price leg.) The
+ * Networks screen's Prices
+ * card states the same order in words; keep the two in step when
+ * the maps change.
  */
 export function priceFallbackSourcesFor(chain: ChainId): PriceSource[] {
   const sources: PriceSource[] = ['CoinGecko'];

@@ -202,7 +202,7 @@ describe('create wallet screen', () => {
     }
   });
 
-  it('creates the vault with all seven profileIds and clears the words', async () => {
+  it('creates the vault with all twenty-four profileIds and clears the words', async () => {
     const mounted = await mountScreen();
     try {
       await generate(mounted.div);
@@ -233,6 +233,23 @@ describe('create wallet screen', () => {
         'bawa-sol-bip44-v1',
         'bawa-ltc-bip84-v1',
         'bawa-doge-bip44-v1',
+        'bawa-cosmos-bip44-v1',
+        'bawa-osmosis-bip44-v1',
+        'bawa-xrp-bip44-v1',
+        'bawa-stellar-bip44-v1',
+        'bawa-polkadot-bip44-v1',
+        'bawa-near-bip44-v1',
+        'bawa-aptos-bip44-v1',
+        'bawa-tezos-bip44-v1',
+        'bawa-algorand-bip44-v1',
+        'bawa-hedera-bip44-v1',
+        'bawa-injective-bip44-v1',
+        'bawa-celestia-bip44-v1',
+        'bawa-dydx-bip44-v1',
+        'bawa-seicosmos-bip44-v1',
+        'bawa-axelar-bip44-v1',
+        'bawa-noble-bip44-v1',
+        'bawa-juno-bip44-v1',
       ], '');
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
       // The mnemonic is cleared: no recovery word is shown any more.
@@ -439,6 +456,23 @@ describe('create wallet screen', () => {
         'bawa-sol-bip44-v1',
         'bawa-ltc-bip84-v1',
         'bawa-doge-bip44-v1',
+        'bawa-cosmos-bip44-v1',
+        'bawa-osmosis-bip44-v1',
+        'bawa-xrp-bip44-v1',
+        'bawa-stellar-bip44-v1',
+        'bawa-polkadot-bip44-v1',
+        'bawa-near-bip44-v1',
+        'bawa-aptos-bip44-v1',
+        'bawa-tezos-bip44-v1',
+        'bawa-algorand-bip44-v1',
+        'bawa-hedera-bip44-v1',
+        'bawa-injective-bip44-v1',
+        'bawa-celestia-bip44-v1',
+        'bawa-dydx-bip44-v1',
+        'bawa-seicosmos-bip44-v1',
+        'bawa-axelar-bip44-v1',
+        'bawa-noble-bip44-v1',
+        'bawa-juno-bip44-v1',
       ], 'TREZOR');
       expect(isPassphraseUsed()).toBe(true);
       expect(mounted.div.textContent).toContain('Your wallet is ready');

@@ -33,7 +33,7 @@ type QrTemplate = 'address' | 'payment' | 'link';
 // Lane H: the popular networks — the same four the dashboard's
 // PopularChainsStrip uses (the four original adapter chains). They
 // are the picker's first section, so the chains people actually
-// receive on are one tap away without scrolling through all 22.
+// receive on are one tap away without scrolling through all 84.
 export const POPULAR_RECEIVE_CHAINS: readonly ChainId[] = [
   'btc',
   'eth',
@@ -220,7 +220,7 @@ export function ReceiveScreen() {
   // Lane H: the picker's sections. Popular first (only the ones this
   // screen can receive on), the rest grouped behind "All networks".
   // A search query replaces both sections with a flat filtered list
-  // across all 22 — the same filterChains the watch-only chain
+  // across all 84 — the same filterChains the watch-only chain
   // search uses (name, symbol or id, case-insensitive).
   const popularChains = POPULAR_RECEIVE_CHAINS.filter((entry) =>
     chains.includes(entry),
@@ -566,12 +566,12 @@ export function ReceiveScreen() {
         <h2 id="receive-addresses-heading" className="sr-only">
           Choose a network
         </h2>
-        {/* Lane H: a sleek network picker, not the 22-button grid.
+        {/* Lane H: a sleek network picker, not the 84-button grid.
             Search at the top; Popular first as full-width rows with
             the real chain marks (names never truncated); the rest
             grouped behind "All networks", collapsed by default, so
             the popular chains are reachable without scrolling
-            through all 22. Searching replaces both sections with a
+            through all 84. Searching replaces both sections with a
             flat filtered list. Built on the watch-only chain search
             (filterChains), not a second copy of it. */}
         <div className="space-y-1">

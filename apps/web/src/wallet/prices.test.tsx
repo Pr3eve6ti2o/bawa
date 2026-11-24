@@ -21,6 +21,9 @@ import {
   usdPriceToMinorUnitsPerWhole,
 } from './prices';
 import type { PriceQuote } from './prices';
+import type { BalanceState } from './balance-state';
+import { SUPPORTED_CHAINS } from './chains';
+import type { ChainId } from '../engine/boundary';
 
 const NOW_MS = Date.UTC(2026, 10, 19, 19, 15, 0);
 const secondsBefore = (ms: number): number => Math.floor((NOW_MS - ms) / 1000);
@@ -44,6 +47,55 @@ function freshPayload(ageMs = 30_000): Record<string, { usd: number; last_update
     mantle: { usd: 0.387288, last_updated_at: secondsBefore(ageMs) },
     'metis-token': { usd: 2.18, last_updated_at: secondsBefore(ageMs) },
     fantom: { usd: 0.02543893, last_updated_at: secondsBefore(ageMs) },
+    // Lane 80-APP (2026-11-24): the 46 new CoinGecko ids. Prices are
+    // fixtures except the five marked live (Coinbase sample, same day);
+    // the tests assert freshness and identity for these, not values.
+    'crypto-com-chain': { usd: 0.04002, last_updated_at: secondsBefore(ageMs) },
+    'kava': { usd: 0.0241, last_updated_at: secondsBefore(ageMs) },
+    'filecoin': { usd: 0.5381, last_updated_at: secondsBefore(ageMs) },
+    'frax-ether': { usd: 1.5, last_updated_at: secondsBefore(ageMs) },
+    'berachain-bera': { usd: 0.07889, last_updated_at: secondsBefore(ageMs) },
+    'sei-network': { usd: 0.03275, last_updated_at: secondsBefore(ageMs) },
+    'apecoin': { usd: 0.5, last_updated_at: secondsBefore(ageMs) },
+    'sonic-3': { usd: 0.03, last_updated_at: secondsBefore(ageMs) },
+    'hyperliquid': { usd: 25, last_updated_at: secondsBefore(ageMs) },
+    'monad': { usd: 0.02, last_updated_at: secondsBefore(ageMs) },
+    'ronin': { usd: 0.08, last_updated_at: secondsBefore(ageMs) },
+    'immutable-x': { usd: 0.4, last_updated_at: secondsBefore(ageMs) },
+    'fuse-network-token': { usd: 0.02, last_updated_at: secondsBefore(ageMs) },
+    'velas': { usd: 0.001, last_updated_at: secondsBefore(ageMs) },
+    'syscoin': { usd: 0.05, last_updated_at: secondsBefore(ageMs) },
+    'theta-fuel': { usd: 0.02, last_updated_at: secondsBefore(ageMs) },
+    'iotex': { usd: 0.02, last_updated_at: secondsBefore(ageMs) },
+    'okb': { usd: 50, last_updated_at: secondsBefore(ageMs) },
+    'astar': { usd: 0.02, last_updated_at: secondsBefore(ageMs) },
+    'telos': { usd: 0.02, last_updated_at: secondsBefore(ageMs) },
+    'conflux-token': { usd: 0.1, last_updated_at: secondsBefore(ageMs) },
+    'coredaoorg': { usd: 0.1, last_updated_at: secondsBefore(ageMs) },
+    'songbird': { usd: 0.005, last_updated_at: secondsBefore(ageMs) },
+    'pulsechain': { usd: 0.00002, last_updated_at: secondsBefore(ageMs) },
+    'xdce-crowd-sale': { usd: 0.02, last_updated_at: secondsBefore(ageMs) },
+    'chiliz': { usd: 0.03, last_updated_at: secondsBefore(ageMs) },
+    'ethereum-classic': { usd: 15, last_updated_at: secondsBefore(ageMs) },
+    'flare-networks': { usd: 0.01, last_updated_at: secondsBefore(ageMs) },
+    'zetachain': { usd: 0.2, last_updated_at: secondsBefore(ageMs) },
+    'flow': { usd: 0.2, last_updated_at: secondsBefore(ageMs) },
+    'cosmos': { usd: 4, last_updated_at: secondsBefore(ageMs) },
+    'osmosis': { usd: 0.2, last_updated_at: secondsBefore(ageMs) },
+    'ripple': { usd: 1.5, last_updated_at: secondsBefore(ageMs) },
+    'stellar': { usd: 0.2, last_updated_at: secondsBefore(ageMs) },
+    'polkadot': { usd: 2, last_updated_at: secondsBefore(ageMs) },
+    'near': { usd: 1.5, last_updated_at: secondsBefore(ageMs) },
+    'aptos': { usd: 2, last_updated_at: secondsBefore(ageMs) },
+    'tezos': { usd: 0.5, last_updated_at: secondsBefore(ageMs) },
+    'algorand': { usd: 0.1, last_updated_at: secondsBefore(ageMs) },
+    'hedera-hashgraph': { usd: 0.1, last_updated_at: secondsBefore(ageMs) },
+    'injective-protocol': { usd: 5, last_updated_at: secondsBefore(ageMs) },
+    'celestia': { usd: 1, last_updated_at: secondsBefore(ageMs) },
+    'dydx-chain': { usd: 0.2, last_updated_at: secondsBefore(ageMs) },
+    'axelar': { usd: 0.2, last_updated_at: secondsBefore(ageMs) },
+    'usd-coin': { usd: 1, last_updated_at: secondsBefore(ageMs) },
+    'juno-network': { usd: 0.05, last_updated_at: secondsBefore(ageMs) },
   };
 }
 
@@ -518,7 +570,7 @@ describe('fetchPrices', () => {
     vi.unstubAllGlobals();
   });
 
-  it('fetches all twenty-two fresh prices in one batch without a demo key', async () => {
+  it('fetches all eighty-four fresh prices in one batch without a demo key', async () => {
     vi.stubEnv('VITE_COINGECKO_DEMO_KEY', '');
     try {
       const calls: Array<{ url: string; init: unknown }> = [];
@@ -536,14 +588,14 @@ describe('fetchPrices', () => {
       expect(calls).toHaveLength(1);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       expect(calls[0]!.url).toBe(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin,xdai,celo,mantle,metis-token,fantom&vs_currencies=usd&include_last_updated_at=true',
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin,xdai,celo,mantle,metis-token,fantom,crypto-com-chain,kava,filecoin,frax-ether,berachain-bera,sei-network,apecoin,sonic-3,hyperliquid,monad,ronin,immutable-x,fuse-network-token,velas,syscoin,theta-fuel,iotex,okb,astar,telos,conflux-token,coredaoorg,songbird,pulsechain,xdce-crowd-sale,chiliz,ethereum-classic,flare-networks,zetachain,flow,cosmos,osmosis,ripple,stellar,polkadot,near,aptos,tezos,algorand,hedera-hashgraph,injective-protocol,celestia,dydx-chain,axelar,usd-coin,juno-network&vs_currencies=usd&include_last_updated_at=true',
       );
       const headers = (
         calls[0]!.init as { headers: Record<string, string> }
       ).headers;
       expect(headers['Accept']).toBe('application/json');
       expect(headers).not.toHaveProperty('x-cg-demo-api-key');
-      expect(Object.values(prices)).toHaveLength(22);
+      expect(Object.values(prices)).toHaveLength(84);
       for (const price of Object.values(prices)) {
         expect(price).toMatchObject({ status: 'fresh' });
       }
@@ -579,7 +631,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(22);
+    expect(Object.values(prices)).toHaveLength(84);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -598,7 +650,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(22);
+    expect(Object.values(prices)).toHaveLength(84);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -617,7 +669,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(22);
+    expect(Object.values(prices)).toHaveLength(84);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -633,7 +685,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(22);
+    expect(Object.values(prices)).toHaveLength(84);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -649,7 +701,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(22);
+    expect(Object.values(prices)).toHaveLength(84);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -670,7 +722,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(22);
+    expect(Object.values(prices)).toHaveLength(84);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -803,7 +855,10 @@ describe('portfolioTotal', () => {
   const fresh = parsePriceResponse(freshPayload(), NOW_MS);
   const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
   const zero = { status: 'zero' } as const;
-  const zeros = { btc: zero, eth: zero, trx: zero, ton: zero, sol: zero, bsc: zero, matic: zero, arb: zero, op: zero, base: zero, avax: zero, gnosis: zero, celo: zero, linea: zero, mantle: zero, scroll: zero, opbnb: zero, metis: zero, aurora: zero, fantom: zero, ltc: zero, doge: zero };
+  // All 84 chains at zero: portfolioTotal takes Record<ChainId, BalanceState>.
+  const zeros = Object.fromEntries(
+    SUPPORTED_CHAINS.map((chain) => [chain, zero]),
+  ) as Record<ChainId, BalanceState>;
   const btc = { status: 'available', value: '100000000' } as const;
   const eth = { status: 'available', value: '1500000000000000000' } as const;
 
@@ -1078,7 +1133,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(22);
+      expect(entries).toHaveLength(84);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'fresh' });
       expect(Number.isFinite(latest!.state.lastFetchedAtMs)).toBe(true);
     } finally {
@@ -1101,7 +1156,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(22);
+      expect(entries).toHaveLength(84);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
       // Three CoinGecko attempts. The fallback calls throw too (the
       // same dead network) and are not CoinGecko attempts.
@@ -1136,7 +1191,7 @@ describe('usePrices', () => {
       await act(async () => { latest?.refresh(); });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(22);
+      expect(entries).toHaveLength(84);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
     } finally {
       await cleanup();
@@ -1286,7 +1341,7 @@ describe('usePrices', () => {
       });
 
       expect(latest!.state.status).toBe('ready');
-      expect(Object.values(latest!.state.entries)).toHaveLength(22);
+      expect(Object.values(latest!.state.entries)).toHaveLength(84);
       for (const entry of Object.values(latest!.state.entries)) {
         expect(entry).toMatchObject({
           status: 'error',
@@ -1374,15 +1429,18 @@ describe('usePrices', () => {
       const payload = Object.fromEntries(
         Object.entries(freshPayload()).slice(1),
       );
+      // Dropping the first entry (bitcoin) leaves two chains
+      // unavailable, not one: rootstock is priced via the bitcoin
+      // CoinGecko id (RBTC tracks BTC), so it goes unavailable too.
       const mixed = parsePriceResponse(payload, NOW_MS);
       expect(
         Object.values(mixed).filter((entry) => entry.status === 'fresh'),
-      ).toHaveLength(21);
+      ).toHaveLength(82);
       expect(
         Object.values(mixed).filter(
           (entry) => entry.status === 'unavailable',
         ),
-      ).toHaveLength(1);
+      ).toHaveLength(2);
 
       const sleep = vi.fn((_ms: number) => Promise.resolve());
       const fetchStub = vi.fn(async (url: RequestInfo | URL) => {

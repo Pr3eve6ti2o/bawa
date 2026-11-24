@@ -88,7 +88,22 @@ export interface EvmAdapterOverrides {
   historyExplorerBase?: string;
   broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
-
+/**
+ * Ronin addresses arrive in Trust Wallet Core's `ronin:<40 hex>` form
+ * (the wallet's own derived address — the prefix REPLACES the 0x, it
+ * is not prepended to it; probe-proven 2026-11-24 with the test-vector
+ * address ronin:9858EfFD232B4033E47d90003D41EC34EcaEda94). The EVM RPCs
+ * and viem take the bare 0x form, so restore the 0x here, at the
+ * adapter boundary, and the adapter serves Ronin exactly like the
+ * other 0x EVM chains. A `ronin:0x…` spelling is accepted too.
+ * Every other chain passes through unchanged.
+ */
+function normalizeEvmAddress(address: string): string {
+  const trimmed = address.trim();
+  if (!trimmed.startsWith('ronin:')) return trimmed;
+  const stripped = trimmed.slice('ronin:'.length);
+  return stripped.startsWith('0x') ? stripped : `0x${stripped}`;
+}
 
 export function createEvmAdapter(
   config: EvmAdapterConfig,
@@ -197,18 +212,19 @@ export function createEvmAdapter(
   const getBalance = async (
     address: string,
   ): Promise<AdapterResult<AdapterBalance>> => {
-    if (!isAddress(address)) {
+    const normalized = normalizeEvmAddress(address);
+    if (!isAddress(normalized)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
     try {
       const { value: balance, source } = await runOnHealthyClient((client) =>
-        client.getBalance({ address: getAddress(address) }),
+        client.getBalance({ address: getAddress(normalized) }),
       );
       return {
         status: 'ok',
         data: {
           chain: config.chain,
-          address: getAddress(address),
+          address: getAddress(normalized),
           networkId,
           valueBaseUnits: balance.toString(),
           decimals: 18,
@@ -227,7 +243,8 @@ export function createEvmAdapter(
     address: string,
     limit = 20,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isAddress(address)) {
+    const normalized = normalizeEvmAddress(address);
+    if (!isAddress(normalized)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
     if (!historyBaseUrl) {
@@ -251,7 +268,7 @@ export function createEvmAdapter(
     const separator = historyBaseUrl.includes('?') ? '&' : '?';
     const url =
       `${historyBaseUrl}${separator}module=account&action=txlist` +
-      `&address=${address}&page=1&offset=${limit}&sort=desc`;
+      `&address=${normalized}&page=1&offset=${limit}&sort=desc`;
     // Merge lane (2026-11-24): Etherscan V2's keyless tier allows 1
     // request per 5 s per IP, and answers NOTOK "Missing/Invalid API
     // Key" inside the window — the same message as a missing key, so
@@ -299,7 +316,7 @@ export function createEvmAdapter(
     if (!Array.isArray(raw['result'])) {
       return { status: 'error', reason: 'Invalid response: expected a result list' };
     }
-    const lower = address.toLowerCase();
+    const lower = normalized.toLowerCase();
     const txs: AdapterTx[] = [];
     for (const entry of raw['result']) {
       if (!isRecord(entry)) continue;
@@ -362,12 +379,13 @@ export function createEvmAdapter(
   const getTxInputs = async (
     address: string,
   ): Promise<AdapterResult<TxInput>> => {
-    if (!isAddress(address)) {
+    const normalized = normalizeEvmAddress(address);
+    if (!isAddress(normalized)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
     try {
       const { value: nonce, source } = await runOnHealthyClient((client) =>
-        client.getTransactionCount({ address: getAddress(address) }),
+        client.getTransactionCount({ address: getAddress(normalized) }),
       );
       return {
         status: 'ok',

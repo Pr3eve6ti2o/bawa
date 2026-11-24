@@ -9,8 +9,8 @@
  *   balance. Bad input gets a specific inline error (role="alert"),
  *   nothing is persisted, nothing is added, the input stays intact and
  *   keeps focus.
- * - "Add chain": enable one of the 22 registry chains. No free-text
- *   chain field — a 23rd chain is impossible by design.
+ * - "Add chain": enable one of the 84 registry chains. No free-text
+ *   chain field — an 85th chain is impossible by design.
  *
  * Lane 1: the contract field also accepts a ticker or name ("sushi").
  * An address-shaped input keeps the strict format error; anything else
@@ -226,7 +226,7 @@ export function AddTokenDialog({
   }, [open ]);
 
   // The addable chains are the registry chains with derivation —
-  // availableFor('derive') is the full 22 in production. The
+  // availableFor('derive') is the full 84 in production. The
   // screen layer only depends on the two chains-module names the
   // screen tests mock (availableFor, chainConfig); importing
   // SUPPORTED_CHAINS here broke those tests at module load even

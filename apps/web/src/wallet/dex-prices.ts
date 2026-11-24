@@ -80,6 +80,19 @@ export const DEXSCREENER_CHAIN_FOR_CHAIN: Partial<Record<ChainId, string>> = {
   opbnb: 'opbnb',
   metis: 'metis',
   fantom: 'fantom',
+  kava: 'kava',
+  berachain: 'berachain',
+  worldchain: 'worldchain',
+  manta: 'manta',
+  soneium: 'soneium',
+  sonic: 'sonic',
+  monad: 'monad',
+  fuse: 'fuse',
+  telos: 'telos',
+  conflux: 'conflux',
+  pulsechain: 'pulsechain',
+  aptos: 'aptos',
+  algorand: 'algorand',
 };
 
 /** DexScreener only accepts 30 token addresses per tokens/v1 call. */

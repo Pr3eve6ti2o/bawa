@@ -110,7 +110,7 @@ describe('NetworkSelectionScreen', () => {
       const buttons = [...mounted.div.querySelectorAll('button')].filter(
         (button) => button.textContent === 'Disable',
       );
-      expect(buttons.length).toBe(22);
+      expect(buttons.length).toBe(84);
       await act(async () => {
         buttons[0]!.click();
       });
@@ -357,7 +357,7 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       );
       expect(options).toContain('Ethereum');
       expect(options).not.toContain('Dogecoin');
-      expect(options).toHaveLength(21);
+      expect(options).toHaveLength(83);
     } finally {
       await mounted.cleanup();
     }

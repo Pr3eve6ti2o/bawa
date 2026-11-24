@@ -14,6 +14,7 @@
 
 import { hashMessage, hexToBytes, sha256, stringToHex } from 'viem';
 import type { ChainId } from '../engine/boundary';
+import { isEvmTxChain } from './watch-only-families';
 
 /** Sign-only capability; credentials and raw keys are never exposed. */
 export interface PartialSigner {
@@ -166,8 +167,21 @@ export function assertIntentMatchesTransaction(
   }
 }
 
+/**
+ * Chains the PartialSigner facade can sign for: BTC, TRX, TON, and every
+ * EVM-transaction chain (Lane 80-APP, 2026-11-24: the generalised EVM
+ * signer covers all sixty — the 59 0x chains plus Ronin — with the
+ * chain's own key; the 60'-path chains share the ETH key, the five
+ * non-60 EVM chains use their own coin path). Filecoin, SOL, LTC,
+ * DOGE and the non-EVM expanded chains have no signer here.
+ */
 export function isPartialSignerChain(value: unknown): value is ChainId {
-  return value === 'btc' || value === 'eth' || value === 'trx' || value === 'ton';
+  return (
+    value === 'btc' ||
+    value === 'trx' ||
+    value === 'ton' ||
+    (typeof value === 'string' && isEvmTxChain(value as ChainId))
+  );
 }
 
 export function assertPartialSignerDigest(digest: Uint8Array): void {
@@ -189,8 +203,10 @@ export function hashPartialSignerMessage(
   }
 
   const bytes = Uint8Array.from(message);
+  // EIP-191 personal_sign is chain-agnostic: every EVM chain hashes a
+  // message the same way. BTC/TRX/TON keep the plain SHA-256 hash.
   return hexToBytes(
-    chain === 'eth' ? hashMessage({ raw: bytes }) : sha256(bytes),
+    isEvmTxChain(chain) ? hashMessage({ raw: bytes }) : sha256(bytes),
   );
 }
 

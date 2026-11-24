@@ -29,54 +29,178 @@ import {
 import { DEVNET_NETWORK_IDS } from './devnet-endpoints';
 
 describe('chains registry', () => {
-  it('supports exactly twenty-two mainnet chains', () => {
+  it('supports exactly eighty-four mainnet chains', () => {
     expect([...SUPPORTED_CHAINS].sort()).toEqual([
+      'abstract',
+      'algorand',
+      'apechain',
+      'aptos',
       'arb',
+      'arbnova',
+      'astar',
       'aurora',
       'avax',
+      'axelar',
       'base',
+      'berachain',
+      'bob',
+      'boba',
       'bsc',
       'btc',
+      'celestia',
       'celo',
+      'chiliz',
+      'conflux',
+      'core',
+      'cosmos',
+      'cronos',
       'doge',
+      'dydx',
+      'etc',
       'eth',
       'fantom',
+      'filecoin',
+      'flare',
+      'flowevm',
+      'fraxtal',
+      'fuse',
       'gnosis',
+      'hedera',
+      'hemi',
+      'hyperevm',
+      'immutable',
+      'injective',
+      'ink',
+      'iotex',
+      'juno',
+      'kava',
       'linea',
       'ltc',
+      'manta',
       'mantle',
       'matic',
       'metis',
+      'mode',
+      'monad',
+      'near',
+      'noble',
       'op',
       'opbnb',
+      'osmosis',
+      'polkadot',
+      'pulsechain',
+      'ronin',
+      'rootstock',
       'scroll',
+      'sei',
+      'seicosmos',
       'sol',
+      'soneium',
+      'songbird',
+      'sonic',
+      'stellar',
+      'syscoin',
+      'taiko',
+      'telos',
+      'tezos',
+      'theta',
       'ton',
       'trx',
+      'unichain',
+      'velas',
+      'worldchain',
+      'xdc',
+      'xlayer',
+      'xrp',
+      'zetachain',
+      'zksync',
+      'zora',
     ]);
     expect(Object.keys(CHAINS).sort()).toEqual([
+      'abstract',
+      'algorand',
+      'apechain',
+      'aptos',
       'arb',
+      'arbnova',
+      'astar',
       'aurora',
       'avax',
+      'axelar',
       'base',
+      'berachain',
+      'bob',
+      'boba',
       'bsc',
       'btc',
+      'celestia',
       'celo',
+      'chiliz',
+      'conflux',
+      'core',
+      'cosmos',
+      'cronos',
       'doge',
+      'dydx',
+      'etc',
       'eth',
       'fantom',
+      'filecoin',
+      'flare',
+      'flowevm',
+      'fraxtal',
+      'fuse',
       'gnosis',
+      'hedera',
+      'hemi',
+      'hyperevm',
+      'immutable',
+      'injective',
+      'ink',
+      'iotex',
+      'juno',
+      'kava',
       'linea',
       'ltc',
+      'manta',
       'mantle',
       'matic',
       'metis',
+      'mode',
+      'monad',
+      'near',
+      'noble',
       'op',
       'opbnb',
+      'osmosis',
+      'polkadot',
+      'pulsechain',
+      'ronin',
+      'rootstock',
       'scroll',
+      'sei',
+      'seicosmos',
       'sol',
+      'soneium',
+      'songbird',
+      'sonic',
+      'stellar',
+      'syscoin',
+      'taiko',
+      'telos',
+      'tezos',
+      'theta',
       'ton',
       'trx',
+      'unichain',
+      'velas',
+      'worldchain',
+      'xdc',
+      'xlayer',
+      'xrp',
+      'zetachain',
+      'zksync',
+      'zora',
     ]);
   });
 
@@ -185,86 +309,22 @@ describe('chains registry', () => {
     expect(pathFor('sol', 1, 2)).toBe("m/44'/501'/1'/0'/2'");
   });
 
-  it('lists all twenty-two chains for derive, restore and receive', () => {
-    expect(availableFor('derive')).toEqual([
-      'btc',
-      'eth',
-      'trx',
-      'ton',
-      'sol',
-      'bsc',
-      'matic',
-      'arb',
-      'op',
-      'base',
-      'avax',
-      'ltc',
-      'doge',
-      'gnosis',
-      'celo',
-      'linea',
-      'mantle',
-      'scroll',
-      'opbnb',
-      'metis',
-      'aurora',
-      'fantom',
-    ]);
-    expect(availableFor('restore')).toEqual([
-      'btc',
-      'eth',
-      'trx',
-      'ton',
-      'sol',
-      'bsc',
-      'matic',
-      'arb',
-      'op',
-      'base',
-      'avax',
-      'ltc',
-      'doge',
-      'gnosis',
-      'celo',
-      'linea',
-      'mantle',
-      'scroll',
-      'opbnb',
-      'metis',
-      'aurora',
-      'fantom',
-    ]);
-    expect(availableFor('receive')).toEqual([
-      'btc',
-      'eth',
-      'trx',
-      'ton',
-      'sol',
-      'bsc',
-      'matic',
-      'arb',
-      'op',
-      'base',
-      'avax',
-      'ltc',
-      'doge',
-      'gnosis',
-      'celo',
-      'linea',
-      'mantle',
-      'scroll',
-      'opbnb',
-      'metis',
-      'aurora',
-      'fantom',
-    ]);
+  it('lists all eighty-four chains for derive, restore and receive', () => {
+    // Lane 80-APP (2026-11-24): derivation is probe-verified for all 62
+    // expanded chains (chains-expanded-wiring.test.ts); this test pins
+    // the set equals the registry.
+    expect(availableFor('derive')).toEqual([...SUPPORTED_CHAINS]);
+    expect(availableFor('restore')).toEqual([...SUPPORTED_CHAINS]);
+    expect(availableFor('receive')).toEqual([...SUPPORTED_CHAINS]);
   });
 
-  it('lists all twenty-two chains for balance, sixteen chains for history, and three for fee-quote', () => {
-    // Token discovery (2026-11-22): balance adapters now exist for all
-    // 22 chains, so availableFor('balance') is the full registry.
-    // UI/UX fixes item 14 (2026-11-23): the nine new EVM chains use
-    // the same generic EVM adapter, so balance covers all 22 chains.
+  it('lists sixty-six chains for balance, sixteen chains for history, and three for fee-quote', () => {
+    // Lane 80-APP (2026-11-24): the 44 newly-wired EVM chains use the
+    // generic EVM adapter, so balance covers 66 chains — every chain
+    // except the 18 derive-only chains (filecoin + the 17 non-EVM
+    // chains), which have no adapter. Balance for the 44 was verified
+    // by live mainnet cross-check 2026-11-24 (two RPCs agree on chain
+    // id and balance), except ronin (primary only — backup 400/500).
     expect(availableFor('balance')).toEqual([
       'btc',
       'eth',
@@ -288,6 +348,50 @@ describe('chains registry', () => {
       'metis',
       'aurora',
       'fantom',
+      'zksync',
+      'cronos',
+      'kava',
+      'zora',
+      'mode',
+      'fraxtal',
+      'berachain',
+      'sei',
+      'arbnova',
+      'worldchain',
+      'manta',
+      'unichain',
+      'ink',
+      'abstract',
+      'soneium',
+      'apechain',
+      'sonic',
+      'hyperevm',
+      'monad',
+      'ronin',
+      'immutable',
+      'fuse',
+      'velas',
+      'syscoin',
+      'theta',
+      'iotex',
+      'xlayer',
+      'boba',
+      'taiko',
+      'astar',
+      'telos',
+      'conflux',
+      'core',
+      'songbird',
+      'rootstock',
+      'pulsechain',
+      'xdc',
+      'chiliz',
+      'etc',
+      'flare',
+      'zetachain',
+      'hemi',
+      'bob',
+      'flowevm',
     ]);
     // Lane C, item 16 (2026-11-23): ltc/doge/sol history is verified —
     // adapters + live mainnet cross-check 2026-11-23 (second source).
@@ -872,6 +976,45 @@ describe('capabilities.json registry shape and identity', () => {
     'metis',
     'aurora',
     'fantom',
+    // Lane 80-APP (2026-11-24): the 35 new registry coins for the
+    // expanded chains — prospective, Bawa fields null, following the
+    // existing convention for the 18 app chains. The 27 EVM chains
+    // whose registry coin is ethereum share that entry.
+    'zksync',
+    'cronos',
+    'kavaevm',
+    'filecoin',
+    'seievm',
+    'arbitrumnova',
+    'manta',
+    'sonic',
+    'hyperevm',
+    'monad',
+    'ronin',
+    'tfuelevm',
+    'iotexevm',
+    'boba',
+    'cfxevm',
+    'rootstock',
+    'classic',
+    'zetaevm',
+    'cosmos',
+    'osmosis',
+    'ripple',
+    'stellar',
+    'polkadot',
+    'near',
+    'aptos',
+    'tezos',
+    'algorand',
+    'hedera',
+    'nativeinjective',
+    'tia',
+    'dydx',
+    'sei',
+    'axelar',
+    'noble',
+    'juno',
   ] as const;
   const coinNames = [
     ...Object.keys(expectedSupportedCoins),
@@ -893,7 +1036,7 @@ describe('capabilities.json registry shape and identity', () => {
   ] as const;
 
   // Explicit allowlists, independent of the forbidden-words check. The
-  // merged tree lists thirteen mainnet chains; only the four
+  // merged tree lists eighty-four mainnet chains; only the four
   // engine-supported chains have supported registry coins.
   const mainnetNetworkIds = [
     'bip122:000000000019d6689c085ae165831e93',
@@ -918,6 +1061,69 @@ describe('capabilities.json registry shape and identity', () => {
     'eip155:1088',
     'eip155:1313161554',
     'eip155:250',
+    // Lane 80-APP (2026-11-24): the 62 expanded-chain network IDs.
+    'algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=',
+    'aptos:1',
+    'cosmos:axelar-dojo-1',
+    'cosmos:celestia',
+    'cosmos:cosmoshub-4',
+    'cosmos:dydx-mainnet-1',
+    'cosmos:injective-1',
+    'cosmos:juno-1',
+    'cosmos:noble-1',
+    'cosmos:osmosis-1',
+    'cosmos:pacific-1',
+    'eip155:1030',
+    'eip155:106',
+    'eip155:1116',
+    'eip155:122',
+    'eip155:130',
+    'eip155:1329',
+    'eip155:13371',
+    'eip155:14',
+    'eip155:143',
+    'eip155:146',
+    'eip155:167000',
+    'eip155:169',
+    'eip155:1868',
+    'eip155:19',
+    'eip155:196',
+    'eip155:2020',
+    'eip155:2222',
+    'eip155:25',
+    'eip155:252',
+    'eip155:2741',
+    'eip155:288',
+    'eip155:30',
+    'eip155:314',
+    'eip155:324',
+    'eip155:33139',
+    'eip155:34443',
+    'eip155:361',
+    'eip155:369',
+    'eip155:40',
+    'eip155:42170',
+    'eip155:43111',
+    'eip155:4689',
+    'eip155:480',
+    'eip155:50',
+    'eip155:57',
+    'eip155:57073',
+    'eip155:592',
+    'eip155:60808',
+    'eip155:61',
+    'eip155:7000',
+    'eip155:747',
+    'eip155:7777777',
+    'eip155:80094',
+    'eip155:88888',
+    'eip155:999',
+    'hedera:mainnet',
+    'near:mainnet',
+    'polkadot:91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3',
+    'stellar:pubnet',
+    'tezos:NetXdQprcVkpaWU',
+    'xrpl:0',
   ] as const;
 
   const supportedMainnetNetworkIds = [
@@ -1059,7 +1265,7 @@ describe('capabilities.json registry shape and identity', () => {
       .replace(/\{index\}/g, '0');
   }
 
-  it('contains exactly the twenty-two known coin entries', async () => {
+  it('contains exactly the fifty-seven known coin entries', async () => {
     expect.assertions(1);
     const coins = await readRegistryCoins();
     expect(Object.keys(coins).sort()).toEqual([...coinNames].sort());
@@ -1147,7 +1353,7 @@ describe('capabilities.json registry shape and identity', () => {
     },
   );
 
-  it('allows only the twenty-two explicitly listed mainnet network IDs', async () => {
+  it('allows only the eighty-four explicitly listed mainnet network IDs', async () => {
     expect.assertions(2);
     const coins = await readRegistryCoins();
 
@@ -1184,7 +1390,7 @@ describe('capabilities.json registry shape and identity', () => {
     },
   );
 
-  it('has unique network IDs across the twenty-two listed chains', async () => {
+  it('has unique network IDs across the eighty-four listed chains', async () => {
     expect.assertions(2);
     const coins = await readRegistryCoins();
     const liveIds = Object.values(CHAINS).map((chain) => chain.networkId);
@@ -1192,20 +1398,20 @@ describe('capabilities.json registry shape and identity', () => {
       (coin) => coin.networkId,
     );
 
-    expect(new Set(liveIds).size).toBe(22);
+    expect(new Set(liveIds).size).toBe(84);
     expect(new Set(registryIds).size).toBe(4);
   });
 
   it('has unique account 0 index 0 derivation paths across the four engine chains', async () => {
     expect.assertions(3);
     const coins = await readRegistryCoins();
-    // Only the four engine-supported chains: the sixteen coin-type-60 chains
-    // (eth, bsc, matic, arb, op, base, avax + gnosis, celo, linea,
-    // mantle, scroll, opbnb, metis, aurora, fantom) share m/44'/60'/0'/0/0
-    // at account 0 index 0 BY DESIGN — same coin type, same path — so
-    // path uniqueness can only hold across the four engine chains.
-    // Verified first-hand on the merged tree: 7 unique live paths
-    // across 22 chains.
+    // Only the four engine-supported chains: the fifty-nine coin-type-60 chains
+    // (the sixteen above plus the forty-three new 60'-path chains, injective
+    // included) share m/44'/60'/0'/0/0 at account 0 index 0 BY DESIGN —
+    // same coin type, same path — so path uniqueness can only hold
+    // across the four engine chains.
+    // Verified first-hand on the merged tree: 21 unique live paths
+    // across 84 chains (probe-paths 2026-11-24).
     const livePaths = implementedCoins.map(([, coin]) =>
       pathFor(coin.bawaChainId, 0, 0),
     );

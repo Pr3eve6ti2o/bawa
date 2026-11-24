@@ -28,15 +28,15 @@ const DOGE_DPUB =
   'dpubZG2yVAE9cxzbb951cYM2av1gxG46wXAdAKDDJEcTLC7cSFUvHbVo8mMYqZDAe2dPyigxSve76Kvi537CVzxjyhZnNPCRBCm6HJKTqYSjKSn';
 
 describe('watch-only address families', () => {
-  it('lists sixteen EVM chains', () => {
-    expect(EVM_WATCH_CHAINS).toHaveLength(16);
+  it('lists fifty-nine EVM chains', () => {
+    expect(EVM_WATCH_CHAINS).toHaveLength(59);
     expect(EVM_WATCH_CHAINS).toContain('eth');
     expect(EVM_WATCH_CHAINS).toContain('fantom');
     expect(EVM_WATCH_CHAINS).not.toContain('btc');
     expect(EVM_WATCH_CHAINS).not.toContain('sol');
   });
 
-  it('fans an EVM chain out to all sixteen EVM chains', () => {
+  it('fans an EVM chain out to all fifty-nine EVM chains', () => {
     for (const chain of EVM_WATCH_CHAINS) {
       expect(watchOnlyFamilyChains(chain)).toEqual(EVM_WATCH_CHAINS);
     }

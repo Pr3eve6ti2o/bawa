@@ -3,6 +3,8 @@ import { TW } from '@trustwallet/wallet-core';
 import { bytesToHex, keccak256, parseTransaction, recoverAddress, serializeTransaction } from 'viem';
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
+import { COIN_TYPE_KEY_FOR_CHAIN } from '../engine/coin-type-keys';
+import { isEvmTxChain } from './watch-only-families';
 import {
   createPartialSigner,
   deriveAddresses,
@@ -87,6 +89,68 @@ const CHAIN_NAMES: Record<ChainId, string> = {
   fantom: 'Fantom',
   ltc: 'Litecoin',
   doge: 'Dogecoin',
+  zksync: 'ZKsync Era',
+  cronos: 'Cronos',
+  kava: 'Kava',
+  filecoin: 'Filecoin',
+  zora: 'Zora',
+  mode: 'Mode',
+  fraxtal: 'Fraxtal',
+  berachain: 'Berachain',
+  sei: 'Sei',
+  arbnova: 'Arbitrum Nova',
+  worldchain: 'World Chain',
+  manta: 'Manta Pacific',
+  unichain: 'Unichain',
+  ink: 'Ink',
+  abstract: 'Abstract',
+  soneium: 'Soneium',
+  apechain: 'ApeChain',
+  sonic: 'Sonic',
+  hyperevm: 'HyperEVM',
+  monad: 'Monad',
+  ronin: 'Ronin',
+  immutable: 'Immutable zkEVM',
+  fuse: 'Fuse',
+  velas: 'Velas',
+  syscoin: 'Syscoin',
+  theta: 'Theta',
+  iotex: 'IoTeX',
+  xlayer: 'X Layer',
+  boba: 'Boba Network',
+  taiko: 'Taiko',
+  astar: 'Astar',
+  telos: 'Telos',
+  conflux: 'Conflux eSpace',
+  core: 'Core',
+  songbird: 'Songbird',
+  rootstock: 'Rootstock',
+  pulsechain: 'PulseChain',
+  xdc: 'XDC Network',
+  chiliz: 'Chiliz',
+  etc: 'Ethereum Classic',
+  flare: 'Flare',
+  zetachain: 'ZetaChain',
+  hemi: 'Hemi',
+  bob: 'BOB',
+  flowevm: 'Flow EVM',
+  cosmos: 'Cosmos Hub',
+  osmosis: 'Osmosis',
+  xrp: 'XRP Ledger',
+  stellar: 'Stellar',
+  polkadot: 'Polkadot',
+  near: 'NEAR Protocol',
+  aptos: 'Aptos',
+  tezos: 'Tezos',
+  algorand: 'Algorand',
+  hedera: 'Hedera',
+  injective: 'Injective',
+  celestia: 'Celestia',
+  dydx: 'dYdX',
+  seicosmos: 'Sei (Cosmos)',
+  axelar: 'Axelar',
+  noble: 'Noble',
+  juno: 'Juno',
 };
 
 /**
@@ -140,32 +204,20 @@ export async function validateRecipient(
 
   try {
     const core = await loadCore();
-    const coinTypes = {
-      btc: core.CoinType.bitcoin,
-      eth: core.CoinType.ethereum,
-      trx: core.CoinType.tron,
-      ton: core.CoinType.ton,
-      sol: core.CoinType.solana,
-      ltc: core.CoinType.litecoin,
-      doge: core.CoinType.dogecoin,
-      bsc: core.CoinType.smartChain,
-      matic: core.CoinType.polygon,
-      arb: core.CoinType.arbitrum,
-      op: core.CoinType.optimism,
-      base: core.CoinType.base,
-      avax: core.CoinType.avalancheCChain,
-      gnosis: core.CoinType.xdai,
-      celo: core.CoinType.celo,
-      linea: core.CoinType.linea,
-      mantle: core.CoinType.mantle,
-      scroll: core.CoinType.scroll,
-      opbnb: core.CoinType.opBNB,
-      metis: core.CoinType.metis,
-      aurora: core.CoinType.aurora,
-      fantom: core.CoinType.fantom,
-    };
+    // Lane 80-APP: the coin for the chain comes from the shared WASM
+    // key table (all 84 chains), not a hardcoded 22-chain map — TON
+    // has no entry there, so it keeps its direct lookup.
+    const coin =
+      chain === 'ton'
+        ? core.CoinType.ton
+        : (() => {
+            const key = COIN_TYPE_KEY_FOR_CHAIN[chain];
+            if (key === undefined) return undefined;
+            return core.CoinType[key];
+          })();
+    if (coin === undefined) return invalid;
 
-    return core.CoinTypeExt.validate(coinTypes[chain], recipient)
+    return core.CoinTypeExt.validate(coin, recipient)
       ? { ok: true }
       : invalid;
   } catch {
@@ -581,7 +633,11 @@ export async function simulateSend(
   }
 
   // BTC/TRX freshness checks (S4b): UTXO coverage and account inputs.
-  if (chain !== 'eth' && chain !== 'ton' && chain !== 'bsc') {
+  // Every other chain falls through to the generic nonce/seqno
+  // freshness check below — including the EVM chains (Lane 80-APP:
+  // the old condition listed eth/bsc by name, which would have let a
+  // new EVM chain skip the nonce check and return the preview early).
+  if (!isEvmTxChain(chain) && chain !== 'ton') {
     const adapter = getAdapterForMode(chain, devnet);
     if (!adapter) {
       return simulationFailed(
@@ -900,13 +956,15 @@ export async function verifyEthSignedTx(
  * BSC send 2026-11-24). The same code signs any EVM chain: the chain id
  * comes from the registry (chains.ts evmChainId), the from address from
  * deriveAddresses()[chain], and the signing intent names the actual
- * chain, so the fingerprint binds it. The signing key is always the ETH
- * key — all 16 EVM chains share m/44'/60', so the BSC key IS the ETH
- * key (createPartialSigner takes 'eth' for every EVM chain). The
- * transaction is a legacy EIP-155 transfer (21000 gas, no data); v is
- * 27/28 + 2 * chainId. Devnet: only Ethereum Sepolia exists — any other
- * chain + devnet is refused, there is no BSC test network in this
- * wallet. Nothing here broadcasts.
+ * chain, so the fingerprint binds it. The signing key is the chain's
+ * own key (createPartialSigner takes the actual chain, Lane 80-APP,
+ * 2026-11-24): the 60'-path chains share the ETH key, while the five
+ * non-60 EVM chains — Filecoin (461'), Theta (500'), IoTeX (304'),
+ * Rootstock (137'), Ethereum Classic (61') — sign with their own coin
+ * path. The transaction is a legacy EIP-155 transfer (21000 gas, no
+ * data); v is 27/28 + 2 * chainId. Devnet: only Ethereum Sepolia
+ * exists — any other chain + devnet is refused, there is no BSC test
+ * network in this wallet. Nothing here broadcasts.
  * (signEthOffline history: Sol p4, landed 2026-11-19; corrected
  * hands-on; S6a 2026-11-20: PartialSigner facade + viem reassembly,
  * byte-identical output to the old path.)
@@ -1016,8 +1074,8 @@ export async function signEvmOffline(
   }
 
   const digest = hexToBytes(keccak256(unsignedHex));
-  // The ETH key signs for every EVM chain: all 16 share m/44'/60'.
-  const signer = await createPartialSigner(mnemonic, passphrase, 'eth');
+  // The chain's own key signs: the 60'-path chains share the ETH key.
+  const signer = await createPartialSigner(mnemonic, passphrase, chain);
   const sig = await signer.signDigest(digest);
   const r = bytesToHex(sig.slice(0, 32));
   const s = bytesToHex(sig.slice(32, 64));
@@ -1984,12 +2042,13 @@ export async function verifyEvmTokenSignedTx(
  * EVM signer, token form). The transaction calls the token contract
  * with transfer(recipient, amount) calldata, value 0, gas 100000; the
  * chain id comes from the registry, the from address from
- * deriveAddresses()[chain], and the signing key is the ETH key (all 16
- * EVM chains share m/44'/60'). The signing intent binds the contract,
- * the token amount and the nonce — the recipient lives inside the
- * calldata and is checked by verifyEvmTokenSignedTx. Devnet: only
- * Ethereum Sepolia exists, as for native sends. Nothing here
- * broadcasts.
+ * deriveAddresses()[chain], and the signing key is the chain's own key
+ * (Lane 80-APP: the 60'-path chains share the ETH key, the five
+ * non-60 EVM chains use their own coin path). The signing intent binds
+ * the contract, the token amount and the nonce — the recipient lives
+ * inside the calldata and is checked by verifyEvmTokenSignedTx.
+ * Devnet: only Ethereum Sepolia exists, as for native sends. Nothing
+ * here broadcasts.
  */
 export async function signEvmTokenOffline(
   chain: ChainId,
@@ -2110,7 +2169,9 @@ export async function signEvmTokenOffline(
   }
 
   const digest = hexToBytes(keccak256(unsignedHex));
-  const signer = await createPartialSigner(mnemonic, passphrase, 'eth');
+  // The chain's own key signs (Lane 80-APP): the 60'-path chains share
+  // the ETH key, the five non-60 EVM chains use their own coin path.
+  const signer = await createPartialSigner(mnemonic, passphrase, chain);
   const sig = await signer.signDigest(digest);
   const r = bytesToHex(sig.slice(0, 32));
   const s = bytesToHex(sig.slice(32, 64));

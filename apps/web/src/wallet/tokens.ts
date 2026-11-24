@@ -14,6 +14,7 @@ import { getAddress, hexToBytes, isAddress, sha256 } from 'viem';
 import { isRecord } from './guards';
 import type { ChainId } from '../engine/boundary';
 import { SUPPORTED_CHAINS } from './chains';
+import { EVM_TX_CHAINS } from './watch-only-families';
 
 export interface TokenRecord {
   chain: ChainId;
@@ -326,25 +327,8 @@ export function tokenSlug(record: TokenRecord): string {
     : record.contract.toLowerCase();
 }
 
-/** Chains that can hold an ERC-20 token by contract address. */
-export const EVM_TOKEN_CHAINS: readonly ChainId[] = [
-  'eth',
-  'bsc',
-  'matic',
-  'arb',
-  'op',
-  'base',
-  'avax',
-  'gnosis',
-  'celo',
-  'linea',
-  'mantle',
-  'scroll',
-  'opbnb',
-  'metis',
-  'aurora',
-  'fantom',
-];
+/** Chains that can hold an ERC-20 token by contract address — the sixty EVM-transaction chains (Lane 80-APP: the 44 new adapter chains join the 16 existing; Filecoin's f1 address cannot hold an ERC-20). */
+export const EVM_TOKEN_CHAINS: readonly ChainId[] = EVM_TX_CHAINS;
 
 export type TokenStandard =
   | { standard: 'erc20' }
@@ -618,15 +602,29 @@ function defaultStore(): TokenStore | null {
 }
 
 
-/** Default (nothing stored): all 22 chains enabled — the default 20-token list is the enabled set. */
+/**
+ * The curated default view (Lane 80-APP, 2026-11-24): the 22 chains the
+ * wallet shipped with, in registry order. The registry now holds 84
+ * chains, but the default view stays curated — the 62 new chains are
+ * reachable via Add Token / chain management, never dumped into the
+ * default dashboard (which stays 43 rows: 22 natives + 21 default
+ * tokens). A stored enabled-chains list still wins over this default.
+ */
+export const DEFAULT_ENABLED_CHAINS: readonly ChainId[] = [
+  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base',
+  'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll',
+  'opbnb', 'metis', 'aurora', 'fantom',
+];
+
+/** Default (nothing stored): the 22 curated chains (DEFAULT_ENABLED_CHAINS). */
 export function readEnabledChains(store?: TokenStore): ChainId[] {
   const storage = store ?? defaultStore();
   try {
     const raw = storage?.getItem(ENABLED_CHAINS_KEY);
-    if (raw === null || raw === undefined) return [...SUPPORTED_CHAINS];
+    if (raw === null || raw === undefined) return [...DEFAULT_ENABLED_CHAINS];
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.chains)) {
-      return [...SUPPORTED_CHAINS];
+      return [...DEFAULT_ENABLED_CHAINS];
     }
     const chains = (parsed.chains as unknown[]).filter(
       (chain): chain is ChainId =>
@@ -635,11 +633,11 @@ export function readEnabledChains(store?: TokenStore): ChainId[] {
     // Preserve registry order; an empty stored list means "none enabled"
     // only when it was explicitly stored that way — but an empty list
     // can never be produced by the UI (the last chain cannot be
-    // disabled), so treat it as corrupt and fall back to all chains.
-    if (chains.length === 0) return [...SUPPORTED_CHAINS];
+    // disabled), so treat it as corrupt and fall back to the curated default.
+    if (chains.length === 0) return [...DEFAULT_ENABLED_CHAINS];
     return SUPPORTED_CHAINS.filter((chain) => chains.includes(chain));
   } catch {
-    return [...SUPPORTED_CHAINS];
+    return [...DEFAULT_ENABLED_CHAINS];
   }
 }
 

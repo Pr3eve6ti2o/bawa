@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="770" viewBox="0 0 900 770" role="img" aria-labelledby="archTitle archDesc">
   <title id="archTitle">Bawa architecture — guide, HD core, vault, providers, send flow and storage</title>
-  <desc id="archDesc">The guide and registry build the example web wallet through scripts/build-wallet.mjs. The wallet runs on Trust Wallet Core 4.9.3 (WASM). One 24-word phrase derives addresses on 22 chains; the phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from 9 public adapter modules and prices from CoinGecko with fallbacks. Send builds an intent and signs offline; mainnet broadcast is always disabled, and only the devnet path can submit. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
+  <desc id="archDesc">The guide and registry build the example web wallet through scripts/build-wallet.mjs. The wallet runs on Trust Wallet Core 4.9.3 (WASM). One 24-word phrase derives addresses on 84 chains; the phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from 9 public adapter modules and prices from CoinGecko with fallbacks (77 of 84 chains; a chain with no source shows unavailable, never an invented price). Send builds an intent and signs offline; mainnet broadcast is always disabled, and only the devnet path can submit. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
   <style>
     .t { font-family: "Baloo 2", "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
     .b { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
@@ -24,7 +24,7 @@
 
   <!-- Title -->
   <text class="t" x="16" y="32" font-size="23" font-weight="700">How Bawa fits together</text>
-  <text class="b" x="884" y="30" font-size="11.5" text-anchor="end">Trust Wallet Core 4.9.3 · 22 chains · mainnet</text>
+  <text class="b" x="884" y="30" font-size="11.5" text-anchor="end">Trust Wallet Core 4.9.3 · 84 chains · mainnet</text>
   <path d="M16,42 q12,-5 24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0" fill="none" stroke="#FF6B4A" stroke-width="2.5" stroke-linecap="round"/>
 
   <!-- Row 1 : Build -->
@@ -33,7 +33,7 @@
   <text class="t" x="48" y="83" font-size="14" font-weight="700">Guide + registry</text>
   <text class="b" x="30" y="102" font-size="11">docs/ 01–16 · registry/*.json</text>
   <text class="b" x="30" y="119" font-size="11">WALLET_BUILDER.md — entry point</text>
-  <text class="b" x="30" y="136" font-size="11">Guide: 168 chains · wallet ships 22</text>
+  <text class="b" x="30" y="136" font-size="11">Guide: 168 chains · wallet ships 84</text>
 
   <path class="arrow" d="M266,102 L306,102" marker-end="url(#ah)"/>
   <text class="lbl" x="286" y="92" font-size="10.5" text-anchor="middle">builds</text>
@@ -62,12 +62,12 @@
   <!-- Row 2 : Keys -->
   <rect class="panel" x="16" y="164" width="440" height="176" rx="12"/>
   <rect class="sun" x="30" y="180" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
-  <text class="t" x="48" y="191" font-size="15.5" font-weight="700">HD core — one phrase, 22 addresses</text>
+  <text class="t" x="48" y="191" font-size="15.5" font-weight="700">HD core — one phrase, 84 addresses</text>
   <text class="m" x="30" y="212" font-size="10.5">via Trust Wallet Core 4.9.3 (WASM) — loadCore()</text>
   <text class="m" x="30" y="229" font-size="10.5">createWallet(passphrase = '') — 32 random bytes → 24 words</text>
   <text class="m" x="30" y="246" font-size="10.5">deriveAddresses(mnemonic, passphrase = '') — one HDWallet</text>
   <text class="m" x="30" y="263" font-size="10.5">wallet.getAddressForCoin(coin) — once per chain</text>
-  <text class="m" x="30" y="280" font-size="10.5">16 EVM · m/44'/60'/0'/0/0 — one shared address</text>
+  <text class="m" x="30" y="280" font-size="10.5">59 EVM · m/44'/60'/0'/0/0 — one shared address</text>
   <text class="m" x="30" y="297" font-size="10.5">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0 · DOGE m/44'/3'/0'/0/0</text>
   <text class="m" x="30" y="314" font-size="10.5">TRX m/44'/195'/0'/0/0 · TON m/44'/607'/0' · SOL m/44'/501'/0'</text>
   <text class="m" x="30" y="331" font-size="10.5">Rotate: deriveAddressesAt(mnemonic, passphrase, account, index)</text>
@@ -86,14 +86,14 @@
 
   <!-- Arrow Row 2 -> Row 3 : addresses feed balances -->
   <path class="arrow" d="M236,340 L236,356" marker-end="url(#ah)"/>
-  <text class="lbl" x="228" y="352" font-size="10.5" text-anchor="end">22 addresses → balances</text>
+  <text class="lbl" x="228" y="352" font-size="10.5" text-anchor="end">84 addresses → balances</text>
 
   <!-- Row 3 : Providers -->
   <rect class="panel" x="16" y="356" width="440" height="104" rx="12"/>
   <rect class="sun" x="30" y="372" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
   <text class="t" x="48" y="383" font-size="15.5" font-weight="700">Balances — public RPCs</text>
   <text class="b" x="30" y="403" font-size="11">9 adapter modules: btc eth evm trx ton sol ltc doge</text>
-  <text class="b" x="30" y="420" font-size="11">+ token-balances · eth.ts + evm.ts serve the 16 EVM chains</text>
+  <text class="b" x="30" y="420" font-size="11">+ token-balances · eth.ts + evm.ts serve the 60 EVM chains</text>
   <text class="b" x="30" y="437" font-size="11">resolveRpcEndpoints(chain) — up to 3 per chain</text>
   <text class="b" x="30" y="454" font-size="11">refreshBalances() — a failed fetch shows as unavailable</text>
 
@@ -102,8 +102,8 @@
   <text class="t" x="504" y="383" font-size="15.5" font-weight="700">Prices — CoinGecko + fallbacks</text>
   <text class="b" x="486" y="403" font-size="11">api.coingecko.com/api/v3 · 10-minute cache</text>
   <text class="b" x="486" y="420" font-size="11">CoinLore · Coinbase (LTC) · DexScreener · TonAPI</text>
-  <text class="b" x="486" y="437" font-size="11">20 of 22 chains have a fallback — Gnosis (XDAI)</text>
-  <text class="b" x="486" y="454" font-size="11">+ Mantle (MNT) are CoinGecko-only · no source = unavailable</text>
+  <text class="b" x="486" y="437" font-size="11">77 of 84 chains have a fallback — 7 are CoinGecko-only</text>
+  <text class="b" x="486" y="454" font-size="11">fraxtal · velas · telos · songbird · rootstock · pulsechain · xdc</text>
 
   <!-- Arrow Row 3 -> Row 4 : balances + prices feed Send -->
   <path class="arrow" d="M460,460 L460,476" marker-end="url(#ah)"/>
@@ -151,5 +151,5 @@
   <rect class="panel" x="16" y="690" width="868" height="72" rx="12"/>
   <text class="t" x="30" y="712" font-size="13" font-weight="700">Stored on your device — localStorage</text>
   <text class="m" x="30" y="732" font-size="10.5">Vault + watch-only: bawa-vault · bawa-vault-key · bawa-vault-backup · bawa-vault-accounts:v1 · bawa-watch-only-xpubs</text>
-  <text class="m" x="30" y="748" font-size="10.5">Caches + devnet: bawa:prices-cache:v1 · bawa:token-prices-cache:v2 · bawa:custom-tokens:v1 · bawa-devnet-enabled</text>
+  <text class="m" x="30" y="748" font-size="10.5">Caches + devnet: bawa:prices-cache:v1 · bawa:token-prices-cache:v2 · bawa:custom-tokens:v1 · bawa:enabled-chains:v1 · bawa-devnet-enabled</text>
 </svg>

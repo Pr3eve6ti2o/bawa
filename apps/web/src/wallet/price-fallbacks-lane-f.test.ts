@@ -27,11 +27,35 @@ describe('priceFallbackSourcesFor (Lane F, FIX-ALL)', () => {
     expect(priceFallbackSourcesFor('mantle')).toEqual(['CoinGecko', 'CoinLore', 'DexScreener']);
   });
 
-  it('every chain has a verified second source — none is CoinGecko-alone', () => {
+  it('every chain except the seven named CoinGecko-only chains has a verified second source', () => {
+    // Lane 80-APP (2026-11-24): 77 of 84 chains have a verified
+    // native-price fallback. The seven below have none — no CoinLore
+    // id, no Coinbase product and no verified wrapped-native contract
+    // for a DexScreener leg — so CoinGecko is their only price source.
+    // Telos and PulseChain have DexScreener chain slugs for token
+    // lookups but no verified wrapped-native contract, so no native
+    // leg. The set is pinned exactly: a new CoinGecko-only chain must
+    // be named here deliberately, never silently.
+    const COINGECKO_ONLY = new Set([
+      'fraxtal',
+      'velas',
+      'telos',
+      'songbird',
+      'rootstock',
+      'pulsechain',
+      'xdc',
+    ]);
+    const alone: string[] = [];
     for (const chain of SUPPORTED_CHAINS) {
       const sources = priceFallbackSourcesFor(chain);
       expect(sources[0]).toBe('CoinGecko');
-      expect(sources.length).toBeGreaterThanOrEqual(2);
+      if (COINGECKO_ONLY.has(chain)) {
+        expect(sources).toEqual(['CoinGecko']);
+        alone.push(chain);
+      } else {
+        expect(sources.length).toBeGreaterThanOrEqual(2);
+      }
     }
+    expect(alone.sort()).toEqual([...COINGECKO_ONLY].sort());
   });
 });

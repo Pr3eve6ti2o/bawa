@@ -24,6 +24,7 @@ import {
   useWallet,
 } from '../state/wallet-context';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
+import { EVM_TX_CHAINS, isEvmTxChain } from '../wallet/watch-only-families';
 import {
   DEVNET_CHAIN_CONFIGS,
   DEVNET_CHAINS,
@@ -82,18 +83,24 @@ import { TokenPickerRow } from './token-picker-row';
 import type { SendApprovalStage } from './send-approval';
 import type { ChainId } from '../engine/boundary';
 
-// Chains with offline signing today (wallet/send.ts). BSC joined
-// 2026-11-24: it is EVM, so the general EVM signer covers it with
-// chain id 56. SIGNING_CHAINS gates NATIVE sends only. Token sends
+// Chains with offline signing today (wallet/send.ts). Lane 80-APP
+// (2026-11-24): all sixty EVM-transaction chains join — the general
+// EVM signer covers each with its own chain id and key — alongside
+// BTC, TRX and TON. SIGNING_CHAINS gates NATIVE sends only. Token sends
 // are gated separately, on tokenStandardFor(chain): every chain with
-// a token standard (all 16 EVM chains, TRON, TON) signs token
-// transfers offline — including the 14 EVM chains whose native
-// sends are not built, because a token transfer only needs the
-// generalised EVM signer. Solana is the exception: its signer cannot
+// a token standard (all 60 EVM chains, TRON, TON) signs token
+// transfers offline. Solana is the exception: its signer cannot
 // produce a valid signed transaction (Lane 2, 2026-11-24), so SOL
 // token sends are refused with the reason at preview time. Chains
 // with no token standard (BTC, LTC, DOGE) cannot send tokens at all.
-const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'bsc'];
+// Filecoin, the non-EVM expanded chains, SOL, LTC and DOGE have no
+// native send: the screen says so honestly instead of offering one.
+const SIGNING_CHAINS: readonly ChainId[] = [
+  ...EVM_TX_CHAINS,
+  'btc',
+  'trx',
+  'ton',
+];
 
 type Step = 'chain' | 'token' | 'details' | 'review' | 'result';
 
@@ -552,7 +559,7 @@ export function SendScreen() {
       setPreview({
         ok: false,
         code: 'adapter-unavailable',
-        reason: `Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only.`,
+        reason: `Sending on ${config.displayName} isn't available yet. This wallet signs native transfers offline for BTC, TRX, TON and EVM chains only.`,
       });
       return;
     }
@@ -701,7 +708,7 @@ export function SendScreen() {
         if (token !== null) return signTokenSend(mnemonic, token);
         const adapter = getAdapterForMode(chain, devnetEnabled);
         if (!adapter) throw new Error("Sending isn't available for this network.");
-        if (chain === 'eth' || chain === 'bsc') {
+        if (isEvmTxChain(chain)) {
           const inputs = await adapter.getTxInputs(from);
           if (inputs.status !== 'ok') throw new Error(inputs.reason);
           if (inputs.data.kind !== 'nonce') {
@@ -1294,7 +1301,7 @@ export function SendScreen() {
         )}
         {!SIGNING_CHAINS.includes(chain) && selectedToken === null && (
           <p className="text-sm text-ink">
-            {`Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only.`}
+            {`Sending on ${config.displayName} isn't available yet. This wallet signs native transfers offline for BTC, TRX, TON and EVM chains only.`}
           </p>
         )}
         </section>

@@ -103,7 +103,10 @@ describe('custom RPC allowlist (Lane F, FIX-ALL)', () => {
 
   it('rejects any other origin — the browser would refuse its fetches', () => {
     expect(isCustomRpcOriginUsable('https://custom.invalid/eth')).toBe(false);
-    expect(isCustomRpcOriginUsable('https://rpc.ankr.com/eth')).toBe(false);
+    // Lane 80-APP (2026-11-24): https://rpc.ankr.com IS a pinned
+    // origin now — filecoin and chiliz use rpc.ankr.com/* RPCs — so
+    // the rejection case uses Pocket Network, which no chain pins.
+    expect(isCustomRpcOriginUsable('https://rpc.pocket.network/eth')).toBe(false);
     expect(isCustomRpcOriginUsable('https://eth.llamarpc.com')).toBe(false);
     expect(isCustomRpcOriginUsable('not a url')).toBe(false);
   });
