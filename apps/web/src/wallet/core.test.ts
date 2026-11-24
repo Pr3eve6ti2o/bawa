@@ -30,6 +30,7 @@ import {
   type LocalAccount,
 } from './signing-intent';
 import { decodeBtcBech32 } from './devnet';
+import { decodeBase58 } from '../engine/address-codecs';
 import { ripemd160 } from 'viem';
 
 // Public fixtures already in the repo (apps/web/src/engine/boundary.test.ts).
@@ -92,7 +93,11 @@ describe('wallet/core', () => {
     expect(first.trx.startsWith('T')).toBe(true);
     expect(first.ton.startsWith('UQ')).toBe(true);
     expect(first.ton).toHaveLength(48);
-    expect(first.sol).toHaveLength(44);
+    // A 32-byte Solana public key base58-encodes to 43 or 44
+    // characters depending on its leading bytes, so a random
+    // mnemonic can validly derive a 43-character address.
+    // Assert the decoded key instead of a fixed string length.
+    expect(decodeBase58(first.sol)).toHaveLength(32);
     expect(first.bsc.startsWith('0x')).toBe(true);
     expect(first.matic.startsWith('0x')).toBe(true);
     expect(first.arb.startsWith('0x')).toBe(true);
