@@ -366,12 +366,15 @@ beyond a CSP `frame-ancestors` meta warning.
 
 ## Pushes
 
-- `panel-rebuild/token-everywhere`: `<tip>` (7 commits from `31012a6`:
-  BSC fix + 5 lanes + 1 merge fix).
+- `panel-rebuild/token-everywhere`: `c8af598` (7 commits from `31012a6`:
+  BSC fix + 5 lanes + 1 merge fix + programme record). Verified by fresh
+  ls-remote.
 - `panel-rebuild/token-gaps`: fast-forward merged from token-everywhere
-  at `<tip>`, verified by fresh ls-remote.
-- `main`: doc-only (this programme record + README where applicable) at
-  `<main tip>`.
+  at `c8af598`, verified by fresh ls-remote. (A doc-only fixup commit
+  updating this section sits on top of `c8af598` on both branches.)
+- `main`: doc-only (this programme record) at `a3d4c15`, verified by
+  fresh ls-remote. Main's code still has no web wallet — the code lives
+  on `panel-rebuild/token-gaps`.
 
 ## Open items / follow-ups
 
