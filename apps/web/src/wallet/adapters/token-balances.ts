@@ -21,7 +21,8 @@
  *
  * Read-only throughout. No signing, no broadcast, no funds moved.
  */
-import { hexToBytes, isAddress } from 'viem';
+import { hexToBytes, isAddress, sha256 } from 'viem';
+import { decodeBase58, encodeBase58 } from '../../engine/address-codecs';
 import { isRecord } from '../guards';
 import { CHAINS, resolveRpcEndpoints } from '../chains';
 import type { ChainId } from '../../engine/boundary';
@@ -1151,4 +1152,167 @@ export async function resolveTokenCoingeckoId(input: {
   } catch {
     return null;
   }
+}
+
+// --- Token-transfer inputs (Lane 2: token sending) -----------------------
+// Read-only helpers the Send flow needs to build a token transfer: the
+// sender's Jetton wallet on TON, and the SPL token accounts + blockhash
+// on Solana. Nothing here signs, broadcasts, or moves funds.
+
+// --- TON Jettons ----------------------------------------------------------
+
+/**
+ * The sender's Jetton wallet address for a (master, owner) pair, or
+ * null when the owner has no Jetton wallet for the master yet (TonAPI
+ * 404 — a zero balance, never an error). TonAPI returns the wallet
+ * address as an object ({ address: '0:...', ... }); the raw '0:'
+ * form is what Wallet Core's TON signer takes as the message
+ * destination (verified by the signJettonOffline test). A transport
+ * failure other than 404 throws — the caller reports it, never a
+ * guessed address. Read-only.
+ */
+export async function fetchJettonWalletAddress(input: {
+  contract: string;
+  ownerAddress: string;
+  transport?: FetchTransport;
+}): Promise<string | null> {
+  const transport = input.transport ?? httpFetchTransport;
+  let body: unknown;
+  try {
+    body = await tonApiGet(
+      `/v2/accounts/${input.ownerAddress}/jettons/${input.contract}`,
+      transport,
+    );
+  } catch (error: unknown) {
+    if (messageOf(error).includes('HTTP 404')) return null;
+    throw error;
+  }
+  if (!isRecord(body)) return null;
+  const wallet = isRecord(body['wallet_address'])
+    ? body['wallet_address']
+    : undefined;
+  const address =
+    wallet !== undefined && typeof wallet['address'] === 'string'
+      ? wallet['address']
+      : undefined;
+  if (address === undefined || !/^0:[0-9a-fA-F]{64}$/.test(address)) {
+    return null;
+  }
+  return address;
+}
+
+// --- Solana associated token accounts -------------------------------------
+// The ATAs are derived with pure PDA math below — no
+// getTokenAccountsByOwner, which PublicNode refuses (-32602, indexed
+// methods need a personal token, probed live 2026-11-24) and whose
+// fallback endpoint is down. The derivation is used by the balance
+// read and is kept for the Receive flow; the SPL send path was
+// removed (Lane 2): the Solana signer cannot produce a valid signed
+// transaction, so no SPL transfer can be built on it.
+
+/** Associated Token Program id (the program that owns ATAs). */
+export const SOL_ASSOCIATED_TOKEN_PROGRAM =
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
+
+/** Ed25519 field prime p = 2^255 - 19. */
+const ED25519_P = (1n << 255n) - 19n;
+
+function modPow(base: bigint, exponent: bigint, modulus: bigint): bigint {
+  let result = 1n;
+  let b = ((base % modulus) + modulus) % modulus;
+  let e = exponent;
+  while (e > 0n) {
+    if ((e & 1n) === 1n) result = (result * b) % modulus;
+    b = (b * b) % modulus;
+    e >>= 1n;
+  }
+  return result;
+}
+
+function modInverse(value: bigint, modulus: bigint): bigint {
+  return modPow(value, modulus - 2n, modulus);
+}
+
+/** Ed25519 curve constant d = -121665/121666 mod p. */
+const ED25519_D =
+  ((ED25519_P - 121665n) * modInverse(121666n, ED25519_P)) % ED25519_P;
+
+/**
+ * True when the 32-byte candidate is NOT a valid ed25519 curve point
+ * — the program-derived-address test (Solana's find_program_address:
+ * the first bump whose hash is off the curve wins). y is the
+ * little-endian 255-bit value (the top bit is the x-sign and plays no
+ * part); x^2 = (y^2-1)/(d*y^2+1) has a solution exactly when that
+ * quotient is a quadratic residue (Euler's criterion).
+ */
+function isOffEd25519Curve(candidate: Uint8Array): boolean {
+  if (candidate.length !== 32) return false;
+  let y = 0n;
+  for (let i = 31; i >= 0; i -= 1) {
+    y = (y << 8n) | BigInt(candidate[i] as number);
+  }
+  y &= (1n << 255n) - 1n;
+  // y >= p is not a valid field element at all — no curve point, so
+  // the candidate is off the curve by definition.
+  if (y >= ED25519_P) return true;
+  const y2 = (y * y) % ED25519_P;
+  const u = (y2 - 1n + ED25519_P) % ED25519_P;
+  const v = (ED25519_D * y2 + 1n) % ED25519_P;
+  if (u === 0n) return false; // x = 0: on the curve.
+  const legendre = modPow(
+    (u * modInverse(v, ED25519_P)) % ED25519_P,
+    (ED25519_P - 1n) / 2n,
+    ED25519_P,
+  );
+  return legendre === ED25519_P - 1n;
+}
+
+/**
+ * Derive an associated token account (ATA) address — pure PDA math,
+ * no RPC. Seeds are [owner, token program, mint], the program is the
+ * Associated Token Program, and the bump runs 255 down to 0
+ * (spl-associated-token-account's find_program_address). Returns null
+ * on a malformed address. Verified against @solana/spl-token's
+ * getAssociatedTokenAddressSync (see token-balances.test.ts).
+ */
+export function deriveAssociatedTokenAddress(
+  ownerAddress: string,
+  mintAddress: string,
+  tokenProgramId: string = SOL_TOKEN_PROGRAM,
+): string | null {
+  const owner = decodeBase58(ownerAddress);
+  const mint = decodeBase58(mintAddress);
+  const program = decodeBase58(tokenProgramId);
+  const associatedProgram = decodeBase58(SOL_ASSOCIATED_TOKEN_PROGRAM);
+  if (
+    owner === null ||
+    owner.length !== 32 ||
+    mint === null ||
+    mint.length !== 32 ||
+    program === null ||
+    program.length !== 32 ||
+    associatedProgram === null ||
+    associatedProgram.length !== 32
+  ) {
+    return null;
+  }
+  const suffix = new TextEncoder().encode('ProgramDerivedAddress');
+  for (let bump = 255; bump >= 0; bump -= 1) {
+    const input = new Uint8Array(32 + 32 + 32 + 1 + 32 + suffix.length);
+    let at = 0;
+    input.set(owner, at);
+    at += 32;
+    input.set(program, at);
+    at += 32;
+    input.set(mint, at);
+    at += 32;
+    input[at] = bump;
+    at += 1;
+    input.set(associatedProgram, at);
+    at += 32;
+    input.set(suffix, at);
+    const hash = hexToBytes(sha256(input));
+    if (isOffEd25519Curve(hash)) return encodeBase58(hash);
+  }
+  return null;
 }

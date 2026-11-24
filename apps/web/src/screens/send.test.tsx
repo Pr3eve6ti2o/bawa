@@ -88,6 +88,39 @@ vi.mock('../wallet/send', async (importOriginal) => {
       txHash: '0xhash1234',
       from: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
     })),
+    signEvmTokenOffline: vi.fn(async () => ({
+      ok: true,
+      signedTxHex: '0xdeadbeef',
+      txHash: '0xhash1234',
+      from: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+    })),
+  };
+});
+
+// The token simulate re-reads the token balance live; stub that read
+// (100 USDC) so the screen test stays hermetic — the real simulate
+// is covered in send.test.ts with stub adapters.
+vi.mock('../wallet/adapters/token-balances', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../wallet/adapters/token-balances')
+    >();
+  return {
+    ...actual,
+    fetchTokenBalance: vi.fn(async () => ({
+      status: 'ok',
+      data: {
+        chain: 'eth',
+        address: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        networkId: 'eip155:1',
+        valueBaseUnits: '100000000',
+        decimals: 6,
+        source: 'stub',
+        fetchedAt: 0,
+      },
+      source: 'stub',
+      fetchedAt: 0,
+    })),
   };
 });
 
@@ -606,8 +639,19 @@ describe('send screen', () => {
     }
   });
 
-  it('a token send shows the honest unavailable state, never a native preview', async () => {
-    setWallet();
+  it('walks an ETH USDC token send to a signed, not-sent result (Lane 2)', async () => {
+    // Lane 2: the token send no longer shows the honest unavailable
+    // state — it previews and signs offline. The stub adapter quotes
+    // 420000000000000 wei (20 gwei x 21000), so the token fee is
+    // 20 gwei x 100000 = 0.002 ETH.
+    setWallet({
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'available',
+          value: '100000000',
+        },
+      },
+    });
     const mounted = await mountScreen();
     try {
       await clickContaining(mounted.div, 'Ethereum');
@@ -630,11 +674,72 @@ describe('send screen', () => {
         setInputValue(amount, '25');
       });
       await click(mounted.div, 'Review');
-      await waitForText(mounted.div, "Sending USDC isn't available yet");
+      await waitForText(mounted.div, 'Review your send');
+      expect(mounted.div.textContent).toContain('Review your send');
+      expect(mounted.div.textContent).toContain('25 USDC');
+      expect(mounted.div.textContent).toContain('0.002 ETH');
+      expect(mounted.div.textContent).toContain('25 USDC + 0.002 ETH');
       expect(mounted.div.textContent).toContain(
-        "Sending USDC isn't available yet",
+        '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
       );
-      expect(mounted.div.textContent).not.toContain('Review your send');
+      expect(mounted.div.textContent).not.toContain("isn't available yet");
+      await click(mounted.div, 'Sign offline');
+      await waitForText(mounted.div, 'Send signed, not sent');
+      expect(mounted.div.textContent).toContain('Send signed, not sent');
+      expect(mounted.div.textContent).toContain('0xhash1234');
+      expect(mounted.div.textContent).toContain('0xdeadbeef');
+      expect(mounted.div.textContent).toContain('Signed transaction (hex)');
+      expect(mounted.div.textContent).toContain('not sent anywhere');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('a Polygon token send reaches review while native Polygon stays unavailable (Lane 2)', async () => {
+    // Lane 2: a token transfer only needs the generalised EVM signer,
+    // so MATIC USDC sends even though native Polygon sends are not
+    // built (the existing test above keeps that native refusal).
+    setWallet({
+      vaultAddresses: { btc: [], eth: [FROM], trx: [], ton: [], matic: [FROM] },
+      balances: {
+        btc: { status: 'unavailable', reason: 'no-adapter' },
+        eth: { status: 'available', value: '1000000000000000000' },
+        trx: { status: 'unavailable', reason: 'no-adapter' },
+        ton: { status: 'unavailable', reason: 'no-adapter' },
+        matic: { status: 'available', value: '1000000000000000000' },
+      },
+      tokenBalances: {
+        'matic:0x3c499c542cef5e3811e1192ce70d8cc03d5c3359': {
+          status: 'available',
+          value: '100000000',
+        },
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickContaining(mounted.div, 'Polygon');
+      const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('USD Coin'),
+      );
+      expect(usdcButton).not.toBeUndefined();
+      await act(async () => {
+        usdcButton?.click();
+      });
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, RECIPIENT);
+      });
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      await act(async () => {
+        setInputValue(amount, '25');
+      });
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, 'Review your send');
+      expect(mounted.div.textContent).toContain('Review your send');
+      expect(mounted.div.textContent).toContain('25 USDC');
+      expect(mounted.div.textContent).not.toContain("isn't available yet");
     } finally {
       await mounted.cleanup();
     }

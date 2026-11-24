@@ -21,6 +21,8 @@ export type SendReviewProps = {
   fee: string;
   total: string;
   feeNote: string;
+  /** Token contract / mint / master, when the send is a token transfer. Shown as its own row so the signer can check it. */
+  tokenContract?: string;
   disabledReason: string;
   stage: SendApprovalStage;
   onBack: () => void;
@@ -68,6 +70,7 @@ export function SendReview({
   fee,
   total,
   feeNote,
+  tokenContract,
   disabledReason,
   stage,
   onBack,
@@ -122,6 +125,15 @@ export function SendReview({
               {amount}
             </dd>
           </div>
+
+          {tokenContract && (
+            <div className="flex items-start justify-between gap-4 py-4">
+              <dt className="shrink-0 text-sm text-muted-foreground">Token contract</dt>
+              <dd className="min-w-0 break-all text-right font-mono text-sm">
+                {tokenContract}
+              </dd>
+            </div>
+          )}
 
           <div className="flex items-start justify-between gap-4 py-4">
             <dt className="shrink-0 text-sm text-muted-foreground">Estimated fee</dt>

@@ -33,6 +33,10 @@ import {
 import { CHAIN_DECIMALS, decimalToBaseUnits } from './chain-amount-format';
 import { isTestVault } from './vault';
 import type { KeyProvenance } from './vault';
+import {
+  fetchTokenBalance,
+} from './adapters/token-balances';
+import { tokenStandardFor, type TokenRecord } from './tokens';
 
 /**
  * Send flow (Fix Lane 3, Phase 4). Pure send-domain helpers on top of the
@@ -1805,4 +1809,994 @@ export async function signTonOffline(
   } finally {
     wallet?.delete();
   }
+}
+
+// --- Token transfers (Lane 2: token sending) ------------------------------
+// One transfer builder + offline signer per token standard, on the same
+// pattern as the native signers above: the signing key never leaves the
+// vault, the signed transaction is verified against its intent before
+// it is returned, and nothing here broadcasts. The native signers are
+// untouched — the EVM token signer duplicates the EVM signing core
+// (serialize, keccak, ETH partial signer, EIP-155 v) rather than
+// refactoring signEvmOffline, so the landed native path does not move.
+
+/** Gas cap for an ERC-20 transfer call (a plain transfer uses ~51k-65k; the cap is a limit, not a charge — unused gas is refunded). */
+export const ERC20_GAS_LIMIT = 100000n;
+
+/** Upper-bound energy for a TRC-20 transfer, for the fee estimate (an existing holder costs ~14k energy, a new holder more; the estimate is labelled an upper bound). */
+export const TRC20_ENERGY_ESTIMATE = 65000n;
+
+/** Fee-limit cap for a TRC-20 transfer transaction (100 TRX; a cap, not a charge). */
+export const TRC20_FEE_LIMIT_SUN = 100000000n;
+
+/** TON attached to a Jetton transfer message (0.05 TON — the TON docs' Jetton-transfer example amount). */
+export const JETTON_ATTACHED_NANO = '50000000';
+
+const ERC20_TRANSFER_SELECTOR = '0xa9059cbb';
+
+/**
+ * ERC-20 transfer(address,uint256) calldata, encoded by hand (the
+ * repo's raw-calldata style — see adapters/token-balances.ts): the
+ * 4-byte selector, the 20-byte recipient left-padded to a 32-byte
+ * word, the amount as a 32-byte big-endian word. Throws on a bad
+ * recipient or amount.
+ */
+export function buildErc20TransferData(
+  to: string,
+  amountBaseUnits: string,
+): string {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(to)) {
+    throw new Error('Invalid ERC-20 transfer recipient.');
+  }
+  if (!/^[0-9]+$/.test(amountBaseUnits)) {
+    throw new Error('Invalid ERC-20 transfer amount.');
+  }
+  const amount = BigInt(amountBaseUnits);
+  if (amount > (1n << 256n) - 1n) {
+    throw new Error('Invalid ERC-20 transfer amount.');
+  }
+  const amountHex = amount.toString(16).padStart(64, '0');
+  return `${ERC20_TRANSFER_SELECTOR}${to.toLowerCase().replace(/^0x/, '').padStart(64, '0')}${amountHex}`;
+}
+
+/** 32-byte big-endian encoding of a decimal integer string (a uint256 ABI word). */
+function uint256BigEndian(decimal: string): Uint8Array {
+  const value = BigInt(decimal);
+  const hex = value.toString(16).padStart(64, '0');
+  return hexToBytes(`0x${hex}`);
+}
+
+export type EvmTokenSignIntent = {
+  from: string;
+  /** Token contract the transfer calls. */
+  contract: string;
+  /** Token recipient (inside the transfer calldata). */
+  to: string;
+  amountBaseUnits: string;
+  nonce: string;
+  chainId: number;
+};
+
+/**
+ * Post-sign verification for an ERC-20 transfer (mirrors
+ * verifyEthSignedTx): the signed transaction is re-decoded with viem
+ * and contract / zero value / calldata / nonce / chain id / gas limit
+ * are asserted against the signing intent, and the sender is recovered
+ * from the signature. Never throws.
+ */
+export async function verifyEvmTokenSignedTx(
+  signedTxHex: `0x${string}`,
+  intent: EvmTokenSignIntent,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    const parsed = parseTransaction(signedTxHex);
+    if (parsed.to?.toLowerCase() !== intent.contract.toLowerCase()) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction contract does not match the signing intent.',
+      };
+    }
+    if (parsed.value !== undefined && parsed.value !== 0n) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction value is not zero.',
+      };
+    }
+    const expectedData = buildErc20TransferData(
+      intent.to,
+      intent.amountBaseUnits,
+    );
+    if ((parsed.data ?? '0x').toLowerCase() !== expectedData.toLowerCase()) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction calldata does not match the signing intent.',
+      };
+    }
+    if (
+      parsed.nonce === null ||
+      parsed.nonce === undefined ||
+      BigInt(parsed.nonce) !== BigInt(intent.nonce)
+    ) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction nonce does not match the signing intent.',
+      };
+    }
+    if (parsed.chainId !== intent.chainId) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction chain id does not match the signing intent.',
+      };
+    }
+    if (parsed.gas !== ERC20_GAS_LIMIT) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction gas limit does not match the signing intent.',
+      };
+    }
+    if (
+      parsed.gasPrice === undefined ||
+      parsed.r === undefined ||
+      parsed.s === undefined ||
+      parsed.v === undefined
+    ) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction failed post-sign verification.',
+      };
+    }
+    const payload = serializeTransaction({
+      chainId: parsed.chainId,
+      nonce: parsed.nonce,
+      gasPrice: parsed.gasPrice,
+      gas: parsed.gas,
+      to: parsed.to,
+      // viem parses a zero value as undefined; the check above has
+      // already established it is zero when present.
+      value: parsed.value ?? 0n,
+      data: parsed.data ?? '0x',
+    });
+    const recovered = await recoverAddress({
+      hash: keccak256(payload),
+      signature: {
+        r: parsed.r as `0x${string}`,
+        s: parsed.s as `0x${string}`,
+        yParity: Number((parsed.v as bigint) - 35n - BigInt(parsed.chainId) * 2n),
+      },
+    });
+    if (recovered.toLowerCase() !== intent.from.toLowerCase()) {
+      return {
+        ok: false,
+        reason: 'Signed token transaction sender does not match the signing intent.',
+      };
+    }
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      reason: 'Signed token transaction failed post-sign verification.',
+    };
+  }
+}
+
+/**
+ * Offline ERC-20 transfer signing for any EVM chain (the generalised
+ * EVM signer, token form). The transaction calls the token contract
+ * with transfer(recipient, amount) calldata, value 0, gas 100000; the
+ * chain id comes from the registry, the from address from
+ * deriveAddresses()[chain], and the signing key is the ETH key (all 16
+ * EVM chains share m/44'/60'). The signing intent binds the contract,
+ * the token amount and the nonce — the recipient lives inside the
+ * calldata and is checked by verifyEvmTokenSignedTx. Devnet: only
+ * Ethereum Sepolia exists, as for native sends. Nothing here
+ * broadcasts.
+ */
+export async function signEvmTokenOffline(
+  chain: ChainId,
+  mnemonic: string,
+  passphrase: string,
+  tokenContract: string,
+  to: string,
+  amountBaseUnits: string,
+  nonce: string,
+  gasPriceBaseUnits: string,
+  options?: SendDevnetOptions,
+): Promise<EthSignedTx> {
+  const devnet = options?.devnet === true;
+  let chainId: number;
+  if (devnet) {
+    if (chain !== 'eth') {
+      return {
+        ok: false,
+        code: 'invalid-input',
+        reason: `${chainConfig(chain).displayName} has no devnet network in this wallet.`,
+      };
+    }
+    chainId = 11155111;
+  } else {
+    const evmChainId = chainConfig(chain).evmChainId;
+    if (evmChainId === null) {
+      return {
+        ok: false,
+        code: 'invalid-input',
+        reason: `${chainConfig(chain).displayName} is not an EVM chain.`,
+      };
+    }
+    chainId = evmChainId;
+  }
+  if (
+    ![amountBaseUnits, nonce, gasPriceBaseUnits].every(
+      (value) => typeof value === 'string' && /^[0-9]+$/.test(value),
+    ) ||
+    !/^0x[0-9a-fA-F]{40}$/.test(tokenContract)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason:
+        'Amount, nonce and gas price must be unsigned decimal integer strings, and the token contract must be an EVM address.',
+    };
+  }
+  let calldata: string;
+  try {
+    calldata = buildErc20TransferData(to, amountBaseUnits);
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid ERC-20 transfer recipient or amount.',
+    };
+  }
+
+  let from: string;
+  try {
+    from = devnet
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).eth
+      : (await deriveAddresses(mnemonic, passphrase))[chain];
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
+      reason:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'Invalid mnemonic.'
+          : `Failed to sign ${chainConfig(chain).displayName} token transaction offline.`,
+    };
+  }
+
+  const intent = createTransactionIntent(
+    chain,
+    tokenContract,
+    amountBaseUnits,
+    nonce,
+  );
+  try {
+    assertIntentMatchesTransaction(intent, {
+      chain,
+      to: tokenContract,
+      amountBaseUnits,
+      sequence: nonce,
+    });
+  } catch {
+    return {
+      ok: false,
+      code: 'intent-mismatch',
+      reason: 'Transaction does not match the approved intent.',
+    };
+  }
+
+  const unsigned = {
+    chainId,
+    nonce: BigInt(nonce) as unknown as number,
+    gasPrice: BigInt(gasPriceBaseUnits),
+    gas: ERC20_GAS_LIMIT,
+    to: tokenContract as `0x${string}`,
+    value: 0n,
+    data: calldata as `0x${string}`,
+  };
+
+  let unsignedHex: `0x${string}`;
+  try {
+    unsignedHex = serializeTransaction(unsigned);
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: `Invalid ${chainConfig(chain).displayName} token transaction input.`,
+    };
+  }
+
+  const digest = hexToBytes(keccak256(unsignedHex));
+  const signer = await createPartialSigner(mnemonic, passphrase, 'eth');
+  const sig = await signer.signDigest(digest);
+  const r = bytesToHex(sig.slice(0, 32));
+  const s = bytesToHex(sig.slice(32, 64));
+  const v = BigInt(sig[64]! + 35 + 2 * chainId);
+
+  try {
+    const signed = serializeTransaction(unsigned, { r, s, v });
+    return {
+      ok: true,
+      signedTxHex: signed,
+      txHash: keccak256(signed),
+      from,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: `Invalid ${chainConfig(chain).displayName} token transaction input.`,
+    };
+  }
+}
+
+export type Trc20SignedTx = TrxSignedTx;
+
+/**
+ * Offline TRC-20 transfer signing (mirrors signTrxOffline). Wallet
+ * Core's dedicated transferTrc20Contract builds the
+ * TriggerSmartContract call (transfer(address,uint256)) internally;
+ * the fee limit is set to 100 TRX (a cap, not a charge — the network
+ * burns only the energy actually used). The block header comes from
+ * the live chain, as for native TRX. Nothing here broadcasts.
+ */
+export async function signTrc20Offline(
+  mnemonic: string,
+  passphrase: string,
+  tokenContract: string,
+  to: string,
+  amountBaseUnits: string,
+  blockHeader: TrxBlockHeader,
+  options?: SendDevnetOptions,
+): Promise<Trc20SignedTx> {
+  const devnet = options?.devnet === true;
+  const amount = toSafeInt(amountBaseUnits);
+  let headerBytes: {
+    txTrieRoot: Uint8Array;
+    parentHash: Uint8Array;
+    witnessAddress: Uint8Array;
+  };
+  try {
+    if (
+      amount === null ||
+      amount <= 0 ||
+      !Number.isSafeInteger(blockHeader.timestamp) ||
+      !Number.isSafeInteger(blockHeader.number)
+    ) {
+      return { ok: false, code: 'invalid-input', reason: 'Invalid TRC-20 signing inputs.' };
+    }
+    headerBytes = {
+      txTrieRoot: hexToBytes(blockHeader.txTrieRoot),
+      parentHash: hexToBytes(blockHeader.parentHash),
+      witnessAddress: tronAddressToBytes(blockHeader.witnessAddress),
+    };
+    if (
+      headerBytes.txTrieRoot.length !== 32 ||
+      headerBytes.parentHash.length !== 32
+    ) {
+      return { ok: false, code: 'invalid-input', reason: 'Invalid TRC-20 signing inputs.' };
+    }
+  } catch {
+    return { ok: false, code: 'invalid-input', reason: 'Invalid TRC-20 signing inputs.' };
+  }
+
+  let from: string;
+  try {
+    from = devnet
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).trx
+      : (await deriveAddresses(mnemonic, passphrase)).trx;
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
+      reason:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'Invalid mnemonic.'
+          : 'Failed to sign TRC-20 transaction offline.',
+    };
+  }
+
+  const core = await loadCore();
+  try {
+    return await withSigningKey(
+      mnemonic,
+      passphrase,
+      core.CoinType.tron,
+      "m/44'/195'/0'/0/0",
+      async (keyBytes) => {
+        if (keyBytes.length !== 32) {
+          return {
+            ok: false as const,
+            code: 'signer-empty',
+            reason: 'Invalid TRON signing key length.',
+          };
+        }
+        const now = Date.now();
+        const input = TW.Tron.Proto.SigningInput.create({
+          transaction: {
+            timestamp: Long.fromNumber(now),
+            expiration: Long.fromNumber(now + 600000),
+            blockHeader: {
+              timestamp: Long.fromNumber(blockHeader.timestamp),
+              txTrieRoot: headerBytes.txTrieRoot,
+              parentHash: headerBytes.parentHash,
+              number: Long.fromNumber(blockHeader.number),
+              witnessAddress: headerBytes.witnessAddress,
+              version: 0,
+            },
+            feeLimit: Long.fromNumber(Number(TRC20_FEE_LIMIT_SUN)),
+            transferTrc20Contract: {
+              contractAddress: tokenContract,
+              ownerAddress: from,
+              toAddress: to,
+              amount: uint256BigEndian(amountBaseUnits),
+            },
+          },
+          privateKey: keyBytes,
+        });
+        const encoded = TW.Tron.Proto.SigningInput.encode(input).finish();
+        try {
+          const output = TW.Tron.Proto.SigningOutput.decode(
+            core.AnySigner.sign(encoded, core.CoinType.tron),
+          );
+          if (output.error !== TW.Common.Proto.SigningError.OK) {
+            return signingFailure(output.errorMessage || 'Signing failed.', output.error);
+          }
+          if (!output.json || output.id.length !== 32) {
+            return {
+              ok: false as const,
+              code: 'signing-failed',
+              reason: 'Signer returned an empty transaction.',
+            };
+          }
+          return {
+            ok: true as const,
+            signedTxJson: output.json,
+            txId: bytesToHex(output.id).slice(2),
+            from,
+          };
+        } finally {
+          encoded.fill(0);
+        }
+      },
+    );
+  } catch {
+    return { ok: false, code: 'unknown', reason: 'Failed to sign TRC-20 transaction offline.' };
+  }
+}
+
+export type JettonSignedTx = TonSignedTx;
+
+/**
+ * Offline TON Jetton transfer signing (mirrors signTonOffline's V4R2
+ * path, with a Jetton payload). The message goes to the sender's
+ * Jetton wallet (from fetchJettonWalletAddress), attaches 0.05 TON,
+ * and carries the standard Jetton transfer body (op 0xf8a7ea5):
+ * query id 0, the Jetton amount, the recipient as toOwner, the sender
+ * as the response address, and a zero forward amount. Mode 3, as for
+ * native TON. The signed BOC is verified the same way as a native TON
+ * send (no-error result, 32-byte message hash, BOC magic) — its
+ * contents are not re-parsed here (no BOC parser vendored), the same
+ * recorded boundary as signTonOffline. Nothing here broadcasts.
+ */
+export async function signJettonOffline(
+  mnemonic: string,
+  passphrase: string,
+  jettonWalletAddress: string,
+  to: string,
+  amountBaseUnits: string,
+  seqno: number,
+  options?: {
+    walletVersion?: TonWalletVersion;
+    devnet?: boolean;
+    account?: number;
+  },
+): Promise<JettonSignedTx> {
+  const devnet = options?.devnet === true;
+  const walletVersion = options?.walletVersion ?? 'v4r2';
+  const coreWalletVersion =
+    walletVersion === 'v4r2'
+      ? TW.TheOpenNetwork.Proto.WalletVersion.WALLET_V4_R2
+      : undefined;
+  if (coreWalletVersion === undefined) {
+    return {
+      ok: false,
+      code: 'unsupported-version',
+      reason: `Unsupported TON wallet version "${walletVersion}": address derivation supports v4r2 only.`,
+    };
+  }
+  if (
+    !/^[0-9]+$/.test(amountBaseUnits) ||
+    BigInt(amountBaseUnits) <= 0n ||
+    !Number.isSafeInteger(seqno) ||
+    seqno < 0
+  ) {
+    return { ok: false, code: 'invalid-input', reason: 'Invalid Jetton signing inputs.' };
+  }
+
+  const account = options?.account ?? 0;
+  if (!Number.isSafeInteger(account) || account < 0) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid TON signing account.',
+    };
+  }
+  let from: string;
+  try {
+    from = devnet
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, account, 0)).ton
+      : (await deriveAddressesAt(mnemonic, passphrase, account, 0)).ton;
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
+      reason:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'Invalid mnemonic.'
+          : 'Failed to sign Jetton transaction offline.',
+    };
+  }
+
+  const core = await loadCore();
+  let wallet: ReturnType<typeof core.HDWallet.createWithMnemonic> | null =
+    null;
+  try {
+    wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
+    if (!wallet) throw new Error('Unable to restore wallet.');
+    const key = wallet.getKey(
+      core.CoinType.ton,
+      pathFor('ton', account, 0),
+    );
+    try {
+      const seed = key.data();
+      const pubkeyObj = key.getPublicKeyEd25519();
+      let pub: Uint8Array;
+      try {
+        pub = new Uint8Array(pubkeyObj.data());
+      } finally {
+        pubkeyObj.delete();
+      }
+      const input = TW.TheOpenNetwork.Proto.SigningInput.create({
+        privateKey: seed,
+        publicKey: pub,
+        messages: [
+          {
+            dest: jettonWalletAddress,
+            amount: minimalBigEndian(JETTON_ATTACHED_NANO),
+            mode: 3,
+            jettonTransfer: {
+              queryId: Long.fromNumber(0),
+              jettonAmount: minimalBigEndian(amountBaseUnits),
+              toOwner: to,
+              responseAddress: from,
+              forwardAmount: minimalBigEndian('0'),
+            },
+          },
+        ],
+        sequenceNumber: seqno,
+        expireAt: Math.floor(Date.now() / 1000) + 600,
+        walletVersion: coreWalletVersion,
+      });
+      const encoded =
+        TW.TheOpenNetwork.Proto.SigningInput.encode(input).finish();
+      try {
+        const output = TW.TheOpenNetwork.Proto.SigningOutput.decode(
+          core.AnySigner.sign(encoded, core.CoinType.ton),
+        );
+        if (output.error !== TW.Common.Proto.SigningError.OK) {
+          return signingFailure(output.errorMessage || 'Signing failed.', output.error);
+        }
+        if (!output.encoded || output.hash.length !== 32) {
+          return {
+            ok: false,
+            code: 'signing-failed',
+            reason: 'Signer returned an empty transaction.',
+          };
+        }
+        return {
+          ok: true,
+          signedBocBase64: output.encoded,
+          messageHash: bytesToHex(output.hash),
+          from,
+        };
+      } finally {
+        encoded.fill(0);
+        seed.fill(0);
+      }
+    } finally {
+      key.delete();
+    }
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
+      reason:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'Invalid mnemonic.'
+          : 'Failed to sign Jetton transaction offline.',
+    };
+  } finally {
+    wallet?.delete();
+  }
+}
+
+// --- Token preview + simulation -------------------------------------------
+// The screen's flow for a token send: preview (amount + fee, gated on
+// the cached token balance) then, at signing time, a fresh simulate
+// (live token balance + live chain inputs). A preview is only valid
+// for the transaction it describes — the fee the screen shows is the
+// fee the signer must not exceed, and the simulate re-checks it
+// against live inputs before any key is used.
+
+export type TokenSendDeps = {
+  fetchTokenBalance?: typeof fetchTokenBalance;
+};
+
+export type TokenFeeEstimate =
+  | {
+      ok: true;
+      /** Native fee (gas / energy / SOL signatures / '0' for TON-unknown). */
+      feeBaseUnits: string;
+      /** Extra native the send needs on top of the fee: SOL account rent, else '0'. */
+      rentBaseUnits: string;
+      /** Native attached to the message itself: 0.05 TON for a Jetton transfer, else '0'. */
+      attachedBaseUnits: string;
+      feeNote: string;
+      feeUnknown?: boolean;
+    }
+  | { ok: false; code: SendFailureCode; reason: string };
+
+/**
+ * The native fee a token send costs on a chain — the estimate the
+ * review screen shows, in the chain's native base units. Per family:
+ * EVM — the adapter's native quote is gasPrice x 21000, so the gas
+ * price is recovered by exact division and a token transfer is quoted
+ * at the same gas price x 100000 gas. TRX — the adapter quotes SUN
+ * per unit of energy and a TRC-20 transfer is estimated at 65000
+ * energy (an upper bound, labelled as one). SOL — refused: the
+ * Solana signer cannot produce a valid signed transaction (see the
+ * sol branch below). TON — no read-only fee endpoint exists (the same honest
+ * unknown as the native preview); the send attaches 0.05 TON to the
+ * Jetton message. Devnet token sends exist only on ETH (Sepolia
+ * ERC-20), TRX (Nile TRC-20) and TON (testnet Jetton).
+ */
+export async function estimateTokenSendFee(
+  chain: ChainId,
+  token: TokenRecord,
+  options?: SendDevnetOptions,
+): Promise<TokenFeeEstimate> {
+  const devnet = options?.devnet === true;
+  if (devnet && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: `${chainConfig(chain).displayName} has no devnet network in this wallet.`,
+    };
+  }
+  if (chain === 'ton') {
+    return {
+      ok: true,
+      feeBaseUnits: '0',
+      rentBaseUnits: '0',
+      attachedBaseUnits: JETTON_ATTACHED_NANO,
+      feeNote:
+        'TON fee is charged by the network when the transaction is broadcast; it is not known in advance. The Jetton transfer itself attaches 0.05 TON, which comes out of your balance on top of this amount.',
+      feeUnknown: true,
+    };
+  }
+  // SOL: token sending is not feasible with the wallet's existing
+  // infrastructure. Wallet Core 4.9.3's Solana signer returns an
+  // `encoded` transaction that is not a valid Solana wire transaction
+  // (it does not parse with @solana/web3.js, contains none of the
+  // transaction's fields, and its signature does not verify against
+  // the correctly-built message) — verified first-hand 2026-11-24,
+  // for a native SOL transfer as well as a token transfer. No SPL
+  // transfer can be produced or verified, so the send is refused
+  // here with the reason instead of pretending to work.
+  if (chain === 'sol') {
+    return {
+      ok: false,
+      code: 'adapter-unavailable',
+      reason:
+        'Token sending on Solana is not available yet — the Solana signer in this wallet cannot produce a valid signed transaction.',
+    };
+  }
+  const adapter = getAdapterForMode(chain, devnet);
+  if (!adapter) {
+    return {
+      ok: false,
+      code: 'adapter-unavailable',
+      reason: `No adapter available for ${chainConfig(chain).displayName}.`,
+    };
+  }
+  const fee = await adapter.estimateFee();
+  if (fee.status !== 'ok') {
+    return { ok: false, code: 'adapter-unavailable', reason: fee.reason };
+  }
+  if (chain === 'trx') {
+    return {
+      ok: true,
+      feeBaseUnits: (BigInt(fee.data.feeBaseUnits) * TRC20_ENERGY_ESTIMATE).toString(),
+      rentBaseUnits: '0',
+      attachedBaseUnits: '0',
+      feeNote:
+        'Upper-bound estimate at the current energy fee (65000 energy): the network charges only the energy actually used.',
+    };
+  }
+  // EVM: the adapter quotes gasPrice x 21000 for a native transfer;
+  // recover the gas price by exact division and quote the token
+  // transfer at the same gas price x 100000 gas. A quote that is not
+  // an exact multiple of 21000 is not a gas-price quote at all — the
+  // estimate is refused rather than guessed from it.
+  const nativeFee = BigInt(fee.data.feeBaseUnits);
+  if (nativeFee % 21000n !== 0n) {
+    return {
+      ok: false,
+      code: 'adapter-unavailable',
+      reason: 'Fee quote does not match a 21000-gas transfer.',
+    };
+  }
+  const gasPrice = nativeFee / 21000n;
+  return {
+    ok: true,
+    feeBaseUnits: (gasPrice * ERC20_GAS_LIMIT).toString(),
+    rentBaseUnits: '0',
+    attachedBaseUnits: '0',
+    feeNote:
+      'Token-transfer estimate at current gas price, 100000 gas; not a final fee',
+  };
+}
+
+export type TokenSendPreview =
+  | {
+      ok: true;
+      token: TokenRecord;
+      amountBaseUnits: string;
+      feeBaseUnits: string;
+      rentBaseUnits: string;
+      attachedBaseUnits: string;
+      feeNote: string;
+      feeUnknown?: boolean;
+    }
+  | {
+      ok: false;
+      code: SendFailureCode;
+      reason: string;
+      signingErrorCode?: number;
+    };
+
+/**
+ * Preview a token send: the amount in base units, the native fee, and
+ * the native balance check (fee + rent + attached amount). The token
+ * balance is a parameter — the screen's cached balance, never a live
+ * read here; the sign step re-reads it live (simulateTokenSend).
+ * A preview that fails is reported with the reason, never a guessed
+ * fee. Mirrors previewSendAmount.
+ */
+export async function previewTokenSendAmount(
+  chain: ChainId,
+  token: TokenRecord,
+  fromAddress: string,
+  toAddress: string,
+  amountDecimal: string,
+  tokenBalanceBaseUnits: string | null,
+  options?: SendDevnetOptions,
+): Promise<TokenSendPreview> {
+  const devnet = options?.devnet === true;
+  const standard = tokenStandardFor(chain);
+  if (standard.standard === null) {
+    return {
+      ok: false,
+      code: 'adapter-unavailable',
+      reason: `${chainConfig(chain).displayName} has no token standard — only its native coin can be sent.`,
+    };
+  }
+  if (token.chain !== chain) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'The token is not on this network.',
+    };
+  }
+  if (devnet && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: `${chainConfig(chain).displayName} has no devnet network in this wallet.`,
+    };
+  }
+  const amount = decimalToBaseUnits(amountDecimal, token.decimals);
+  if (amount === null || BigInt(amount) <= 0n) {
+    return { ok: false, code: 'invalid-input', reason: 'Enter a valid amount.' };
+  }
+  if (tokenBalanceBaseUnits === null) {
+    return {
+      ok: false,
+      code: 'adapter-unavailable',
+      reason: `The ${token.symbol} balance is not loaded yet.`,
+    };
+  }
+  if (BigInt(amount) > BigInt(tokenBalanceBaseUnits)) {
+    return {
+      ok: false,
+      code: 'insufficient-funds',
+      reason: 'Amount exceeds available balance.',
+    };
+  }
+  const fee = await estimateTokenSendFee(chain, token, options);
+  if (!fee.ok) return fee;
+  const adapter = getAdapterForMode(chain, devnet);
+  if (!adapter) {
+    return {
+      ok: false,
+      code: 'adapter-unavailable',
+      reason: `No adapter available for ${chainConfig(chain).displayName}.`,
+    };
+  }
+  const native = await adapter.getBalance(fromAddress);
+  if (native.status !== 'ok') {
+    return { ok: false, code: 'adapter-unavailable', reason: native.reason };
+  }
+  const needed =
+    BigInt(fee.feeBaseUnits) +
+    BigInt(fee.rentBaseUnits) +
+    BigInt(fee.attachedBaseUnits);
+  if (BigInt(native.data.valueBaseUnits) < needed) {
+    return {
+      ok: false,
+      code: 'insufficient-gas',
+      reason: `The ${chainConfig(chain).symbol} balance does not cover the estimated fee.`,
+    };
+  }
+  return {
+    ok: true,
+    token,
+    amountBaseUnits: amount,
+    feeBaseUnits: fee.feeBaseUnits,
+    rentBaseUnits: fee.rentBaseUnits,
+    attachedBaseUnits: fee.attachedBaseUnits,
+    feeNote: fee.feeNote,
+    ...(fee.feeUnknown === true ? { feeUnknown: true } : {}),
+  };
+}
+
+export type SimulateTokenSendResult =
+  | {
+      ok: true;
+      amountBaseUnits: string;
+      feeBaseUnits: string;
+      rentBaseUnits: string;
+      attachedBaseUnits: string;
+      feeNote: string;
+      feeUnknown?: boolean;
+    }
+  | {
+      ok: false;
+      error: SimulationError;
+      code: SendFailureCode;
+      reason: string;
+    };
+
+/**
+ * Re-check a token send at signing time: the token balance is read
+ * live (never trusted from the cached preview), then the chain's live
+ * inputs are checked — EVM nonce, TRX account balance against the
+ * fee, TON seqno, SOL blockhash + token accounts. On a stale or bad
+ * input the error names the cause; signing does not start. Mirrors
+ * simulateSend.
+ */
+export async function simulateTokenSend(
+  chain: ChainId,
+  token: TokenRecord,
+  from: string,
+  to: string,
+  amountDecimal: string,
+  options?: SendDevnetOptions,
+  deps?: TokenSendDeps,
+): Promise<SimulateTokenSendResult> {
+  const devnet = options?.devnet === true;
+  const fetchBalance = deps?.fetchTokenBalance ?? fetchTokenBalance;
+  const live = await fetchBalance({
+    chain,
+    contract: token.contract,
+    ownerAddress: from,
+    decimals: token.decimals,
+  });
+  if (live.status !== 'ok') {
+    return simulationFailed(
+      chain,
+      live,
+      'adapter-unavailable',
+      `The ${token.symbol} balance could not be read.`,
+    );
+  }
+  const preview = await previewTokenSendAmount(
+    chain,
+    token,
+    from,
+    to,
+    amountDecimal,
+    live.data.valueBaseUnits,
+    options,
+  );
+  if (!preview.ok) {
+    return {
+      ...preview,
+      error: {
+        code: simulationExecutionCode(preview.code),
+        message: preview.reason,
+        chain,
+      },
+    };
+  }
+  const adapter = getAdapterForMode(chain, devnet);
+  if (!adapter) {
+    return simulationFailed(
+      chain,
+      undefined,
+      'adapter-unavailable',
+      `No adapter available for ${chainConfig(chain).displayName}.`,
+    );
+  }
+  const txInputs = await adapter.getTxInputs(from);
+  if (txInputs.status !== 'ok') {
+    return simulationFailed(
+      chain,
+      txInputs,
+      chain === 'ton' ? 'bad-seqno' : 'bad-nonce',
+      `The ${chainConfig(chain).displayName} adapter did not return live transaction inputs.`,
+    );
+  }
+  const data = txInputs.data;
+  if (chain === 'ton') {
+    if (
+      data.kind !== 'seqno' ||
+      !Number.isSafeInteger(data.seqno) ||
+      data.seqno < 0
+    ) {
+      return simulationFailed(
+        chain,
+        undefined,
+        'bad-seqno',
+        'The TON adapter did not return a valid seqno.',
+      );
+    }
+  } else if (chain === 'trx') {
+    if (
+      data.kind !== 'account' ||
+      BigInt(data.balanceSun) < BigInt(preview.feeBaseUnits)
+    ) {
+      return simulationFailed(
+        chain,
+        undefined,
+        'insufficient-funds',
+        'The TRX balance no longer covers the estimated fee.',
+      );
+    }
+  } else if (
+    data.kind !== 'nonce' ||
+    !Number.isSafeInteger(data.nonce) ||
+    data.nonce < 0
+  ) {
+    return simulationFailed(
+      chain,
+      undefined,
+      'bad-nonce',
+      `The ${chainConfig(chain).displayName} adapter did not return a valid nonce.`,
+    );
+  }
+  return { ...preview };
 }

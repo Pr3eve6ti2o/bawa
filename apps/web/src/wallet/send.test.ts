@@ -24,7 +24,17 @@ import {
   simulateSend,
   signingFailure,
   planFailure,
+  buildErc20TransferData,
+  previewTokenSendAmount,
+  signEvmTokenOffline,
+  signJettonOffline,
+  signTrc20Offline,
+  simulateTokenSend,
+  verifyEvmTokenSignedTx,
 } from './send';
+import { chainConfig } from './chains';
+import { DEFAULT_TOKENS, EVM_TOKEN_CHAINS, type TokenRecord } from './tokens';
+import type { ChainId } from '../engine/boundary';
 import {
   createWallet,
   deriveAddresses,
@@ -35,6 +45,7 @@ import { loadCore } from '../engine/boundary';
 import { registerAdapter, registerDevnetAdapter } from './adapters';
 import { decodeBtcBech32 } from './devnet';
 import type {
+  AdapterBalance,
   AdapterResult,
   ChainAdapter,
   FeeEstimate,
@@ -1867,5 +1878,879 @@ describe('devnet send (temporary devnet mode)', () => {
         holder.localStorage = previousStorage;
       }
     }
+  });
+});
+
+// --- Token sending (Lane 2) ------------------------------------------------
+
+describe('buildErc20TransferData (Lane 2)', () => {
+  it('encodes transfer(address,uint256) with the known vector', () => {
+    expect(
+      buildErc20TransferData(
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '1000000',
+      ),
+    ).toBe(
+      '0xa9059cbb' +
+        '00000000000000000000000027ef5cdbe01777d62438affeb695e33fc2335979' +
+        '00000000000000000000000000000000000000000000000000000000000f4240',
+    );
+  });
+
+  it('encodes a zero amount as a zero word', () => {
+    expect(
+      buildErc20TransferData(
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '0',
+      ),
+    ).toBe(
+      '0xa9059cbb' +
+        '00000000000000000000000027ef5cdbe01777d62438affeb695e33fc2335979' +
+        '0000000000000000000000000000000000000000000000000000000000000000',
+    );
+  });
+
+  it('rejects a bad recipient and a bad amount', () => {
+    expect(() => buildErc20TransferData('not-an-address', '1000')).toThrow(
+      'Invalid ERC-20 transfer recipient.',
+    );
+    expect(() =>
+      buildErc20TransferData(
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '0.5',
+      ),
+    ).toThrow('Invalid ERC-20 transfer amount.');
+  });
+});
+
+describe('signEvmTokenOffline (Lane 2)', () => {
+  const TO = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+  const usdc = DEFAULT_TOKENS.find(
+    (token) => token.chain === 'eth' && token.symbol === 'USDC',
+  )!;
+  const usdtBsc = DEFAULT_TOKENS.find(
+    (token) => token.chain === 'bsc' && token.symbol === 'USDT',
+  )!;
+  const usdcBase = DEFAULT_TOKENS.find(
+    (token) => token.chain === 'base' && token.symbol === 'USDC',
+  )!;
+
+  it('signs a 25 USDC transfer on ETH; to is the contract, value is 0, calldata is the transfer call, chain id 1, gas 100000', async () => {
+    const mnemonic = await createWallet();
+    const signed = await signEvmTokenOffline(
+      'eth',
+      mnemonic,
+      '',
+      usdc.contract,
+      TO,
+      '25000000',
+      '3',
+      '20000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.txHash).toBe(keccak256(signed.signedTxHex));
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.to?.toLowerCase()).toBe(usdc.contract.toLowerCase());
+    expect(parsed.value ?? 0n).toBe(0n);
+    expect(parsed.data?.toLowerCase()).toBe(
+      buildErc20TransferData(TO, '25000000').toLowerCase(),
+    );
+    expect(parsed.nonce).toBe(3);
+    expect(parsed.chainId).toBe(1);
+    expect(parsed.gas).toBe(100000n);
+    expect(parsed.gasPrice).toBe(20000000000n);
+    // The in-module verifier accepts the signed tx against its intent.
+    await expect(
+      verifyEvmTokenSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        contract: usdc.contract,
+        to: TO,
+        amountBaseUnits: '25000000',
+        nonce: '3',
+        chainId: 1,
+      }),
+    ).resolves.toEqual({ ok: true });
+    // And it rejects the same tx against the BSC chain id and a wrong amount.
+    await expect(
+      verifyEvmTokenSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        contract: usdc.contract,
+        to: TO,
+        amountBaseUnits: '25000000',
+        nonce: '3',
+        chainId: 56,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason:
+        'Signed token transaction chain id does not match the signing intent.',
+    });
+    await expect(
+      verifyEvmTokenSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        contract: usdc.contract,
+        to: TO,
+        amountBaseUnits: '25000001',
+        nonce: '3',
+        chainId: 1,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason:
+        'Signed token transaction calldata does not match the signing intent.',
+    });
+  });
+
+  it('signs a BSC USDT transfer (18 decimals); chain id 56, sender is the BSC address', async () => {
+    const mnemonic = await createWallet();
+    const addresses = await deriveAddresses(mnemonic, '');
+    const signed = await signEvmTokenOffline(
+      'bsc',
+      mnemonic,
+      '',
+      usdtBsc.contract,
+      TO,
+      '1000000000000000000',
+      '0',
+      '5000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(addresses.bsc);
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.chainId).toBe(56);
+    expect(parsed.to?.toLowerCase()).toBe(usdtBsc.contract.toLowerCase());
+    expect(parsed.value ?? 0n).toBe(0n);
+    expect(parsed.gas).toBe(100000n);
+    await expect(
+      verifyEvmTokenSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        contract: usdtBsc.contract,
+        to: TO,
+        amountBaseUnits: '1000000000000000000',
+        nonce: '0',
+        chainId: 56,
+      }),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it('signs a Base USDC transfer; chain id 8453', async () => {
+    const mnemonic = await createWallet();
+    const signed = await signEvmTokenOffline(
+      'base',
+      mnemonic,
+      '',
+      usdcBase.contract,
+      TO,
+      '1000000',
+      '0',
+      '1000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.chainId).toBe(8453);
+    expect(parsed.to?.toLowerCase()).toBe(usdcBase.contract.toLowerCase());
+  });
+
+  it('signs on every EVM chain with that chain\u2019s id', async () => {
+    const mnemonic = await createWallet();
+    for (const chain of EVM_TOKEN_CHAINS) {
+      const chainId = chainConfig(chain).evmChainId;
+      if (chainId === null) throw new Error(`No chain id for ${chain}.`);
+      const signed = await signEvmTokenOffline(
+        chain,
+        mnemonic,
+        '',
+        usdc.contract,
+        TO,
+        '1000000',
+        '0',
+        '1000000000',
+      );
+      expect(signed.ok).toBe(true);
+      if (!signed.ok) continue;
+      const parsed = parseTransaction(signed.signedTxHex);
+      expect(parsed.chainId).toBe(chainId);
+      expect(parsed.to?.toLowerCase()).toBe(usdc.contract.toLowerCase());
+      expect(parsed.gas).toBe(100000n);
+    }
+  }, 60000);
+
+  it('signs on Sepolia in devnet mode (chain id 11155111)', async () => {
+    const mnemonic = await createWallet();
+    const devnet = await deriveDevnetAddressesAt(mnemonic, '', 0, 0);
+    const signed = await signEvmTokenOffline(
+      'eth',
+      mnemonic,
+      '',
+      usdc.contract,
+      TO,
+      '1000000',
+      '0',
+      '1000000000',
+      { devnet: true },
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(devnet.eth);
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.chainId).toBe(11155111);
+  });
+
+  it('rejects an invalid mnemonic', async () => {
+    expect(
+      await signEvmTokenOffline(
+        'eth',
+        'abandon abandon',
+        '',
+        usdc.contract,
+        TO,
+        '1000',
+        '0',
+        '1',
+      ),
+    ).toEqual({
+      ok: false,
+      code: 'invalid-mnemonic',
+      reason: 'Invalid mnemonic.',
+    });
+  });
+
+  it('refuses a non-EVM chain', async () => {
+    const mnemonic = await createWallet();
+    expect(
+      await signEvmTokenOffline(
+        'sol',
+        mnemonic,
+        '',
+        usdc.contract,
+        TO,
+        '1000',
+        '0',
+        '1',
+      ),
+    ).toEqual({
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Solana is not an EVM chain.',
+    });
+  });
+
+  it('refuses BSC in devnet mode (no BSC test network)', async () => {
+    const mnemonic = await createWallet();
+    expect(
+      await signEvmTokenOffline(
+        'bsc',
+        mnemonic,
+        '',
+        usdtBsc.contract,
+        TO,
+        '1000',
+        '0',
+        '1',
+        { devnet: true },
+      ),
+    ).toEqual({
+      ok: false,
+      code: 'invalid-input',
+      reason: 'BNB Smart Chain has no devnet network in this wallet.',
+    });
+  });
+});
+
+describe('signTrc20Offline (Lane 2)', () => {
+  const USDT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+  const dest = 'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c';
+
+  it('signs offline; the trigger call carries transfer(recipient, amount), the txid and signature recovery verify', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveAddresses(mnemonic, '')).trx;
+    const signed = await signTrc20Offline(mnemonic, '', USDT, dest, '1000000', {
+      timestamp: Date.now(),
+      number: 1,
+      txTrieRoot: '00'.repeat(32),
+      parentHash: '00'.repeat(32),
+      witnessAddress: from,
+    });
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    const json = JSON.parse(signed.signedTxJson) as {
+      raw_data: {
+        contract: {
+          type: string;
+          parameter: {
+            value: {
+              contract_address: string;
+              owner_address: string;
+              data: string;
+            };
+          };
+        }[];
+        fee_limit: number;
+      };
+      raw_data_hex: string;
+      signature: string[];
+    };
+    const contract = json.raw_data.contract[0] as {
+      type: string;
+      parameter: {
+        value: {
+          contract_address: string;
+          owner_address: string;
+          data: string;
+        };
+      };
+    };
+    expect(contract.type).toBe('TriggerSmartContract');
+    const param = contract.parameter.value;
+    expect(param.contract_address).toBe(
+      bytesToHex(tronAddressToBytes(USDT)).slice(2),
+    );
+    expect(param.owner_address).toBe(
+      bytesToHex(tronAddressToBytes(from)).slice(2),
+    );
+    // data = transfer selector + 32-byte recipient + 32-byte amount.
+    expect(param.data.startsWith('a9059cbb')).toBe(true);
+    // Wallet Core encodes the full 21-byte TRON address (0x41
+    // prefix) in the 32-byte word — 11 zero bytes + 21 address bytes.
+    expect(param.data.slice(8, 72)).toBe(
+      '0000000000000000000000' +
+        bytesToHex(tronAddressToBytes(dest)).slice(2),
+    );
+    expect(param.data.slice(72)).toBe(
+      '00000000000000000000000000000000000000000000000000000000000f4240',
+    );
+    expect(json.raw_data.fee_limit).toBe(100000000);
+    const txid = createHash('sha256')
+      .update(Buffer.from(json.raw_data_hex, 'hex'))
+      .digest('hex');
+    expect(txid).toBe(signed.txId);
+    const sigHex = json.signature[0] as string;
+    expect(sigHex).toBeDefined();
+    const sig = Buffer.from(sigHex, 'hex');
+    expect(sig.length).toBe(65);
+    const lastByte = sig[64] as number;
+    const yParity = lastByte >= 27 ? lastByte - 27 : lastByte;
+    const recovered = await recoverAddress({
+      hash: ('0x' + txid) as `0x${string}`,
+      signature: {
+        r: ('0x' + sig.subarray(0, 32).toString('hex')) as `0x${string}`,
+        s: ('0x' + sig.subarray(32, 64).toString('hex')) as `0x${string}`,
+        yParity,
+      },
+    });
+    expect('41' + recovered.slice(2).toLowerCase()).toBe(
+      bytesToHex(tronAddressToBytes(from)).slice(2),
+    );
+  });
+
+  it('signs from the devnet address in devnet mode', async () => {
+    const mnemonic = await createWallet();
+    const devnet = await deriveDevnetAddressesAt(mnemonic, '', 0, 0);
+    const signed = await signTrc20Offline(
+      mnemonic,
+      '',
+      USDT,
+      dest,
+      '1000000',
+      {
+        timestamp: Date.now(),
+        number: 1,
+        txTrieRoot: '00'.repeat(32),
+        parentHash: '00'.repeat(32),
+        witnessAddress: devnet.trx,
+      },
+      { devnet: true },
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(devnet.trx);
+  });
+});
+
+describe('Solana token sending is not feasible (Lane 2)', () => {
+  // Wallet Core 4.9.3's Solana signer returns an `encoded`
+  // transaction that is not a valid Solana wire transaction: it does
+  // not parse with @solana/web3.js, contains none of the
+  // transaction's fields, and its signature does not verify against
+  // the correctly-built message (probed first-hand 2026-11-24, for a
+  // native SOL transfer as well as a token transfer). No SPL transfer
+  // can be produced or verified, so the preview refuses with the
+  // reason instead of pretending to work.
+  it('refuses a Solana token send at preview time', async () => {
+    const usdcSol = DEFAULT_TOKENS.find(
+      (token) => token.chain === 'sol' && token.symbol === 'USDC',
+    )!;
+    await expect(
+      previewTokenSendAmount(
+        'sol',
+        usdcSol,
+        '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+        '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+        '25',
+        '100000000',
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'adapter-unavailable',
+      reason:
+        'Token sending on Solana is not available yet — the Solana signer in this wallet cannot produce a valid signed transaction.',
+    });
+  });
+});
+
+describe('signJettonOffline (Lane 2)', () => {
+  // The USDT Jetton wallet of the tether treasury (TonAPI, live
+  // 2026-11-24): a real Jetton wallet in raw '0:' form.
+  const JETTON_WALLET =
+    '0:2626cf30b702bdded845efc883efa45029ff59defdacc4ce7b8b0a5966d75002';
+  const RECIPIENT = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+
+  it('signs offline; BOC envelope and message hash verify, and the BOC differs from a native transfer to the same destination', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveAddresses(mnemonic, '')).ton;
+    const signed = await signJettonOffline(
+      mnemonic,
+      '',
+      JETTON_WALLET,
+      RECIPIENT,
+      '1000000',
+      0,
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(from);
+    expect(signed.messageHash).toMatch(/^0x[0-9a-f]{64}$/);
+    const boc = Buffer.from(signed.signedBocBase64, 'base64');
+    expect(boc.subarray(0, 4).toString('hex')).toBe('b5ee9c72');
+    expect(boc.length).toBeGreaterThan(100);
+    // A different amount signs a different BOC.
+    const other = await signJettonOffline(
+      mnemonic,
+      '',
+      JETTON_WALLET,
+      RECIPIENT,
+      '2000000',
+      0,
+    );
+    expect(other.ok).toBe(true);
+    if (!other.ok) return;
+    expect(other.signedBocBase64).not.toBe(signed.signedBocBase64);
+    // A native TON transfer to the same Jetton wallet (same amount,
+    // same seqno) is a different message entirely.
+    const native = await signTonOffline(
+      mnemonic,
+      '',
+      JETTON_WALLET,
+      '1000000',
+      0,
+    );
+    expect(native.ok).toBe(true);
+    if (!native.ok) return;
+    expect(native.signedBocBase64).not.toBe(signed.signedBocBase64);
+  });
+
+  it('rejects an invalid mnemonic', async () => {
+    expect(
+      await signJettonOffline(
+        'abandon abandon',
+        '',
+        JETTON_WALLET,
+        RECIPIENT,
+        '1000',
+        0,
+      ),
+    ).toEqual({
+      ok: false,
+      code: 'invalid-mnemonic',
+      reason: 'Invalid mnemonic.',
+    });
+  });
+});
+
+describe('previewTokenSendAmount / simulateTokenSend (Lane 2)', () => {
+  const ethFrom = '0x7ef5cdbe01777d62438affeb695e33fc233597987';
+  const ethTo = '0x1111111111111111111111111111111111111111';
+  const usdc = DEFAULT_TOKENS.find(
+    (token) => token.chain === 'eth' && token.symbol === 'USDC',
+  )!;
+  const usdtTrx = DEFAULT_TOKENS.find(
+    (token) => token.chain === 'trx' && token.symbol === 'USDT',
+  )!;
+  // TON USDT's symbol is 'USD₮' in the defaults — find it by contract.
+  const usdtTon = DEFAULT_TOKENS.find(
+    (token) =>
+      token.chain === 'ton' &&
+      token.contract ===
+        'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+  )!;
+  const tonAddress = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+  const trxAddress = 'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c';
+
+  function tokenStub(
+    chain: ChainId,
+    balance: string,
+    decimals: number,
+    fee: AdapterResult<FeeEstimate>,
+    inputs: AdapterResult<TxInput>,
+  ): ChainAdapter {
+    return {
+      chain,
+      networkId: 'test',
+      getBalance: async () => ({
+        status: 'ok',
+        data: {
+          chain,
+          address: 'stub',
+          networkId: 'test',
+          valueBaseUnits: balance,
+          decimals,
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getHistory: async () => ({
+        status: 'ok',
+        data: [],
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => fee,
+      getTxInputs: async () => inputs,
+      broadcast: async () => {
+        throw new Error('disabled');
+      },
+    };
+  }
+
+  function okFee(
+    chain: ChainId,
+    feeBaseUnits: string,
+  ): AdapterResult<FeeEstimate> {
+    return {
+      status: 'ok',
+      data: {
+        chain,
+        networkId: 'test',
+        feeBaseUnits,
+        unit: 'wei',
+        note: 'stub',
+        source: 'stub',
+        fetchedAt: 0,
+      },
+      source: 'stub',
+      fetchedAt: 0,
+    };
+  }
+
+  function okInputs(data: TxInput): AdapterResult<TxInput> {
+    return { status: 'ok', data, source: 'stub', fetchedAt: 0 };
+  }
+
+  function stubTokenBalance(
+    valueBaseUnits: string,
+  ): AdapterResult<AdapterBalance> {
+    return {
+      status: 'ok',
+      data: {
+        chain: 'eth',
+        address: 'stub',
+        networkId: 'test',
+        valueBaseUnits,
+        decimals: 6,
+        source: 'stub',
+        fetchedAt: 0,
+      },
+      source: 'stub',
+      fetchedAt: 0,
+    };
+  }
+
+  it('previews a 25 USDC send on ETH: 20 gwei x 100000 gas', async () => {
+    registerAdapter(
+      tokenStub(
+        'eth',
+        '1000000000000000000',
+        18,
+        okFee('eth', '420000000000000'),
+        okInputs({ kind: 'nonce', nonce: 5 }),
+      ),
+    );
+    await expect(
+      previewTokenSendAmount('eth', usdc, ethFrom, ethTo, '25', '100000000'),
+    ).resolves.toEqual({
+      ok: true,
+      token: usdc,
+      amountBaseUnits: '25000000',
+      feeBaseUnits: '2000000000000000',
+      rentBaseUnits: '0',
+      attachedBaseUnits: '0',
+      feeNote:
+        'Token-transfer estimate at current gas price, 100000 gas; not a final fee',
+    });
+  });
+
+  it('previews a TRC-20 send: energy fee x 65000', async () => {
+    registerAdapter(
+      tokenStub(
+        'trx',
+        '100000000',
+        6,
+        okFee('trx', '280'),
+        okInputs({ kind: 'account', balanceSun: '100000000' }),
+      ),
+    );
+    await expect(
+      previewTokenSendAmount(
+        'trx',
+        usdtTrx,
+        trxAddress,
+        trxAddress,
+        '1',
+        '10000000',
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      token: usdtTrx,
+      amountBaseUnits: '1000000',
+      feeBaseUnits: '18200000',
+      rentBaseUnits: '0',
+      attachedBaseUnits: '0',
+      feeNote:
+        'Upper-bound estimate at the current energy fee (65000 energy): the network charges only the energy actually used.',
+    });
+  });
+
+  it('previews a Jetton send: unknown fee, 0.05 TON attached', async () => {
+    registerAdapter(
+      tokenStub(
+        'ton',
+        '1000000000',
+        9,
+        okFee('ton', '1000000'),
+        okInputs({ kind: 'seqno', seqno: 3 }),
+      ),
+    );
+    await expect(
+      previewTokenSendAmount(
+        'ton',
+        usdtTon,
+        tonAddress,
+        tonAddress,
+        '1',
+        '10000000',
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      token: usdtTon,
+      amountBaseUnits: '1000000',
+      feeBaseUnits: '0',
+      rentBaseUnits: '0',
+      attachedBaseUnits: '50000000',
+      feeNote:
+        'TON fee is charged by the network when the transaction is broadcast; it is not known in advance. The Jetton transfer itself attaches 0.05 TON, which comes out of your balance on top of this amount.',
+      feeUnknown: true,
+    });
+  });
+
+  it('refuses when the token balance is short', async () => {
+    registerAdapter(
+      tokenStub(
+        'eth',
+        '1000000000000000000',
+        18,
+        okFee('eth', '420000000000000'),
+        okInputs({ kind: 'nonce', nonce: 5 }),
+      ),
+    );
+    await expect(
+      previewTokenSendAmount('eth', usdc, ethFrom, ethTo, '25', '10000000'),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'insufficient-funds',
+      reason: 'Amount exceeds available balance.',
+    });
+  });
+
+  it('refuses when the native balance does not cover the fee', async () => {
+    registerAdapter(
+      tokenStub(
+        'eth',
+        '1000000000000000',
+        18,
+        okFee('eth', '420000000000000'),
+        okInputs({ kind: 'nonce', nonce: 5 }),
+      ),
+    );
+    await expect(
+      previewTokenSendAmount('eth', usdc, ethFrom, ethTo, '25', '100000000'),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'insufficient-gas',
+      reason: 'The ETH balance does not cover the estimated fee.',
+    });
+  });
+
+  it('refuses when the token balance is not loaded', async () => {
+    registerAdapter(
+      tokenStub(
+        'eth',
+        '1000000000000000000',
+        18,
+        okFee('eth', '420000000000000'),
+        okInputs({ kind: 'nonce', nonce: 5 }),
+      ),
+    );
+    await expect(
+      previewTokenSendAmount('eth', usdc, ethFrom, ethTo, '25', null),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'adapter-unavailable',
+      reason: 'The USDC balance is not loaded yet.',
+    });
+  });
+
+  it('refuses a chain with no token standard', async () => {
+    const fakeBtcToken: TokenRecord = {
+      chain: 'btc',
+      contract: '',
+      name: 'Fake',
+      symbol: 'FAKE',
+      decimals: 8,
+      coingeckoId: null,
+      addedAtMs: 0,
+    };
+    await expect(
+      previewTokenSendAmount(
+        'btc',
+        fakeBtcToken,
+        'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+        'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+        '1',
+        '100000000',
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'adapter-unavailable',
+      reason:
+        'Bitcoin has no token standard — only its native coin can be sent.',
+    });
+  });
+
+  it('refuses a non-ETH devnet token send', async () => {
+    const usdcMatic = DEFAULT_TOKENS.find(
+      (token) => token.chain === 'matic' && token.symbol === 'USDC',
+    )!;
+    await expect(
+      previewTokenSendAmount(
+        'matic',
+        usdcMatic,
+        ethFrom,
+        ethTo,
+        '25',
+        '100000000',
+        { devnet: true },
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Polygon has no devnet network in this wallet.',
+    });
+  });
+
+  it('simulates an ETH token send with live balance and nonce inputs', async () => {
+    registerAdapter(
+      tokenStub(
+        'eth',
+        '1000000000000000000',
+        18,
+        okFee('eth', '420000000000000'),
+        okInputs({ kind: 'nonce', nonce: 5 }),
+      ),
+    );
+    await expect(
+      simulateTokenSend('eth', usdc, ethFrom, ethTo, '25', undefined, {
+        fetchTokenBalance: async () => stubTokenBalance('100000000'),
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      amountBaseUnits: '25000000',
+      feeBaseUnits: '2000000000000000',
+    });
+  });
+
+  it('simulates a stale ETH token balance', async () => {
+    registerAdapter(
+      tokenStub(
+        'eth',
+        '1000000000000000000',
+        18,
+        okFee('eth', '420000000000000'),
+        okInputs({ kind: 'nonce', nonce: 5 }),
+      ),
+    );
+    await expect(
+      simulateTokenSend('eth', usdc, ethFrom, ethTo, '25', undefined, {
+        fetchTokenBalance: async () => stubTokenBalance('10000000'),
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      code: 'insufficient-funds',
+      reason: 'Amount exceeds available balance.',
+    });
+  });
+
+  it('simulates a TRX token send refused when the native balance no longer covers the fee', async () => {
+    registerAdapter(
+      tokenStub(
+        'trx',
+        '100000000',
+        6,
+        okFee('trx', '280'),
+        okInputs({ kind: 'account', balanceSun: '1000000' }),
+      ),
+    );
+    await expect(
+      simulateTokenSend(
+        'trx',
+        usdtTrx,
+        trxAddress,
+        trxAddress,
+        '1',
+        undefined,
+        {
+          fetchTokenBalance: async () => stubTokenBalance('10000000'),
+        },
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      code: 'insufficient-funds',
+      reason: 'The TRX balance no longer covers the estimated fee.',
+    });
+  });
+
+  it('simulates a Jetton send with seqno inputs', async () => {
+    registerAdapter(
+      tokenStub(
+        'ton',
+        '1000000000',
+        9,
+        okFee('ton', '1000000'),
+        okInputs({ kind: 'seqno', seqno: 3 }),
+      ),
+    );
+    await expect(
+      simulateTokenSend('ton', usdtTon, tonAddress, tonAddress, '1', undefined, {
+        fetchTokenBalance: async () => stubTokenBalance('10000000'),
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      amountBaseUnits: '1000000',
+      feeUnknown: true,
+    });
   });
 });

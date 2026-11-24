@@ -42,6 +42,7 @@ import {
   shortContract,
   tokenKey,
   tokenKeyOf,
+  tokenStandardFor,
   type TokenRecord,
 } from '../wallet/tokens';
 import {
@@ -53,9 +54,19 @@ import {
   signTrxOffline,
   signTonOffline,
   broadcastSignedDevnet,
+  ERC20_GAS_LIMIT,
+  estimateTokenSendFee,
+  previewTokenSendAmount,
+  signEvmTokenOffline,
+  signJettonOffline,
+  signTrc20Offline,
+  simulateTokenSend,
+  type SendFailure,
   type SendPreview,
+  type TokenSendPreview,
 } from '../wallet/send';
 import { getLatestBlockHeader } from '../wallet/adapters/trx';
+import { fetchJettonWalletAddress } from '../wallet/adapters/token-balances';
 import { getAdapterForMode } from '../wallet/adapters';
 import { recordPendingBroadcastDevnet } from '../state/pending-broadcasts';
 import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
@@ -69,10 +80,15 @@ import type { ChainId } from '../engine/boundary';
 
 // Chains with offline signing today (wallet/send.ts). BSC joined
 // 2026-11-24: it is EVM, so the general EVM signer covers it with
-// chain id 56. Token sends and native sends on the other registry
-// chains are not built: the asset picker shows them, but the amount
-// step says so honestly instead of pretending to send (token gaps,
-// item 4).
+// chain id 56. SIGNING_CHAINS gates NATIVE sends only. Token sends
+// are gated separately, on tokenStandardFor(chain): every chain with
+// a token standard (all 16 EVM chains, TRON, TON) signs token
+// transfers offline — including the 14 EVM chains whose native
+// sends are not built, because a token transfer only needs the
+// generalised EVM signer. Solana is the exception: its signer cannot
+// produce a valid signed transaction (Lane 2, 2026-11-24), so SOL
+// token sends are refused with the reason at preview time. Chains
+// with no token standard (BTC, LTC, DOGE) cannot send tokens at all.
 const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'bsc'];
 
 type Step = 'chain' | 'token' | 'details' | 'review' | 'result';
@@ -164,15 +180,15 @@ export function SendScreen() {
     () => searchParams.get('scan') === '1',
   );
   const [amount, setAmount] = useState('');
-  const [preview, setPreview] = useState<SendPreview | null>(null);
+  const [preview, setPreview] = useState<SendPreview | TokenSendPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [signState, setSignState] = useState<SignState>({ status: 'idle' });
   const [approvalStage, setApprovalStage] = useState<SendApprovalStage>('review');
   const [devnetBroadcast, setDevnetBroadcast] = useState<DevnetBroadcastState>({ status: 'idle' });
   const [copied, setCopied] = useState(false);
   // Full asset list (token gaps, item 4): the selected chain's native
-  // coin plus its tokens. Token sends are not built (see SIGNING_CHAINS
-  // above) — picking one shows the honest unavailable state.
+  // coin plus its tokens. A token send previews and signs offline on
+  // every chain with a token standard (see SIGNING_CHAINS above).
   const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(null);
   const [prefillNote, setPrefillNote] = useState<string | null>(null);
   const prefillApplied = useRef(false);
@@ -411,8 +427,8 @@ export function SendScreen() {
 
   // Round 2, item 8: recipient and amount share one step, so there is a
   // single Continue: validate the recipient, then preview the amount.
-  // A bad recipient stops here with its error; a token or a chain
-  // without offline signing reports honestly instead of previewing.
+  // A bad recipient stops here with its error; a chain without offline
+  // signing reports honestly instead of previewing.
   async function handleDetailsNext(): Promise<void> {
     const recipientResult = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
     if (!recipientResult.ok) {
@@ -474,15 +490,38 @@ export function SendScreen() {
   }
 
   async function handleAmountNext(): Promise<void> {
-    // Token sends and native sends on chains without offline signing
-    // are not built: say so here instead of previewing a native send
-    // the user did not ask for (token gaps, item 4).
+    // A token send previews against the cached token balance (the
+    // sign step re-reads it live — see handleSign). Native sends on
+    // chains without offline signing are not built: say so here
+    // instead of previewing a native send the user did not ask for
+    // (token gaps, item 4).
     if (selectedToken !== null) {
-      setPreview({
-        ok: false,
-        code: 'adapter-unavailable',
-        reason: `Sending ${selectedToken.symbol} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only — token sending is not built yet.`,
-      });
+      setPreviewBusy(true);
+      try {
+        try {
+          await (devnetEnabled ? ensureDevnetAdapters() : ensureAdapters());
+        } catch {
+          setPreview({ ok: false, code: 'adapter-unavailable', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+          return;
+        }
+        const token = selectedToken;
+        const result = await previewTokenSendAmount(
+          chain,
+          token,
+          from,
+          recipient,
+          amount,
+          tokenBalance !== undefined &&
+            (tokenBalance.status === 'available' || tokenBalance.status === 'zero')
+            ? tokenBalance.value ?? null
+            : null,
+          { devnet: devnetEnabled },
+        );
+        setPreview(result);
+        if (result.ok) setStep('review');
+      } finally {
+        setPreviewBusy(false);
+      }
       return;
     }
     if (!SIGNING_CHAINS.includes(chain)) {
@@ -529,18 +568,113 @@ export function SendScreen() {
       return;
     }
     const previewOk = preview;
+    const token = selectedToken;
     setApprovalStage('simulating');
-    const simulation = await simulateSend(chain, from, recipient, amount, { devnet: devnetEnabled });
+    const simulation = token !== null
+      ? await simulateTokenSend(chain, token, from, recipient, amount, { devnet: devnetEnabled })
+      : await simulateSend(chain, from, recipient, amount, { devnet: devnetEnabled });
     if (!simulation.ok) {
       setSignState({ status: 'error', reason: simulation.reason });
       setApprovalStage('review');
       return;
     }
 
+    // One signing branch per token standard. The recipient lives
+    // inside the transfer itself (ERC-20/TRC-20 calldata, the SPL
+    // instruction, the Jetton message); the fee in the preview is
+    // native, the amount is tokens — the two are never added.
+    async function signTokenSend(
+      mnemonic: string,
+      tokenToSend: TokenRecord,
+    ): Promise<
+      | { ok: true; txHash: string; payload: string; payloadLabel: string }
+      | SendFailure
+    > {
+      const standard = tokenStandardFor(chain);
+      if (standard.standard === 'erc20') {
+        const adapter = getAdapterForMode(chain, devnetEnabled);
+        if (!adapter) throw new Error("Sending isn't available for this network.");
+        const inputs = await adapter.getTxInputs(from);
+        if (inputs.status !== 'ok') throw new Error(inputs.reason);
+        if (inputs.data.kind !== 'nonce') {
+          throw new Error(`We couldn't prepare your ${config.displayName} transaction. Please retry.`);
+        }
+        // The token fee quote is gasPrice x 100000 (see
+        // estimateTokenSendFee); the gas price is recovered by exact
+        // division, as the native branch divides by 21000.
+        const fee = BigInt(previewOk.feeBaseUnits);
+        if (fee % ERC20_GAS_LIMIT !== 0n) {
+          throw new Error('Fee quote does not match a 100000-gas transfer.');
+        }
+        const gasPrice = (fee / ERC20_GAS_LIMIT).toString();
+        const result = await signEvmTokenOffline(
+          chain,
+          mnemonic,
+          getSessionPassphrase(),
+          tokenToSend.contract,
+          recipient,
+          previewOk.amountBaseUnits,
+          String(inputs.data.nonce),
+          gasPrice,
+          { devnet: devnetEnabled },
+        );
+        if (!result.ok) return result;
+        return signedTxResult(result.txHash, result.signedTxHex, 'Signed transaction (hex)');
+      }
+      if (standard.standard === 'trc20') {
+        const header = await getLatestBlockHeader(
+          devnetEnabled
+            ? { baseUrl: DEVNET_CHAIN_CONFIGS.trx.apiBaseUrl }
+            : undefined,
+        );
+        if (header.status !== 'ok') throw new Error(header.reason);
+        const result = await signTrc20Offline(
+          mnemonic,
+          getSessionPassphrase(),
+          tokenToSend.contract,
+          recipient,
+          previewOk.amountBaseUnits,
+          header.data,
+          { devnet: devnetEnabled },
+        );
+        if (!result.ok) return result;
+        return signedTxResult(result.txId, result.signedTxJson, 'Signed transaction (JSON)');
+      }
+      if (standard.standard === 'jetton') {
+        const jettonWallet = await fetchJettonWalletAddress({
+          contract: tokenToSend.contract,
+          ownerAddress: from,
+        });
+        if (jettonWallet === null) {
+          throw new Error('You have no Jetton wallet for this token yet.');
+        }
+        const adapter = getAdapterForMode(chain, devnetEnabled);
+        if (!adapter) throw new Error("Sending isn't available for this network.");
+        const inputs = await adapter.getTxInputs(from);
+        if (inputs.status !== 'ok') throw new Error(inputs.reason);
+        if (inputs.data.kind !== 'seqno') {
+          throw new Error("We couldn't prepare your TON transaction. Please retry.");
+        }
+        const result = await signJettonOffline(
+          mnemonic,
+          getSessionPassphrase(),
+          jettonWallet,
+          recipient,
+          previewOk.amountBaseUnits,
+          inputs.data.seqno,
+          { devnet: devnetEnabled, account: vaultAccount.account },
+        );
+        if (!result.ok) return result;
+        return signedTxResult(result.messageHash, result.signedBocBase64, 'Signed message (base64 BOC)');
+      }
+      throw new Error(`Token sending on ${config.displayName} isn't available yet.`);
+    }
+
     setApprovalStage('signing');
     setSignState({ status: 'signing' });
     try {
       const signed = await withMnemonicAsync(async (mnemonic) => {
+        if (token !== null) return signTokenSend(mnemonic, token);
         const adapter = getAdapterForMode(chain, devnetEnabled);
         if (!adapter) throw new Error("Sending isn't available for this network.");
         if (chain === 'eth' || chain === 'bsc') {
@@ -695,8 +829,21 @@ export function SendScreen() {
     let cancelled = false;
     setFeeEstimate(null);
     if (selectedToken !== null) {
-      // Token sends are not built, so no fee estimate applies.
-      setFeeEstimate({ ok: false, reason: 'A fee estimate is not available for token sends.' });
+      // Token sends: the fee is native (gas / energy / SOL signatures
+      // / unknown for TON) — estimateTokenSendFee quotes it per
+      // standard. The amount itself is tokens; the fee never comes
+      // out of it.
+      void (async () => {
+        const result = await estimateTokenSendFee(chain, selectedToken, {
+          devnet: devnetEnabled,
+        });
+        if (cancelled) return;
+        setFeeEstimate(
+          result.ok
+            ? { ok: true, feeBaseUnits: result.feeBaseUnits, note: result.feeNote }
+            : { ok: false, reason: humanReasonMessage(result.reason, 'general') },
+        );
+      })();
       return;
     }
     void (async () => {
@@ -727,7 +874,19 @@ export function SendScreen() {
   // of energy, and TON has no fee estimate — for those chains Max stays
   // disabled with the honest reason, per spec §8.
   const maxInfo = ((): { enabled: false; reason: string } | { enabled: true; maxBaseUnits: string } => {
-    if (selectedToken !== null) return { enabled: false, reason: 'Max is unavailable for tokens: token sending is not built yet.' };
+    if (selectedToken !== null) {
+      // Max for a token is the full token balance: the fee is paid in
+      // the native coin, so no fee reserve comes out of the token
+      // amount. The preview still refuses when the native balance
+      // does not cover the fee.
+      if (tokenBalance === undefined || (tokenBalance.status !== 'available' && tokenBalance.status !== 'zero')) {
+        return { enabled: false, reason: 'Max is unavailable: the token balance is not loaded yet.' };
+      }
+      if (BigInt(tokenBalance.value ?? '0') <= 0n) {
+        return { enabled: false, reason: 'Max is unavailable: the token balance is zero.' };
+      }
+      return { enabled: true, maxBaseUnits: tokenBalance.value ?? '0' };
+    }
     if (chain === 'ton') return { enabled: false, reason: 'Max is unavailable: no fee estimate is available for TON.' };
     if (chain === 'btc') return { enabled: false, reason: 'Max is unavailable: the Bitcoin fee is a rate, and the planned fee depends on the transaction.' };
     if (chain === 'trx') return { enabled: false, reason: 'Max is unavailable: TRON fees depend on energy use, not a flat fee.' };
@@ -741,12 +900,33 @@ export function SendScreen() {
   function handleMax(): void {
     if (!maxInfo.enabled) return;
     const maxBase = BigInt(maxInfo.maxBaseUnits);
-    const decimals = CHAIN_DECIMALS[chain];
+    const decimals = selectedToken?.decimals ?? CHAIN_DECIMALS[chain];
     const divisor = 10n ** BigInt(decimals);
     const whole = maxBase / divisor;
     const frac = (maxBase % divisor).toString().padStart(decimals, '0').replace(/0+$/, '');
     setAmount(frac ? `${whole}.${frac}` : `${whole}`);
   }
+
+  // Review display values. A token preview shows the token amount
+  // and "{amount} + {fee}" — the fee is native and the amount is
+  // tokens, so the two are never added into one total; a native
+  // preview shows its totalBaseUnits. A token preview has no
+  // totalBaseUnits, so the native branch narrows on the property
+  // itself ('totalBaseUnits' in preview).
+  const reviewAmountText =
+    preview !== null && preview.ok
+      ? selectedToken !== null
+        ? formatNativeWithSymbol(preview.amountBaseUnits, selectedToken.decimals, selectedToken.symbol)
+        : formatNativeWithSymbol(preview.amountBaseUnits, CHAIN_DECIMALS[chain], config.symbol)
+      : '';
+  const reviewTotalText =
+    preview !== null && preview.ok
+      ? preview.feeUnknown
+        ? `${reviewAmountText} + network fee`
+        : 'totalBaseUnits' in preview
+          ? formatNativeWithSymbol(preview.totalBaseUnits, CHAIN_DECIMALS[chain], config.symbol)
+          : `${reviewAmountText} + ${formatNativeWithSymbol(preview.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}`
+      : '';
 
   if (chainsWithWallet.length === 0 || !from) {
     // Locked vault, no addresses in state (UI/UX round 2, deep-link
@@ -1081,9 +1261,9 @@ export function SendScreen() {
               );
             })}
         </ul>
-        {selectedToken !== null && (
+        {selectedToken !== null && tokenStandardFor(chain).standard === null && (
           <p className="text-sm text-ink">
-            {`Sending ${selectedToken.symbol} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only — token sending is not built yet.`}
+            {`Sending ${selectedToken.symbol} isn't available yet. ${config.displayName} has no token standard — only its native coin can be sent.`}
           </p>
         )}
         {!SIGNING_CHAINS.includes(chain) && selectedToken === null && (
@@ -1258,11 +1438,7 @@ export function SendScreen() {
             symbol={config.symbol}
             from={from}
             recipient={recipient}
-            amount={formatNativeWithSymbol(
-              preview.amountBaseUnits,
-              CHAIN_DECIMALS[chain],
-              config.symbol,
-            )}
+            amount={reviewAmountText}
             fee={
               preview.feeUnknown
                 ? 'Unknown. Charged by the network at broadcast.'
@@ -1272,20 +1448,9 @@ export function SendScreen() {
                     config.symbol,
                   )
             }
-            total={
-              preview.feeUnknown
-                ? `${formatNativeWithSymbol(
-                    preview.amountBaseUnits,
-                    CHAIN_DECIMALS[chain],
-                    config.symbol,
-                  )} + network fee`
-                : formatNativeWithSymbol(
-                    preview.totalBaseUnits,
-                    CHAIN_DECIMALS[chain],
-                    config.symbol,
-                  )
-            }
+            total={reviewTotalText}
             feeNote={preview.feeNote}
+            tokenContract={selectedToken?.contract}
             disabledReason={BROADCAST_DISABLED_MESSAGE}
             stage={approvalStage}
             devnetNetworkName={

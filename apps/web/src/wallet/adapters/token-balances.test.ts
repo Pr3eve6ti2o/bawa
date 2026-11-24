@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hexToBytes } from 'viem';
 import {
+  deriveAssociatedTokenAddress,
   evmClientForChain,
+  fetchJettonWalletAddress,
   fetchTokenBalance,
   fetchTronTokenMetadata,
   isValidTronAddress,
@@ -759,5 +761,112 @@ describe('verifyJettonToken — UI/UX fixes, item 13', () => {
     });
     expect(result.ok).toBe(false);
     expect(transport.request).not.toHaveBeenCalled();
+  });
+});
+
+// --- Token-transfer inputs (Lane 2) ----------------------------------------
+
+describe('fetchJettonWalletAddress (Lane 2)', () => {
+  // The USDT Jetton wallet of the tether treasury (TonAPI, live
+  // 2026-11-24): a real Jetton wallet in raw '0:' form.
+  const TREASURY_JETTON_WALLET =
+    '0:2626cf30b702bdded845efc883efa45029ff59defdacc4ce7b8b0a5966d75002';
+
+  function mockJettonWalletTransport(
+    walletAddress: string | null,
+  ): FetchTransportLike {
+    return {
+      request: vi.fn(async (url: string) => {
+        if (
+          url.includes(
+            `/v2/accounts/${TON_OWNER}/jettons/${TON_USDT_MASTER}`,
+          )
+        ) {
+          if (walletAddress === null) throw new Error('HTTP 404');
+          return {
+            balance: '1000000',
+            wallet_address: {
+              address: walletAddress,
+              is_scam: false,
+              is_wallet: true,
+            },
+            jetton: {
+              address: TON_USDT_MASTER,
+              name: 'Tether USD',
+              symbol: 'USD₮',
+              decimals: 6,
+            },
+          };
+        }
+        throw new Error(`unexpected TonAPI url ${url}`);
+      }),
+    };
+  }
+
+  it('returns the raw 0: wallet address from the TonAPI wallet_address object', async () => {
+    await expect(
+      fetchJettonWalletAddress({
+        contract: TON_USDT_MASTER,
+        ownerAddress: TON_OWNER,
+        transport: mockJettonWalletTransport(TREASURY_JETTON_WALLET),
+      }),
+    ).resolves.toBe(TREASURY_JETTON_WALLET);
+  });
+
+  it('returns null when the owner has no jetton wallet (TonAPI 404)', async () => {
+    await expect(
+      fetchJettonWalletAddress({
+        contract: TON_USDT_MASTER,
+        ownerAddress: TON_OWNER,
+        transport: mockJettonWalletTransport(null),
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('throws on a non-404 transport failure', async () => {
+    const transport: FetchTransportLike = {
+      request: vi.fn(async () => {
+        throw new Error('HTTP 500');
+      }),
+    };
+    await expect(
+      fetchJettonWalletAddress({
+        contract: TON_USDT_MASTER,
+        ownerAddress: TON_OWNER,
+        transport,
+      }),
+    ).rejects.toThrow('HTTP 500');
+  });
+});
+
+describe('deriveAssociatedTokenAddress (Lane 2)', () => {
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+  const TOKEN_2022_PROGRAM = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+  const OWNER_A = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM';
+  const OWNER_B = 'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK';
+
+  it('matches @solana/spl-token getAssociatedTokenAddressSync (token program)', () => {
+    // Vectors from an independent @solana/spl-token 0.4.9 oracle,
+    // 2026-11-24 (scratch only, never a runtime dependency).
+    expect(
+      deriveAssociatedTokenAddress(OWNER_A, USDC_MINT, TOKEN_PROGRAM),
+    ).toBe('BGDSeeSBbHKvgtUiz1oqv3rJtDJvTwc8ToDqiRiSJpYj');
+    expect(
+      deriveAssociatedTokenAddress(OWNER_B, USDC_MINT, TOKEN_PROGRAM),
+    ).toBe('6wzzozWHyumGXyBgFpxnYkpoPN2fserASyYW3Yj882Br');
+  });
+
+  it('matches the oracle for the Token-2022 program', () => {
+    expect(
+      deriveAssociatedTokenAddress(OWNER_A, USDC_MINT, TOKEN_2022_PROGRAM),
+    ).toBe('EaM8iM6b7pRm7BUkmHWy3EB4WnKhhnRnwdJfecNjciYi');
+  });
+
+  it('returns null on a malformed address', () => {
+    expect(
+      deriveAssociatedTokenAddress('not-an-address', USDC_MINT),
+    ).toBeNull();
+    expect(deriveAssociatedTokenAddress(OWNER_A, 'not-a-mint')).toBeNull();
   });
 });
