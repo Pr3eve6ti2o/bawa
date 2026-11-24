@@ -1,0 +1,26 @@
+{
+    "browser": {
+        "./dist/node.js": "./dist/browser.js"
+    },
+    "bugs": {
+        "url": "https://github.com/no2chem/bigint-buffer/issues"
+    },
+    "contributors": [
+        "Michael Wei <mwei@vmware.com> (https://github.com/no2chem)"
+    ],
+    "description": "bigint to buffer conversion (pure JS only; native binding removed \u2014 see PATCH-NOTES.md)",
+    "keywords": [
+        "bigint",
+        "bignum",
+        "tc39-bigint"
+    ],
+    "license": "Apache-2.0",
+    "main": "dist/node.js",
+    "name": "bigint-buffer",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/no2chem/bigint-buffer.git"
+    },
+    "types": "dist/index.d.ts",
+    "version": "1.1.6"
+}
