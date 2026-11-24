@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CUSTOM_TOKENS_KEY,
+  DEFAULT_ENABLED_CHAINS,
   DEFAULT_TOKENS,
   ENABLED_CHAINS_KEY,
   addCustomTokenToList,
@@ -24,8 +25,6 @@ import {
   type TokenRecord,
   type TokenStore,
 } from './tokens';
-
-import { SUPPORTED_CHAINS } from './chains';
 
 function memoryStore(initial: Record<string, string> = {}): TokenStore {
   const data = { ...initial };
@@ -636,8 +635,9 @@ describe('duplicate detection', () => {
 });
 
 describe('enabled-chains persistence', () => {
-  it('defaults to all 13 chains when nothing is stored', () => {
-    expect(readEnabledChains(memoryStore())).toEqual([...SUPPORTED_CHAINS]);
+  it('defaults to the 22 curated chains when nothing is stored (Lane 80-APP)', () => {
+    expect(readEnabledChains(memoryStore())).toEqual([...DEFAULT_ENABLED_CHAINS]);
+    expect(DEFAULT_ENABLED_CHAINS).toHaveLength(22);
   });
 
   it('round-trips a stored subset', () => {
@@ -647,9 +647,9 @@ describe('enabled-chains persistence', () => {
     expect(readEnabledChains(store)).toEqual(['btc', 'eth']);
   });
 
-  it('falls back to all chains on corrupt storage', () => {
+  it('falls back to the 22 curated chains on corrupt storage', () => {
     expect(readEnabledChains(memoryStore({ [ENABLED_CHAINS_KEY]: 'not json' }))).toEqual([
-      ...SUPPORTED_CHAINS,
+      ...DEFAULT_ENABLED_CHAINS,
     ]);
   });
 

@@ -1,7 +1,7 @@
 import { bytesToBase64Url, crc16Xmodem } from '../engine/address-codecs';
 import { COIN_TYPE_KEY_FOR_CHAIN } from '../engine/coin-type-keys';
 import type { ChainId } from '../engine/boundary';
-import { pathFor } from './chains';
+import { pathFor, SUPPORTED_CHAINS } from './chains';
 import {
   decodeBtcBech32,
   encodeBtcBech32,
@@ -60,6 +60,68 @@ const DEFAULT_PATHS: Readonly<Record<ChainId, string>> = Object.freeze({
   fantom: "m/44'/60'/0'/0/0",
   ltc: "m/84'/2'/0'/0/0",
   doge: "m/44'/3'/0'/0/0",
+  zksync: "m/44'/60'/0'/0/0",
+  cronos: "m/44'/60'/0'/0/0",
+  kava: "m/44'/60'/0'/0/0",
+  filecoin: "m/44'/461'/0'/0/0",
+  zora: "m/44'/60'/0'/0/0",
+  mode: "m/44'/60'/0'/0/0",
+  fraxtal: "m/44'/60'/0'/0/0",
+  berachain: "m/44'/60'/0'/0/0",
+  sei: "m/44'/60'/0'/0/0",
+  arbnova: "m/44'/60'/0'/0/0",
+  worldchain: "m/44'/60'/0'/0/0",
+  manta: "m/44'/60'/0'/0/0",
+  unichain: "m/44'/60'/0'/0/0",
+  ink: "m/44'/60'/0'/0/0",
+  abstract: "m/44'/60'/0'/0/0",
+  soneium: "m/44'/60'/0'/0/0",
+  apechain: "m/44'/60'/0'/0/0",
+  sonic: "m/44'/60'/0'/0/0",
+  hyperevm: "m/44'/60'/0'/0/0",
+  monad: "m/44'/60'/0'/0/0",
+  ronin: "m/44'/60'/0'/0/0",
+  immutable: "m/44'/60'/0'/0/0",
+  fuse: "m/44'/60'/0'/0/0",
+  velas: "m/44'/60'/0'/0/0",
+  syscoin: "m/44'/60'/0'/0/0",
+  theta: "m/44'/500'/0'/0/0",
+  iotex: "m/44'/304'/0'/0/0",
+  xlayer: "m/44'/60'/0'/0/0",
+  boba: "m/44'/60'/0'/0/0",
+  taiko: "m/44'/60'/0'/0/0",
+  astar: "m/44'/60'/0'/0/0",
+  telos: "m/44'/60'/0'/0/0",
+  conflux: "m/44'/60'/0'/0/0",
+  core: "m/44'/60'/0'/0/0",
+  songbird: "m/44'/60'/0'/0/0",
+  rootstock: "m/44'/137'/0'/0/0",
+  pulsechain: "m/44'/60'/0'/0/0",
+  xdc: "m/44'/60'/0'/0/0",
+  chiliz: "m/44'/60'/0'/0/0",
+  etc: "m/44'/61'/0'/0/0",
+  flare: "m/44'/60'/0'/0/0",
+  zetachain: "m/44'/60'/0'/0/0",
+  hemi: "m/44'/60'/0'/0/0",
+  bob: "m/44'/60'/0'/0/0",
+  flowevm: "m/44'/60'/0'/0/0",
+  cosmos: "m/44'/118'/0'/0/0",
+  osmosis: "m/44'/118'/0'/0/0",
+  xrp: "m/44'/144'/0'/0/0",
+  stellar: "m/44'/148'/0'",
+  polkadot: "m/44'/354'/0'/0'/0'",
+  near: "m/44'/397'/0'",
+  aptos: "m/44'/637'/0'/0'/0'",
+  tezos: "m/44'/1729'/0'/0'",
+  algorand: "m/44'/283'/0'/0'/0'",
+  hedera: "m/44'/3030'/0'/0'/0",
+  injective: "m/44'/60'/0'/0/0",
+  celestia: "m/44'/118'/0'/0/0",
+  dydx: "m/44'/118'/0'/0/0",
+  seicosmos: "m/44'/118'/0'/0/0",
+  axelar: "m/44'/118'/0'/0/0",
+  noble: "m/44'/118'/0'/0/0",
+  juno: "m/44'/118'/0'/0/0",
 });
 
 function coinForChain(core: WalletCore, chain: ChainId): WalletCoin {
@@ -218,37 +280,21 @@ export async function restoreWallet(
  * account 0 index 0 is unchanged.
  */
 /**
- * All 22 registry chains' addresses from one address function. The
- * deriveAddresses / deriveAddressesAt pair differ only in how a single
- * address is derived, not in the chain map.
+ * All registry chains' addresses from one address function (Lane
+ * 80-APP: iterates SUPPORTED_CHAINS — 84 after the expansion —
+ * instead of a hardcoded 22-chain literal, so a new chain can never
+ * be registered without being derived). The deriveAddresses /
+ * deriveAddressesAt pair differ only in how a single address is
+ * derived, not in the chain map.
  */
 function allChainAddresses(
   addressFor: (chain: ChainId) => string,
 ): WalletAddresses {
-  return {
-    btc: addressFor('btc'),
-    eth: addressFor('eth'),
-    trx: addressFor('trx'),
-    ton: addressFor('ton'),
-    sol: addressFor('sol'),
-    bsc: addressFor('bsc'),
-    matic: addressFor('matic'),
-    arb: addressFor('arb'),
-    op: addressFor('op'),
-    base: addressFor('base'),
-    avax: addressFor('avax'),
-    gnosis: addressFor('gnosis'),
-    celo: addressFor('celo'),
-    linea: addressFor('linea'),
-    mantle: addressFor('mantle'),
-    scroll: addressFor('scroll'),
-    opbnb: addressFor('opbnb'),
-    metis: addressFor('metis'),
-    aurora: addressFor('aurora'),
-    fantom: addressFor('fantom'),
-    ltc: addressFor('ltc'),
-    doge: addressFor('doge'),
-  };
+  const out = {} as WalletAddresses;
+  for (const chain of SUPPORTED_CHAINS) {
+    out[chain] = addressFor(chain);
+  }
+  return out;
 }
 
 export async function deriveAddresses(
@@ -289,9 +335,53 @@ export async function deriveAddresses(
  * secp256k1Extended form that Tron/Address.cpp and Ethereum/Address.cpp
  * require (a 33-byte key throws across the WASM boundary uncaught and
  * aborts the instance) — while BTC-family chains use the compressed form
- * as extracted. TON/SOL Ed25519 keys are used as-is. At account 0 index 0
+ * as extracted. Ed25519 keys (ED25519_CHAINS: TON, SOL and the seven
+ * expanded Ed25519 chains) are used as-is. Lane 80-APP
+ * (probe 3, 2026-11-24): the eight Cosmos-family chains plus XRP and
+ * Injective are the exception — their addresses only agree with
+ * getAddressForCoin when the COMPRESSED key is passed, so they stay
+ * compressed (COMPRESSED_PUBKEY_CHAINS below). Filecoin is the
+ * opposite: only the uncompressed form agrees. At account 0 index 0
  * the result equals deriveAddresses() exactly.
  */
+// Lane 80-APP (probe 3 + probe-form, 2026-11-24): these secp256k1 chains
+// derive the getAddressForCoin address only from the COMPRESSED pubkey;
+// passing the 65-byte uncompressed form yields a different
+// (valid-looking) address. Every other secp256k1 chain agrees with
+// either form (EVM 0x chains), needs the uncompressed form (ETH/TRX/
+// Filecoin), or — Injective — is an ETH-style bech32 address (keccak of
+// the uncompressed pubkey), so it stays uncompressed too. XRP agrees
+// with either form and stays here for symmetry with the Cosmos set.
+const COMPRESSED_PUBKEY_CHAINS: ReadonlySet<ChainId> = new Set([
+  'cosmos',
+  'osmosis',
+  'celestia',
+  'dydx',
+  'seicosmos',
+  'axelar',
+  'noble',
+  'juno',
+  'xrp',
+]);
+
+// Lane 80-APP (2026-11-24): the seven expanded Ed25519 chains join TON
+// and SOL — their keys are Ed25519, never secp256k1. Calling
+// getPublicKeySecp256k1 on one throws across the WASM boundary uncaught
+// and aborts the instance (exception catching is disabled in the WASM
+// build), poisoning every later core call in the same test file. Every
+// Ed25519-gated site in this file must use this set, not a ton/sol
+// special case.
+const ED25519_CHAINS: ReadonlySet<ChainId> = new Set([
+  'ton',
+  'sol',
+  'stellar',
+  'polkadot',
+  'near',
+  'aptos',
+  'tezos',
+  'algorand',
+  'hedera',
+]);
 function deriveOneAddress(
   core: WalletCore,
   wallet: ReturnType<WalletCore['HDWallet']['createWithMnemonic']>,
@@ -317,18 +407,18 @@ function deriveOneAddress(
     // BTC-family keys are already compressed as extracted, so no
     // .compressed() call is made for them (it would return *this and
     // a delete would double-free the shared object).
-    const rawPubkey =
-      chain === 'ton' || chain === 'sol'
-        ? key.getPublicKeyEd25519()
-        : key.getPublicKeySecp256k1(true);
+    const rawPubkey = ED25519_CHAINS.has(chain)
+      ? key.getPublicKeyEd25519()
+      : key.getPublicKeySecp256k1(true);
 
     try {
-      const isSecp256k1 = chain !== 'ton' && chain !== 'sol';
+      const isSecp256k1 = !ED25519_CHAINS.has(chain);
       const needsExtended =
         isSecp256k1 &&
         chain !== 'btc' &&
         chain !== 'ltc' &&
-        chain !== 'doge';
+        chain !== 'doge' &&
+        !COMPRESSED_PUBKEY_CHAINS.has(chain);
       const pubkey = needsExtended ? rawPubkey.uncompressed() : rawPubkey;
 
       try {
@@ -488,6 +578,19 @@ async function deriveDevnetBtcAddress(
  * The serialisation is per chain: BTC zpub (BIP-84), LTC Ltub (BIP-84),
  * DOGE dpub (BIP-44), every other secp256k1 chain xpub (BIP-44).
  */
+// Lane 80-APP (probe 4, 2026-11-24): the seven expanded Ed25519 chains
+// have no extended public key — Wallet Core exports a key for them, but
+// getPublicKeyFromExtended aborts the WASM instance on it. Like TON and
+// SOL, they throw here instead of issuing or consuming one.
+const ED25519_NO_XPUB_CHAINS: ReadonlySet<ChainId> = new Set([
+  'stellar',
+  'polkadot',
+  'near',
+  'aptos',
+  'tezos',
+  'algorand',
+  'hedera',
+]);
 export async function getAccountExtendedPublicKey(
   mnemonic: string,
   passphrase: string,
@@ -501,6 +604,11 @@ export async function getAccountExtendedPublicKey(
   }
   if (chain === 'sol') {
     throw new Error('SOL uses fully hardened Ed25519 derivation and cannot derive children from an xpub.');
+  }
+  if (ED25519_NO_XPUB_CHAINS.has(chain)) {
+    throw new Error(
+      `${chain.toUpperCase()} uses fully hardened Ed25519 derivation and cannot derive children from an xpub.`,
+    );
   }
   assertAccountIndex(account, 0);
 
@@ -552,6 +660,11 @@ export async function deriveFromXpub(
   }
   if (chain === 'sol') {
     throw new Error('SOL uses fully hardened Ed25519 derivation and cannot derive children from an xpub.');
+  }
+  if (ED25519_NO_XPUB_CHAINS.has(chain)) {
+    throw new Error(
+      `${chain.toUpperCase()} uses fully hardened Ed25519 derivation and cannot derive children from an xpub.`,
+    );
   }
 
   if (
@@ -631,10 +744,9 @@ export async function createPartialSigner(
     try {
       const key = wallet.getKey(coin, derivationPath);
       try {
-        const pubkey =
-          chain === 'ton'
-            ? key.getPublicKeyEd25519()
-            : key.getPublicKeySecp256k1(chain === 'btc');
+        const pubkey = ED25519_CHAINS.has(chain)
+          ? key.getPublicKeyEd25519()
+          : key.getPublicKeySecp256k1(chain === 'btc');
         try {
           address = checkedAddress(
             core,
@@ -659,10 +771,9 @@ export async function createPartialSigner(
     const signingCore = await loadCore();
     assertValidMnemonic(signingCore, mnemonic);
     const signingCoin = coinForChain(signingCore, chain);
-    const curve =
-      chain === 'ton'
-        ? signingCore.Curve.ed25519
-        : signingCore.Curve.secp256k1;
+    const curve = ED25519_CHAINS.has(chain)
+      ? signingCore.Curve.ed25519
+      : signingCore.Curve.secp256k1;
     const wallet = signingCore.HDWallet.createWithMnemonic(
       mnemonic,
       passphrase,

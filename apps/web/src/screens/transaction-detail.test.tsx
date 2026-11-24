@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { TransactionDetailScreen } from './transaction-detail';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
+import type { ChainId } from '../engine/boundary';
 import type { HistoryState } from '../state/wallet-context';
 
 vi.mock('../state/wallet-context', () => ({
@@ -97,7 +98,7 @@ async function mountScreen(path: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(chainConfig).mockImplementation(
-    (chain: ChainKey) => CHAINS[chain] as unknown as ReturnType<typeof chainConfig>,
+    (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
   );
   // History is verified for the original four chains plus SOL, LTC and
   // DOGE (chains.ts: capabilitiesForBalanceChain with historyVerified).

@@ -21,6 +21,13 @@
  *
  * Timeouts are 10 s per endpoint; a slow host reports failed, never
  * hangs the screen. No key, no credentials, no funds move.
+ *
+ * Lane 80-APP (2026-11-24): the expanded non-EVM chains have no
+ * address-free liveness check wired here, so they report unchecked
+ * with the reason — never a failed 'Not an EVM chain'. Their RPC
+ * endpoints were verified live when the chain data was recorded
+ * (chains-expanded.ts rpcEvidence); the in-app probe only covers the
+ * chains above.
  */
 import type { ChainId } from '../engine/boundary';
 import { CHAINS } from './chains';
@@ -278,6 +285,16 @@ export async function probeRpcEndpoint(
         };
       }
       return await probeDoge(url, fetchFn, startedMs);
+    }
+    // Lane 80-APP: a non-EVM chain with no probe above is unchecked,
+    // not failed — its RPCs were verified live at data time.
+    if (CHAINS[chain].evmChainId === null) {
+      return {
+        status: 'unchecked',
+        latencyMs: Date.now() - startedMs,
+        reason:
+          'No in-app liveness check is wired for this chain yet; its RPC endpoints were verified live when the chain data was recorded.',
+      };
     }
     return await probeEvm(chain, url, fetchFn, startedMs);
   } catch (error: unknown) {

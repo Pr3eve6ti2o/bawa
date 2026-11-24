@@ -264,7 +264,7 @@ describe('buildPaymentUri — Solana Pay and TON', () => {
     const evmChains = SUPPORTED_CHAINS.filter(
       (chain) => CHAINS[chain].evmChainId !== null,
     );
-    expect(evmChains.length).toBe(16);
+    expect(evmChains.length).toBe(61);
     for (const chain of evmChains) {
       const chainId = CHAINS[chain].evmChainId as number;
       const result = buildPaymentUri({

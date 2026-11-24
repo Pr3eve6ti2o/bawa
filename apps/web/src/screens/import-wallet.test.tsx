@@ -206,10 +206,10 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
       await cleanup();
     }
   });
-  it('offers all 22 chains in the watch-only search, including SOL', async () => {
+  it('offers all 84 chains in the watch-only search, including SOL', async () => {
     // Token gaps, item 6 + item 8: the watch-only picker offered only
     // BTC/ETH/TRX/TON even though validation, derivation and the label
-    // map already cover all 22 registry chains — a SOL address could not
+    // map already cover all 84 registry chains — a SOL address could not
     // be watched at all. UI/UX Round 2, item 3: the picker is a search
     // bar now, so the test opens it and checks every chain is an option.
     const { div, cleanup } = await mountImportScreen();
@@ -229,7 +229,7 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
         }
       });
       const options = [...div.querySelectorAll('[role="option"]')];
-      expect(options).toHaveLength(22);
+      expect(options).toHaveLength(84);
       for (const name of [
         'Bitcoin',
         'Ethereum',
@@ -253,6 +253,9 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
         'Metis',
         'Aurora',
         'Fantom',
+        'ZKsync Era',
+        'Cosmos Hub',
+        'Ronin',
       ]) {
         expect(
           options.some((option) => option.textContent?.includes(name)),
@@ -862,7 +865,7 @@ describe('expandUniquePrefix', () => {
 });
 
 // Watch-only address fan-out screen tests (Finish the Product, Lane B,
-// 2026-11-23). One 0x address must watch all 16 EVM chains: the screen
+// 2026-11-23). One 0x address must watch all 59 0x EVM chains: the screen
 // reports the fan-out and lists the import once, with all its chain
 // badges. (Appended to this file: setInputValue, waitForImportScreen
 // and testGlobal come from the module scope above; the mount/click
@@ -965,7 +968,7 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
     }
   });
 
-  it('fans one EVM address out to 16 chains and reports it', async () => {
+  it('fans one EVM address out to 59 chains and reports it', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {
       await clickTabTrigger(div, 'Watch-only');
@@ -979,13 +982,13 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
       await act(async () => {
         for (
           let i = 0;
-          i < 40 && !div.textContent?.includes('Watching this address on 16 chains');
+          i < 40 && !div.textContent?.includes('Watching this address on 59 chains');
           i++
         ) {
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
       });
-      expect(div.textContent).toContain('Watching this address on 16 chains.');
+      expect(div.textContent).toContain('Watching this address on 59 chains.');
       // One grouped row: the truncated address once, with the family badges.
       expect(div.textContent).toContain('0x9858EfFD23');
       expect(div.textContent).toContain('EcaEda94');
@@ -1013,7 +1016,7 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
       await act(async () => {
         for (
           let i = 0;
-          i < 40 && !div.textContent?.includes('Watching this address on 16 chains');
+          i < 40 && !div.textContent?.includes('Watching this address on 59 chains');
           i++
         ) {
           await new Promise((resolve) => setTimeout(resolve, 50));
@@ -1032,7 +1035,7 @@ describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', ()
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
       });
-      expect(div.textContent).toContain('already watched on all 16 chains');
+      expect(div.textContent).toContain('already watched on all 59 chains');
     } finally {
       await cleanup();
     }

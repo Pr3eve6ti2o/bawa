@@ -283,18 +283,23 @@ describe('wallet context — adapter-backed balances and history', () => {
 
 describe('wallet context — watch-only address fan-out (Lane B)', () => {
   // BIP-39 test-vector EVM address (wallet/core.test.ts). One 0x address
-  // is the same address on all sixteen EVM chains, so importing it must
+  // is the same address on all fifty-nine EVM chains, so importing it must
   // create a watch entry on every one of them.
   const EVM_ADDRESS = '0x9858EfFD232B4033E47d90003D41EC34EcaEda94';
   const ETH_XPUB =
     'xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc';
   const EVM_CHAINS = [
     'eth', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'gnosis',
-    'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora',
-    'fantom',
+    'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom',
+    'zksync', 'cronos', 'kava', 'zora', 'mode', 'fraxtal', 'berachain', 'sei',
+    'arbnova', 'worldchain', 'manta', 'unichain', 'ink', 'abstract', 'soneium', 'apechain',
+    'sonic', 'hyperevm', 'monad', 'immutable', 'fuse', 'velas', 'syscoin', 'theta',
+    'iotex', 'xlayer', 'boba', 'taiko', 'astar', 'telos', 'conflux', 'core',
+    'songbird', 'rootstock', 'pulsechain', 'xdc', 'chiliz', 'etc', 'flare', 'zetachain',
+    'hemi', 'bob', 'flowevm',
   ] as const;
 
-  it('fans one EVM address out to all sixteen EVM chains', async () => {
+  it('fans one EVM address out to all fifty-nine EVM chains', async () => {
     const mounted = await mountProvider();
     try {
       const result = await act(async () =>
@@ -351,7 +356,7 @@ describe('wallet context — watch-only address fan-out (Lane B)', () => {
   it('skips chains that already have a watch-only entry, never overwriting them', async () => {
     const mounted = await mountProvider();
     try {
-      // Import the same address once: all sixteen chains are taken.
+      // Import the same address once: all fifty-nine chains are taken.
       await act(async () => {
         await latest?.addWatchOnlyAddress('eth', EVM_ADDRESS, '');
       });

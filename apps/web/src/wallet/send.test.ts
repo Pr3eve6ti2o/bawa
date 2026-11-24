@@ -527,6 +527,157 @@ describe('signEvmOffline BSC (native BNB, chain id 56)', () => {
   });
 });
 
+describe('signEvmOffline new EVM chains (Lane 80-APP, 2026-11-24)', () => {
+  const TO = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+
+  it('signs 0.01 on ZKsync Era offline; chain id is 324 and the sender is the ETH address (60\' path)', async () => {
+    const mnemonic = await createWallet();
+    const addresses = await deriveAddresses(mnemonic, '');
+    const signed = await signEvmOffline(
+      'zksync',
+      mnemonic,
+      '',
+      TO,
+      '10000000000000000',
+      '0',
+      '20000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    // ZKsync Era shares m/44'/60' with ETH: the sender IS the ETH address.
+    expect(signed.from).toBe(addresses.zksync);
+    expect(signed.from).toBe(addresses.eth);
+    expect(signed.txHash).toBe(keccak256(signed.signedTxHex));
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.to?.toLowerCase()).toBe(TO.toLowerCase());
+    expect(parsed.value).toBe(10000000000000000n);
+    expect(parsed.nonce).toBe(0);
+    expect(parsed.chainId).toBe(324);
+    expect(parsed.gas).toBe(21000n);
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        to: TO,
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 324,
+      }),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        to: TO,
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 1,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'Signed ETH transaction chain id does not match the signing intent.',
+    });
+  });
+
+  it('signs 0.01 RBTC on Rootstock offline; chain id is 30 and the sender is the 137\' key, not the ETH address', async () => {
+    const mnemonic = await createWallet();
+    const addresses = await deriveAddresses(mnemonic, '');
+    const signed = await signEvmOffline(
+      'rootstock',
+      mnemonic,
+      '',
+      TO,
+      '10000000000000000',
+      '0',
+      '20000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    // Rootstock derives on m/44'/137' (its own coin path), so its
+    // address differs from the ETH address on the same mnemonic.
+    expect(signed.from).toBe(addresses.rootstock);
+    expect(signed.from).not.toBe(addresses.eth);
+    expect(signed.txHash).toBe(keccak256(signed.signedTxHex));
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.to?.toLowerCase()).toBe(TO.toLowerCase());
+    expect(parsed.value).toBe(10000000000000000n);
+    expect(parsed.nonce).toBe(0);
+    expect(parsed.chainId).toBe(30);
+    expect(parsed.gas).toBe(21000n);
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        to: TO,
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 30,
+      }),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        to: TO,
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 1,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'Signed ETH transaction chain id does not match the signing intent.',
+    });
+  });
+
+  it('signs 0.01 RON on Ronin offline; chain id is 2020 and the sender keeps the ronin: prefix', async () => {
+    const mnemonic = await createWallet();
+    const addresses = await deriveAddresses(mnemonic, '');
+    const signed = await signEvmOffline(
+      'ronin',
+      mnemonic,
+      '',
+      TO,
+      '10000000000000000',
+      '0',
+      '20000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    // Ronin shares the 60' key with ETH but its wallet address carries
+    // the ronin: prefix INSTEAD of the 0x (ronin:9858… is the ETH
+    // address 0x9858… with the prefix swapped in).
+    expect(signed.from).toBe(addresses.ronin);
+    expect(signed.from.startsWith('ronin:')).toBe(true);
+    expect(signed.txHash).toBe(keccak256(signed.signedTxHex));
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.to?.toLowerCase()).toBe(TO.toLowerCase());
+    expect(parsed.value).toBe(10000000000000000n);
+    expect(parsed.nonce).toBe(0);
+    expect(parsed.chainId).toBe(2020);
+    expect(parsed.gas).toBe(21000n);
+    // The verifier compares against the recovered 0x sender, so the
+    // intent names the 0x form (the prefix replaces the 0x, it is not
+    // prepended to it — strip it and restore the 0x).
+    const from0x = '0x' + signed.from.slice('ronin:'.length);
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: from0x,
+        to: TO,
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 2020,
+      }),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it('refuses a derive-only chain (Cosmos) for EVM signing', async () => {
+    const mnemonic = await createWallet();
+    expect(
+      await signEvmOffline('cosmos', mnemonic, '', TO, '1000', '0', '1'),
+    ).toEqual({
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Cosmos Hub is not an EVM chain.',
+    });
+  });
+});
+
 describe('broadcastSigned / markBroadcastUnknown (Sol p5)', () => {
   it('always returns disabled and never broadcasts', async () => {
     expect(await broadcastSigned('eth', '0x1234')).toEqual({

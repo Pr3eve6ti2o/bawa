@@ -394,37 +394,35 @@ describe('send screen', () => {
     }
   });
 
-  it('a still-unsupported chain (Polygon) shows the honest unavailable state', async () => {
+  it('a still-unsupported chain (Cosmos) shows the honest unavailable state', async () => {
+    // Lane 80-APP (2026-11-24): Polygon no longer qualifies — it is a
+    // 60'-path EVM chain and now signs offline via the generalised EVM
+    // signer. Cosmos is derive-only (no adapter, not in SIGNING_CHAINS),
+    // so it is the honest still-unsupported example. The message lives
+    // on the token step, so no recipient/amount is needed. The address
+    // is the BIP-39 test-vector index-0 address (abandon x11 + about).
     setWallet({
-      vaultAddresses: { btc: [], eth: [FROM], trx: [], ton: [], matic: [FROM] },
+      vaultAddresses: { btc: [], eth: [FROM], trx: [], ton: [], cosmos: ['cosmos19rl4cm2hmr8afy4kldpxz3fka4jguq0auqdal4'] },
       balances: {
         btc: { status: 'unavailable', reason: 'no-adapter' },
         eth: { status: 'available', value: '1000000000000000000' },
         trx: { status: 'unavailable', reason: 'no-adapter' },
         ton: { status: 'unavailable', reason: 'no-adapter' },
-        matic: { status: 'available', value: '1000000000000000000' },
+        cosmos: { status: 'unavailable', reason: 'no-adapter' },
       },
     });
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Polygon');
-      await clickContaining(mounted.div, 'Polygon · POL');
-      const recipient = mounted.div.querySelector(
-        '#send-recipient',
-      ) as HTMLInputElement;
-      await act(async () => {
-        setInputValue(recipient, RECIPIENT);
-      });
-      const amount = await waitForInput(mounted.div, '#send-amount');
-      await act(async () => {
-        setInputValue(amount, '0.5');
-      });
-      await click(mounted.div, 'Review');
-      await waitForText(mounted.div, "Sending on Polygon isn't available yet");
+      await clickContaining(mounted.div, 'Cosmos Hub');
       expect(mounted.div.textContent).toContain(
-        "Sending on Polygon isn't available yet",
+        "Sending on Cosmos Hub isn't available yet",
       );
-      expect(mounted.div.textContent).toContain('BTC, ETH, BNB, TRX, TON and SOL');
+      expect(mounted.div.textContent).toContain(
+        'BTC, TRX, TON, SOL and EVM chains only',
+      );
+      expect(mounted.div.textContent).toContain(
+        'BTC, TRX, TON, SOL and EVM chains only',
+      );
       expect(mounted.div.textContent).not.toContain('Review your send');
     } finally {
       await mounted.cleanup();
@@ -636,14 +634,20 @@ describe('send screen', () => {
     }
   });
 
-  it('shows all thirteen chains on step 1, and the selected chain’s tokens on step 2', async () => {
+  it('shows all eighty-four chains on step 1, and the selected chain’s tokens on step 2', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      // Step 1 is chains only (Round 2, item 8): all 13 registry chains
+      // Step 1 is chains only (Round 2, item 8): all 84 registry chains
       // have a picker button (disabled without a wallet on that chain),
       // and no token list yet.
-      for (const name of ['Bitcoin', 'Ethereum', 'TRON', 'TON', 'Solana', 'BNB Smart Chain', 'Polygon', 'Arbitrum One', 'OP Mainnet', 'Base', 'Avalanche C-Chain', 'Litecoin', 'Dogecoin']) {
+      const chips = [
+        ...mounted.div.querySelectorAll(
+          '[role="group"][aria-label="Chain"] button',
+        ),
+      ];
+      expect(chips).toHaveLength(84);
+      for (const name of ['Bitcoin', 'Ethereum', 'TRON', 'TON', 'Solana', 'BNB Smart Chain', 'Polygon', 'Arbitrum One', 'OP Mainnet', 'Base', 'Avalanche C-Chain', 'Litecoin', 'Dogecoin', 'ZKsync Era', 'Cronos', 'Cosmos Hub', 'Stellar', 'Ronin', 'Filecoin']) {
         expect(mounted.div.textContent).toContain(name);
       }
       expect(mounted.div.textContent).not.toContain('USD Coin');
@@ -782,10 +786,11 @@ describe('send screen', () => {
     }
   });
 
-  it('a Polygon token send reaches review while native Polygon stays unavailable (Lane 2)', async () => {
-    // Lane 2: a token transfer only needs the generalised EVM signer,
-    // so MATIC USDC sends even though native Polygon sends are not
-    // built (the existing test above keeps that native refusal).
+  it('a Polygon token send reaches review (Lane 2)', async () => {
+    // Lane 2: a token transfer only needs the generalised EVM signer.
+    // Lane 80-APP (2026-11-24): native Polygon signs offline too now
+    // (60'-path EVM chain); the Cosmos test above keeps the native
+    // refusal for a chain with no signer.
     setWallet({
       vaultAddresses: { btc: [], eth: [FROM], trx: [], ton: [], matic: [FROM] },
       balances: {

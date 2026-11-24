@@ -37,7 +37,7 @@ Reference.
 
 **Status:** Metadata reference; contribution and validation procedures are incomplete.
 
-Bawa ships a local chain registry: `registry/capabilities.json` (v3, with 22 chains in `chainSupport`), `registry/engines.json`, `registry/profiles.json`, and `registry/ui.json`. This section interprets Bawa’s local registry alongside the upstream Trust Wallet Core registry (`registry.json`) and Trust Wallet Assets, and explains what each can and cannot answer for Bawa.
+Bawa ships a local chain registry: `registry/capabilities.json` (v4, with 84 chains in `chainSupport`), `registry/engines.json`, `registry/profiles.json`, and `registry/ui.json`. This section interprets Bawa’s local registry alongside the upstream Trust Wallet Core registry (`registry.json`) and Trust Wallet Assets, and explains what each can and cannot answer for Bawa.
 
 The Trust Wallet Core registry is mainnet metadata: it holds 168 entries and zero testnet entries. It describes coin, derivation and address parameters for Trust Wallet Core; it does not define Bawa's supported networks. Trust Wallet Assets supplies asset metadata for identification and display; an entry there does not establish Bawa's engine compatibility or payment support.
 
@@ -205,7 +205,7 @@ flowchart TB
 
     S["Sources of truth<br/>registry/capabilities.json: chainSupport<br/>apps/web/src/wallet/chains.ts:<br/>ChainId, pathFor, per-chain capabilities with evidence"]
 
-    A["token-gaps<br/>22 chains in chainSupport"]
+    A["token-gaps<br/>84 chains in chainSupport"]
 
     F["Fully verified: BTC / ETH / TRX<br/>All 10 operations: IMPLEMENTED_AND_VERIFIED"]
 
@@ -221,9 +221,9 @@ flowchart TB
 
 Derivation paths below are Bawa's pinned `pathFor` values
 (`apps/web/src/wallet/chains.ts`; `a` = account, `i` = index). TON and SOL
-are single-address: their paths ignore account and index. The fifteen EVM chains beyond ETH (BSC, Polygon, Arbitrum, OP, Base, Avalanche, Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom) all use coin type 60, the same path shape as ETH — they are distinct chains that share a derivation scheme, not the same chain.
+are single-address: their paths ignore account and index. The fifty-five EVM chains beyond ETH that share its derivation scheme all use coin type 60, the same path shape as ETH — they are distinct chains that share a derivation scheme, not the same chain. Five more EVM chains (Filecoin, Theta, IoTeX, Rootstock, Ethereum Classic) derive on their own coin paths.
 
-| Chain | Derivation path | token-gaps (22 chains in chainSupport) |
+| Chain | Derivation path | token-gaps (84 chains in chainSupport) |
 | --- | --- | --- | --- |
 | Bitcoin (btc) | `m/84'/0'/a'/0/i` | Fully verified (10/10) |
 | Ethereum (eth) | `m/44'/60'/a'/0/i` | Fully verified (10/10) |

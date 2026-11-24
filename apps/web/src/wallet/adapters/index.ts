@@ -19,6 +19,7 @@ import { createEvmAdapter } from './evm';
 import { createSolanaAdapter } from './sol';
 import { createLtcAdapter } from './ltc';
 import { createDogeAdapter } from './doge';
+import { EVM_TX_CHAINS } from '../watch-only-families';
 
 /**
  * EVM history sources, wired 2026-11-23 (gap 1, Lane D). These are the
@@ -115,7 +116,11 @@ export function registerAllAdapters(): void {
   // and the adapter config is derived from it — never duplicated here.
   // The history endpoint is pinned the same way (Lane B): only chains
   // whose keyless indexer was probed live carry one.
-  for (const chain of ['bsc', 'matic', 'arb', 'op', 'base', 'avax', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom'] as const) {
+  // Lane 80-APP: all sixty EVM-transaction chains (the 59 0x chains
+  // plus Ronin — the adapter normalises Ronin's ronin: prefix in
+  // evm.ts). Filecoin is not an adapter chain: its wallet address is
+  // f1…, not 0x, so viem cannot serve it.
+  for (const chain of EVM_TX_CHAINS) {
     if (adapters.has(chain)) continue;
     const config = CHAINS[chain];
     const rpcUrl = config.rpcEndpoints[0];
@@ -130,7 +135,12 @@ export function registerAllAdapters(): void {
           evmChainId: config.evmChainId,
           chainName: config.displayName,
           nativeSymbol: config.symbol,
-          source: 'publicnode',
+          // The source label names the configured RPC host: the
+          // existing chains keep 'publicnode', a new chain reports
+          // its primary RPC hostname (shown as "Last balance from").
+          source: rpcUrl.includes('publicnode.com')
+            ? 'publicnode'
+            : new URL(rpcUrl).hostname,
           historyBaseUrl: config.historyBaseUrl,
           historyExplorerBase: config.historyExplorerBase,
           ...(history !== undefined ? history : {}),

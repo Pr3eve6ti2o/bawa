@@ -27,7 +27,7 @@ export function WelcomeScreen() {
         </h1>
         <p className="mt-2 max-w-xl text-body-md text-ink">
           Bawa is a self-custodial wallet that runs in your browser. One
-          recovery phrase covers 22 chains — Bitcoin, Ethereum, Solana,
+          recovery phrase covers 84 chains — Bitcoin, Ethereum, Solana,
           TRON, TON and more. Your keys are made on this device and
           encrypted with your vault password. They never leave it.
         </p>
@@ -56,7 +56,7 @@ export function WelcomeScreen() {
         </h2>
         <ul className="mt-2 list-disc space-y-2 pl-5 text-body-md text-ink">
           <li>
-            <strong>Receive on 22 chains</strong>. One wallet, one address
+            <strong>Receive on 84 chains</strong>. One wallet, one address
             per chain, with a QR code for each.
           </li>
           <li>
@@ -84,7 +84,7 @@ export function WelcomeScreen() {
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>
             <CardDescription>
-              One recovery phrase for 22 chains. Set a vault password,
+              One recovery phrase for 84 chains. Set a vault password,
               write down 24 words, and your wallet is ready.
             </CardDescription>
           </CardHeader>

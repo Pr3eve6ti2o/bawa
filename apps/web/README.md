@@ -6,7 +6,7 @@ offline signing with broadcast disabled, and read-only balances and transaction 
 via chain adapters. Prices come from CoinGecko, with DexScreener and TonAPI as fallback for tokens CoinGecko does not list, so there is a portfolio fiat total.
 Secrets never leave the browser.
 
-It ships with 22 chains enabled by default; the list is `SUPPORTED_CHAINS` in `src/wallet/chains.ts`. The guide covers the full Trust Wallet Core registry of 168 chains, and this wallet enables 22 of them.
+It ships with 84 chains (22 enabled by default); the list is `SUPPORTED_CHAINS` in `src/wallet/chains.ts`. The guide covers the full Trust Wallet Core registry of 168 chains, and this wallet supports 84 of them.
 
 ## Install, develop, build and test
 
@@ -119,14 +119,21 @@ rendered by the chain-keyed `chainLogoFor` map in
 `src/screens/token-logo.tsx` (so Arbitrum, Optimism and Base no longer
 all fall back to the Ethereum logo) and by the `ChainLogo` component
 (`src/screens/token-logo.tsx`) in place of ticker-letter chips.
-Each logo is stored twice: the original PNG (canonical source, 303,787
-bytes total) and a 96 px WebP at quality 85 (39,670 bytes total, -87%),
+Each logo is stored twice: the original PNG (canonical source, 833,053
+bytes total) and a 96 px WebP at quality 85 (97,446 bytes total, -88%),
 matching the existing chain-logo convention. Lane G (2026-11-23) adds
 the nine late-registry chain logos from the same source and pinned
 commit (Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora,
 Fantom), with one directory correction: Gnosis is `blockchains/xdai`
 (not `blockchains/gnosis`, which does not exist). Each logo's upstream
-`info.json` name was verified at fetch time. The chain strip and the
+`info.json` name was verified at fetch time. Lane 80-APP (2026-11-24)
+adds the thirty-four expanded-chain logos from the same source and
+pinned commit (56 chain logos, 112 files in total), with directory
+corrections where the Bawa key differs from the Trust Wallet directory
+(Kava `kavaevm`, Sei EVM `seievm` vs Sei Cosmos `sei`, IoTeX
+`iotexevm`, Conflux `cfxevm`, Ethereum Classic `classic`, ZetaChain
+`zetaevm`, XRP `ripple`, Injective `nativeinjective`). Each logo's
+upstream `info.json` name was verified at fetch time. The chain strip and the
 receive/send pickers use `ChainLogo` now too — the hand-drawn blob
 with the ticker text inside rendered as a crossed-out logo, so it is
 gone from every screen.

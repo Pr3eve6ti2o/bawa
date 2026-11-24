@@ -21,6 +21,40 @@ import opbnbLogo from '../assets/chains/opbnb.webp';
 import metisLogo from '../assets/chains/metis.webp';
 import auroraLogo from '../assets/chains/aurora.webp';
 import fantomLogo from '../assets/chains/fantom.webp';
+import zksyncLogo from '../assets/chains/zksync.webp';
+import cronosLogo from '../assets/chains/cronos.webp';
+import kavaevmLogo from '../assets/chains/kavaevm.webp';
+import filecoinLogo from '../assets/chains/filecoin.webp';
+import seievmLogo from '../assets/chains/seievm.webp';
+import mantaLogo from '../assets/chains/manta.webp';
+import sonicLogo from '../assets/chains/sonic.webp';
+import hyperevmLogo from '../assets/chains/hyperevm.webp';
+import monadLogo from '../assets/chains/monad.webp';
+import roninLogo from '../assets/chains/ronin.webp';
+import syscoinLogo from '../assets/chains/syscoin.webp';
+import thetaLogo from '../assets/chains/theta.webp';
+import iotexevmLogo from '../assets/chains/iotexevm.webp';
+import bobaLogo from '../assets/chains/boba.webp';
+import cfxevmLogo from '../assets/chains/cfxevm.webp';
+import rootstockLogo from '../assets/chains/rootstock.webp';
+import xdcLogo from '../assets/chains/xdc.webp';
+import classicLogo from '../assets/chains/classic.webp';
+import zetaevmLogo from '../assets/chains/zetaevm.webp';
+import cosmosLogo from '../assets/chains/cosmos.webp';
+import osmosisLogo from '../assets/chains/osmosis.webp';
+import rippleLogo from '../assets/chains/ripple.webp';
+import stellarLogo from '../assets/chains/stellar.webp';
+import polkadotLogo from '../assets/chains/polkadot.webp';
+import nearLogo from '../assets/chains/near.webp';
+import aptosLogo from '../assets/chains/aptos.webp';
+import tezosLogo from '../assets/chains/tezos.webp';
+import algorandLogo from '../assets/chains/algorand.webp';
+import hederaLogo from '../assets/chains/hedera.webp';
+import nativeinjectiveLogo from '../assets/chains/nativeinjective.webp';
+import seiLogo from '../assets/chains/sei.webp';
+import axelarLogo from '../assets/chains/axelar.webp';
+import nobleLogo from '../assets/chains/noble.webp';
+import junoLogo from '../assets/chains/juno.webp';
 import usdcLogo from '../assets/tokens/usdc.webp';
 import usdtLogo from '../assets/tokens/usdt.webp';
 import daiLogo from '../assets/tokens/dai.webp';
@@ -94,6 +128,20 @@ const TOKEN_SYMBOL_ALIASES: Record<string, string> = {
  * registry directory names. Each upstream info.json name was verified
  * at fetch time (Gnosis Chain, Celo, Linea, Mantle Chain, Scroll,
  * opBNB, Metis, Aurora, Fantom).
+ * Lane 80-APP (2026-11-24) adds the thirty-four expanded-chain logos
+ * from the same source and pinned commit, with directory corrections
+ * where the Bawa key differs from the Trust Wallet directory: Kava is
+ * blockchains/kavaevm, Sei (EVM) is blockchains/seievm while Sei
+ * (Cosmos) is blockchains/sei, IoTeX is blockchains/iotexevm, Conflux
+ * is blockchains/cfxevm, Ethereum Classic is blockchains/classic,
+ * ZetaChain is blockchains/zetaevm, XRP is blockchains/ripple and
+ * Injective is blockchains/nativeinjective. Each upstream info.json
+ * name was verified at fetch time (ZkSync Era, Cronos, KavaEvm,
+ * Filecoin, Sei, Manta Pacific, Sonic, HyperEVM, Monad, Ronin,
+ * Syscoin, THETA, IoTeX Network Mainnet, Boba, Conflux eSpace,
+ * Rootstock, XinFin Network, Ethereum Classic, ZetaChain, Cosmos,
+ * Osmosis, XRP, Stellar, Polkadot, NEAR Protocol, Aptos, Tezos,
+ * Algorand, Hedera, NativeInjective, Sei, Axelar, Noble, Juno).
  */
 export const CHAIN_LOGOS: Record<string, string> = {
   sol: solanaLogo,
@@ -114,6 +162,40 @@ export const CHAIN_LOGOS: Record<string, string> = {
   metis: metisLogo,
   aurora: auroraLogo,
   fantom: fantomLogo,
+  zksync: zksyncLogo,
+  cronos: cronosLogo,
+  kava: kavaevmLogo,
+  filecoin: filecoinLogo,
+  sei: seievmLogo,
+  manta: mantaLogo,
+  sonic: sonicLogo,
+  hyperevm: hyperevmLogo,
+  monad: monadLogo,
+  ronin: roninLogo,
+  syscoin: syscoinLogo,
+  theta: thetaLogo,
+  iotex: iotexevmLogo,
+  boba: bobaLogo,
+  conflux: cfxevmLogo,
+  rootstock: rootstockLogo,
+  xdc: xdcLogo,
+  etc: classicLogo,
+  zetachain: zetaevmLogo,
+  cosmos: cosmosLogo,
+  osmosis: osmosisLogo,
+  xrp: rippleLogo,
+  stellar: stellarLogo,
+  polkadot: polkadotLogo,
+  near: nearLogo,
+  aptos: aptosLogo,
+  tezos: tezosLogo,
+  algorand: algorandLogo,
+  hedera: hederaLogo,
+  injective: nativeinjectiveLogo,
+  seicosmos: seiLogo,
+  axelar: axelarLogo,
+  noble: nobleLogo,
+  juno: junoLogo,
 };
 
 export function chainLogoFor(chain: string): string | undefined {
@@ -133,8 +215,8 @@ export function tokenLogoFor(symbol: string): string | undefined {
  * and Base have their own marks — a symbol-keyed lookup would show the
  * Ethereum logo for all three. (Moved here from asset-rows, Lane G, so
  * the strip and pickers can use it without importing the rows module.)
- * A logo that fails to load falls back to the ticker badge, never a
- * broken image.
+ * A logo that fails to load falls back to the empty ring (Lane B),
+ * never a broken image and never a ticker-letter chip.
  */
 export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
   const [failed, setFailed] = useState(false);

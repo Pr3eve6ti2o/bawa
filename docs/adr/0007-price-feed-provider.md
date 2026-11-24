@@ -92,6 +92,17 @@ so no chain is CoinGecko-only. CoinLore covers 19 chains; the three it
 misses (TON, Polygon, Litecoin) are covered by TonAPI, DexScreener and
 Coinbase respectively.
 
+**Amendment 2026-11-24 (Lane 80-APP, expansion to 84 chains):** coverage
+is now 77 of 84 — CoinLore covers 53 of the 62 new chains (72 of 84
+total) and Coinbase covers 44 of the 62 new chains (45 of 84 total
+including Litecoin). Seven chains remain CoinGecko-only: fraxtal,
+velas, telos, songbird, rootstock, pulsechain, xdc. (Telos and
+PulseChain have DexScreener chain slugs for token lookups, but no
+verified wrapped-native contract, so no native-price leg.) The live
+price probe the same day priced all 62 new CoinGecko ids (62/62) and
+all 53 CoinLore ids (53/53, single-ticker endpoint
+`/api/ticker/?id=`).
+
 **CoinLore — FIRST fallback.** A free public crypto price API
 (`https://api.coinlore.net`). The wallet makes one batched
 `/api/ticker/?id=...` call for every mapped chain. It goes first because
@@ -205,6 +216,8 @@ accepted
 Amendment (2026-11-20): the live price feed now covers all 13 chains in the chain registry (apps/web/src/wallet/prices.ts), using 12 unique CoinGecko ids — Base shares Ethereum's id (ethereum). The 4-native-asset scope stated above is the scope at the time this ADR was written, not the current coverage. No other part of this record changes.
 
 Amendment (2026-11-23): the live price feed now covers all 22 chains in the chain registry (apps/web/src/wallet/prices.ts), using 15 unique CoinGecko ids — Base, Arbitrum One, OP Mainnet, Linea, Scroll and Aurora share Ethereum's id (ethereum), and opBNB shares BNB Smart Chain's id (binancecoin). No other part of this record changes.
+
+Amendment (2026-11-24): the live price feed now covers all 84 chains in the chain registry (apps/web/src/wallet/prices.ts), using 61 unique CoinGecko ids — most ETH-native chains share Ethereum's id (ethereum); opBNB shares BNB Smart Chain's id (binancecoin); Rootstock shares Bitcoin's id (bitcoin); Noble shares USD Coin's id (usd-coin); Sei EVM and Sei Cosmos share Sei's id (sei-network). No other part of this record changes.
 
 ## Consequences
 

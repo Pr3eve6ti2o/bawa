@@ -7,6 +7,7 @@ import { AssetDetailScreen } from './asset-detail';
 import { useWallet } from '../state/wallet-context';
 import { usePrices } from '../wallet/prices';
 import { chainConfig } from '../wallet/chains';
+import type { ChainId } from '../engine/boundary';
 import type { BalanceState, HistoryState } from '../state/wallet-context';
 
 vi.mock('../state/wallet-context', async (importOriginal) => ({
@@ -154,7 +155,7 @@ async function mountScreen(path: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(chainConfig).mockImplementation(
-    (chain: ChainKey) => CHAINS[chain] as unknown as ReturnType<typeof chainConfig>,
+    (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
   );
   setPrices(unavailablePrices);
 });

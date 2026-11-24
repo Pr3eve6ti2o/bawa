@@ -15,7 +15,7 @@ node scripts/build-wallet.mjs "Create a Web wallet" --out reports/web-report.jso
 - Expected profile: `web-wallet`.
 - Expected platforms: `[web]`.
 - Expected outcome: generate, setup, build and test are each `VERIFIED`.
-- Capability boundary: Web derives in-browser via wallet-core WASM, as documented. Balances and history are now implemented via read-only mainnet adapters, and send is now implemented as offline signing for BTC, ETH, TRX, and TON. Broadcast remains disabled and unauthorised, and prices are implemented via a CoinGecko feed covering all 22 chains, with per-chain fresh/expired/unavailable/error states and portfolio totals that include only fresh-quoted balances. Verification does not remove these limitations.
+- Capability boundary: Web derives in-browser via wallet-core WASM, as documented. Balances and history are now implemented via read-only mainnet adapters, and send is now implemented as offline signing for BTC, ETH, TRX, and TON. Broadcast remains disabled and unauthorised, and prices are implemented via a CoinGecko feed covering all 84 chains, with per-chain fresh/expired/unavailable/error states and portfolio totals that include only fresh-quoted balances. Verification does not remove these limitations.
 
 ## 2. Create an Android wallet
 

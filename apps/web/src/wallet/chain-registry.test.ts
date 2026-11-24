@@ -97,8 +97,18 @@ describe('chain registry — token discovery', () => {
     ]);
   });
 
-  it('lists all 22 chains for balance once their adapters land', () => {
-    expect(availableFor('balance')).toEqual([...SUPPORTED_CHAINS]);
+  it('lists all 66 chains for balance once their adapters land', () => {
+    // Lane 80-APP (2026-11-24): 22 pre-existing chains + the 44 new EVM
+    // chains wired to the generic EVM adapter; the 18 derive-only chains
+    // (filecoin + 17 non-EVM) have no balance adapter.
+    const DERIVE_ONLY = new Set([
+      'filecoin', 'cosmos', 'osmosis', 'celestia', 'dydx', 'seicosmos',
+      'axelar', 'noble', 'juno', 'stellar', 'polkadot', 'near', 'aptos',
+      'tezos', 'algorand', 'hedera', 'xrp', 'injective',
+    ]);
+    expect(availableFor('balance')).toEqual(
+      SUPPORTED_CHAINS.filter((chain) => !DERIVE_ONLY.has(chain)),
+    );
   });
 
   it('marks balance verified for the 9 new chains with a dated live cross-check', () => {

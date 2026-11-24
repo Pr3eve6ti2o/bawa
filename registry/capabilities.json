@@ -1,7 +1,7 @@
 {
   "registry": "capabilities",
-  "version": 3,
-  "updated": "2026-11-23",
+  "version": 4,
+  "updated": "2026-11-24",
   "iv-semantics": "IMPLEMENTED_AND_VERIFIED in chainSupport means verified in at least one explicitly identified profile in that chain's profiles list, not repo-wide verification. chainSupport covers 22 chains (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom); the 18 additional chains (sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom) are scoped to the multichain-extended-wallet profile, with create, derive, restore, receive and balance IMPLEMENTED_AND_VERIFIED and the other five operations NOT_SUPPORTED. The entries array has 8 entries covering only the 4 chains (btc, eth, trx, ton). In entries, send/sign/broadcast/confirm mean the end-to-end flow including broadcast, which is not implemented anywhere; plan-transfer and local-sign in chainSupport are the implemented offline steps (transaction construction and local signing without broadcast).",
   "chainSupport": {
     "btc": {
@@ -388,6 +388,1060 @@
         "restore": "IMPLEMENTED_AND_VERIFIED",
         "receive": "IMPLEMENTED_AND_VERIFIED",
         "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "zksync": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "cronos": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "kava": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "filecoin": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "zora": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "mode": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "fraxtal": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "berachain": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "sei": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "arbnova": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "worldchain": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "manta": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "unichain": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "ink": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "abstract": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "soneium": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "apechain": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "sonic": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "hyperevm": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "monad": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "ronin": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "immutable": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "fuse": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "velas": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "syscoin": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "theta": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "iotex": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "xlayer": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "boba": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "taiko": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "astar": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "telos": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "conflux": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "core": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "songbird": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "rootstock": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "pulsechain": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "xdc": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "chiliz": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "etc": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "flare": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "zetachain": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "hemi": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "bob": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "flowevm": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "cosmos": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "osmosis": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "xrp": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "stellar": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "polkadot": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "near": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "aptos": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "tezos": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "algorand": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "hedera": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "injective": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "celestia": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "dydx": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "seicosmos": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "axelar": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "noble": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "juno": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
         "history": "NOT_SUPPORTED",
         "fee-quote": "NOT_SUPPORTED",
         "plan-transfer": "NOT_SUPPORTED",
@@ -827,8 +1881,7 @@
       "assetId": null,
       "profileId": null,
       "rpcEndpoints": null
-    }
-,
+    },
     "xdai": {
       "registryId": "xdai",
       "bawaChainId": null,
@@ -848,6 +1901,706 @@
       "assetId": null,
       "profileId": null,
       "rpcEndpoints": null
+    },
+    "zksync": {
+      "registryId": "zksync",
+      "bawaChainId": null,
+      "coinTypeName": "zksync",
+      "coinId": 10000324,
+      "slip44": null,
+      "symbol": "ETH",
+      "registrySymbol": "ETH",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 324,
+      "status": "prospective",
+      "displayName": "ZKsync Era",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "cronos": {
+      "registryId": "cronos",
+      "bawaChainId": null,
+      "coinTypeName": "cronos",
+      "coinId": 10000025,
+      "slip44": null,
+      "symbol": "CRO",
+      "registrySymbol": "CRO",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 25,
+      "status": "prospective",
+      "displayName": "Cronos",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "kavaevm": {
+      "registryId": "kavaevm",
+      "bawaChainId": null,
+      "coinTypeName": "kavaevm",
+      "coinId": 10002222,
+      "slip44": null,
+      "symbol": "KAVA",
+      "registrySymbol": "KAVA",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 2222,
+      "status": "prospective",
+      "displayName": "Kava",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "filecoin": {
+      "registryId": "filecoin",
+      "bawaChainId": null,
+      "coinTypeName": "filecoin",
+      "coinId": 461,
+      "slip44": null,
+      "symbol": "FIL",
+      "registrySymbol": "FIL",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/461'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 314,
+      "status": "prospective",
+      "displayName": "Filecoin",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "seievm": {
+      "registryId": "seievm",
+      "bawaChainId": null,
+      "coinTypeName": "seievm",
+      "coinId": 1329,
+      "slip44": null,
+      "symbol": "SEI",
+      "registrySymbol": "SEI",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 1329,
+      "status": "prospective",
+      "displayName": "Sei",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "arbitrumnova": {
+      "registryId": "arbitrumnova",
+      "bawaChainId": null,
+      "coinTypeName": "arbitrumnova",
+      "coinId": 10042170,
+      "slip44": null,
+      "symbol": "ETH",
+      "registrySymbol": "ETH",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 42170,
+      "status": "prospective",
+      "displayName": "Arbitrum Nova",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "manta": {
+      "registryId": "manta",
+      "bawaChainId": null,
+      "coinTypeName": "manta",
+      "coinId": 169,
+      "slip44": null,
+      "symbol": "ETH",
+      "registrySymbol": "ETH",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 169,
+      "status": "prospective",
+      "displayName": "Manta Pacific",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "sonic": {
+      "registryId": "sonic",
+      "bawaChainId": null,
+      "coinTypeName": "sonic",
+      "coinId": 10000146,
+      "slip44": null,
+      "symbol": "S",
+      "registrySymbol": "S",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 146,
+      "status": "prospective",
+      "displayName": "Sonic",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "hyperevm": {
+      "registryId": "hyperevm",
+      "bawaChainId": null,
+      "coinTypeName": "hyperevm",
+      "coinId": 10000999,
+      "slip44": null,
+      "symbol": "HYPE",
+      "registrySymbol": "HYPE",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 999,
+      "status": "prospective",
+      "displayName": "HyperEVM",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "monad": {
+      "registryId": "monad",
+      "bawaChainId": null,
+      "coinTypeName": "monad",
+      "coinId": 10143,
+      "slip44": null,
+      "symbol": "MON",
+      "registrySymbol": "MON",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 143,
+      "status": "prospective",
+      "displayName": "Monad",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "ronin": {
+      "registryId": "ronin",
+      "bawaChainId": null,
+      "coinTypeName": "ronin",
+      "coinId": 10002020,
+      "slip44": null,
+      "symbol": "RON",
+      "registrySymbol": "RON",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 2020,
+      "status": "prospective",
+      "displayName": "Ronin",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "tfuelevm": {
+      "registryId": "tfuelevm",
+      "bawaChainId": null,
+      "coinTypeName": "tfuelevm",
+      "coinId": 361,
+      "slip44": null,
+      "symbol": "TFUEL",
+      "registrySymbol": "TFUEL",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/500'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 361,
+      "status": "prospective",
+      "displayName": "Theta",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "iotexevm": {
+      "registryId": "iotexevm",
+      "bawaChainId": null,
+      "coinTypeName": "iotexevm",
+      "coinId": 10004689,
+      "slip44": null,
+      "symbol": "IOTX",
+      "registrySymbol": "IOTX",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/304'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 4689,
+      "status": "prospective",
+      "displayName": "IoTeX",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "boba": {
+      "registryId": "boba",
+      "bawaChainId": null,
+      "coinTypeName": "boba",
+      "coinId": 10000288,
+      "slip44": null,
+      "symbol": "ETH",
+      "registrySymbol": "ETH",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 288,
+      "status": "prospective",
+      "displayName": "Boba Network",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "cfxevm": {
+      "registryId": "cfxevm",
+      "bawaChainId": null,
+      "coinTypeName": "cfxevm",
+      "coinId": 1030,
+      "slip44": null,
+      "symbol": "CFX",
+      "registrySymbol": "CFX",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 1030,
+      "status": "prospective",
+      "displayName": "Conflux eSpace",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "rootstock": {
+      "registryId": "rootstock",
+      "bawaChainId": null,
+      "coinTypeName": "rootstock",
+      "coinId": 137,
+      "slip44": null,
+      "symbol": "RBTC",
+      "registrySymbol": "RBTC",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/137'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 30,
+      "status": "prospective",
+      "displayName": "Rootstock",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "classic": {
+      "registryId": "classic",
+      "bawaChainId": null,
+      "coinTypeName": "classic",
+      "coinId": 61,
+      "slip44": null,
+      "symbol": "ETC",
+      "registrySymbol": "ETC",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/61'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 61,
+      "status": "prospective",
+      "displayName": "Ethereum Classic",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "zetaevm": {
+      "registryId": "zetaevm",
+      "bawaChainId": null,
+      "coinTypeName": "zetaevm",
+      "coinId": 20007000,
+      "slip44": null,
+      "symbol": "ZETA",
+      "registrySymbol": "ZETA",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 7000,
+      "status": "prospective",
+      "displayName": "ZetaChain",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "cosmos": {
+      "registryId": "cosmos",
+      "bawaChainId": null,
+      "coinTypeName": "cosmos",
+      "coinId": 118,
+      "slip44": null,
+      "symbol": "ATOM",
+      "registrySymbol": "ATOM",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Cosmos Hub",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "osmosis": {
+      "registryId": "osmosis",
+      "bawaChainId": null,
+      "coinTypeName": "osmosis",
+      "coinId": 10000118,
+      "slip44": null,
+      "symbol": "OSMO",
+      "registrySymbol": "OSMO",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Osmosis",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "ripple": {
+      "registryId": "ripple",
+      "bawaChainId": null,
+      "coinTypeName": "ripple",
+      "coinId": 144,
+      "slip44": null,
+      "symbol": "XRP",
+      "registrySymbol": "XRP",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/144'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "XRP Ledger",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "stellar": {
+      "registryId": "stellar",
+      "bawaChainId": null,
+      "coinTypeName": "stellar",
+      "coinId": 148,
+      "slip44": null,
+      "symbol": "XLM",
+      "registrySymbol": "XLM",
+      "decimals": 7,
+      "curve": "ed25519",
+      "derivationTemplate": "m/44'/148'/{account}'",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Stellar",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "polkadot": {
+      "registryId": "polkadot",
+      "bawaChainId": null,
+      "coinTypeName": "polkadot",
+      "coinId": 354,
+      "slip44": null,
+      "symbol": "DOT",
+      "registrySymbol": "DOT",
+      "decimals": 10,
+      "curve": "ed25519",
+      "derivationTemplate": "m/44'/354'/{account}'/0'/{index}'",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Polkadot",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "near": {
+      "registryId": "near",
+      "bawaChainId": null,
+      "coinTypeName": "near",
+      "coinId": 397,
+      "slip44": null,
+      "symbol": "NEAR",
+      "registrySymbol": "NEAR",
+      "decimals": 24,
+      "curve": "ed25519",
+      "derivationTemplate": "m/44'/397'/{account}'",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "NEAR Protocol",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "aptos": {
+      "registryId": "aptos",
+      "bawaChainId": null,
+      "coinTypeName": "aptos",
+      "coinId": 637,
+      "slip44": null,
+      "symbol": "APT",
+      "registrySymbol": "APT",
+      "decimals": 8,
+      "curve": "ed25519",
+      "derivationTemplate": "m/44'/637'/{account}'/0'/{index}'",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Aptos",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "tezos": {
+      "registryId": "tezos",
+      "bawaChainId": null,
+      "coinTypeName": "tezos",
+      "coinId": 1729,
+      "slip44": null,
+      "symbol": "XTZ",
+      "registrySymbol": "XTZ",
+      "decimals": 6,
+      "curve": "ed25519",
+      "derivationTemplate": "m/44'/1729'/{account}'/0'/{index}'",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Tezos",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "algorand": {
+      "registryId": "algorand",
+      "bawaChainId": null,
+      "coinTypeName": "algorand",
+      "coinId": 283,
+      "slip44": null,
+      "symbol": "ALGO",
+      "registrySymbol": "ALGO",
+      "decimals": 6,
+      "curve": "ed25519",
+      "derivationTemplate": "m/44'/283'/{account}'/0'/{index}'",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Algorand",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "hedera": {
+      "registryId": "hedera",
+      "bawaChainId": null,
+      "coinTypeName": "hedera",
+      "coinId": 3030,
+      "slip44": null,
+      "symbol": "HBAR",
+      "registrySymbol": "HBAR",
+      "decimals": 8,
+      "curve": "ed25519",
+      "derivationTemplate": "m/44'/3030'/{account}'/0'/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Hedera",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "nativeinjective": {
+      "registryId": "nativeinjective",
+      "bawaChainId": null,
+      "coinTypeName": "nativeinjective",
+      "coinId": 10000060,
+      "slip44": null,
+      "symbol": "INJ",
+      "registrySymbol": "INJ",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Injective",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "tia": {
+      "registryId": "tia",
+      "bawaChainId": null,
+      "coinTypeName": "tia",
+      "coinId": 21000118,
+      "slip44": null,
+      "symbol": "TIA",
+      "registrySymbol": "TIA",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Celestia",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "dydx": {
+      "registryId": "dydx",
+      "bawaChainId": null,
+      "coinTypeName": "dydx",
+      "coinId": 22000118,
+      "slip44": null,
+      "symbol": "DYDX",
+      "registrySymbol": "DYDX",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "dYdX",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "sei": {
+      "registryId": "sei",
+      "bawaChainId": null,
+      "coinTypeName": "sei",
+      "coinId": 19000118,
+      "slip44": null,
+      "symbol": "SEI",
+      "registrySymbol": "SEI",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Sei (Cosmos)",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "axelar": {
+      "registryId": "axelar",
+      "bawaChainId": null,
+      "coinTypeName": "axelar",
+      "coinId": 50000118,
+      "slip44": null,
+      "symbol": "AXL",
+      "registrySymbol": "AXL",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Axelar",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "noble": {
+      "registryId": "noble",
+      "bawaChainId": null,
+      "coinTypeName": "noble",
+      "coinId": 18000118,
+      "slip44": null,
+      "symbol": "USDC",
+      "registrySymbol": "USDC",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Noble",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "juno": {
+      "registryId": "juno",
+      "bawaChainId": null,
+      "coinTypeName": "juno",
+      "coinId": 30000118,
+      "slip44": null,
+      "symbol": "JUNO",
+      "registrySymbol": "JUNO",
+      "decimals": 6,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/118'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": null,
+      "status": "prospective",
+      "displayName": "Juno",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
     }
   },
   "entries": [
@@ -855,8 +2608,12 @@
       "id": "btc-mainnet",
       "name": "Bitcoin mainnet",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["BTC"],
-      "networks": ["mainnet"],
+      "chains": [
+        "BTC"
+      ],
+      "networks": [
+        "mainnet"
+      ],
       "operations": [
         "generate",
         "derive",
@@ -887,8 +2644,12 @@
       "id": "btc-testnet4",
       "name": "Bitcoin testnet4",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["BTC"],
-      "networks": ["testnet4"],
+      "chains": [
+        "BTC"
+      ],
+      "networks": [
+        "testnet4"
+      ],
       "operations": [
         "generate",
         "derive",
@@ -919,8 +2680,12 @@
       "id": "eth-mainnet",
       "name": "Ethereum mainnet",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["ETH"],
-      "networks": ["mainnet"],
+      "chains": [
+        "ETH"
+      ],
+      "networks": [
+        "mainnet"
+      ],
       "operations": [
         "generate",
         "derive",
@@ -951,8 +2716,12 @@
       "id": "eth-testnet",
       "name": "Ethereum testnet (selection OPEN)",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["ETH"],
-      "networks": ["testnet (selection OPEN)"],
+      "chains": [
+        "ETH"
+      ],
+      "networks": [
+        "testnet (selection OPEN)"
+      ],
       "operations": [
         "generate",
         "derive",
@@ -983,8 +2752,12 @@
       "id": "trx-mainnet",
       "name": "TRON mainnet",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["TRX"],
-      "networks": ["mainnet"],
+      "chains": [
+        "TRX"
+      ],
+      "networks": [
+        "mainnet"
+      ],
       "operations": [
         "generate",
         "derive",
@@ -1015,8 +2788,12 @@
       "id": "trx-testnet",
       "name": "TRON testnet (selection OPEN)",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["TRX"],
-      "networks": ["testnet (selection OPEN)"],
+      "chains": [
+        "TRX"
+      ],
+      "networks": [
+        "testnet (selection OPEN)"
+      ],
       "operations": [
         "generate",
         "derive",
@@ -1047,8 +2824,12 @@
       "id": "ton-mainnet",
       "name": "TON mainnet",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["TON"],
-      "networks": ["mainnet"],
+      "chains": [
+        "TON"
+      ],
+      "networks": [
+        "mainnet"
+      ],
       "operations": [
         "generate",
         "derive",
@@ -1079,8 +2860,12 @@
       "id": "ton-testnet",
       "name": "TON testnet (selection OPEN)",
       "status": "DOCUMENTED_NOT_TESTED",
-      "chains": ["TON"],
-      "networks": ["testnet (selection OPEN)"],
+      "chains": [
+        "TON"
+      ],
+      "networks": [
+        "testnet (selection OPEN)"
+      ],
       "operations": [
         "generate",
         "derive",

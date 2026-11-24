@@ -16,7 +16,7 @@ import {
 import { crc16Xmodem } from './address-codecs';
 import { COIN_TYPE_KEY_FOR_CHAIN } from './coin-type-keys';
 
-export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom';
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom' | 'zksync' | 'cronos' | 'kava' | 'filecoin' | 'zora' | 'mode' | 'fraxtal' | 'berachain' | 'sei' | 'arbnova' | 'worldchain' | 'manta' | 'unichain' | 'ink' | 'abstract' | 'soneium' | 'apechain' | 'sonic' | 'hyperevm' | 'monad' | 'ronin' | 'immutable' | 'fuse' | 'velas' | 'syscoin' | 'theta' | 'iotex' | 'xlayer' | 'boba' | 'taiko' | 'astar' | 'telos' | 'conflux' | 'core' | 'songbird' | 'rootstock' | 'pulsechain' | 'xdc' | 'chiliz' | 'etc' | 'flare' | 'zetachain' | 'hemi' | 'bob' | 'flowevm' | 'cosmos' | 'osmosis' | 'xrp' | 'stellar' | 'polkadot' | 'near' | 'aptos' | 'tezos' | 'algorand' | 'hedera' | 'injective' | 'celestia' | 'dydx' | 'seicosmos' | 'axelar' | 'noble' | 'juno';
 
 const BASE58_ALPHABET =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -80,6 +80,72 @@ const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   // validateExtendedKey is never called for ton (validateWatchOnlyImport
   // routes ton to validateTonAddress); the empty list is a backstop.
   ton: [],
+  // Lane 80-APP (2026-11-24): the 55 secp256k1 expanded chains export
+  // the standard xpub (0488b21e) and round-trip index 0/1 through it
+  // (Wallet Core 4.9.3 probe 4); the 7 Ed25519 chains export a key no
+  // derivation can consume, so they allow none — like TON/SOL.
+  zksync: ['0488b21e'],
+  cronos: ['0488b21e'],
+  kava: ['0488b21e'],
+  filecoin: ['0488b21e'],
+  zora: ['0488b21e'],
+  mode: ['0488b21e'],
+  fraxtal: ['0488b21e'],
+  berachain: ['0488b21e'],
+  sei: ['0488b21e'],
+  arbnova: ['0488b21e'],
+  worldchain: ['0488b21e'],
+  manta: ['0488b21e'],
+  unichain: ['0488b21e'],
+  ink: ['0488b21e'],
+  abstract: ['0488b21e'],
+  soneium: ['0488b21e'],
+  apechain: ['0488b21e'],
+  sonic: ['0488b21e'],
+  hyperevm: ['0488b21e'],
+  monad: ['0488b21e'],
+  ronin: ['0488b21e'],
+  immutable: ['0488b21e'],
+  fuse: ['0488b21e'],
+  velas: ['0488b21e'],
+  syscoin: ['0488b21e'],
+  theta: ['0488b21e'],
+  iotex: ['0488b21e'],
+  xlayer: ['0488b21e'],
+  boba: ['0488b21e'],
+  taiko: ['0488b21e'],
+  astar: ['0488b21e'],
+  telos: ['0488b21e'],
+  conflux: ['0488b21e'],
+  core: ['0488b21e'],
+  songbird: ['0488b21e'],
+  rootstock: ['0488b21e'],
+  pulsechain: ['0488b21e'],
+  xdc: ['0488b21e'],
+  chiliz: ['0488b21e'],
+  etc: ['0488b21e'],
+  flare: ['0488b21e'],
+  zetachain: ['0488b21e'],
+  hemi: ['0488b21e'],
+  bob: ['0488b21e'],
+  flowevm: ['0488b21e'],
+  cosmos: ['0488b21e'],
+  osmosis: ['0488b21e'],
+  xrp: ['0488b21e'],
+  stellar: [],
+  polkadot: [],
+  near: [],
+  aptos: [],
+  tezos: [],
+  algorand: [],
+  hedera: [],
+  injective: ['0488b21e'],
+  celestia: ['0488b21e'],
+  dydx: ['0488b21e'],
+  seicosmos: ['0488b21e'],
+  axelar: ['0488b21e'],
+  noble: ['0488b21e'],
+  juno: ['0488b21e'],
 };
 
 const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, string>> = {
@@ -103,6 +169,71 @@ const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, stri
   btc: "m/84'/0'/0'/0",
   eth: "m/44'/60'/0'/0",
   trx: "m/44'/195'/0'/0",
+  // Lane 80-APP: the account-level prefix (derivation path minus the
+  // index segment). The 7 Ed25519 prefixes are unreachable — those
+  // chains allow no xpub version — but the Record type requires them.
+  zksync: "m/44'/60'/0'/0",
+  cronos: "m/44'/60'/0'/0",
+  kava: "m/44'/60'/0'/0",
+  filecoin: "m/44'/461'/0'/0",
+  zora: "m/44'/60'/0'/0",
+  mode: "m/44'/60'/0'/0",
+  fraxtal: "m/44'/60'/0'/0",
+  berachain: "m/44'/60'/0'/0",
+  sei: "m/44'/60'/0'/0",
+  arbnova: "m/44'/60'/0'/0",
+  worldchain: "m/44'/60'/0'/0",
+  manta: "m/44'/60'/0'/0",
+  unichain: "m/44'/60'/0'/0",
+  ink: "m/44'/60'/0'/0",
+  abstract: "m/44'/60'/0'/0",
+  soneium: "m/44'/60'/0'/0",
+  apechain: "m/44'/60'/0'/0",
+  sonic: "m/44'/60'/0'/0",
+  hyperevm: "m/44'/60'/0'/0",
+  monad: "m/44'/60'/0'/0",
+  ronin: "m/44'/60'/0'/0",
+  immutable: "m/44'/60'/0'/0",
+  fuse: "m/44'/60'/0'/0",
+  velas: "m/44'/60'/0'/0",
+  syscoin: "m/44'/60'/0'/0",
+  theta: "m/44'/500'/0'/0",
+  iotex: "m/44'/304'/0'/0",
+  xlayer: "m/44'/60'/0'/0",
+  boba: "m/44'/60'/0'/0",
+  taiko: "m/44'/60'/0'/0",
+  astar: "m/44'/60'/0'/0",
+  telos: "m/44'/60'/0'/0",
+  conflux: "m/44'/60'/0'/0",
+  core: "m/44'/60'/0'/0",
+  songbird: "m/44'/60'/0'/0",
+  rootstock: "m/44'/137'/0'/0",
+  pulsechain: "m/44'/60'/0'/0",
+  xdc: "m/44'/60'/0'/0",
+  chiliz: "m/44'/60'/0'/0",
+  etc: "m/44'/61'/0'/0",
+  flare: "m/44'/60'/0'/0",
+  zetachain: "m/44'/60'/0'/0",
+  hemi: "m/44'/60'/0'/0",
+  bob: "m/44'/60'/0'/0",
+  flowevm: "m/44'/60'/0'/0",
+  cosmos: "m/44'/118'/0'/0",
+  osmosis: "m/44'/118'/0'/0",
+  xrp: "m/44'/144'/0'/0",
+  stellar: "m/44'/148'/0'",
+  polkadot: "m/44'/354'/0'/0'",
+  near: "m/44'/397'/0'",
+  aptos: "m/44'/637'/0'/0'",
+  tezos: "m/44'/1729'/0'",
+  algorand: "m/44'/283'/0'/0'",
+  hedera: "m/44'/3030'/0'/0'",
+  injective: "m/44'/60'/0'/0",
+  celestia: "m/44'/118'/0'/0",
+  dydx: "m/44'/118'/0'/0",
+  seicosmos: "m/44'/118'/0'/0",
+  axelar: "m/44'/118'/0'/0",
+  noble: "m/44'/118'/0'/0",
+  juno: "m/44'/118'/0'/0",
 };
 
 export type WalletCore = Awaited<ReturnType<typeof initWasm>>;
@@ -572,7 +703,7 @@ export function validateSolanaAddress(
 // Lane B (Finish the Product, 2026-11-23): a plain public address is
 // accepted too. The returned `kind` tells the caller which it is, so an
 // address can fan out to every chain in its family (one EVM address is
-// the same address on all sixteen EVM chains) while an xpub keeps the
+// the same address on all fifty-nine EVM chains) while an xpub keeps the
 // one-chain behaviour.
 export type WatchOnlyImportValidation =
   | { ok: true; kind: WatchOnlyValueKind }

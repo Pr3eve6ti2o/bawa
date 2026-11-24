@@ -12,12 +12,13 @@ import { AssetRows } from './asset-rows';
 import { StepCard } from '../ui/components/step-card';
 import { AssetRow } from '../ui/components/asset-row';
 import { createWallet } from '../wallet/core';
-import { loadCore } from '../engine/boundary';
+import { loadCore, type ChainId } from '../engine/boundary';
 import { createVault, hasVault } from '../wallet/vault';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import type { HistoryState } from '../state/wallet-context';
-import type { PriceEntry, PriceMap } from '../wallet/prices';
+import type { PriceMap } from '../wallet/prices';
+import { idlePriceEntries } from '../wallet/prices';
 
 vi.mock('../wallet/core', () => ({
   createWallet: vi.fn(),
@@ -110,31 +111,7 @@ const EMPTY_ADDRESSES: Record<ChainKey, string[]> = {
   doge: [],
 };
 
-const UNAVAILABLE_PRICE: PriceEntry = { status: 'unavailable', reason: 'missing' };
-const EMPTY_PRICES: PriceMap = {
-  btc: UNAVAILABLE_PRICE,
-  eth: UNAVAILABLE_PRICE,
-  trx: UNAVAILABLE_PRICE,
-  ton: UNAVAILABLE_PRICE,
-  sol: UNAVAILABLE_PRICE,
-  bsc: UNAVAILABLE_PRICE,
-  matic: UNAVAILABLE_PRICE,
-  arb: UNAVAILABLE_PRICE,
-  op: UNAVAILABLE_PRICE,
-  base: UNAVAILABLE_PRICE,
-  avax: UNAVAILABLE_PRICE,
-  gnosis: UNAVAILABLE_PRICE,
-  celo: UNAVAILABLE_PRICE,
-  linea: UNAVAILABLE_PRICE,
-  mantle: UNAVAILABLE_PRICE,
-  scroll: UNAVAILABLE_PRICE,
-  opbnb: UNAVAILABLE_PRICE,
-  metis: UNAVAILABLE_PRICE,
-  aurora: UNAVAILABLE_PRICE,
-  fantom: UNAVAILABLE_PRICE,
-  ltc: UNAVAILABLE_PRICE,
-  doge: UNAVAILABLE_PRICE,
-};
+const EMPTY_PRICES: PriceMap = idlePriceEntries();
 
 const mockRefreshHistory = vi.fn();
 
@@ -278,7 +255,7 @@ beforeEach(() => {
   mockRefreshHistory.mockResolvedValue(undefined);
   vi.mocked(availableFor).mockReturnValue(['btc', 'eth', 'trx', 'ton']);
   vi.mocked(chainConfig).mockImplementation(
-    (chain: ChainKey) => CHAINS[chain] as unknown as ReturnType<typeof chainConfig>,
+    (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
   );
 });
 
@@ -291,13 +268,13 @@ describe('text spacing', () => {
       // intro line: words must not run together. (Marketing-fix Lane 3:
       // the intro and list now lead with the wallet.)
       expect(mounted.div.textContent).toContain(
-        'Bawa is a self-custodial wallet that runs in your browser. One recovery phrase covers 22 chains — Bitcoin, Ethereum, Solana, TRON, TON and more. Your keys are made on this device and encrypted with your vault password. They never leave it.',
+        'Bawa is a self-custodial wallet that runs in your browser. One recovery phrase covers 84 chains — Bitcoin, Ethereum, Solana, TRON, TON and more. Your keys are made on this device and encrypted with your vault password. They never leave it.',
       );
       expect(mounted.div.textContent).not.toContain('Bawais a self-custodial');
       expect(mounted.div.textContent).toContain(
-        'Receive on 22 chains. One wallet, one address per chain, with a QR code for each.',
+        'Receive on 84 chains. One wallet, one address per chain, with a QR code for each.',
       );
-      expect(mounted.div.textContent).not.toContain('Receiveon 22 chains');
+      expect(mounted.div.textContent).not.toContain('Receiveon 84 chains');
       expect(mounted.div.textContent).toContain(
         'Real balances and prices. Balances from public blockchains, prices from CoinGecko — no made-up numbers.',
       );

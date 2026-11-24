@@ -11,13 +11,13 @@
 
 ![Bawa architecture: purpose, HD core, vault, providers, outputs, send flow and storage](docs/diagrams/architecture.svg)
 
-![One phrase, one account, 22 chains](docs/diagrams/explainer.svg)
+![One phrase, one account, 84 chains](docs/diagrams/explainer.svg)
 
 How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
 
 **[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of this branch.
 
-**22 chains** enabled in the example wallet · **168 chains** in the guide · **21 default tokens** · **440 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
+**84 chains** in the example wallet (22 enabled by default) · **168 chains** in the guide · **21 default tokens** · **440 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
 
 ## Showcase
 
@@ -57,7 +57,7 @@ Bawa exists so you can answer all three from the code, not from a promise. Keys 
 
 - **Self-custodial by construction.** Keys are generated and held locally in the browser; your recovery phrase never leaves your machine. See [How Bawa works](docs/HOW-IT-WORKS.md).
 - **Real data only.** Balances and prices come from public read-only endpoints. When a provider cannot be reached, a balance shows as unavailable — never as an invented figure. See [Chain support](#chain-support).
-- **22 chains out of the box, 168 in the guide.** The example wallet ships with 22 chains enabled and 21 default tokens. The guide covers the full Trust Wallet Core registry of 168 chains. See [Chain support](#chain-support).
+- **84 chains out of the box, 168 in the guide.** The example wallet ships with 84 chains (22 enabled by default) and 21 default tokens. The guide covers the full Trust Wallet Core registry of 168 chains. See [Chain support](#chain-support).
 - **Built on Trust Wallet Core 4.9.3.** The wallet engine is Trust Wallet Core as WebAssembly, loaded by a React 19 + Vite + Tailwind web starter and a Kotlin + Compose + Material 3 Android starter. See [Configuration](#configuration).
 
 > If Bawa helped you, please give it a star. ⭐ It costs nothing, it tells other builders this reference is worth their time, and it is the simplest way to support an open-source project maintained by one person. Thank you.
@@ -108,7 +108,7 @@ The web wallet in `apps/web` is a fully functional example wallet built using th
 - Create, import (24/25 words) and watch-only wallets; multiple accounts from one phrase; bulk account creation.
 - 22 native assets plus 21 default tokens (43 rows), with live prices.
 - Receive with a QR card and three templates — address, payment request, share link — plus copy and share.
-- Add Token adds a token by contract address, and can enable any of the 22 chains.
+- Add Token adds a token by contract address, and can enable any of the 84 chains.
 - Send walks through a stepped flow, but broadcast stays disabled, so nothing is ever sent.
 
 To run it, follow [docs/CREATE-EXAMPLE-WALLET.md](docs/CREATE-EXAMPLE-WALLET.md). To understand how it fits together, read [How Bawa works](docs/HOW-IT-WORKS.md) — two Mermaid diagrams (how it starts, what it can do), each box traced to a real file.
@@ -125,9 +125,9 @@ If you build something with Bawa, tell us — open an issue and it will be liste
 
 ## Chain support
 
-The example wallet enables **22 chains** by default: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom. The list is `SUPPORTED_CHAINS` in `apps/web/src/wallet/chains.ts` and `chainSupport` in `registry/capabilities.json`.
+The example wallet supports **84 chains**: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom, zksync, cronos, kava, filecoin, zora, mode, fraxtal, berachain, sei, arbnova, worldchain, manta, unichain, ink, abstract, soneium, apechain, sonic, hyperevm, monad, ronin, immutable, fuse, velas, syscoin, theta, iotex, xlayer, boba, taiko, astar, telos, conflux, core, songbird, rootstock, pulsechain, xdc, chiliz, etc, flare, zetachain, hemi, bob, flowevm, cosmos, osmosis, xrp, stellar, polkadot, near, aptos, tezos, algorand, hedera, injective, celestia, dydx, seicosmos, axelar, noble, juno. Twenty-two are enabled by default (the curated set: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom); the other 62 are reachable via Add Token. The list is `SUPPORTED_CHAINS` in `apps/web/src/wallet/chains.ts` and `chainSupport` in `registry/capabilities.json`.
 
-Do not confuse that number with the guide's number. The guide covers the full Trust Wallet Core registry of **168 chains**. The example wallet enables 22 of them. Add Token adds more tokens by contract address and can enable any of the 22 chains; a chain outside the 22 cannot be added from the wallet, it needs a change to the registry first.
+Do not confuse that number with the guide's number. The guide covers the full Trust Wallet Core registry of **168 chains**. The example wallet supports 84 of them, 22 enabled by default. Add Token adds more tokens by contract address and can enable any of the 84 chains; a chain outside the 84 cannot be added from the wallet, it needs a change to the registry first.
 
 Network operations are verified for btc, eth, trx, ton only. The 18 additional chains are scoped to the multichain-extended-wallet profile. See the [docs index](docs/index.md) for the per-chain status.
 

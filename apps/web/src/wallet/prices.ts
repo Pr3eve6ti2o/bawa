@@ -29,10 +29,17 @@
  * fills the gap from CoinLore (batched, first), DexScreener wrapped
  * natives (base-side, or the exact priceUsd/priceNative implied
  * price for quote-side pairs), TonAPI for TON, Coinbase for LTC.
- * 22 of 22 chains have a fallback (Lane B, 2026-11-24: Gnosis
- * xDAI via CoinLore DAI, Mantle MNT via CoinLore + DexScreener
- * WMNT, Fantom FTM via CoinLore Sonic (S) + DexScreener implied
- * — see wallet/price-fallbacks.ts for the live evidence). Rejected
+ * 77 of 84 chains have a fallback (Lane 80-APP, 2026-11-24: the
+ * 62 expanded chains add CoinLore for 53 and Coinbase for 44; the
+ * seven CoinGecko-only chains are Fraxtal, Velas, Telos, Songbird,
+ * Rootstock, PulseChain and XDC — no second source answers for them,
+ * named honestly in wallet/price-fallbacks.ts. Lane B, 2026-11-24: Gnosis xDAI via
+ * CoinLore DAI, Mantle MNT via CoinLore + DexScreener WMNT, Fantom
+ * FTM via CoinLore Sonic (S) + DexScreener implied — see
+ * wallet/price-fallbacks.ts for the live evidence). The 62 expanded
+ * chains' CoinGecko ids are in PRICE_IDS below (same native-asset
+ * rule — an EVM chain whose native asset is ETH/BNB/etc. maps to
+ * that asset's id, never a governance token). Rejected
  * live: Binance (451 geo-block; binance.us FTM $0.4806 is a frozen
  * quote, ~16x the live ~$0.03), CoinPaprika (same frozen FTM
  * $0.4803), CoinCodex (fantom "not_trading_anymore"), Kraken (no
@@ -46,6 +53,7 @@ import { applyPriceFallbacks } from './price-fallbacks';
 import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { CHAIN_DECIMALS } from './chain-amount-format';
+import { SUPPORTED_CHAINS } from './chains';
 import { fiatMinorUnits, formatFiatUSD, sumFiatUSD } from './money';
 import type { BalanceState } from './balance-state';
 
@@ -74,20 +82,86 @@ export const PRICE_IDS: Record<ChainId, string> = {
   metis: 'metis-token',
   aurora: 'ethereum',
   fantom: 'fantom',
+  zksync: 'ethereum',
+  cronos: 'crypto-com-chain',
+  kava: 'kava',
+  filecoin: 'filecoin',
+  zora: 'ethereum',
+  mode: 'ethereum',
+  fraxtal: 'frax-ether',
+  berachain: 'berachain-bera',
+  sei: 'sei-network',
+  arbnova: 'ethereum',
+  worldchain: 'ethereum',
+  manta: 'ethereum',
+  unichain: 'ethereum',
+  ink: 'ethereum',
+  abstract: 'ethereum',
+  soneium: 'ethereum',
+  apechain: 'apecoin',
+  sonic: 'sonic-3',
+  hyperevm: 'hyperliquid',
+  monad: 'monad',
+  ronin: 'ronin',
+  immutable: 'immutable-x',
+  fuse: 'fuse-network-token',
+  velas: 'velas',
+  syscoin: 'syscoin',
+  theta: 'theta-fuel',
+  iotex: 'iotex',
+  xlayer: 'okb',
+  boba: 'ethereum',
+  taiko: 'ethereum',
+  astar: 'astar',
+  telos: 'telos',
+  conflux: 'conflux-token',
+  core: 'coredaoorg',
+  songbird: 'songbird',
+  rootstock: 'bitcoin',
+  pulsechain: 'pulsechain',
+  xdc: 'xdce-crowd-sale',
+  chiliz: 'chiliz',
+  etc: 'ethereum-classic',
+  flare: 'flare-networks',
+  zetachain: 'zetachain',
+  hemi: 'ethereum',
+  bob: 'ethereum',
+  flowevm: 'flow',
+  cosmos: 'cosmos',
+  osmosis: 'osmosis',
+  xrp: 'ripple',
+  stellar: 'stellar',
+  polkadot: 'polkadot',
+  near: 'near',
+  aptos: 'aptos',
+  tezos: 'tezos',
+  algorand: 'algorand',
+  hedera: 'hedera-hashgraph',
+  injective: 'injective-protocol',
+  celestia: 'celestia',
+  dydx: 'dydx-chain',
+  seicosmos: 'sei-network',
+  axelar: 'axelar',
+  noble: 'usd-coin',
+  juno: 'juno-network',
 };
 
+// CAIP-19 native-asset ids. The slip44 is the NATIVE coin's (BNB 714,
+// POL 966, AVAX 9000, CELO 527) — not ETH's 60, which the EVM chains
+// that settle in ETH share. Must match chainConfig(chain).assetId;
+// the wiring test pins the equality for all 84 chains.
 export const PRICE_ASSET_IDS: Record<ChainId, string> = {
   btc: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
   eth: 'eip155:1/slip44:60',
   trx: 'tron:0x2b6653dc/slip44:195',
   ton: 'ton:-239/slip44:607',
   sol: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501',
-  bsc: 'eip155:56/slip44:60',
-  matic: 'eip155:137/slip44:60',
+  bsc: 'eip155:56/slip44:714',
+  matic: 'eip155:137/slip44:966',
   arb: 'eip155:42161/slip44:60',
   op: 'eip155:10/slip44:60',
   base: 'eip155:8453/slip44:60',
-  avax: 'eip155:43114/slip44:60',
+  avax: 'eip155:43114/slip44:9000',
   ltc: 'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2/slip44:2',
   doge: 'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691/slip44:3',
   gnosis: 'eip155:100/slip44:60',
@@ -99,6 +173,68 @@ export const PRICE_ASSET_IDS: Record<ChainId, string> = {
   metis: 'eip155:1088/slip44:60',
   aurora: 'eip155:1313161554/slip44:60',
   fantom: 'eip155:250/slip44:250',
+  zksync: 'eip155:324/slip44:60',
+  cronos: 'eip155:25/slip44:60',
+  kava: 'eip155:2222/slip44:60',
+  filecoin: 'eip155:314/slip44:461',
+  zora: 'eip155:7777777/slip44:60',
+  mode: 'eip155:34443/slip44:60',
+  fraxtal: 'eip155:252/slip44:60',
+  berachain: 'eip155:80094/slip44:60',
+  sei: 'eip155:1329/slip44:60',
+  arbnova: 'eip155:42170/slip44:60',
+  worldchain: 'eip155:480/slip44:60',
+  manta: 'eip155:169/slip44:60',
+  unichain: 'eip155:130/slip44:60',
+  ink: 'eip155:57073/slip44:60',
+  abstract: 'eip155:2741/slip44:60',
+  soneium: 'eip155:1868/slip44:60',
+  apechain: 'eip155:33139/slip44:60',
+  sonic: 'eip155:146/slip44:60',
+  hyperevm: 'eip155:999/slip44:60',
+  monad: 'eip155:143/slip44:60',
+  ronin: 'eip155:2020/slip44:60',
+  immutable: 'eip155:13371/slip44:60',
+  fuse: 'eip155:122/slip44:60',
+  velas: 'eip155:106/slip44:60',
+  syscoin: 'eip155:57/slip44:60',
+  theta: 'eip155:361/slip44:500',
+  iotex: 'eip155:4689/slip44:304',
+  xlayer: 'eip155:196/slip44:60',
+  boba: 'eip155:288/slip44:60',
+  taiko: 'eip155:167000/slip44:60',
+  astar: 'eip155:592/slip44:60',
+  telos: 'eip155:40/slip44:60',
+  conflux: 'eip155:1030/slip44:60',
+  core: 'eip155:1116/slip44:60',
+  songbird: 'eip155:19/slip44:60',
+  rootstock: 'eip155:30/slip44:137',
+  pulsechain: 'eip155:369/slip44:60',
+  xdc: 'eip155:50/slip44:60',
+  chiliz: 'eip155:88888/slip44:60',
+  etc: 'eip155:61/slip44:61',
+  flare: 'eip155:14/slip44:60',
+  zetachain: 'eip155:7000/slip44:60',
+  hemi: 'eip155:43111/slip44:60',
+  bob: 'eip155:60808/slip44:60',
+  flowevm: 'eip155:747/slip44:60',
+  cosmos: 'cosmos:cosmoshub-4/slip44:118',
+  osmosis: 'cosmos:osmosis-1/slip44:118',
+  xrp: 'xrpl:0/slip44:144',
+  stellar: 'stellar:pubnet/slip44:148',
+  polkadot: 'polkadot:91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3/slip44:354',
+  near: 'near:mainnet/slip44:397',
+  aptos: 'aptos:1/slip44:637',
+  tezos: 'tezos:NetXdQprcVkpaWU/slip44:1729',
+  algorand: 'algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=/slip44:283',
+  hedera: 'hedera:mainnet/slip44:3030',
+  injective: 'cosmos:injective-1/slip44:60',
+  celestia: 'cosmos:celestia/slip44:118',
+  dydx: 'cosmos:dydx-mainnet-1/slip44:118',
+  seicosmos: 'cosmos:pacific-1/slip44:118',
+  axelar: 'cosmos:axelar-dojo-1/slip44:118',
+  noble: 'cosmos:noble-1/slip44:118',
+  juno: 'cosmos:juno-1/slip44:118',
 };
 
 export const MAX_QUOTE_AGE_MS = 10 * 60 * 1000;
@@ -583,30 +719,14 @@ export function parsePriceResponse(
     }, nowMs);
   };
 
-  return {
-    btc: parseChain('btc'),
-    eth: parseChain('eth'),
-    trx: parseChain('trx'),
-    ton: parseChain('ton'),
-    sol: parseChain('sol'),
-    bsc: parseChain('bsc'),
-    matic: parseChain('matic'),
-    arb: parseChain('arb'),
-    op: parseChain('op'),
-    base: parseChain('base'),
-    avax: parseChain('avax'),
-    gnosis: parseChain('gnosis'),
-    celo: parseChain('celo'),
-    linea: parseChain('linea'),
-    mantle: parseChain('mantle'),
-    scroll: parseChain('scroll'),
-    opbnb: parseChain('opbnb'),
-    metis: parseChain('metis'),
-    aurora: parseChain('aurora'),
-    fantom: parseChain('fantom'),
-    ltc: parseChain('ltc'),
-    doge: parseChain('doge'),
-  };
+  // Built from PRICE_IDS (the 84-chain id map) so a new chain can never
+  // silently miss its parsed entry.
+  return Object.fromEntries(
+    (Object.keys(PRICE_IDS) as ChainId[]).map((chain) => [
+      chain,
+      parseChain(chain),
+    ]),
+  ) as PriceMap;
 }
 
 /**
@@ -649,7 +769,12 @@ export async function fetchPrices(
   fetchFn: typeof fetch,
   nowMs?: number,
 ): Promise<PriceMap> {
-  const chains = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom'] as const;
+  // Lane 80-APP (2026-11-24): the error map used to hardcode the 22
+  // pre-expansion chains, so any CoinGecko outage silently dropped the
+  // 62 new chains' quotes (and "keeps the last good quotes" lost them
+  // after a 429). It now covers every priced chain, like
+  // idlePriceEntries() below.
+  const chains = Object.keys(PRICE_IDS) as ChainId[];
   const allError = (
     entry: Extract<PriceEntry, { status: 'error' }>,
   ): PriceMap =>
@@ -852,7 +977,7 @@ export function portfolioTotal(
   balances: Record<ChainId, BalanceState>,
   entries: PriceMap,
   nowMs: number,
-  // Chains to total. Defaults to all 22 registry chains; the dashboard
+  // Chains to total. Defaults to all 84 registry chains; the dashboard
   // passes availableFor('balance') so the hero totals exactly the chains
   // its loading/failed detection counts (in the screen tests that mock
   // is the original 4, which keeps the hero's 4-chain expectations).
@@ -860,9 +985,7 @@ export function portfolioTotal(
   // whole portfolio — natives plus the priced token balances the caller
   // folds in via tokenContribution. Token fiat values also show on
   // their own rows.
-  chains: readonly ChainId[] = [
-    'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom',
-  ],
+  chains: readonly ChainId[] = SUPPORTED_CHAINS,
   tokenContribution?: PortfolioTokenContribution,
 ): {
   status: 'zero' | 'total' | 'partial' | 'unavailable';
@@ -987,30 +1110,12 @@ export function quoteFreshnessLabel(quote: PriceQuote, nowMs: number): string {
  * entries, so test balances are never valued at mainnet prices.
  */
 export function idlePriceEntries(): PriceMap {
-  return {
-    btc: { status: 'unavailable', reason: 'missing' },
-    eth: { status: 'unavailable', reason: 'missing' },
-    trx: { status: 'unavailable', reason: 'missing' },
-    ton: { status: 'unavailable', reason: 'missing' },
-    sol: { status: 'unavailable', reason: 'missing' },
-    bsc: { status: 'unavailable', reason: 'missing' },
-    matic: { status: 'unavailable', reason: 'missing' },
-    arb: { status: 'unavailable', reason: 'missing' },
-    op: { status: 'unavailable', reason: 'missing' },
-    base: { status: 'unavailable', reason: 'missing' },
-    avax: { status: 'unavailable', reason: 'missing' },
-    gnosis: { status: 'unavailable', reason: 'missing' },
-    celo: { status: 'unavailable', reason: 'missing' },
-    linea: { status: 'unavailable', reason: 'missing' },
-    mantle: { status: 'unavailable', reason: 'missing' },
-    scroll: { status: 'unavailable', reason: 'missing' },
-    opbnb: { status: 'unavailable', reason: 'missing' },
-    metis: { status: 'unavailable', reason: 'missing' },
-    aurora: { status: 'unavailable', reason: 'missing' },
-    fantom: { status: 'unavailable', reason: 'missing' },
-    ltc: { status: 'unavailable', reason: 'missing' },
-    doge: { status: 'unavailable', reason: 'missing' },
-  };
+  return Object.fromEntries(
+    (Object.keys(PRICE_IDS) as ChainId[]).map((chain) => [
+      chain,
+      { status: 'unavailable', reason: 'missing' } as const,
+    ]),
+  ) as PriceMap;
 }
 
 
