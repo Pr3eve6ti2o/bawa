@@ -12,9 +12,9 @@
  * Chain identity rests on getHealth returning 'ok' (cached per
  * instance). History is built on the same RPC: getSignaturesForAddress
  * plus getTransaction (jsonParsed), with direction and amount from the
- * address's pre/post balance delta. Fee-quote and tx inputs are not
- * built — they report unavailable, never faked. Broadcast stays
- * disabled.
+ * address's pre/post balance delta. Fee-quote is the protocol
+ * constant (5,000 lamports per signature); tx inputs are the live
+ * recent blockhash via getLatestBlockhash. Broadcast stays disabled.
  */
 import {
   createDisabledBroadcast,
@@ -22,7 +22,6 @@ import {
   httpFetchTransport,
   resolveEndpoints,
   toAdapterError,
-  unavailableResult,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -41,6 +40,126 @@ const FALLBACK_URL = 'https://public.rpc.solanavibestation.com';
 const PRIMARY_SOURCE = 'solana-publicnode';
 const FALLBACK_SOURCE = 'solana-vibe-station';
 const DECIMALS = 9;
+
+/**
+ * Base fee: 5,000 lamports per signature (Solana fee docs,
+ * `lamports_per_signature`). A legacy transfer carries one signature,
+ * so a SOL or SPL send costs 5,000 lamports plus, for a new token
+ * account, the rent-exempt minimum — never a priority fee.
+ */
+export const SOL_LAMPORTS_PER_SIGNATURE = 5000;
+
+/** SPL Token account size in bytes (the Account struct). */
+export const SOL_TOKEN_ACCOUNT_SIZE = 165;
+
+/**
+ * One JSON-RPC call against the Solana endpoints, with the same sweep
+ * as the adapter: endpoints in order, JSON-RPC error objects treated
+ * as a failure of that endpoint, withRetry bounding the sweep. Throws
+ * on failure — the standalone helpers below surface the reason to
+ * their caller, which reports it instead of guessing.
+ */
+async function solanaRpcCall(
+  overrides: SolanaAdapterOverrides,
+  method: string,
+  params: unknown[],
+  operation: string,
+): Promise<{ raw: unknown; source: string }> {
+  const baseUrl = overrides.baseUrl ?? PRIMARY_URL;
+  const fallbackUrl = overrides.fallbackUrl ?? FALLBACK_URL;
+  const transport = overrides.transport ?? httpFetchTransport;
+  const post = (url: string): Promise<unknown> =>
+    transport.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    });
+  const labelForEndpoint = (url: string): string => {
+    if (url === PRIMARY_URL) return PRIMARY_SOURCE;
+    if (url === FALLBACK_URL) return FALLBACK_SOURCE;
+    return endpointHost(url);
+  };
+  const urls = resolveEndpoints(overrides.rpcUrls, [baseUrl, fallbackUrl]);
+  return withRetry(
+    async () => {
+      let lastError: unknown = new Error('No Solana endpoints configured.');
+      for (const url of urls) {
+        let raw: unknown;
+        try {
+          raw = await post(url);
+        } catch (error: unknown) {
+          lastError = error;
+          continue;
+        }
+        if (isRecord(raw) && isRecord(raw['error'])) {
+          lastError = new Error(
+            typeof raw['error']['message'] === 'string'
+              ? raw['error']['message']
+              : 'RPC error',
+          );
+          continue;
+        }
+        return { raw, source: labelForEndpoint(url) };
+      }
+      throw lastError;
+    },
+    { operation },
+  );
+}
+
+/**
+ * True when the address holds an account on Solana (getAccountInfo
+ * returns a value). Used by the SPL send path: a missing recipient
+ * token account must be created in the same transaction, funded with
+ * the rent-exempt minimum. Throws on RPC failure — a missing answer
+ * is not proof the account is missing.
+ */
+export async function fetchSolanaAccountExists(
+  address: string,
+  overrides: SolanaAdapterOverrides = {},
+): Promise<boolean> {
+  const { raw } = await solanaRpcCall(
+    overrides,
+    'getAccountInfo',
+    [address],
+    'sol.accountExists',
+  );
+  const result = isRecord(raw) ? raw['result'] : undefined;
+  // getAccountInfo returns { context, value: null | account }.
+  return (
+    isRecord(result) && result['value'] !== null && result['value'] !== undefined
+  );
+}
+
+/**
+ * Rent-exempt minimum in lamports for an account of `bytes` bytes
+ * (getMinimumBalanceForRentExemption). A token account is 165 bytes;
+ * live 2026-11-24 on PublicNode that is 1,488,440 lamports — the
+ * 2,039,280 figure in older SPL docs is stale. Always read live, never
+ * hardcode: the number moves as rent parameters change. Throws on RPC
+ * failure or an unusable response.
+ */
+export async function fetchSolanaMinimumBalanceForRentExemption(
+  bytes: number,
+  overrides: SolanaAdapterOverrides = {},
+): Promise<number> {
+  if (!Number.isSafeInteger(bytes) || bytes < 0) {
+    throw new Error('Account size must be a non-negative safe integer.');
+  }
+  const { raw } = await solanaRpcCall(
+    overrides,
+    'getMinimumBalanceForRentExemption',
+    [bytes],
+    'sol.rentExemption',
+  );
+  const value = isRecord(raw) ? raw['result'] : undefined;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error(
+      'Invalid response: expected a lamport rent-exemption minimum',
+    );
+  }
+  return value;
+}
 
 export interface SolanaAdapterOverrides {
   baseUrl?: string;
@@ -316,13 +435,64 @@ export function createSolanaAdapter(
     return { status: 'ok', data: txs, source, fetchedAt: Date.now() };
   };
 
-  const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> =>
-    unavailableResult('Fee-quote is not connected for Solana yet.');
+  const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
+    // The fee is the protocol constant, not an RPC quote: a legacy
+    // transaction costs 5,000 lamports per signature and this wallet
+    // never adds a priority fee, so a one-signature SOL or SPL send
+    // costs exactly 5,000 lamports. getFeeForMessage would return the
+    // same number for the built message; quoting the constant keeps
+    // the preview honest without building the transaction twice.
+    const now = Date.now();
+    return {
+      status: 'ok',
+      data: {
+        chain: 'sol',
+        networkId: NETWORK_ID,
+        feeBaseUnits: String(SOL_LAMPORTS_PER_SIGNATURE),
+        unit: 'lamports',
+        note: 'Base fee of 5,000 lamports for one signature; no priority fee is added.',
+        source: 'solana-protocol',
+        fetchedAt: now,
+      },
+      source: 'solana-protocol',
+      fetchedAt: now,
+    };
+  };
 
   const getTxInputs = async (
-    _address: string,
-  ): Promise<AdapterResult<TxInput>> =>
-    unavailableResult('Transaction inputs are not connected for Solana yet.');
+    address: string,
+  ): Promise<AdapterResult<TxInput>> => {
+    const blocked = await checkAddress(address);
+    if (blocked) return blocked;
+    let raw: unknown;
+    let source = PRIMARY_SOURCE;
+    try {
+      ({ raw, source } = await rpc(
+        'getLatestBlockhash',
+        [],
+        'sol.getTxInputs',
+      ));
+    } catch (error: unknown) {
+      return toAdapterError(error);
+    }
+    const rpcErr = rpcErrorMessage(raw);
+    if (rpcErr !== null) return { status: 'error', reason: rpcErr };
+    const result = isRecord(raw) ? raw['result'] : undefined;
+    const value = isRecord(result) ? result['value'] : undefined;
+    const blockhash = isRecord(value) ? value['blockhash'] : undefined;
+    if (typeof blockhash !== 'string' || blockhash.length === 0) {
+      return {
+        status: 'error',
+        reason: 'Invalid response: expected a recent blockhash',
+      };
+    }
+    return {
+      status: 'ok',
+      data: { kind: 'blockhash', blockhash },
+      source,
+      fetchedAt: Date.now(),
+    };
+  };
 
   const broadcast = createDisabledBroadcast();
 

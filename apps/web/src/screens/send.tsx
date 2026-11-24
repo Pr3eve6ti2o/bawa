@@ -57,12 +57,14 @@ import {
   signBtcOffline,
   signTrxOffline,
   signTonOffline,
+  signSolOffline,
   broadcastSignedDevnet,
   ERC20_GAS_LIMIT,
   estimateTokenSendFee,
   previewTokenSendAmount,
   signEvmTokenOffline,
   signJettonOffline,
+  signSplOffline,
   signTrc20Offline,
   simulateTokenSend,
   type SendFailure,
@@ -70,7 +72,11 @@ import {
   type TokenSendPreview,
 } from '../wallet/send';
 import { getLatestBlockHeader } from '../wallet/adapters/trx';
-import { fetchJettonWalletAddress } from '../wallet/adapters/token-balances';
+import { fetchSolanaAccountExists } from '../wallet/adapters/sol';
+import {
+  deriveAssociatedTokenAddress,
+  fetchJettonWalletAddress,
+} from '../wallet/adapters/token-balances';
 import { getAdapterForMode } from '../wallet/adapters';
 import { recordPendingBroadcastDevnet } from '../state/pending-broadcasts';
 import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
@@ -84,16 +90,18 @@ import type { ChainId } from '../engine/boundary';
 
 // Chains with offline signing today (wallet/send.ts). BSC joined
 // 2026-11-24: it is EVM, so the general EVM signer covers it with
-// chain id 56. SIGNING_CHAINS gates NATIVE sends only. Token sends
-// are gated separately, on tokenStandardFor(chain): every chain with
-// a token standard (all 16 EVM chains, TRON, TON) signs token
-// transfers offline — including the 14 EVM chains whose native
-// sends are not built, because a token transfer only needs the
-// generalised EVM signer. Solana is the exception: its signer cannot
-// produce a valid signed transaction (Lane 2, 2026-11-24), so SOL
-// token sends are refused with the reason at preview time. Chains
-// with no token standard (BTC, LTC, DOGE) cannot send tokens at all.
-const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'bsc'];
+// chain id 56. Solana joined in the expansion (Lane SOL): native SOL
+// and SPL transfers are signed with @solana/web3.js from the derived
+// ed25519 keypair (the Wallet Core Solana signer cannot produce a
+// valid wire transaction — see wallet/send.ts). SIGNING_CHAINS gates
+// NATIVE sends only. Token sends are gated separately, on
+// tokenStandardFor(chain): every chain with a token standard (all 16
+// EVM chains, TRON, TON, Solana) signs token transfers offline —
+// including the 14 EVM chains whose native sends are not built,
+// because a token transfer only needs the generalised EVM signer.
+// Chains with no token standard (BTC, LTC, DOGE) cannot send tokens
+// at all.
+const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'bsc', 'sol'];
 
 type Step = 'chain' | 'token' | 'details' | 'review' | 'result';
 
@@ -552,7 +560,7 @@ export function SendScreen() {
       setPreview({
         ok: false,
         code: 'adapter-unavailable',
-        reason: `Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only.`,
+        reason: `Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX, TON and SOL transfers offline only.`,
       });
       return;
     }
@@ -664,6 +672,41 @@ export function SendScreen() {
         if (!result.ok) return result;
         return signedTxResult(result.txId, result.signedTxJson, 'Signed transaction (JSON)');
       }
+      if (standard.standard === 'spl') {
+        // Solana: the recipient token account is checked live just
+        // before signing, so a race that creates it between preview
+        // and sign does not build a transaction that would fail on
+        // broadcast (signSplOffline creates it when it is missing).
+        const adapter = getAdapterForMode(chain, devnetEnabled);
+        if (!adapter) throw new Error("Sending isn't available for this network.");
+        const inputs = await adapter.getTxInputs(from);
+        if (inputs.status !== 'ok') throw new Error(inputs.reason);
+        if (inputs.data.kind !== 'blockhash') {
+          throw new Error(`We couldn't prepare your ${config.displayName} transaction. Please retry.`);
+        }
+        const recipientAta = deriveAssociatedTokenAddress(
+          recipient,
+          tokenToSend.contract,
+        );
+        if (recipientAta === null) {
+          throw new Error('Invalid Solana recipient address.');
+        }
+        const recipientAtaExists =
+          await fetchSolanaAccountExists(recipientAta);
+        const result = await signSplOffline(
+          mnemonic,
+          getSessionPassphrase(),
+          tokenToSend.contract,
+          recipient,
+          previewOk.amountBaseUnits,
+          tokenToSend.decimals,
+          inputs.data.blockhash,
+          recipientAtaExists,
+          { devnet: devnetEnabled, account: vaultAccount.account },
+        );
+        if (!result.ok) return result;
+        return signedTxResult(result.signature, result.signedTxBase64, 'Signed transaction (base64)');
+      }
       if (standard.standard === 'jetton') {
         const jettonWallet = await fetchJettonWalletAddress({
           contract: tokenToSend.contract,
@@ -766,6 +809,23 @@ export function SendScreen() {
           if (!result.ok) return result;
           return signedTxResult(result.txId, result.signedTxJson, 'Signed transaction (JSON)');
         }
+        if (chain === 'sol') {
+          const inputs = await adapter.getTxInputs(from);
+          if (inputs.status !== 'ok') throw new Error(inputs.reason);
+          if (inputs.data.kind !== 'blockhash') {
+            throw new Error(`We couldn't prepare your ${config.displayName} transaction. Please retry.`);
+          }
+          const result = await signSolOffline(
+            mnemonic,
+            getSessionPassphrase(),
+            recipient,
+            previewOk.amountBaseUnits,
+            inputs.data.blockhash,
+            { devnet: devnetEnabled, account: vaultAccount.account },
+          );
+          if (!result.ok) return result;
+          return signedTxResult(result.signature, result.signedTxBase64, 'Signed transaction (base64)');
+        }
         const inputs = await adapter.getTxInputs(from);
         if (inputs.status !== 'ok') throw new Error(inputs.reason);
         if (inputs.data.kind !== 'seqno') {
@@ -858,9 +918,12 @@ export function SendScreen() {
       // standard. The amount itself is tokens; the fee never comes
       // out of it.
       void (async () => {
+        // Solana only: pass the recipient so the rent is exact (the
+        // recipient token account is checked live); other chains
+        // ignore the extra argument.
         const result = await estimateTokenSendFee(chain, selectedToken, {
           devnet: devnetEnabled,
-        });
+        }, recipient);
         if (cancelled) return;
         setFeeEstimate(
           result.ok
@@ -891,7 +954,7 @@ export function SendScreen() {
     return () => {
       cancelled = true;
     };
-  }, [step, chain, selectedToken, devnetEnabled]);
+  }, [step, chain, selectedToken, devnetEnabled, recipient]);
 
   // Max preserves the fee reserve. Only ETH has a flat native fee estimate
   // (gasPrice x 21000): BTC quotes a sat/vB rate, TRX quotes SUN per unit
@@ -936,7 +999,18 @@ export function SendScreen() {
   // tokens, so the two are never added into one total; a native
   // preview shows its totalBaseUnits. A token preview has no
   // totalBaseUnits, so the native branch narrows on the property
-  // itself ('totalBaseUnits' in preview).
+  // itself ('totalBaseUnits' in preview). The native cost of a token
+  // send is the fee plus the rent (creating a recipient token account
+  // on Solana); every other chain reports rent '0', so this changes
+  // nothing for them. The attached TON amount stays out of the total,
+  // as before — its feeNote explains it.
+  const reviewNativeCostBaseUnits =
+    preview !== null &&
+    preview.ok &&
+    selectedToken !== null &&
+    'rentBaseUnits' in preview
+      ? (BigInt(preview.feeBaseUnits) + BigInt(preview.rentBaseUnits)).toString()
+      : null;
   const reviewAmountText =
     preview !== null && preview.ok
       ? selectedToken !== null
@@ -949,7 +1023,7 @@ export function SendScreen() {
         ? `${reviewAmountText} + network fee`
         : 'totalBaseUnits' in preview
           ? formatNativeWithSymbol(preview.totalBaseUnits, CHAIN_DECIMALS[chain], config.symbol)
-          : `${reviewAmountText} + ${formatNativeWithSymbol(preview.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}`
+          : `${reviewAmountText} + ${formatNativeWithSymbol(reviewNativeCostBaseUnits ?? preview.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}`
       : '';
 
   if (chainsWithWallet.length === 0 || !from) {
@@ -1469,7 +1543,7 @@ export function SendScreen() {
               preview.feeUnknown
                 ? 'Unknown. Charged by the network at broadcast.'
                 : formatNativeWithSymbol(
-                    preview.feeBaseUnits,
+                    reviewNativeCostBaseUnits ?? preview.feeBaseUnits,
                     CHAIN_DECIMALS[chain],
                     config.symbol,
                   )

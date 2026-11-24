@@ -424,7 +424,7 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain(
         "Sending on Polygon isn't available yet",
       );
-      expect(mounted.div.textContent).toContain('BTC, ETH, BNB, TRX and TON');
+      expect(mounted.div.textContent).toContain('BTC, ETH, BNB, TRX, TON and SOL');
       expect(mounted.div.textContent).not.toContain('Review your send');
     } finally {
       await mounted.cleanup();

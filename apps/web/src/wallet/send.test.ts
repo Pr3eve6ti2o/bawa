@@ -8,6 +8,12 @@ import {
   serializeTransaction,
 } from 'viem';
 import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  decodeTransferCheckedInstruction,
+} from '@solana/spl-token';
+import { SystemInstruction, SystemProgram, Transaction } from '@solana/web3.js';
+import {
   validateRecipient,
   previewSendAmount,
   signEthOffline,
@@ -28,6 +34,8 @@ import {
   previewTokenSendAmount,
   signEvmTokenOffline,
   signJettonOffline,
+  signSolOffline,
+  signSplOffline,
   signTrc20Offline,
   simulateTokenSend,
   verifyEvmTokenSignedTx,
@@ -35,6 +43,8 @@ import {
 import { chainConfig } from './chains';
 import { DEFAULT_TOKENS, EVM_TOKEN_CHAINS, type TokenRecord } from './tokens';
 import type { ChainId } from '../engine/boundary';
+import { decodeBase58 } from '../engine/address-codecs';
+import { deriveAssociatedTokenAddress } from './adapters/token-balances';
 import {
   createWallet,
   deriveAddresses,
@@ -2270,33 +2280,332 @@ describe('signTrc20Offline (Lane 2)', () => {
   });
 });
 
-describe('Solana token sending is not feasible (Lane 2)', () => {
-  // Wallet Core 4.9.3's Solana signer returns an `encoded`
-  // transaction that is not a valid Solana wire transaction: it does
-  // not parse with @solana/web3.js, contains none of the
-  // transaction's fields, and its signature does not verify against
-  // the correctly-built message (probed first-hand 2026-11-24, for a
-  // native SOL transfer as well as a token transfer). No SPL transfer
-  // can be produced or verified, so the preview refuses with the
-  // reason instead of pretending to work.
-  it('refuses a Solana token send at preview time', async () => {
+describe('Solana signing with @solana/web3.js (expansion Lane SOL)', () => {
+  // The fix for Lane 2's refusal: Wallet Core 4.9.3's Solana signer
+  // returns an `encoded` transaction that does not parse as a Solana
+  // wire transaction. These tests prove the replacement path — a
+  // web3.js Transaction built from the derived ed25519 keypair — by
+  // parsing the produced transaction back with Transaction.from and
+  // verifying its signatures, the exact step the old signer failed.
+  // A real recent blockhash (PublicNode, 2026-11-24); signing does not
+  // check freshness, only that it is 32 bytes base58.
+  const BLOCKHASH = 'FyuXxRoUgru9MrwnmRkfFzZiyZ5WR4JePH98mcqPpgHM';
+  const FROM = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM';
+
+  function solStubAdapter(): ChainAdapter {
+    return {
+      chain: 'sol',
+      networkId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+      getBalance: async () => ({
+        status: 'ok',
+        data: {
+          chain: 'sol',
+          address: 'stub',
+          networkId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+          valueBaseUnits: '1000000000',
+          decimals: 9,
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getHistory: async () => ({
+        status: 'ok',
+        data: [],
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => ({
+        status: 'ok',
+        data: {
+          chain: 'sol',
+          networkId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+          feeBaseUnits: '5000',
+          unit: 'lamports',
+          note: 'stub fee',
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getTxInputs: async () => ({
+        status: 'ok',
+        data: { kind: 'blockhash', blockhash: BLOCKHASH },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      broadcast: async (): Promise<never> => {
+        throw new Error('disabled');
+      },
+    };
+  }
+
+  beforeAll(() => {
+    registerAdapter(solStubAdapter());
+  });
+
+  it('signs a native SOL transfer that parses as a valid wire transaction', async () => {
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const from = (await deriveAddresses(mnemonic, '')).sol;
+    const signed = await signSolOffline(mnemonic, '', recipient, '1000000', BLOCKHASH);
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(from);
+    // The exact failure the old signer had: parse the wire bytes back.
+    const parsed = Transaction.from(
+      Buffer.from(signed.signedTxBase64, 'base64'),
+    );
+    expect(parsed.verifySignatures()).toBe(true);
+    expect(parsed.feePayer?.toBase58()).toBe(from);
+    expect(parsed.recentBlockhash).toBe(BLOCKHASH);
+    expect(parsed.instructions).toHaveLength(1);
+    const instruction = parsed.instructions[0]!;
+    expect(instruction.programId.toBase58()).toBe(
+      SystemProgram.programId.toBase58(),
+    );
+    const decoded = SystemInstruction.decodeTransfer(instruction);
+    expect(decoded.fromPubkey.toBase58()).toBe(from);
+    expect(decoded.toPubkey.toBase58()).toBe(recipient);
+    expect(BigInt(decoded.lamports)).toBe(1000000n);
+    expect(parsed.signature).not.toBeNull();
+    expect(decodeBase58(signed.signature)).toEqual(
+      Uint8Array.from(parsed.signature!),
+    );
+  });
+
+  it('refuses invalid SOL signing inputs', async () => {
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    await expect(
+      signSolOffline(mnemonic, '', recipient, '1000', 'not-a-blockhash'),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'invalid-input',
+      reason:
+        'Amount must be a positive lamport integer and the blockhash must be a recent Solana blockhash.',
+    });
+    await expect(
+      signSolOffline(mnemonic, '', recipient, '0', BLOCKHASH),
+    ).resolves.toMatchObject({ ok: false, code: 'invalid-input' });
+    await expect(
+      signSolOffline(mnemonic, '', 'not-an-address!!', '1000', BLOCKHASH),
+    ).resolves.toMatchObject({ ok: false, code: 'invalid-input' });
+    await expect(
+      signSolOffline(mnemonic, '', recipient, '1000', BLOCKHASH, {
+        devnet: true,
+      }),
+    ).resolves.toMatchObject({ ok: false, code: 'invalid-input' });
+    await expect(
+      signSolOffline('abandon abandon', '', recipient, '1000', BLOCKHASH),
+    ).resolves.toEqual({
+      ok: false,
+      code: 'invalid-mnemonic',
+      reason: 'Invalid mnemonic.',
+    });
+  });
+
+  it('signs an SPL transfer that parses, with TransferChecked decoded', async () => {
+    const usdcSol = DEFAULT_TOKENS.find(
+      (token) => token.chain === 'sol' && token.symbol === 'USDC',
+    )!;
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const from = (await deriveAddresses(mnemonic, '')).sol;
+    const signed = await signSplOffline(
+      mnemonic,
+      '',
+      usdcSol.contract,
+      recipient,
+      '25000000',
+      usdcSol.decimals,
+      BLOCKHASH,
+      true,
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(from);
+    expect(signed.createdRecipientAta).toBe(false);
+    const parsed = Transaction.from(
+      Buffer.from(signed.signedTxBase64, 'base64'),
+    );
+    expect(parsed.verifySignatures()).toBe(true);
+    expect(parsed.instructions).toHaveLength(1);
+    const instruction = parsed.instructions[0]!;
+    expect(instruction.programId.toBase58()).toBe(
+      TOKEN_PROGRAM_ID.toBase58(),
+    );
+    const decoded = decodeTransferCheckedInstruction(instruction);
+    expect(decoded.data.amount).toBe(25000000n);
+    expect(decoded.data.decimals).toBe(usdcSol.decimals);
+    expect(decoded.keys.mint.pubkey.toBase58()).toBe(usdcSol.contract);
+    expect(decoded.keys.source.pubkey.toBase58()).toBe(
+      deriveAssociatedTokenAddress(from, usdcSol.contract),
+    );
+    expect(decoded.keys.destination.pubkey.toBase58()).toBe(
+      deriveAssociatedTokenAddress(recipient, usdcSol.contract),
+    );
+    expect(decoded.keys.owner.pubkey.toBase58()).toBe(from);
+  });
+
+  it('creates the recipient token account first when it does not exist', async () => {
+    const usdcSol = DEFAULT_TOKENS.find(
+      (token) => token.chain === 'sol' && token.symbol === 'USDC',
+    )!;
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const from = (await deriveAddresses(mnemonic, '')).sol;
+    const signed = await signSplOffline(
+      mnemonic,
+      '',
+      usdcSol.contract,
+      recipient,
+      '25000000',
+      usdcSol.decimals,
+      BLOCKHASH,
+      false,
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.createdRecipientAta).toBe(true);
+    const parsed = Transaction.from(
+      Buffer.from(signed.signedTxBase64, 'base64'),
+    );
+    expect(parsed.verifySignatures()).toBe(true);
+    expect(parsed.instructions).toHaveLength(2);
+    const createAta = parsed.instructions[0]!;
+    expect(createAta.programId.toBase58()).toBe(
+      ASSOCIATED_TOKEN_PROGRAM_ID.toBase58(),
+    );
+    expect(createAta.data.length).toBe(0);
+    expect(createAta.keys[1]?.pubkey.toBase58()).toBe(
+      deriveAssociatedTokenAddress(recipient, usdcSol.contract),
+    );
+    const transfer = parsed.instructions[1]!;
+    expect(transfer.programId.toBase58()).toBe(TOKEN_PROGRAM_ID.toBase58());
+    expect(
+      decodeTransferCheckedInstruction(transfer).data.amount,
+    ).toBe(25000000n);
+    expect(from).not.toBe(recipient);
+  });
+
+  it('refuses invalid SPL signing inputs', async () => {
+    const usdcSol = DEFAULT_TOKENS.find(
+      (token) => token.chain === 'sol' && token.symbol === 'USDC',
+    )!;
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    await expect(
+      signSplOffline(
+        mnemonic,
+        '',
+        usdcSol.contract,
+        recipient,
+        '25000000',
+        256,
+        BLOCKHASH,
+        true,
+      ),
+    ).resolves.toMatchObject({ ok: false, code: 'invalid-input' });
+    await expect(
+      signSplOffline(
+        mnemonic,
+        '',
+        'not-a-mint!!',
+        recipient,
+        '25000000',
+        usdcSol.decimals,
+        BLOCKHASH,
+        true,
+      ),
+    ).resolves.toMatchObject({ ok: false, code: 'invalid-input' });
+  });
+
+  it('previews a native SOL send at the 5,000-lamport base fee', async () => {
+    await expect(previewSendAmount('sol', FROM, FROM, '0.001')).resolves.toEqual({
+      ok: true,
+      amountBaseUnits: '1000000',
+      feeBaseUnits: '5000',
+      totalBaseUnits: '1005000',
+      // The stub adapter's note, not the real adapter's: the preview
+      // quotes the stub's fee. The value asserted is the 5,000 fee.
+      feeNote: 'stub fee',
+    });
+  });
+
+  it('previews an SPL send with zero rent when the recipient token account exists', async () => {
     const usdcSol = DEFAULT_TOKENS.find(
       (token) => token.chain === 'sol' && token.symbol === 'USDC',
     )!;
     await expect(
-      previewTokenSendAmount(
-        'sol',
-        usdcSol,
-        '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
-        '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
-        '25',
-        '100000000',
-      ),
+      previewTokenSendAmount('sol', usdcSol, FROM, FROM, '25', '100000000', undefined, {
+        fetchSolanaAccountExists: async () => true,
+      }),
     ).resolves.toEqual({
-      ok: false,
-      code: 'adapter-unavailable',
-      reason:
-        'Token sending on Solana is not available yet — the Solana signer in this wallet cannot produce a valid signed transaction.',
+      ok: true,
+      token: usdcSol,
+      amountBaseUnits: '25000000',
+      feeBaseUnits: '5000',
+      rentBaseUnits: '0',
+      attachedBaseUnits: '0',
+      feeNote:
+        'Base fee of 5,000 lamports for one signature; the recipient already has a token account for this token.',
+    });
+  });
+
+  it('previews an SPL send with the live rent when the recipient token account is missing', async () => {
+    const usdcSol = DEFAULT_TOKENS.find(
+      (token) => token.chain === 'sol' && token.symbol === 'USDC',
+    )!;
+    await expect(
+      previewTokenSendAmount('sol', usdcSol, FROM, FROM, '25', '100000000', undefined, {
+        fetchSolanaAccountExists: async () => false,
+        fetchSolanaRentExemption: async () => 1488440,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      token: usdcSol,
+      amountBaseUnits: '25000000',
+      feeBaseUnits: '5000',
+      rentBaseUnits: '1488440',
+      attachedBaseUnits: '0',
+      feeNote:
+        'Base fee of 5,000 lamports for one signature, plus 1488440 lamports to create the recipient token account (rent-exempt minimum).',
+    });
+  });
+
+  it('simulates native and SPL sends on a live blockhash', async () => {
+    const usdcSol = DEFAULT_TOKENS.find(
+      (token) => token.chain === 'sol' && token.symbol === 'USDC',
+    )!;
+    await expect(simulateSend('sol', FROM, FROM, '0.001')).resolves.toMatchObject({
+      ok: true,
+      feeBaseUnits: '5000',
+    });
+    await expect(
+      simulateTokenSend('sol', usdcSol, FROM, FROM, '25', undefined, {
+        fetchTokenBalance: async () => ({
+          status: 'ok' as const,
+          data: {
+            chain: 'sol' as const,
+            address: FROM,
+            networkId: 'test',
+            valueBaseUnits: '100000000',
+            decimals: 6,
+            source: 'stub',
+            fetchedAt: 0,
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        }),
+        fetchSolanaAccountExists: async () => true,
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      feeBaseUnits: '5000',
+      rentBaseUnits: '0',
     });
   });
 });

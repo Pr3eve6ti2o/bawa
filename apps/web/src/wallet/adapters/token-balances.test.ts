@@ -440,6 +440,8 @@ describe('evmClientForChain — RPC failover (UI/UX fixes, item 19)', () => {
 
 const SOL_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const SOL_OWNER = 'DFeDnNjEonL96pQywDtanNuVGxSnjjq1aHjGGLjtxset';
+/** The owner's USDC associated token account (verified PDA utility). */
+const SOL_USDC_ATA = deriveAssociatedTokenAddress(SOL_OWNER, SOL_USDC_MINT)!;
 const TON_USDT_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 const TON_OWNER = 'UQBfcPvE9ZZ0VXxBN_8zs7oJpf9q6ta8p7GZaaB97uWzvH5M';
 const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
@@ -495,6 +497,7 @@ function metaplexMetadataBase64(name: string, symbol: string, mint: string): str
 
 function mockSolTransport(overrides: {
   mintNull?: boolean;
+  ataNull?: boolean;
   noMetadata?: boolean;
   primaryDown?: boolean;
 } = {}): FetchTransportLike {
@@ -508,6 +511,40 @@ function mockSolTransport(overrides: {
         params?: unknown[];
       };
       if (body.method === 'getAccountInfo') {
+        const address = String(body.params?.[0] ?? '');
+        // The balance read targets the ATA; the metadata read targets
+        // the mint. The mock answers each with its own shape.
+        if (address === SOL_USDC_ATA) {
+          if (overrides.ataNull === true) return { result: { value: null } };
+          return {
+            result: {
+              value: {
+                data: {
+                  parsed: {
+                    info: {
+                      isNative: false,
+                      mint: SOL_USDC_MINT,
+                      owner: SOL_OWNER,
+                      state: 'initialized',
+                      tokenAmount: {
+                        amount: '2500000',
+                        decimals: 6,
+                        uiAmount: 2.5,
+                      },
+                    },
+                    type: 'account',
+                  },
+                  program: 'spl-token',
+                  space: 165,
+                },
+                executable: false,
+                lamports: 2039280,
+                owner: TOKEN_PROGRAM,
+                rentEpoch: 361,
+              },
+            },
+          };
+        }
         if (overrides.mintNull === true) return { result: { value: null } };
         return {
           result: {
@@ -556,38 +593,9 @@ function mockSolTransport(overrides: {
           ],
         };
       }
-      if (body.method === 'getTokenAccountsByOwner') {
-        return {
-          result: {
-            value: [
-              {
-                account: {
-                  data: {
-                    parsed: {
-                      info: {
-                        tokenAmount: {
-                          amount: '2500000',
-                          decimals: 6,
-                          uiAmount: 2.5,
-                        },
-                      },
-                      program: 'spl-token',
-                      type: 'account',
-                    },
-                    program: 'spl-token',
-                    space: 165,
-                  },
-                  executable: false,
-                  lamports: 2039280,
-                  owner: TOKEN_PROGRAM,
-                  rentEpoch: 361,
-                },
-                pubkey: '9vB5XyA1p2Z3q4r5s6t7u8v9w0x1y2z3a4b5c6d7e8f9g0h',
-              },
-            ],
-          },
-        };
-      }
+      // No getTokenAccountsByOwner handler: the balance read must not
+      // use the indexed method (PublicNode refuses it, -32602). An
+      // unexpected call throws below, which fails the test loudly.
       throw new Error(`unexpected Solana method ${body.method ?? ''}`);
     }),
   };
@@ -636,18 +644,9 @@ describe('SPL balanceOf — UI/UX fixes, item 13', () => {
   });
 
   it('reports an exact zero balance when the owner has no token account', async () => {
-    const transport: FetchTransportLike = {
-      request: vi.fn(async (_url: string, init?: RequestInit) => {
-        const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
-        if (body.method === 'getTokenAccountsByOwner') {
-          return { result: { value: [] } };
-        }
-        return mockSolTransport().request(_url, init);
-      }),
-    };
     const result = await fetchTokenBalance(
       { chain: 'sol', contract: SOL_USDC_MINT, ownerAddress: SOL_OWNER },
-      { transport },
+      { transport: mockSolTransport({ ataNull: true }) },
     );
     expect(result.status).toBe('ok');
     if (result.status === 'ok') expect(result.data.valueBaseUnits).toBe('0');

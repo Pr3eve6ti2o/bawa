@@ -1,8 +1,17 @@
 import Long from 'long';
 import { TW } from '@trustwallet/wallet-core';
+import { Buffer } from 'buffer';
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import { bytesToHex, keccak256, parseTransaction, recoverAddress, serializeTransaction } from 'viem';
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
+import { decodeBase58, encodeBase58 } from '../engine/address-codecs';
 import {
   createPartialSigner,
   deriveAddresses,
@@ -36,6 +45,13 @@ import type { KeyProvenance } from './vault';
 import {
   fetchTokenBalance,
 } from './adapters/token-balances';
+import { deriveAssociatedTokenAddress } from './adapters/token-balances';
+import {
+  fetchSolanaAccountExists,
+  fetchSolanaMinimumBalanceForRentExemption,
+  SOL_LAMPORTS_PER_SIGNATURE,
+  SOL_TOKEN_ACCOUNT_SIZE,
+} from './adapters/sol';
 import { tokenStandardFor, type TokenRecord } from './tokens';
 
 /**
@@ -202,6 +218,7 @@ export type SendFailureCode =
   | 'insufficient-gas'
   | 'bad-nonce'
   | 'bad-seqno'
+  | 'bad-blockhash'
   | 'plan-failed'
   | 'simulation-failed'
   | 'signing-failed'
@@ -2433,6 +2450,555 @@ export async function signJettonOffline(
   }
 }
 
+// --- Solana signing (@solana/web3.js, expansion Lane SOL) -----------------
+// Wallet Core 4.9.3's Solana signer returns an `encoded` transaction
+// that is not a valid Solana wire transaction (it does not parse with
+// @solana/web3.js, contains none of the transaction's fields, and its
+// signature does not verify against the correctly-built message) —
+// verified first-hand 2026-11-24, for a native SOL transfer as well as
+// a token transfer. So Solana is signed the way every Solana wallet
+// signs it instead: a web3.js Transaction built from the derived
+// ed25519 keypair (Keypair.fromSeed on the 32-byte Wallet Core seed),
+// signed with tx.sign(keypair) and serialised with tx.serialize().
+// That is the path solana-labs/solana-web3.js documents (Transaction,
+// SystemProgram.transfer, Keypair.fromSeed, Transaction.from) and the
+// one Phantom, Solflare and Backpack implement through the
+// wallet-adapter standard (sendTransaction takes a web3.js
+// Transaction; prepareTransaction sets feePayer + recentBlockhash from
+// getLatestBlockhash), and Privy and WalletConnect/Reown use the same
+// Transaction shape. The two SPL instructions below are built by hand
+// (not via @solana/spl-token's builders): spl-token 0.4.15 is CommonJS
+// that calls the bare global Buffer, which does not exist in a browser
+// bundle — its builders throw ReferenceError there while passing in
+// Node, so a vitest-only pass would hide a broken send. The layouts
+// are copied from the installed spl-token 0.4.15 source itself
+// (instructions/transferChecked.js: TransferChecked = 12, data u8 +
+// u64-LE amount + u8 decimals; instructions/associatedTokenAccount.js:
+// Create takes six keys and empty data) and the unit tests decode the
+// hand-built instructions with spl-token's own decoder, so the bytes
+// are still checked against the canonical implementation. Broadcast
+// stays disabled: these functions only produce a signed transaction,
+// never submit one.
+
+export type SolSignedTx =
+  | {
+      ok: true;
+      /** Serialised signed transaction, standard base64 (wire format). */
+      signedTxBase64: string;
+      /** First (fee-payer) signature, base58 — the transaction's id. */
+      signature: string;
+      from: string;
+    }
+  | SendFailure;
+
+export type SplSignedTx =
+  | {
+      ok: true;
+      /** Serialised signed transaction, standard base64 (wire format). */
+      signedTxBase64: string;
+      /** First (fee-payer) signature, base58 — the transaction's id. */
+      signature: string;
+      from: string;
+      /** True when the transaction creates the recipient's token account. */
+      createdRecipientAta: boolean;
+    }
+  | SendFailure;
+
+export type SignSolOptions = SendDevnetOptions & {
+  /**
+   * The vault account to sign from (default 0), mirroring
+   * signTonOffline: the key path and the from address follow it, so a
+   * send from account 1 signs with the account-1 key, not account 0's.
+   */
+  account?: number;
+};
+
+/**
+ * Standard base64 (not URL-safe) for a byte array. `Buffer` is not a
+ * browser global; the web3.js bundle brings the `buffer` package, but
+ * this module must not rely on a Node global. Chunked like
+ * wallet/vault.ts so long transactions do not blow the stack.
+ */
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+/** A recent blockhash is 32 bytes, base58-encoded (32-44 characters). */
+function isValidBlockhash(blockhash: string): boolean {
+  const bytes = decodeBase58(blockhash);
+  return bytes !== null && bytes.length === 32;
+}
+
+/** Base58 Solana address to a PublicKey, or null when malformed. */
+function solanaAddressToPublicKey(address: string): PublicKey | null {
+  const bytes = decodeBase58(address);
+  if (bytes === null || bytes.length !== 32) return null;
+  return new PublicKey(bytes);
+}
+
+/**
+ * Sign a built web3.js transaction with the vault's Solana key and
+ * self-verify the exact failure the old Wallet Core signer had: the
+ * serialised bytes must parse back with Transaction.from and the
+ * signatures must verify. The derived keypair's public key must match
+ * the sending address, so a derivation drift can never sign for the
+ * wrong account. The seed bytes are wiped by withSigningKey after the
+ * callback settles.
+ */
+async function signSolTransaction(
+  mnemonic: string,
+  passphrase: string,
+  account: number,
+  from: string,
+  transaction: Transaction,
+): Promise<
+  | { ok: true; signedTxBase64: string; signature: string }
+  | SendFailure
+> {
+  const core = await loadCore();
+  try {
+    return await withSigningKey(
+      mnemonic,
+      passphrase,
+      core.CoinType.solana,
+      pathFor('sol', account, 0),
+      async (
+        keyBytes,
+      ): Promise<
+        | { ok: true; signedTxBase64: string; signature: string }
+        | SendFailure
+      > => {
+        if (keyBytes.length !== 32) {
+          return {
+            ok: false,
+            code: 'signing-failed',
+            reason: 'The Solana signing key is not a 32-byte seed.',
+          };
+        }
+        const keypair = Keypair.fromSeed(keyBytes);
+        if (keypair.publicKey.toBase58() !== from) {
+          return {
+            ok: false,
+            code: 'signing-failed',
+            reason:
+              'The Solana signing key does not match the sending address.',
+          };
+        }
+        transaction.sign(keypair);
+        const serialized = transaction.serialize();
+        // Self-verify: parse the wire bytes back and check the
+        // signatures, the fee payer and the blockhash. The old signer
+        // failed this exact step — its `encoded` output did not parse.
+        const parsed = Transaction.from(serialized);
+        if (
+          !parsed.verifySignatures() ||
+          parsed.feePayer?.toBase58() !== from ||
+          parsed.recentBlockhash !== transaction.recentBlockhash
+        ) {
+          return {
+            ok: false,
+            code: 'signing-failed',
+            reason: 'The signed Solana transaction failed verification.',
+          };
+        }
+        const signature = parsed.signature;
+        if (signature === null) {
+          return {
+            ok: false,
+            code: 'signing-failed',
+            reason: 'The signed Solana transaction has no signature.',
+          };
+        }
+        return {
+          ok: true,
+          signedTxBase64: bytesToBase64(serialized),
+          signature: encodeBase58(signature),
+        };
+      },
+    );
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
+      reason:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'Invalid mnemonic.'
+          : 'Failed to sign Solana transaction offline.',
+    };
+  }
+}
+
+/**
+ * Offline native SOL signing: one SystemProgram.transfer instruction
+ * in a legacy transaction (feePayer + recentBlockhash), signed with
+ * the derived ed25519 keypair. The blockhash comes from the adapter's
+ * getTxInputs (getLatestBlockhash), like an EVM nonce. Solana has no
+ * devnet network in this wallet, so devnet mode is refused.
+ */
+export async function signSolOffline(
+  mnemonic: string,
+  passphrase: string,
+  to: string,
+  amountBaseUnits: string,
+  blockhash: string,
+  options?: SignSolOptions,
+): Promise<SolSignedTx> {
+  if (options?.devnet === true) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Solana has no devnet network in this wallet.',
+    };
+  }
+  if (
+    !/^[0-9]+$/.test(amountBaseUnits) ||
+    BigInt(amountBaseUnits) <= 0n ||
+    !isValidBlockhash(blockhash)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason:
+        'Amount must be a positive lamport integer and the blockhash must be a recent Solana blockhash.',
+    };
+  }
+  const account = options?.account ?? 0;
+  if (!Number.isSafeInteger(account) || account < 0) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Solana signing account.',
+    };
+  }
+  const toPubkey = solanaAddressToPublicKey(to);
+  if (toPubkey === null) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Solana recipient address.',
+    };
+  }
+  let from: string;
+  try {
+    from = (await deriveAddressesAt(mnemonic, passphrase, account, 0)).sol;
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
+      reason:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'Invalid mnemonic.'
+          : 'Failed to sign Solana transaction offline.',
+    };
+  }
+  const fromPubkey = solanaAddressToPublicKey(from);
+  if (fromPubkey === null) {
+    return {
+      ok: false,
+      code: 'unknown',
+      reason: 'Failed to sign Solana transaction offline.',
+    };
+  }
+  const intent = createTransactionIntent('sol', to, amountBaseUnits, '');
+  try {
+    assertIntentMatchesTransaction(intent, {
+      chain: 'sol',
+      to,
+      amountBaseUnits,
+      sequence: '',
+    });
+  } catch {
+    return {
+      ok: false,
+      code: 'intent-mismatch',
+      reason: 'Transaction does not match the approved intent.',
+    };
+  }
+  const transaction = new Transaction({
+    feePayer: fromPubkey,
+    recentBlockhash: blockhash,
+  });
+  try {
+    transaction.add(
+      SystemProgram.transfer({
+        fromPubkey,
+        toPubkey,
+        lamports: BigInt(amountBaseUnits),
+      }),
+    );
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Solana transfer amount.',
+    };
+  }
+  const signed = await signSolTransaction(
+    mnemonic,
+    passphrase,
+    account,
+    from,
+    transaction,
+  );
+  if (!signed.ok) return signed;
+  return {
+    ok: true,
+    signedTxBase64: signed.signedTxBase64,
+    signature: signed.signature,
+    from,
+  };
+}
+
+/**
+ * Offline SPL token signing: a TransferChecked instruction (mint and
+ * decimals checked on-chain) between the sender's and the recipient's
+ * associated token accounts, derived with the verified ATA utility.
+ * When the recipient has no token account for this mint yet,
+ * `recipientAtaExists` is false and the transaction first creates it
+ * (createAssociatedTokenAccountInstruction, funded by the sender with
+ * the rent-exempt minimum) — the same sender-funded shape
+ * `spl-token transfer --fund-recipient` produces. The caller checks
+ * the recipient account live just before signing, so a race that
+ * creates the account between preview and sign does not build a
+ * transaction that would fail on broadcast. Token program is the
+ * standard SPL Token program (Tokenkeg...); Token-2022 mints are not
+ * supported — a TransferChecked against the wrong program would fail
+ * on broadcast, so the mint's program is out of scope here.
+ */
+/** SPL Token program id (legacy token program). */
+const SOL_TOKEN_PROGRAM_ID = new PublicKey(
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+);
+/** Associated Token Program id (the program that owns ATAs). */
+const SOL_ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+);
+/** SPL Token instruction discriminator for TransferChecked (= 12). */
+const SPL_TRANSFER_CHECKED_DISCRIMINATOR = 12;
+
+/**
+ * Build a CreateAssociatedTokenAccount instruction by hand — same six
+ * keys and empty data as @solana/spl-token 0.4.15's
+ * buildAssociatedTokenAccountInstruction (instructions/
+ * associatedTokenAccount.js): payer (signer, writable), associated
+ * token account (writable), owner, mint, System program, Token
+ * program; program id is the Associated Token Program. Hand-built
+ * because spl-token's builder calls the bare global Buffer, which
+ * does not exist in a browser bundle (see the header comment).
+ */
+function createAssociatedTokenAccountInstruction(
+  payer: PublicKey,
+  associatedToken: PublicKey,
+  owner: PublicKey,
+  mint: PublicKey,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    keys: [
+      { pubkey: payer, isSigner: true, isWritable: true },
+      { pubkey: associatedToken, isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: false, isWritable: false },
+      { pubkey: mint, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: SOL_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+    programId: SOL_ASSOCIATED_TOKEN_PROGRAM_ID,
+    data: Buffer.alloc(0),
+  });
+}
+
+/**
+ * Build a TransferChecked instruction by hand — same keys and data
+ * layout as @solana/spl-token 0.4.15's createTransferCheckedInstruction
+ * (instructions/transferChecked.js): keys source (writable), mint,
+ * destination (writable), owner (signer); data is u8 discriminator
+ * 12, u64 little-endian amount, u8 decimals; program id is the Token
+ * program. Hand-built for the same bare-Buffer reason as above.
+ */
+function createTransferCheckedInstruction(
+  source: PublicKey,
+  mint: PublicKey,
+  destination: PublicKey,
+  owner: PublicKey,
+  amount: bigint,
+  decimals: number,
+): TransactionInstruction {
+  const data = Buffer.alloc(10);
+  data.writeUInt8(SPL_TRANSFER_CHECKED_DISCRIMINATOR, 0);
+  data.writeBigUInt64LE(amount, 1);
+  data.writeUInt8(decimals, 9);
+  return new TransactionInstruction({
+    keys: [
+      { pubkey: source, isSigner: false, isWritable: true },
+      { pubkey: mint, isSigner: false, isWritable: false },
+      { pubkey: destination, isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: true, isWritable: false },
+    ],
+    programId: SOL_TOKEN_PROGRAM_ID,
+    data,
+  });
+}
+
+export async function signSplOffline(
+  mnemonic: string,
+  passphrase: string,
+  mint: string,
+  to: string,
+  amountBaseUnits: string,
+  decimals: number,
+  blockhash: string,
+  recipientAtaExists: boolean,
+  options?: SignSolOptions,
+): Promise<SplSignedTx> {
+  if (options?.devnet === true) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Solana has no devnet network in this wallet.',
+    };
+  }
+  if (
+    !/^[0-9]+$/.test(amountBaseUnits) ||
+    BigInt(amountBaseUnits) <= 0n ||
+    !Number.isSafeInteger(decimals) ||
+    decimals < 0 ||
+    decimals > 255 ||
+    !isValidBlockhash(blockhash)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason:
+        'Amount must be a positive token-base-unit integer, decimals must be 0-255, and the blockhash must be a recent Solana blockhash.',
+    };
+  }
+  const account = options?.account ?? 0;
+  if (!Number.isSafeInteger(account) || account < 0) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Solana signing account.',
+    };
+  }
+  const mintPubkey = solanaAddressToPublicKey(mint);
+  const toPubkey = solanaAddressToPublicKey(to);
+  if (mintPubkey === null || toPubkey === null) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Solana token mint or recipient address.',
+    };
+  }
+  let from: string;
+  try {
+    from = (await deriveAddressesAt(mnemonic, passphrase, account, 0)).sol;
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
+      reason:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'Invalid mnemonic.'
+          : 'Failed to sign Solana token transaction offline.',
+    };
+  }
+  const fromPubkey = solanaAddressToPublicKey(from);
+  if (fromPubkey === null) {
+    return {
+      ok: false,
+      code: 'unknown',
+      reason: 'Failed to sign Solana token transaction offline.',
+    };
+  }
+  const senderAta = deriveAssociatedTokenAddress(from, mint);
+  const recipientAta = deriveAssociatedTokenAddress(to, mint);
+  if (senderAta === null || recipientAta === null) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Solana token account address.',
+    };
+  }
+  // Mirror signEvmTokenOffline: the intent pins the token contract
+  // (here the mint), not the recipient owner — the recipient lives
+  // inside the transfer instruction.
+  const intent = createTransactionIntent('sol', mint, amountBaseUnits, '');
+  try {
+    assertIntentMatchesTransaction(intent, {
+      chain: 'sol',
+      to: mint,
+      amountBaseUnits,
+      sequence: '',
+    });
+  } catch {
+    return {
+      ok: false,
+      code: 'intent-mismatch',
+      reason: 'Transaction does not match the approved intent.',
+    };
+  }
+  const transaction = new Transaction({
+    feePayer: fromPubkey,
+    recentBlockhash: blockhash,
+  });
+  try {
+    if (!recipientAtaExists) {
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          fromPubkey,
+          new PublicKey(recipientAta),
+          toPubkey,
+          mintPubkey,
+        ),
+      );
+    }
+    transaction.add(
+      createTransferCheckedInstruction(
+        new PublicKey(senderAta),
+        mintPubkey,
+        new PublicKey(recipientAta),
+        fromPubkey,
+        BigInt(amountBaseUnits),
+        decimals,
+      ),
+    );
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid SPL transfer input.',
+    };
+  }
+  const signed = await signSolTransaction(
+    mnemonic,
+    passphrase,
+    account,
+    from,
+    transaction,
+  );
+  if (!signed.ok) return signed;
+  return {
+    ok: true,
+    signedTxBase64: signed.signedTxBase64,
+    signature: signed.signature,
+    from,
+    createdRecipientAta: !recipientAtaExists,
+  };
+}
+
 // --- Token preview + simulation -------------------------------------------
 // The screen's flow for a token send: preview (amount + fee, gated on
 // the cached token balance) then, at signing time, a fresh simulate
@@ -2443,6 +3009,13 @@ export async function signJettonOffline(
 
 export type TokenSendDeps = {
   fetchTokenBalance?: typeof fetchTokenBalance;
+  /**
+   * Solana-only, injectable for tests: whether an address holds an
+   * account, and the rent-exempt minimum for a token account. Live
+   * defaults hit the Solana RPC.
+   */
+  fetchSolanaAccountExists?: typeof fetchSolanaAccountExists;
+  fetchSolanaRentExemption?: typeof fetchSolanaMinimumBalanceForRentExemption;
 };
 
 export type TokenFeeEstimate =
@@ -2466,9 +3039,10 @@ export type TokenFeeEstimate =
  * price is recovered by exact division and a token transfer is quoted
  * at the same gas price x 100000 gas. TRX — the adapter quotes SUN
  * per unit of energy and a TRC-20 transfer is estimated at 65000
- * energy (an upper bound, labelled as one). SOL — refused: the
- * Solana signer cannot produce a valid signed transaction (see the
- * sol branch below). TON — no read-only fee endpoint exists (the same honest
+ * energy (an upper bound, labelled as one). SOL — the 5,000-lamport
+ * base fee for one signature, plus the live rent-exempt minimum when
+ * the recipient has no token account for the mint yet (see the sol
+ * branch below). TON — no read-only fee endpoint exists (the same honest
  * unknown as the native preview); the send attaches 0.05 TON to the
  * Jetton message. Devnet token sends exist only on ETH (Sepolia
  * ERC-20), TRX (Nile TRC-20) and TON (testnet Jetton).
@@ -2477,6 +3051,13 @@ export async function estimateTokenSendFee(
   chain: ChainId,
   token: TokenRecord,
   options?: SendDevnetOptions,
+  /**
+   * Solana only: the recipient owner address. With it the rent is
+   * exact (the recipient token account is checked live); without it
+   * the rent is reported as 0 with a note, never guessed.
+   */
+  toAddress?: string,
+  deps?: TokenSendDeps,
 ): Promise<TokenFeeEstimate> {
   const devnet = options?.devnet === true;
   if (devnet && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
@@ -2497,22 +3078,74 @@ export async function estimateTokenSendFee(
       feeUnknown: true,
     };
   }
-  // SOL: token sending is not feasible with the wallet's existing
-  // infrastructure. Wallet Core 4.9.3's Solana signer returns an
-  // `encoded` transaction that is not a valid Solana wire transaction
-  // (it does not parse with @solana/web3.js, contains none of the
-  // transaction's fields, and its signature does not verify against
-  // the correctly-built message) — verified first-hand 2026-11-24,
-  // for a native SOL transfer as well as a token transfer. No SPL
-  // transfer can be produced or verified, so the send is refused
-  // here with the reason instead of pretending to work.
+  // SOL: a one-signature send costs the 5,000-lamport base fee. When
+  // the recipient is known, the rent is exact too: a missing recipient
+  // token account is created in the same transaction, funded with the
+  // live rent-exempt minimum for a 165-byte token account (read live —
+  // the 2,039,280 figure in older SPL docs is stale; PublicNode
+  // returned 1,488,440 on 2026-11-24). Without a recipient the rent is
+  // reported as 0 with a note, never guessed.
   if (chain === 'sol') {
-    return {
-      ok: false,
-      code: 'adapter-unavailable',
-      reason:
-        'Token sending on Solana is not available yet — the Solana signer in this wallet cannot produce a valid signed transaction.',
-    };
+    const baseFee = String(SOL_LAMPORTS_PER_SIGNATURE);
+    if (toAddress === undefined) {
+      return {
+        ok: true,
+        feeBaseUnits: baseFee,
+        rentBaseUnits: '0',
+        attachedBaseUnits: '0',
+        feeNote:
+          'Base fee of 5,000 lamports for one signature. If the recipient has no token account for this token yet, creating it costs the rent-exempt minimum on top of the fee.',
+      };
+    }
+    const recipientAta = deriveAssociatedTokenAddress(
+      toAddress,
+      token.contract,
+    );
+    if (recipientAta === null) {
+      return {
+        ok: false,
+        code: 'invalid-input',
+        reason: 'Invalid Solana recipient address.',
+      };
+    }
+    try {
+      const exists = await (
+        deps?.fetchSolanaAccountExists ?? fetchSolanaAccountExists
+      )(recipientAta);
+      if (exists) {
+        return {
+          ok: true,
+          feeBaseUnits: baseFee,
+          rentBaseUnits: '0',
+          attachedBaseUnits: '0',
+          feeNote:
+            'Base fee of 5,000 lamports for one signature; the recipient already has a token account for this token.',
+        };
+      }
+      const rent = await (
+        deps?.fetchSolanaRentExemption ??
+        fetchSolanaMinimumBalanceForRentExemption
+      )(SOL_TOKEN_ACCOUNT_SIZE);
+      return {
+        ok: true,
+        feeBaseUnits: baseFee,
+        rentBaseUnits: String(rent),
+        attachedBaseUnits: '0',
+        feeNote:
+          'Base fee of 5,000 lamports for one signature, plus ' +
+          String(rent) +
+          ' lamports to create the recipient token account (rent-exempt minimum).',
+      };
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        code: 'adapter-unavailable',
+        reason:
+          error instanceof Error
+            ? error.message
+            : 'The Solana token-account check failed.',
+      };
+    }
   }
   const adapter = getAdapterForMode(chain, devnet);
   if (!adapter) {
@@ -2594,6 +3227,7 @@ export async function previewTokenSendAmount(
   amountDecimal: string,
   tokenBalanceBaseUnits: string | null,
   options?: SendDevnetOptions,
+  deps?: TokenSendDeps,
 ): Promise<TokenSendPreview> {
   const devnet = options?.devnet === true;
   const standard = tokenStandardFor(chain);
@@ -2636,7 +3270,7 @@ export async function previewTokenSendAmount(
       reason: 'Amount exceeds available balance.',
     };
   }
-  const fee = await estimateTokenSendFee(chain, token, options);
+  const fee = await estimateTokenSendFee(chain, token, options, toAddress, deps);
   if (!fee.ok) return fee;
   const adapter = getAdapterForMode(chain, devnet);
   if (!adapter) {
@@ -2731,6 +3365,7 @@ export async function simulateTokenSend(
     amountDecimal,
     live.data.valueBaseUnits,
     options,
+    deps,
   );
   if (!preview.ok) {
     return {
@@ -2756,12 +3391,25 @@ export async function simulateTokenSend(
     return simulationFailed(
       chain,
       txInputs,
-      chain === 'ton' ? 'bad-seqno' : 'bad-nonce',
+      chain === 'ton' ? 'bad-seqno' : chain === 'sol' ? 'bad-blockhash' : 'bad-nonce',
       `The ${chainConfig(chain).displayName} adapter did not return live transaction inputs.`,
     );
   }
   const data = txInputs.data;
-  if (chain === 'ton') {
+  if (chain === 'sol') {
+    if (
+      data.kind !== 'blockhash' ||
+      typeof data.blockhash !== 'string' ||
+      data.blockhash.length === 0
+    ) {
+      return simulationFailed(
+        chain,
+        undefined,
+        'bad-blockhash',
+        'The Solana adapter did not return a valid blockhash.',
+      );
+    }
+  } else if (chain === 'ton') {
     if (
       data.kind !== 'seqno' ||
       !Number.isSafeInteger(data.seqno) ||

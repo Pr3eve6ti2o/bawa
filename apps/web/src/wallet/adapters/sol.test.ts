@@ -1,15 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createSolanaAdapter } from './sol';
+import {
+  SOL_LAMPORTS_PER_SIGNATURE,
+  SOL_TOKEN_ACCOUNT_SIZE,
+  createSolanaAdapter,
+  fetchSolanaAccountExists,
+  fetchSolanaMinimumBalanceForRentExemption,
+} from './sol';
 import { BROADCAST_DISABLED_MESSAGE, type FetchTransport } from './types';
 
 // System program address: valid base58, holds 1 lamport on mainnet.
 const ADDRESS = '11111111111111111111111111111111';
+
+// A real recent blockhash (PublicNode, 2026-11-24): 32 bytes base58.
+const BLOCKHASH = 'FyuXxRoUgru9MrwnmRkfFzZiyZ5WR4JePH98mcqPpgHM';
 
 function solTransport(handlers: {
   getBalance?: unknown;
   getHealth?: unknown;
   getSignaturesForAddress?: unknown;
   getTransaction?: Record<string, unknown>;
+  getLatestBlockhash?: unknown;
+  getAccountInfo?: unknown;
+  getMinimumBalanceForRentExemption?: unknown;
 }): FetchTransport {
   return {
     request: vi.fn(async (_url: string, init?: RequestInit) => {
@@ -24,6 +36,24 @@ function solTransport(handlers: {
       if (body.method === 'getHealth') {
         if (handlers.getHealth instanceof Error) throw handlers.getHealth;
         return handlers.getHealth;
+      }
+      if (body.method === 'getLatestBlockhash') {
+        if (handlers.getLatestBlockhash instanceof Error) {
+          throw handlers.getLatestBlockhash;
+        }
+        return handlers.getLatestBlockhash;
+      }
+      if (body.method === 'getAccountInfo') {
+        if (handlers.getAccountInfo instanceof Error) {
+          throw handlers.getAccountInfo;
+        }
+        return handlers.getAccountInfo;
+      }
+      if (body.method === 'getMinimumBalanceForRentExemption') {
+        if (handlers.getMinimumBalanceForRentExemption instanceof Error) {
+          throw handlers.getMinimumBalanceForRentExemption;
+        }
+        return handlers.getMinimumBalanceForRentExemption;
       }
       if (body.method === 'getSignaturesForAddress') {
         if (handlers.getSignaturesForAddress instanceof Error) {
@@ -195,16 +225,123 @@ describe('solana adapter — balance', () => {
   });
 });
 
-describe('solana adapter — unbuilt operations', () => {
-  it('reports fee-quote and tx inputs unavailable, never faked', async () => {
+describe('solana adapter — fee and tx inputs (expansion Lane SOL)', () => {
+  it('quotes the 5,000-lamport base fee for one signature', async () => {
     const adapter = createSolanaAdapter({ transport: solTransport({}) });
-    expect((await adapter.estimateFee()).status).toBe('unavailable');
-    expect((await adapter.getTxInputs(ADDRESS)).status).toBe('unavailable');
+    const fee = await adapter.estimateFee();
+    expect(fee.status).toBe('ok');
+    if (fee.status === 'ok') {
+      expect(fee.data.feeBaseUnits).toBe(String(SOL_LAMPORTS_PER_SIGNATURE));
+      expect(fee.data.feeBaseUnits).toBe('5000');
+      expect(fee.data.unit).toBe('lamports');
+    }
+  });
+
+  it('returns the live recent blockhash as tx inputs', async () => {
+    const transport = solTransport({
+      getHealth: { jsonrpc: '2.0', id: 2, result: 'ok' },
+      getLatestBlockhash: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: {
+          context: { slot: 1 },
+          value: { blockhash: BLOCKHASH, lastValidBlockHeight: 1 },
+        },
+      },
+    });
+    const adapter = createSolanaAdapter({ transport });
+    const inputs = await adapter.getTxInputs(ADDRESS);
+    expect(inputs.status).toBe('ok');
+    if (inputs.status === 'ok') {
+      expect(inputs.data).toEqual({ kind: 'blockhash', blockhash: BLOCKHASH });
+    }
+  });
+
+  it('errors when the blockhash response is unusable', async () => {
+    const transport = solTransport({
+      getHealth: { jsonrpc: '2.0', id: 2, result: 'ok' },
+      getLatestBlockhash: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: { context: { slot: 1 }, value: {} },
+      },
+    });
+    const adapter = createSolanaAdapter({ transport });
+    const inputs = await adapter.getTxInputs(ADDRESS);
+    expect(inputs.status).toBe('error');
   });
 
   it('always throws the broadcast-disabled message', async () => {
     const adapter = createSolanaAdapter({ transport: solTransport({}) });
     await expect(adapter.broadcast({})).rejects.toThrow(BROADCAST_DISABLED_MESSAGE);
+  });
+});
+
+describe('solana account helpers (expansion Lane SOL)', () => {
+  it('reports an existing account from getAccountInfo', async () => {
+    const transport = solTransport({
+      getAccountInfo: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: {
+          context: { slot: 1 },
+          value: { lamports: 1, owner: ADDRESS, executable: false, rentEpoch: 1 },
+        },
+      },
+    });
+    await expect(
+      fetchSolanaAccountExists(ADDRESS, { transport }),
+    ).resolves.toBe(true);
+  });
+
+  it('reports a missing account when getAccountInfo returns null', async () => {
+    const transport = solTransport({
+      getAccountInfo: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: { context: { slot: 1 }, value: null },
+      },
+    });
+    await expect(
+      fetchSolanaAccountExists(ADDRESS, { transport }),
+    ).resolves.toBe(false);
+  });
+
+  it('throws when the account check fails — a missing answer is not proof of absence', async () => {
+    const transport = solTransport({
+      getAccountInfo: new Error('Network error: all Solana RPCs unreachable'),
+    });
+    await expect(fetchSolanaAccountExists(ADDRESS, { transport })).rejects.toThrow();
+  });
+
+  it('returns the live rent-exempt minimum for a token account', async () => {
+    const transport = solTransport({
+      getMinimumBalanceForRentExemption: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: 1488440,
+      },
+    });
+    await expect(
+      fetchSolanaMinimumBalanceForRentExemption(SOL_TOKEN_ACCOUNT_SIZE, {
+        transport,
+      }),
+    ).resolves.toBe(1488440);
+  });
+
+  it('throws on an unusable rent-exemption response', async () => {
+    const transport = solTransport({
+      getMinimumBalanceForRentExemption: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: 'not-a-number',
+      },
+    });
+    await expect(
+      fetchSolanaMinimumBalanceForRentExemption(SOL_TOKEN_ACCOUNT_SIZE, {
+        transport,
+      }),
+    ).rejects.toThrow();
   });
 });
 
