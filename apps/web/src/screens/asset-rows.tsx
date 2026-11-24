@@ -18,6 +18,8 @@ import {
   shortContract,
   tokenKeyOf,
   tokenSlug,
+  verificationSourceOf,
+  verifiedSourceLabel,
   type TokenRecord,
 } from '../wallet/tokens';
 import {
@@ -67,6 +69,10 @@ type AssetRowModel =
       isToken: boolean;
       logoChain: ChainId | null;
       logoSymbol: string;
+      /** Lane A: the token's resolved icon URL (null = no icon). */
+      logoIconUrl?: string | null;
+      /** Lane A: may the bundled symbol logo be shown (defaults only). */
+      logoAllowSymbol?: boolean;
     }
   | {
       kind: 'unavailable';
@@ -80,6 +86,8 @@ type AssetRowModel =
       isToken: boolean;
       logoChain: ChainId | null;
       logoSymbol: string;
+      logoIconUrl?: string | null;
+      logoAllowSymbol?: boolean;
       /** Token gaps, item 2: official token — show the VERIFIED tick. */
       verified?: boolean;
     }
@@ -98,13 +106,21 @@ type AssetRowModel =
       isToken: boolean;
       logoChain: ChainId | null;
       logoSymbol: string;
+      logoIconUrl?: string | null;
+      logoAllowSymbol?: boolean;
       /** Token gaps, item 2: official token — show the VERIFIED tick. */
       verified?: boolean;
     };
 
 function RowLogo({ model }: { model: AssetRowModel }) {
   if (model.logoChain !== null) return <ChainLogo chain={model.logoChain} />;
-  return <TokenLogo symbol={model.logoSymbol} />;
+  return (
+    <TokenLogo
+      symbol={model.logoSymbol}
+      iconUrl={model.logoIconUrl ?? null}
+      allowSymbolLogo={model.logoAllowSymbol ?? true}
+    />
+  );
 }
 
 /**
@@ -379,6 +395,8 @@ function getTokenRowModel(
       isToken: true,
       logoChain: null,
       logoSymbol: token.symbol,
+      logoIconUrl: token.iconUrl ?? null,
+      logoAllowSymbol: isDefaultToken(token),
     };
   }
 
@@ -398,6 +416,8 @@ function getTokenRowModel(
       isToken: true,
       logoChain: null,
       logoSymbol: token.symbol,
+      logoIconUrl: token.iconUrl ?? null,
+      logoAllowSymbol: isDefaultToken(token),
       verified,
     };
   }
@@ -407,7 +427,12 @@ function getTokenRowModel(
       ? '0'
       : formatNativeWithSymbol(balance.value, token.decimals, token.symbol);
   let fiatText: string | undefined;
-  let detail = `${chainName} · ${isDefaultToken(token) ? 'Default token' : 'Added token'}`;
+  // Lane A: the row detail names who verified the token, so a
+  // Verified tick is never a mystery ("Verified (CoinGecko)").
+  const verifiedSource = verificationSourceOf(token);
+  let detail = `${chainName} · ${isDefaultToken(token) ? 'Default token' : 'Added token'}${
+    verifiedSource !== null ? ` · Verified (${verifiedSourceLabel(verifiedSource)})` : ''
+  }`;
 
   if (entry !== undefined) {
     const fiat = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
@@ -437,6 +462,8 @@ function getTokenRowModel(
     isToken: true,
     logoChain: null,
     logoSymbol: token.symbol,
+    logoIconUrl: token.iconUrl ?? null,
+    logoAllowSymbol: isDefaultToken(token),
     verified,
   };
 }

@@ -13,6 +13,7 @@ import {
   resolveTokenByTickerOrName,
   shortContract,
   tokenKey,
+  verificationSourceOf,
   tokenKeyOf,
   tokenStandardFor,
   validateEvmContractAddress,
@@ -400,6 +401,101 @@ describe('isVerifiedToken', () => {
       addedAtMs: 1,
     };
     expect(isVerifiedToken(added)).toBe(false);
+  });
+
+  // Lane A (token-verify): a trusted list other than CoinGecko verifies
+  // too — a memecoin with a real 1inch / Jupiter / Uniswap / PancakeSwap
+  // listing is Verified, while a copycat contract with the same
+  // name/symbol and no listing is not.
+  it('marks a user-added token verified when a trusted list holds its contract', () => {
+    const added: TokenRecord = {
+      chain: 'eth',
+      contract: '0x1e6bb68acec8fefbd87d192be09bb274170a0548',
+      name: 'Aave interest bearing AMPL',
+      symbol: 'aAMPL',
+      decimals: 9,
+      coingeckoId: null,
+      addedAtMs: 1,
+      verifiedSource: 'one-inch',
+    };
+    expect(isVerifiedToken(added)).toBe(true);
+  });
+
+  it('does not mark a copycat verified even when it copies a listed token', () => {
+    const copycat: TokenRecord = {
+      chain: 'sol',
+      contract: 'BonkUg9t46HnxF4erZzmnB4Ae6oEcDS4V66zqUoUhwWY',
+      name: 'Bonk',
+      symbol: 'Bonk',
+      decimals: 5,
+      coingeckoId: null,
+      addedAtMs: 1,
+      verifiedSource: null,
+    };
+    expect(isVerifiedToken(copycat)).toBe(false);
+  });
+});
+
+describe('verificationSourceOf', () => {
+  it('prefers the recorded source, then the CoinGecko id, then curation', () => {
+    const listed: TokenRecord = {
+      chain: 'eth',
+      contract: '0x1e6bb68acec8fefbd87d192be09bb274170a0548',
+      name: 'Aave interest bearing AMPL',
+      symbol: 'aAMPL',
+      decimals: 9,
+      coingeckoId: null,
+      addedAtMs: 1,
+      verifiedSource: 'one-inch',
+    };
+    expect(verificationSourceOf(listed)).toBe('one-inch');
+    const legacy: TokenRecord = {
+      ...listed,
+      verifiedSource: undefined,
+      coingeckoId: 'usd-coin',
+    };
+    expect(verificationSourceOf(legacy)).toBe('coingecko');
+    expect(verificationSourceOf(DEFAULT_TOKENS[0]!)).toBe('curated');
+    const unverified: TokenRecord = {
+      ...listed,
+      verifiedSource: null,
+      coingeckoId: null,
+    };
+    expect(verificationSourceOf(unverified)).toBeNull();
+  });
+
+  it('round-trips the new record fields through storage', () => {
+    const store = new Map<string, string>();
+    const record: TokenRecord = {
+      chain: 'sol',
+      contract: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      name: 'Bonk',
+      symbol: 'Bonk',
+      decimals: 5,
+      coingeckoId: 'bonk',
+      addedAtMs: 1,
+      verifiedSource: 'jupiter-strict',
+      iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e/blockchains/solana/assets/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png',
+      iconSource: 'trustwallet',
+    };
+    writeCustomTokens([record], {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    });
+    const read = readCustomTokens({
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    });
+    expect(read).toHaveLength(1);
+    expect(read[0]).toMatchObject({
+      verifiedSource: 'jupiter-strict',
+      iconSource: 'trustwallet',
+    });
+    expect(read[0]?.iconUrl).toContain('trustwallet/assets');
   });
 });
 

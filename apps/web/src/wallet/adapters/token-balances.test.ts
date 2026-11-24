@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hexToBytes } from 'viem';
 import {
   deriveAssociatedTokenAddress,
+  deriveMetaplexMetadataAddress,
   evmClientForChain,
   fetchJettonWalletAddress,
   fetchTokenBalance,
@@ -326,12 +327,35 @@ describe('resolveTokenCoingeckoId', () => {
       expect(url).toContain('/coins/ethereum/contract/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
       return { ok: true, status: 200, json: async () => ({ id: 'usd-coin' }) };
     });
-    const id = await resolveTokenCoingeckoId({
+    const result = await resolveTokenCoingeckoId({
       platform: 'ethereum',
       contract: USDC,
       fetchFn: fetchFn as unknown as typeof fetch,
     });
-    expect(id).toBe('usd-coin');
+    expect(result).toEqual({ id: 'usd-coin', image: null });
+  });
+
+  it('returns the CoinGecko image alongside the id when the listing has one', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 'usd-coin',
+        image: {
+          small:
+            'https://coin-images.coingecko.com/coins/images/6319/small/usdc.png',
+        },
+      }),
+    }));
+    const result = await resolveTokenCoingeckoId({
+      platform: 'ethereum',
+      contract: USDC,
+      fetchFn: fetchFn as unknown as typeof fetch,
+    });
+    expect(result).toEqual({
+      id: 'usd-coin',
+      image: 'https://coin-images.coingecko.com/coins/images/6319/small/usdc.png',
+    });
   });
 
   it('returns the CoinGecko id for a Jetton via the-open-network', async () => {
@@ -342,12 +366,12 @@ describe('resolveTokenCoingeckoId', () => {
       );
       return { ok: true, status: 200, json: async () => ({ id: 'notcoin' }) };
     });
-    const id = await resolveTokenCoingeckoId({
+    const result = await resolveTokenCoingeckoId({
       platform: 'the-open-network',
       contract: NOT_MASTER,
       fetchFn: fetchFn as unknown as typeof fetch,
     });
-    expect(id).toBe('notcoin');
+    expect(result).toEqual({ id: 'notcoin', image: null });
   });
 
   it('returns null on 404 (unknown token still addable, price unavailable)', async () => {
@@ -356,24 +380,24 @@ describe('resolveTokenCoingeckoId', () => {
       status: 404,
       json: async () => ({}),
     }));
-    const id = await resolveTokenCoingeckoId({
+    const result = await resolveTokenCoingeckoId({
       platform: 'ethereum',
       contract: USDC,
       fetchFn: fetchFn as unknown as typeof fetch,
     });
-    expect(id).toBeNull();
+    expect(result).toBeNull();
   });
 
   it('returns null when the network fails', async () => {
     const fetchFn = vi.fn(async () => {
       throw new Error('fetch failed');
     });
-    const id = await resolveTokenCoingeckoId({
+    const result = await resolveTokenCoingeckoId({
       platform: 'tron',
       contract: TRON_USDT,
       fetchFn: fetchFn as unknown as typeof fetch,
     });
-    expect(id).toBeNull();
+    expect(result).toBeNull();
   });
 });
 
@@ -512,6 +536,27 @@ function mockSolTransport(overrides: {
       };
       if (body.method === 'getAccountInfo') {
         const address = String(body.params?.[0] ?? '');
+        // Lane A: the metadata read targets the mint's Metaplex
+        // metadata PDA (getAccountInfo, base64) — never
+        // getProgramAccounts: PublicNode refuses indexed requests
+        // (-32602), so the old lookup failed for every mint.
+        if (address === deriveMetaplexMetadataAddress(SOL_USDC_MINT)) {
+          if (overrides.noMetadata === true) return { result: { value: null } };
+          return {
+            result: {
+              value: {
+                data: [
+                  metaplexMetadataBase64('USD Coin', 'USDC', SOL_USDC_MINT),
+                  'base64',
+                ],
+                executable: false,
+                lamports: 0,
+                owner: METAPLEX_PROGRAM,
+                rentEpoch: 0,
+              },
+            },
+          };
+        }
         // The balance read targets the ATA; the metadata read targets
         // the mint. The mock answers each with its own shape.
         if (address === SOL_USDC_ATA) {
@@ -571,31 +616,10 @@ function mockSolTransport(overrides: {
           },
         };
       }
-      if (body.method === 'getProgramAccounts') {
-        // Real shape: the result IS the array (no { value } wrapper —
-        // unlike getAccountInfo / getTokenAccountsByOwner).
-        if (overrides.noMetadata === true) return { result: [] };
-        return {
-          result: [
-            {
-              account: {
-                data: [
-                  metaplexMetadataBase64('USD Coin', 'USDC', SOL_USDC_MINT),
-                  'base64',
-                ],
-                executable: false,
-                lamports: 0,
-                owner: METAPLEX_PROGRAM,
-                rentEpoch: 0,
-              },
-              pubkey: '9vB5XyA1p2Z3q4r5s6t7u8v9w0x1y2z3a4b5c6d7e8f9g0h',
-            },
-          ],
-        };
-      }
-      // No getTokenAccountsByOwner handler: the balance read must not
-      // use the indexed method (PublicNode refuses it, -32602). An
-      // unexpected call throws below, which fails the test loudly.
+      // No getProgramAccounts handler: the metadata read must use the
+      // PDA getAccountInfo (PublicNode refuses indexed requests,
+      // -32602). An unexpected call throws below, which fails the
+      // test loudly.
       throw new Error(`unexpected Solana method ${body.method ?? ''}`);
     }),
   };
@@ -867,5 +891,22 @@ describe('deriveAssociatedTokenAddress (Lane 2)', () => {
       deriveAssociatedTokenAddress('not-an-address', USDC_MINT),
     ).toBeNull();
     expect(deriveAssociatedTokenAddress(OWNER_A, 'not-a-mint')).toBeNull();
+  });
+});
+
+describe('deriveMetaplexMetadataAddress (Lane A)', () => {
+  it('matches the live chain for BONK', () => {
+    // Ground truth: api.mainnet-beta.solana.com getProgramAccounts
+    // on the Metaplex program filtered to the BONK mint, 2026-11-24
+    // — the returned account pubkey is this PDA.
+    expect(
+      deriveMetaplexMetadataAddress(
+        'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      ),
+    ).toBe('FDZZbyY9XGpL3CNKUZxLk3wFTTQYL3TkDiDzqxrizcPN');
+  });
+
+  it('returns null on a malformed mint', () => {
+    expect(deriveMetaplexMetadataAddress('not-a-mint')).toBeNull();
   });
 });

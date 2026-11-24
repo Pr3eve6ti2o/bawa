@@ -8,7 +8,17 @@ import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-f
 import { TxRow } from './tx-row';
 import { unitPriceForChain, usePrices } from '../wallet/prices';
 import { useTokenPrices } from '../wallet/token-prices';
-import { DEFAULT_TOKENS, isVerifiedToken, tokenKeyOf, tokenSlug, type TokenRecord } from '../wallet/tokens';
+import {
+  DEFAULT_TOKENS,
+  iconSourceLabel,
+  isDefaultToken,
+  isVerifiedToken,
+  tokenKeyOf,
+  tokenSlug,
+  verificationSourceOf,
+  verifiedSourceLabel,
+  type TokenRecord,
+} from '../wallet/tokens';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
@@ -243,6 +253,14 @@ export function AssetDetailScreen() {
   const displaySymbol = tokenRecord !== undefined ? tokenRecord.symbol : config.symbol;
   const displayDecimals = tokenRecord !== undefined ? tokenRecord.decimals : CHAIN_DECIMALS[chainId];
   const displayTitle = tokenRecord !== undefined ? tokenRecord.symbol : config.displayName;
+  // Lane A: the header tick names who verified the token, so a
+  // Verified tick is never a mystery ("✓ Verified (CoinGecko)").
+  const verifiedDetailSource =
+    tokenRecord !== undefined ? verificationSourceOf(tokenRecord) : null;
+  const verifiedDetailLabel =
+    verifiedDetailSource !== null
+      ? `✓ Verified (${verifiedSourceLabel(verifiedDetailSource)})`
+      : '✓ Verified';
   // Round 2, item 6: in devnet mode the network is the test network, not
   // mainnet — the label must say so, now that live prices show here too.
   const devnetConfig = devnetEnabled
@@ -321,8 +339,13 @@ export function AssetDetailScreen() {
               with the ticker text inside rendered as a crossed-out
               logo. The bordered tile stays (the brand frame). */}
           <span aria-hidden="true" className="inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
-            {isToken ? (
-              <TokenLogo symbol={displaySymbol} size={40} />
+            {isToken && tokenRecord !== undefined ? (
+              <TokenLogo
+                symbol={displaySymbol}
+                size={40}
+                iconUrl={tokenRecord.iconUrl ?? null}
+                allowSymbolLogo={isDefaultToken(tokenRecord)}
+              />
             ) : (
               <ChainLogo chain={chainId} size={40} />
             )}
@@ -334,7 +357,9 @@ export function AssetDetailScreen() {
                   token header says whether it is verified or not. */}
               {tokenRecord !== undefined &&
                 (isVerifiedToken(tokenRecord) ? (
-                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">
+                    {verifiedDetailLabel}
+                  </span>
                 ) : (
                   <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
                 ))}
@@ -480,6 +505,20 @@ export function AssetDetailScreen() {
                     <dt className="text-muted-foreground">Decimals</dt>
                     <dd className="font-semibold">{tokenRecord.decimals}</dd>
                   </div>
+                  {verifiedDetailSource !== null && (
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">Verified by</dt>
+                      <dd className="font-semibold">
+                        {verifiedSourceLabel(verifiedDetailSource)}
+                      </dd>
+                    </div>
+                  )}
+                  {tokenRecord.iconSource !== undefined && tokenRecord.iconSource !== null && (
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">Icon from</dt>
+                      <dd className="font-semibold">{iconSourceLabel(tokenRecord.iconSource)}</dd>
+                    </div>
+                  )}
                 </>
               )}
             </dl>

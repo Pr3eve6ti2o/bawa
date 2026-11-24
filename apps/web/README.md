@@ -173,6 +173,45 @@ honest empty state (a plain ring, no fill, no ticker text), never a
 broken image and never a yellow text square (Lane B, 2026-11-24 —
 the yellow ticker badge read as a broken logo).
 
+Lane A (token-verify, 2026-11-24): a user-added token's icon is
+resolved at add time, in order — Trust Wallet Assets at the pinned
+commit (`blockchains/<dir>/assets/<contract>/logo.png`, HEAD-checked;
+only 30 chains have an Assets directory, the rest fall through),
+the CoinGecko token image (`image.small` from the contract
+endpoint), then the verifying list's `logoURI` — but only when its
+host is an allowed image origin (`raw.githubusercontent.com`,
+`assets.coingecko.com`, `coin-images.coingecko.com`,
+`tokens.1inch.io`, `tokens.pancakeswap.finance`). The URL and its
+source are stored on the token record (`iconUrl`, `iconSource`) and
+shown on the asset detail ("Icon from …"). A token with no icon from
+any source keeps the empty ring. The bundled symbol logo is shown
+for a user-added token only when it is a curated default — a custom
+token that shares a symbol with a known token must not wear that
+token's mark. Verification itself is membership in a trusted list
+checked by exact chain + contract (`src/wallet/token-verification.ts`):
+curated defaults, a CoinGecko listing, Jupiter Strict (Solana),
+1inch, Uniswap Default, or PancakeSwap Extended. A memecoin with a
+real listing is Verified; a copycat contract with the same
+name/symbol is not. The verified mark names its source ("✓ Verified
+(CoinGecko)") on the asset detail and in the row detail, and the
+Add Token result does the same. Raydium and DexScreener are NOT
+verification sources (any token with a pool is listable; pair
+existence proves a pool, not the real token) — they stay price /
+existence sources only. Lane A also fixed the SPL metadata read
+that blocked every Solana add: `fetchSplTokenMetadata` used
+`getProgramAccounts`, which the wallet's primary Solana RPC
+(PublicNode) refuses ("Indexed requests require a personal token",
+-32602), so no SPL token could ever be added by contract — real
+BONK included. It now reads the Metaplex metadata account by its
+program-derived address with a plain `getAccountInfo` (the same
+pure-PDA math as the ATA derivation, `deriveMetaplexMetadataAddress`
+in `src/wallet/adapters/token-balances.ts`, verified against the
+live chain for BONK). The CoinGecko platform map
+(`COINGECKO_PLATFORM_FOR_CHAIN` in `src/wallet/tokens.ts`) covers
+all 84 chains — 60 EVM platforms + Solana + TRON + TON; Bob has no
+CoinGecko platform — and corrects the old Metis slug
+(`metis-andromeda`, not `metis`).
+
 ### Design tokens and UI patterns (Lane G research, 2026-11-23)
 
 Sources: `~/workspace/bawa-uiux-sources/RESEARCH.md` (13 sources, all

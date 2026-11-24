@@ -242,6 +242,23 @@ export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number 
 type TokenLogoProps = {
   symbol: string;
   size?: number;
+  /**
+   * Lane A: the token's resolved icon URL (recorded at add time —
+   * Trust Wallet Assets, CoinGecko image, or the verifying list's
+   * logoURI). It wins over the bundled symbol logo: a custom token
+   * that merely shares a symbol with a known token must not wear
+   * that token's logo.
+   */
+  iconUrl?: string | null;
+  /**
+   * Lane A: whether the bundled symbol-keyed logo may be shown.
+   * True for the curated defaults (their symbol IS their identity);
+   * false for user-added tokens, where a shared symbol must not
+   * borrow the real token's mark. Defaults to true so existing
+   * call sites keep their behaviour until they thread the record
+   * through.
+   */
+  allowSymbolLogo?: boolean;
 };
 
 /**
@@ -251,13 +268,33 @@ type TokenLogoProps = {
  * 2026-11-24: the yellow ticker badge read as a broken logo, owner
  * 2026-11-23; the symbol is already shown as text beside the logo,
  * so nothing is lost).
+ *
+ * Lane A: when a resolved iconUrl is set it is tried first; a failed
+ * remote icon falls back to the bundled symbol logo only when
+ * allowSymbolLogo is set, and to the empty ring otherwise.
  */
-export function TokenLogo({ symbol, size = 40 }: TokenLogoProps) {
-  const [failed, setFailed] = useState(false);
+export function TokenLogo({ symbol, size = 40, iconUrl, allowSymbolLogo = true }: TokenLogoProps) {
+  const [iconFailed, setIconFailed] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
   const logo = tokenLogoFor(symbol);
   const style = size === 40 ? undefined : { width: size, height: size };
 
-  if (logo && !failed) {
+  if (iconUrl !== null && iconUrl !== undefined && !iconFailed) {
+    return (
+      <img
+        src={iconUrl}
+        alt={`${symbol} logo`}
+        width={size}
+        height={size}
+        decoding="async"
+        className="size-10 shrink-0 rounded-full"
+        style={style}
+        onError={() => setIconFailed(true)}
+      />
+    );
+  }
+
+  if (allowSymbolLogo && logo && !logoFailed) {
     return (
       <img
         src={logo}
@@ -267,7 +304,7 @@ export function TokenLogo({ symbol, size = 40 }: TokenLogoProps) {
         decoding="async"
         className="size-10 shrink-0 rounded-full"
         style={style}
-        onError={() => setFailed(true)}
+        onError={() => setLogoFailed(true)}
       />
     );
   }

@@ -42,6 +42,7 @@ import {
 } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
+  isDefaultToken,
   isVerifiedToken,
   orderAssetsByBalance,
   shortContract,
@@ -1343,7 +1344,12 @@ export function SendScreen() {
                       {token === null ? (
                         <ChainLogo chain={chain} size={24} />
                       ) : (
-                        <TokenLogo symbol={token.symbol} size={24} />
+                        <TokenLogo
+                          symbol={token.symbol}
+                          size={24}
+                          iconUrl={token.iconUrl ?? null}
+                          allowSymbolLogo={isDefaultToken(token)}
+                        />
                       )}
                     </>
                   }

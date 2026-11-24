@@ -36,6 +36,8 @@ import { availableFor, chainConfig } from '../wallet/chains';
 import { useWallet } from '../state/wallet-context';
 import {
   DEFAULT_TOKENS,
+  COINGECKO_PLATFORM_FOR_CHAIN,
+  isDefaultToken,
   isDuplicateToken,
   isVerifiedToken,
   resolveTokenByTickerOrName,
@@ -45,9 +47,16 @@ import {
   validateSolMintAddress,
   validateTonJettonAddress,
   validateTronContractAddress,
+  verifiedSourceLabel,
   type AddressValidation,
   type TokenRecord,
+  type VerifiedSource,
 } from '../wallet/tokens';
+import {
+  isBannedToken,
+  resolveTokenIcon,
+  resolveTokenListVerification,
+} from '../wallet/token-verification';
 import {
   searchTokensByNameOrTicker,
   type TokenSearchCandidate,
@@ -68,57 +77,7 @@ import {
 } from '../ui/components/dialog';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
-
-/** CoinGecko platform slug per token chain (see token-balances.ts). */
-const COINGECKO_PLATFORM_FOR_CHAIN: Partial<
-  Record<
-    ChainId,
-    | 'ethereum'
-    | 'tron'
-    | 'binance-smart-chain'
-    | 'polygon-pos'
-    | 'arbitrum-one'
-    | 'optimistic-ethereum'
-    | 'base'
-    | 'avalanche'
-    | 'solana'
-    | 'xdai'
-    | 'celo'
-    | 'linea'
-    | 'mantle'
-    | 'scroll'
-    | 'opbnb'
-    | 'metis'
-    | 'aurora'
-    | 'fantom'
-    | 'the-open-network'
-  >
-> = {
-  eth: 'ethereum',
-  trx: 'tron',
-  bsc: 'binance-smart-chain',
-  matic: 'polygon-pos',
-  arb: 'arbitrum-one',
-  op: 'optimistic-ethereum',
-  base: 'base',
-  avax: 'avalanche',
-  // UI/UX fixes, item 13: SPL on Solana + ERC-20 on the 9 new EVM chains.
-  sol: 'solana',
-  gnosis: 'xdai',
-  celo: 'celo',
-  linea: 'linea',
-  mantle: 'mantle',
-  scroll: 'scroll',
-  opbnb: 'opbnb',
-  metis: 'metis',
-  aurora: 'aurora',
-  fantom: 'fantom',
-  // Item D: TON was missing here, so every Jetton was stored with
-  // coingeckoId null and never priced — even listed ones (NOT resolves
-  // to 'notcoin' via /coins/the-open-network/contract/, verified live
-  // 2026-11-23, and the endpoint accepts the lowercased friendly form).
-  ton: 'the-open-network',
-};
+import { TokenLogo } from './token-logo';
 
 /**
  * The owner's address for a token chain: the vault address first, then
@@ -385,27 +344,57 @@ export function AddTokenDialog({
         inputRef.current?.focus();
         return;
       }
-      // 5. CoinGecko id for the price feed; 404 → still added, and the
-      // price feed falls back to DexScreener (EVM/Solana/TRON) or
-      // TonAPI rates (TON Jettons) at refresh time — the price shows
-      // "Price unavailable" only when no source has it (see
-      // token-prices / dex-prices).
+      // 5. Trusted-list verification (token-verify Lane A): the
+      // CoinGecko contract lookup first (it also yields the price id
+      // and the token image), then the swap lists — Jupiter Strict,
+      // 1inch, Uniswap Default, PancakeSwap — only when CoinGecko
+      // did not verify, so the common path stays one request. A
+      // banned mint (Jupiter's banned list, Solana) is refused
+      // outright, never added. A token no list holds is still added
+      // — it is just Unverified, and its price shows "Price
+      // unavailable" unless the DexScreener / TonAPI fallback has
+      // it (see token-prices / dex-prices).
       const platform = COINGECKO_PLATFORM_FOR_CHAIN[chainId];
-      const resolvedId =
+      const coingecko =
         platform === undefined
           ? null
           : await resolveTokenCoingeckoId({ platform, contract: normalized });
+      if (await isBannedToken({ chain: chainId, contract: normalized })) {
+        setError(
+          "This token is on Jupiter's banned-token list — it can't be added.",
+        );
+        inputRef.current?.focus();
+        return;
+      }
+      const lists =
+        coingecko !== null
+          ? null
+          : await resolveTokenListVerification({
+              chain: chainId,
+              contract: normalized,
+            });
       // Lane 1: a token found by ticker search is CoinGecko-confirmed
       // — keep its listing id when this lookup is rate-limited (null),
       // so the add does not lose its verified mark.
-      const coingeckoId =
-        resolvedId ??
-        (picked !== null &&
+      const pickedId =
+        picked !== null &&
         picked.chain === chainId &&
         picked.contract.toLowerCase() === normalized.toLowerCase() &&
         picked.coingeckoId !== ''
           ? picked.coingeckoId
-          : null);
+          : null;
+      const coingeckoId = coingecko?.id ?? pickedId;
+      const verifiedSource: VerifiedSource | null =
+        coingecko !== null || pickedId !== null
+          ? 'coingecko'
+          : (lists?.source ?? null);
+      const icon = await resolveTokenIcon({
+        chain: chainId,
+        contract: normalized,
+        coingeckoImage:
+          coingecko?.image ?? picked?.iconUrl ?? null,
+        listLogoUri: lists?.logoUri ?? null,
+      });
       const record: TokenRecord = {
         chain: chainId,
         contract: normalized,
@@ -414,6 +403,9 @@ export function AddTokenDialog({
         decimals: verification.metadata.decimals,
         coingeckoId,
         addedAtMs: Date.now(),
+        verifiedSource,
+        iconUrl: icon.iconUrl,
+        iconSource: icon.iconSource,
       };
       const added = wallet.addCustomToken(record);
       if (!added.ok) {
@@ -421,9 +413,12 @@ export function AddTokenDialog({
         inputRef.current?.focus();
         return;
       }
-      // Lane 1: the add result says whether the token is verified.
+      // Lane 1: the add result says whether the token is verified —
+      // and, when it is, which list verified it.
       setStatus(
-        isVerifiedToken(record) ? 'Token added — ✓ Verified' : 'Token added — Unverified',
+        isVerifiedToken(record) && verifiedSource !== null
+          ? `Token added — ✓ Verified (${verifiedSourceLabel(verifiedSource)})`
+          : 'Token added — Unverified',
       );
     } finally {
       setChecking(false);
@@ -607,7 +602,27 @@ export function AddTokenDialog({
                         onClick={() => onPickCandidate(candidate)}
                         className="flex w-full items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-3 py-2 text-left"
                       >
-                        <span className="min-w-0">
+                        {/* Lane A: the candidate's icon — its CoinGecko
+                            image when search found one, the bundled
+                            symbol logo only for a curated default, the
+                            empty ring otherwise (never an invented
+                            icon for a token that merely shares a
+                            symbol with a known one). */}
+                        <TokenLogo
+                          symbol={candidate.symbol}
+                          size={32}
+                          iconUrl={candidate.iconUrl ?? null}
+                          allowSymbolLogo={isDefaultToken({
+                            chain: candidate.chain,
+                            contract: candidate.contract,
+                            name: candidate.name,
+                            symbol: candidate.symbol,
+                            decimals: candidate.decimals,
+                            coingeckoId: candidate.coingeckoId,
+                            addedAtMs: 0,
+                          })}
+                        />
+                        <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-ink">
                             {candidate.name} ({candidate.symbol})
                             {/* Lane 1: the verified mark on the search

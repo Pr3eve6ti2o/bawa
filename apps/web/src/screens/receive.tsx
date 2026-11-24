@@ -8,6 +8,7 @@ import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-forma
 import { buildBawaSendLink, buildPaymentUri, qrCardToPngFile } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
+  isDefaultToken,
   isVerifiedToken,
   orderAssetsByBalance,
   resolveTokenByTickerOrName,
@@ -739,7 +740,12 @@ export function ReceiveScreen() {
                       {/* Lane G: the real token mark (see above) —
                           WETH and the USDT variants resolve to real
                           logos now instead of the yellow ticker badge. */}
-                      <TokenLogo symbol={token.symbol} size={24} />
+                      <TokenLogo
+                        symbol={token.symbol}
+                        size={24}
+                        iconUrl={token.iconUrl ?? null}
+                        allowSymbolLogo={isDefaultToken(token)}
+                      />
                     </>
                   }
                 >
