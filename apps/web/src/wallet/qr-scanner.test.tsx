@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import type { ReactElement } from 'react';
@@ -187,5 +187,142 @@ describe('QrScanner upload fallback', () => {
     );
     const file = new File(['x'], 'qr.png', { type: 'image/png' });
     await expect(decodeQrImageFile(file)).resolves.toBeNull();
+  });
+});
+
+describe('QrScanner camera start (Lane 7)', () => {
+  const originalMediaDevices = Object.getOwnPropertyDescriptor(
+    window.navigator,
+    'mediaDevices',
+  );
+  const originalPlay = HTMLVideoElement.prototype.play;
+
+  function stubCamera(getUserMedia: unknown): void {
+    Object.defineProperty(window.navigator, 'mediaDevices', {
+      value: { getUserMedia },
+      configurable: true,
+    });
+  }
+
+  function restoreCamera(): void {
+    if (originalMediaDevices === undefined) {
+      delete (window.navigator as { mediaDevices?: unknown }).mediaDevices;
+    } else {
+      Object.defineProperty(
+        window.navigator,
+        'mediaDevices',
+        originalMediaDevices,
+      );
+    }
+  }
+
+  function fakeStream(): MediaStream {
+    return { getTracks: () => [] } as unknown as MediaStream;
+  }
+
+  async function flush(): Promise<void> {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  async function waitForText(
+    container: HTMLDivElement,
+    text: string,
+  ): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < 5000) {
+      if (container.textContent?.includes(text)) return;
+      await flush();
+    }
+    throw new Error('timed out waiting for text: ' + text);
+  }
+
+  async function waitForCalls(
+    mock: ReturnType<typeof vi.fn>,
+    count: number,
+  ): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < 5000) {
+      if (mock.mock.calls.length >= count) return;
+      await flush();
+    }
+    throw new Error('timed out waiting for ' + count + ' getUserMedia calls');
+  }
+
+  beforeEach(() => {
+    vi.spyOn(HTMLVideoElement.prototype, 'play').mockResolvedValue(
+      undefined,
+    );
+  });
+
+  afterEach(() => {
+    restoreCamera();
+    HTMLVideoElement.prototype.play = originalPlay;
+  });
+
+  it('retries with any camera when the rear-camera request is over-constrained', async () => {
+    const getUserMedia = vi.fn(async (constraints: unknown) => {
+      const video = (constraints as { video?: unknown } | undefined)?.video;
+      if (
+        typeof video === 'object' &&
+        video !== null &&
+        'facingMode' in video
+      ) {
+        throw new DOMException('no rear camera', 'OverconstrainedError');
+      }
+      return fakeStream();
+    });
+    stubCamera(getUserMedia);
+    const container = await mount(
+      <QrScanner onScan={() => undefined} onCancel={() => undefined} />,
+    );
+    await waitForCalls(getUserMedia, 2);
+    expect(getUserMedia).toHaveBeenNthCalledWith(1, {
+      video: { facingMode: 'environment' },
+    });
+    expect(getUserMedia).toHaveBeenNthCalledWith(2, { video: true });
+    expect(container.textContent).not.toContain('Camera access was denied');
+    expect(container.textContent).not.toContain('No camera was found');
+    expect(container.textContent).toContain('Point the camera at a QR code');
+  });
+
+  it('says the camera was denied and points at the upload fallback, without retrying', async () => {
+    const getUserMedia = vi.fn(async () => {
+      throw new DOMException('denied', 'NotAllowedError');
+    });
+    stubCamera(getUserMedia);
+    const container = await mount(
+      <QrScanner onScan={() => undefined} onCancel={() => undefined} />,
+    );
+    await waitForText(container, 'Camera access was denied.');
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain('upload a QR image instead');
+    expect(container.querySelector('input[type="file"]')).not.toBeNull();
+  });
+
+  it('says no camera was found after the fallback attempt fails', async () => {
+    const getUserMedia = vi.fn(async () => {
+      throw new DOMException('none', 'NotFoundError');
+    });
+    stubCamera(getUserMedia);
+    const container = await mount(
+      <QrScanner onScan={() => undefined} onCancel={() => undefined} />,
+    );
+    await waitForText(container, 'No camera was found on this device.');
+    expect(getUserMedia).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain('Upload a QR image instead');
+  });
+
+  it('surfaces a preview failure instead of waiting silently', async () => {
+    stubCamera(vi.fn(async () => fakeStream()));
+    vi.spyOn(HTMLVideoElement.prototype, 'play').mockRejectedValue(
+      new Error('play failed'),
+    );
+    const container = await mount(
+      <QrScanner onScan={() => undefined} onCancel={() => undefined} />,
+    );
+    await waitForText(container, 'The camera preview could not start.');
+    expect(container.textContent).toContain('Upload a QR image instead');
   });
 });

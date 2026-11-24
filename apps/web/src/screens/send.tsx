@@ -485,8 +485,12 @@ export function SendScreen() {
     setRecipient(value);
     const result = await validateRecipient(chain, value, { devnet: devnetEnabled });
     setRecipientError(result.ok ? null : result.reason);
-    // The amount input shares this step, so a valid scan just fills
-    // the recipient — there is no step to advance to.
+    // The recipient and amount inputs only render on the details step,
+    // so a scan from the chain step must advance there — otherwise the
+    // scanner closes with nothing visibly changed (Lane 7: a bare
+    // address scan silently did nothing). Advancing is a no-op when
+    // the scan already happened on the details step.
+    setStep('details');
   }
 
   async function handleAmountNext(): Promise<void> {

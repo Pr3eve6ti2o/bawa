@@ -107,6 +107,10 @@ const BASE_USDC_QR =
   'ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&uint256=25000000';
 const SOLANA_QR =
   'solana:DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK?amount=1.5';
+// A bare address (no scheme, no amount) — the Lane 7 case: scanning
+// one from the chain step used to close the scanner with nothing
+// visibly changed, because handleScan never advanced the step.
+const BARE_ADDRESS_QR = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
 
 vi.mock('../wallet/qr-scanner', () => ({
   QrScanner: ({ onScan }: { onScan: (value: string) => void }) => (
@@ -116,6 +120,9 @@ vi.mock('../wallet/qr-scanner', () => ({
       </button>
       <button type="button" onClick={() => onScan(SOLANA_QR)}>
         Simulate Solana scan
+      </button>
+      <button type="button" onClick={() => onScan(BARE_ADDRESS_QR)}>
+        Simulate bare-address scan
       </button>
     </div>
   ),
@@ -263,6 +270,26 @@ describe('send screen — scanning a QR from the chain step (Round 2, item 1)', 
       expect(amount.value).toBe('25');
       expect(mounted.div.textContent).toContain(RECIPIENT);
       expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('advances to the details step and prefills the recipient from a bare-address scan', async () => {
+    // Lane 7: a bare address carries no chain, token or amount, so the
+    // scan fills the recipient on the current chain and must land on
+    // the details step, where the recipient and amount render — the
+    // chain step shows neither, so staying there looked like nothing
+    // happened at all.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await clickLabel(mounted.div, 'Scan QR code');
+      await clickText(mounted.div, 'Simulate bare-address scan');
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(mounted.div.textContent).toContain(RECIPIENT);
+      expect(amount.value).toBe('');
     } finally {
       await mounted.cleanup();
     }
