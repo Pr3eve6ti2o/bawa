@@ -68,14 +68,34 @@ export async function decodeQrImageFile(file: File): Promise<string | null> {
 }
 
 /**
- * Browser camera QR scanner, wired into the send flow's recipient step
- * (send.tsx scan icon button; the decoded value fills the recipient and
- * prefills the whole payment for a payment-request URI or a Bawa send
- * link). Follows the BlueWallet ScanQRCode contract: a decoded value
- * and a cancel action. Decodes at ~10 fps from the camera frame via an
- * off-screen canvas and jsQR. When the camera cannot start, the panel
- * stays open with the failure note and an image-upload fallback instead
- * of closing — a desktop without a camera can still scan from a file.
+ * Camera failure, in the user's words, always pointing at the
+ * image-upload fallback — the scanner must never be a dead end.
+ * A permission denial names the denial; a missing camera names that;
+ * anything else falls back to the generic wording.
+ */
+export function cameraErrorMessage(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return 'Camera access was denied. Allow the camera, or upload a QR image instead.';
+  }
+  if (error instanceof DOMException && error.name === 'NotFoundError') {
+    return 'No camera was found on this device. Upload a QR image instead.';
+  }
+  return 'Camera access was denied or is unavailable. Upload a QR image instead.';
+}
+
+/**
+ * Browser camera QR scanner, wired into the send flow (send.tsx scan
+ * buttons on the chain step and the details step; the decoded value
+ * fills the recipient and prefills the whole payment for a
+ * payment-request URI or a Bawa send link). Follows the BlueWallet
+ * ScanQRCode contract: a decoded value and a cancel action. Decodes at
+ * ~10 fps from the camera frame via an off-screen canvas and jsQR.
+ * When the camera cannot start, the panel stays open with the failure
+ * note and an image-upload fallback instead of closing — a desktop
+ * without a camera can still scan from a file. The rear camera is
+ * tried first; when the device cannot satisfy that constraint the
+ * scanner retries once with any camera (Lane 7: a single attempt was
+ * a silent dead end on devices with no rear camera).
  */
 export function QrScanner({ onScan, onCancel }: QrScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -95,16 +115,36 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
 
     async function start() {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraMessage('Camera is not available in this browser.');
+        setCameraMessage(
+          'Camera is not available in this browser. Upload a QR image instead.',
+        );
         return;
       }
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' },
         });
-      } catch {
-        setCameraMessage('Camera access was denied or is unavailable.');
-        return;
+      } catch (error) {
+        // The rear camera is not available on this device, or the
+        // constraint cannot be satisfied — retry once with any camera
+        // before giving up. A permission denial is not retried.
+        if (
+          error instanceof DOMException &&
+          (error.name === 'OverconstrainedError' ||
+            error.name === 'NotFoundError')
+        ) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+            });
+          } catch (retryError) {
+            setCameraMessage(cameraErrorMessage(retryError));
+            return;
+          }
+        } else {
+          setCameraMessage(cameraErrorMessage(error));
+          return;
+        }
       }
       const video = videoRef.current;
       if (!video || cancelled) return;
@@ -112,7 +152,14 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
       try {
         await video.play();
       } catch {
-        // Play interrupted by unmount — the cleanup below stops the stream.
+        if (cancelled) return;
+        // The camera started but the preview could not play — without a
+        // playing video the decode loop sees no frames (videoWidth stays
+        // 0), so say so instead of waiting silently.
+        setCameraMessage(
+          'The camera preview could not start. Upload a QR image instead.',
+        );
+        return;
       }
 
       const loop = (now: number) => {
