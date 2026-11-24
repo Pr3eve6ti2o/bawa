@@ -1376,7 +1376,7 @@ export function SendScreen() {
         )}
         {!SIGNING_CHAINS.includes(chain) && selectedToken === null && (
           <p className="text-sm text-ink">
-            {`Sending on ${config.displayName} isn't available yet. This wallet signs native transfers offline for BTC, TRX, TON and EVM chains only.`}
+            {`Sending on ${config.displayName} isn't available yet. This wallet signs native transfers offline for BTC, TRX, TON, SOL and EVM chains only.`}
           </p>
         )}
         </section>
