@@ -9,7 +9,7 @@
 
 Bawa is an HD-wallet reference and command-line launcher for generating encrypted seed files, deriving watch-only addresses, and security and recovery checks, with AI-guided build routes. It is written for two readers: a developer — or an AI agent — building HD-wallet tooling from scratch, and anyone who wants to understand how a self-custodial wallet actually works. If you want a wallet to hold funds, this is not it — use a production wallet application instead. Unlike a generated wallet tutorial, every step resolves to something real — a tool in this repo, a guide, or a public-root derivation. Nothing in the guide is a placeholder. Built on Trust Wallet Core 4.9.3 (WebAssembly), with Python tooling and a Node.js generator.
 
-**[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the saved adopt-proper-based build; the example wallet itself is developed on `panel-rebuild/token-gaps`, not on `main`.
+**[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of the example wallet, developed on `panel-rebuild/token-gaps`, not on `main`.
 
 **136 checks** passing (smoke) · **48 launcher tests** · **26 make_wallet tests** · **0 funds ever sent** — no signing or broadcast code on `main`.
 
