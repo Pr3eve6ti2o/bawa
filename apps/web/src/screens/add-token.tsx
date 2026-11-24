@@ -10,7 +10,9 @@
  *   nothing is persisted, nothing is added, the input stays intact and
  *   keeps focus.
  * - "Add chain": enable one of the 84 registry chains. No free-text
- *   chain field — an 85th chain is impossible by design.
+ *   chain field — an 85th chain is impossible by design. Lane E
+ *   (2026-11-24): each row shows the chain's real logo (ChainLogo)
+ *   — the 28 chains that used to have no logo now have one.
  *
  * Lane 1: the contract field also accepts a ticker or name ("sushi").
  * An address-shaped input keeps the strict format error; anything else
@@ -33,6 +35,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ChainId } from '../engine/boundary';
 import { availableFor, chainConfig } from '../wallet/chains';
+import { ChainLogo } from './token-logo';
 import { useWallet } from '../state/wallet-context';
 import {
   DEFAULT_TOKENS,
@@ -541,7 +544,8 @@ export function AddTokenDialog({
                   key={chainId}
                   className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-3 py-2"
                 >
-                  <span className="min-w-0">
+                  <ChainLogo chain={chainId} size={40} />
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-ink">
                       {config.displayName}
                     </span>

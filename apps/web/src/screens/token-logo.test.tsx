@@ -66,8 +66,9 @@ describe('TokenLogo', () => {
     expect(src).not.toBe('');
   });
 
-  it('renders an unknown symbol as an honest empty state without an image', () => {
-    // Lane B: no yellow ticker badge — a plain ring, no fill, no text.
+  it('renders an unknown symbol as the deliberate link mark without an image', () => {
+    // Lane E: no yellow ticker badge and no faded empty ring — a paper
+    // disc with an ink ring and a centred chain-link mark, no text.
     mount('ZZZZ');
 
     expect(div.querySelector('img')).toBeNull();
@@ -76,10 +77,12 @@ describe('TokenLogo', () => {
     expect(empty).not.toBeNull();
     expect(empty?.textContent).toBe('');
     expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.className).not.toContain('opacity-40');
+    expect(empty?.querySelector('svg')).not.toBeNull();
     expect(empty?.getAttribute('aria-label')).toBe('ZZZZ logo unavailable');
   });
 
-  it('replaces a failed token image with an empty state', () => {
+  it('replaces a failed token image with the link mark', () => {
     mount('USDC');
 
     const img = div.querySelector('img');
@@ -95,6 +98,7 @@ describe('TokenLogo', () => {
     expect(empty).not.toBeNull();
     expect(empty?.textContent).toBe('');
     expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.querySelector('svg')).not.toBeNull();
     expect(empty?.getAttribute('aria-label')).toBe('USDC logo unavailable');
   });
 
@@ -151,6 +155,35 @@ describe('TokenLogo', () => {
       'metis',
       'aurora',
       'fantom',
+      // Lane E: the 28 chains that had no Trust Wallet Assets icon.
+      'zora',
+      'mode',
+      'fraxtal',
+      'berachain',
+      'arbnova',
+      'worldchain',
+      'unichain',
+      'ink',
+      'abstract',
+      'soneium',
+      'apechain',
+      'immutable',
+      'fuse',
+      'velas',
+      'xlayer',
+      'taiko',
+      'astar',
+      'telos',
+      'core',
+      'songbird',
+      'pulsechain',
+      'chiliz',
+      'flare',
+      'hemi',
+      'bob',
+      'flowevm',
+      'celestia',
+      'dydx',
     ];
 
     for (const chain of chains) {

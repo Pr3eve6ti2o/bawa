@@ -136,7 +136,26 @@ corrections where the Bawa key differs from the Trust Wallet directory
 upstream `info.json` name was verified at fetch time. The chain strip and the
 receive/send pickers use `ChainLogo` now too — the hand-drawn blob
 with the ticker text inside rendered as a crossed-out logo, so it is
-gone from every screen.
+gone from every screen. Lane E (token-verify programme, 2026-11-24)
+adds the twenty-eight remaining chain logos — the ones with no Trust
+Wallet Assets directory at the pin, or at HEAD (checked 2026-11-24).
+Their real marks come from DefiLlama chain icons (22: Zora, Mode,
+Fraxtal, Berachain, Arbitrum Nova, Unichain, Ink, Abstract, Soneium,
+ApeChain, Immutable zkEVM, Fuse, X Layer, Taiko, Telos, Core,
+PulseChain, Chiliz, Flare, Hemi, BOB, dYdX), CoinGecko coin images (5:
+Astar, Songbird, Velas, World Chain via the Worldcoin mark, Celestia
+via the TIA mark) and the Tatum chain-logo CDN (1: Flow EVM, SVG
+rendered to PNG). Each was viewed by eye before bundling; the
+per-chain source is recorded in `chains-expanded.ts` (iconPath /
+iconUrl). Same convention as the rest: original PNG plus 96 px WebP at
+quality 85 (28 logos, 56 files, 1,146,342 bytes PNG, 50,208 bytes
+WebP). All 84 registry chains now have a real logo. The Flare source
+had a checkerboard baked into its corners; the bundled PNG has those
+corners made transparent instead. The fallback for a logo that fails
+to load is no longer the faded empty ring: it is a paper disc with an
+ink ring and a centred chain-link mark, clearly intentional and never
+yellow, never a ticker square. The Add chain rows show each chain's
+real logo too (ChainLogo, Lane E).
 
 ### Token logos
 
