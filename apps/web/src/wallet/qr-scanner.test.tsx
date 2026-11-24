@@ -124,14 +124,16 @@ afterEach(async () => {
 });
 
 describe('decodeQrImageData', () => {
-  it('decodes a painted QR code to the bare address', () => {
+  it('decodes a painted QR code to the bare address', async () => {
     const { data, width, height } = paintQrPixels();
-    expect(decodeQrImageData(data, width, height)).toBe(RECIPIENT);
+    await expect(decodeQrImageData(data, width, height)).resolves.toBe(
+      RECIPIENT,
+    );
   });
 
-  it('returns null for a blank image', () => {
+  it('returns null for a blank image', async () => {
     const blank = new Uint8ClampedArray(200 * 200 * 4).fill(255);
-    expect(decodeQrImageData(blank, 200, 200)).toBeNull();
+    await expect(decodeQrImageData(blank, 200, 200)).resolves.toBeNull();
   });
 });
 

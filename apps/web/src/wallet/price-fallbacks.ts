@@ -102,7 +102,7 @@
  * (hoisted function declarations on both sides), never at
  * top-level evaluation time. tsc + vitest + vite build verify it.
  */
-import Decimal from 'decimal.js';
+import { divideToString, parseDecimalString } from './decimal';
 import type { ChainId } from '../engine/boundary';
 import { isRecord, ownValue } from './guards';
 import {
@@ -478,10 +478,12 @@ export function parseDexScreenerNativeResponse(
     }
     let implied: string | null = null;
     try {
-      const ratio = new Decimal(String(basePrice)).div(new Decimal(String(priceNative)));
-      if (ratio.isFinite() && ratio.gt(0)) {
-        implied = ratio.toString();
-      }
+      // Exact BigInt division at Decimal's default 20 significant
+      // digits; null when the ratio is not a finite positive number.
+      implied = divideToString(
+        parseDecimalString(String(basePrice)),
+        parseDecimalString(String(priceNative)),
+      );
     } catch {
       implied = null;
     }

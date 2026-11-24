@@ -416,13 +416,13 @@ export function AssetDetailScreen() {
       <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-bawa border-2 border-ink bg-paper px-2 py-2">
         {/* No Send for tokens: no token send exists in this wallet. */}
         {!isToken && (
-          <Button asChild className="h-11">
+          <Button asChild size="tall">
             <Link to="/send" onClick={() => setSelectedChain(chainId)}>
               Send
             </Link>
           </Button>
         )}
-        <Button asChild variant="outline" className="h-11">
+        <Button asChild variant="outline" size="tall">
           <Link to="/receive" onClick={() => setSelectedChain(chainId)}>
             Receive
           </Link>
@@ -433,7 +433,7 @@ export function AssetDetailScreen() {
           refetch the balance/history Retries already replace with Unlock.
         */}
         {vaultState === 'locked' ? (
-          <Button asChild variant="outline" className="h-11">
+          <Button asChild variant="outline" size="tall">
             <Link to="/lock">Unlock</Link>
           </Button>
         ) : (
@@ -442,7 +442,7 @@ export function AssetDetailScreen() {
             variant="outline"
             disabled={state === 'loading'}
             onClick={refreshAll}
-            className="h-11"
+            size="tall"
           >
             Refresh
           </Button>
@@ -460,7 +460,7 @@ export function AssetDetailScreen() {
         <h2 id="asset-details-heading" className="text-lg font-semibold">
           Details
         </h2>
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardContent className="pt-6">
             <dl className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3">
@@ -638,7 +638,7 @@ export function AssetDetailScreen() {
         above. Moved after the addresses (it documented the import
         before the addresses it describes were shown).
       */}
-      <Card className="rounded-xl">
+      <Card radius="xl">
         <CardContent className="pt-6">
           <dl className="space-y-4">
             <div>

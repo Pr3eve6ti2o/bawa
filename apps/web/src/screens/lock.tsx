@@ -235,7 +235,7 @@ export function LockScreen() {
       }}
     >
       <Card
-        className="text-ink"
+       
         style={{ width: "100%", maxWidth: "30rem", boxShadow: "none" }}
       >
         <CardHeader style={{ textAlign: "center" }}>
@@ -257,10 +257,10 @@ export function LockScreen() {
         <CardContent style={{ display: "grid", gap: "1.25rem" }}>
           {noVault ? (
             <div style={{ display: "grid", gap: "0.75rem" }}>
-              <Button asChild className="bg-sun text-ink">
+              <Button asChild variant="sun">
                 <Link to="/create-wallet">Create wallet</Link>
               </Button>
-              <Button asChild className="bg-paper text-ink border-ink">
+              <Button asChild>
                 <Link to="/import-wallet">Import wallet</Link>
               </Button>
             </div>
@@ -278,7 +278,7 @@ export function LockScreen() {
                     name="password"
                     type="password"
                     autoComplete="current-password"
-                    className="bg-paper text-ink border-ink rounded-bawa"
+                    radius="bawa"
                     value={password}
                     onChange={(event) =>
                       setPassword(event.currentTarget.value)
@@ -301,7 +301,7 @@ export function LockScreen() {
                       name="passphrase"
                       type="password"
                       autoComplete="off"
-                      className="bg-paper text-ink border-ink rounded-bawa"
+                      radius="bawa"
                       value={passphrase}
                       onChange={(event) =>
                         setPassphrase(event.currentTarget.value)
@@ -332,7 +332,7 @@ export function LockScreen() {
 
                 <Button
                   type="submit"
-                  className="bg-sun text-ink"
+                  variant="sun"
                   disabled={isUnlocking}
                 >
                   {isUnlocking ? "Unlocking…" : "Unlock"}

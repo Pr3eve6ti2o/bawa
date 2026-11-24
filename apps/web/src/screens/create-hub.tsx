@@ -63,7 +63,7 @@ export function CreateScreen() {
       </p>
 
       <div className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-4 sm:p-6">
-        <CardHeader className="min-w-0 space-y-2 p-0">
+        <CardHeader padding="none" className="min-w-0 space-y-2">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
               <BawaIcon name="wallet" className="size-5" />
@@ -81,7 +81,7 @@ export function CreateScreen() {
         </CardHeader>
         <Button
           asChild
-          className="h-auto w-full whitespace-normal py-3 text-center"
+          size="wrap" className="w-full"
         >
           <Link to="/create-wallet" aria-label="Create your wallet">
             Create your wallet

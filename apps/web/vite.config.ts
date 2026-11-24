@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -26,6 +27,21 @@ export default defineConfig({
   // GitHub Pages (panel-rebuild/pages-base): served under /bawa/ —
   // Vite rewrites asset URLs to this prefix (the plugin below rewrites <base>).
   base: '/bawa/',
+  resolve: {
+    // Lane C (bundle-size gate): 'long' shipped twice — long/index.js
+    // (send.ts) and long/umd/index.js (protobufjs via wallet-core).
+    // One copy: every importer gets the package's main entry.
+    alias: [
+      {
+        find: /^long$/,
+        // The ESM source; the UMD build is generated from it, so the
+        // two copies were the same library twice.
+        replacement: fileURLToPath(
+          new URL('./node_modules/long/index.js', import.meta.url),
+        ),
+      },
+    ],
+  },
   plugins: [
     react(),
     tailwindcss(),

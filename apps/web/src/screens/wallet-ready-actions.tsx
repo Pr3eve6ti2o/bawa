@@ -18,12 +18,12 @@ export function WalletReadyActions() {
         const pendingSearch = readPendingSendLinkSearch();
         if (pendingSearch === null || pendingSearch === '') return null;
         return (
-          <Button asChild className="h-auto whitespace-normal py-3 text-center">
+          <Button asChild size="wrap">
             <Link to={`/send?${pendingSearch}`}>Continue to your send</Link>
           </Button>
         );
       })()}
-      <Button asChild className="h-auto whitespace-normal py-3 text-center">
+      <Button asChild size="wrap">
         <Link to="/mnemonic-backup">Review your backup checklist</Link>
       </Button>
     </>

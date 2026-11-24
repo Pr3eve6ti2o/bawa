@@ -562,7 +562,7 @@ export function ReceiveScreen() {
             onChange={(event) => setChainQuery(event.target.value)}
             onKeyDown={handleChainSearchKeyDown}
             placeholder="Search networks — e.g. Solana"
-            className="h-11"
+            height="md"
           />
         </div>
         {chainSearch !== '' ? (
@@ -666,7 +666,7 @@ export function ReceiveScreen() {
             value={tokenFilter}
             onChange={(event) => setTokenFilter(event.target.value)}
             placeholder="Find a token by ticker or name — e.g. USDC"
-            className="h-11"
+            height="md"
           />
         </div>
         {orderedAssets.length === 0 ? (
@@ -787,7 +787,7 @@ export function ReceiveScreen() {
         </Alert>
       )}
 
-      <Card className="rounded-xl border-border bg-card p-3 text-foreground">
+      <Card radius="xl" tone="card" borderTone="border" padding="sm">
         {address ? (
           <div className="flex flex-col items-center gap-1.5">
             {/* The QR card (UI/UX Round 2, item 1): QR, amount,
@@ -933,7 +933,7 @@ export function ReceiveScreen() {
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 placeholder={`0.0 ${assetSymbol}`}
-                className="h-12"
+               
               />
               {amountError ? (
                 <p role="alert" className="text-sm text-ink bawa-squiggle-underline">{amountError}</p>

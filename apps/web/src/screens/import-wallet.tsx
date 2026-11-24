@@ -474,7 +474,7 @@ export function ImportWalletScreen() {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-xl">
+      <Card radius="xl">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Import a wallet</CardTitle>
@@ -508,7 +508,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && phraseStep === 'enter' && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>Restore from a recovery phrase</CardTitle>
             <CardDescription>
@@ -569,7 +569,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && phraseStep === 'same' && derived !== null && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>This is the same recovery phrase</CardTitle>
             <CardDescription>
@@ -586,7 +586,7 @@ export function ImportWalletScreen() {
                   {accountName(addedAccount)} added. It is a new account
                   from the same recovery phrase, with its own addresses.
                 </p>
-                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                <Button asChild size="wrap">
                   <Link to="/wallets">See your accounts</Link>
                 </Button>
               </>
@@ -607,14 +607,14 @@ export function ImportWalletScreen() {
                   type="button"
                   disabled={isAddingAccount || (vaultPassphraseNeeded && splitPassphrase !== '')}
                   onClick={() => void handleAddSamePhraseAccount()}
-                  className="h-auto whitespace-normal py-3 text-center"
+                  size="wrap"
                 >
                   {isAddingAccount
                     ? 'Adding…'
                     : `Add as ${accountName(vaultAccounts.length === 0 ? 0 : Math.max(...vaultAccounts) + 1)}`}
                 </Button>
                 {vaultPassphraseNeeded && splitPassphrase !== '' && (
-                  <Button asChild variant="outline" className="h-auto whitespace-normal py-3 text-center">
+                  <Button asChild variant="outline" size="wrap">
                     <Link to="/lock">Unlock with your recovery passphrase</Link>
                   </Button>
                 )}
@@ -638,7 +638,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && phraseStep === 'different' && derived !== null && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>
               {compareUnavailable
@@ -671,15 +671,15 @@ export function ImportWalletScreen() {
             )}
             <div className="flex flex-col gap-3">
               {compareUnavailable ? (
-                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                <Button asChild size="wrap">
                   <Link to="/lock">Unlock your wallet</Link>
                 </Button>
               ) : (
-                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                <Button asChild size="wrap">
                   <Link to="/wallets">Add an account from your current phrase</Link>
                 </Button>
               )}
-              <Button asChild variant="outline" className="h-auto whitespace-normal py-3 text-center">
+              <Button asChild variant="outline" size="wrap">
                 <Link to="/security">Go to security settings</Link>
               </Button>
               <Button
@@ -701,7 +701,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && !vaultExists && phraseStep === 'preview' && derived !== null && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>Check the restored addresses</CardTitle>
             <CardDescription>
@@ -760,7 +760,7 @@ export function ImportWalletScreen() {
                     <AlertDescription>{phraseError}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" className="h-auto whitespace-normal py-3 text-center">
+                <Button type="submit" size="wrap">
                   {isSaving ? 'Saving…' : 'Save to vault'}
                 </Button>
               </fieldset>
@@ -770,7 +770,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && !vaultExists && phraseStep === 'saved' && derived !== null && (
-        <Card className="rounded-xl">
+        <Card radius="xl">
           <CardHeader>
             <CardTitle>Wallet restored</CardTitle>
             <CardDescription>

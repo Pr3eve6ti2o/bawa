@@ -1,13 +1,15 @@
 import Long from 'long';
 import { TW } from '@trustwallet/wallet-core';
-import { Buffer } from 'buffer';
 import {
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  TransactionInstruction,
-} from '@solana/web3.js';
+  SOL_ASSOCIATED_TOKEN_PROGRAM_ID,
+  SOL_SYSTEM_PROGRAM_ID,
+  SOL_TOKEN_PROGRAM_ID,
+  SolPublicKey,
+  SolTransaction,
+  solKeypairPublicKey,
+  solSystemTransferInstruction,
+  type SolInstruction,
+} from './solana-tx';
 import { bytesToHex, keccak256, parseTransaction, recoverAddress, serializeTransaction } from 'viem';
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
@@ -2522,35 +2524,37 @@ export async function signJettonOffline(
   }
 }
 
-// --- Solana signing (@solana/web3.js, expansion Lane SOL) -----------------
+// --- Solana signing (minimal wire format, Lane C) ------------------------
 // Wallet Core 4.9.3's Solana signer returns an `encoded` transaction
 // that is not a valid Solana wire transaction (it does not parse with
 // @solana/web3.js, contains none of the transaction's fields, and its
 // signature does not verify against the correctly-built message) —
 // verified first-hand 2026-11-24, for a native SOL transfer as well as
 // a token transfer. So Solana is signed the way every Solana wallet
-// signs it instead: a web3.js Transaction built from the derived
-// ed25519 keypair (Keypair.fromSeed on the 32-byte Wallet Core seed),
-// signed with tx.sign(keypair) and serialised with tx.serialize().
-// That is the path solana-labs/solana-web3.js documents (Transaction,
-// SystemProgram.transfer, Keypair.fromSeed, Transaction.from) and the
-// one Phantom, Solflare and Backpack implement through the
-// wallet-adapter standard (sendTransaction takes a web3.js
-// Transaction; prepareTransaction sets feePayer + recentBlockhash from
-// getLatestBlockhash), and Privy and WalletConnect/Reown use the same
-// Transaction shape. The two SPL instructions below are built by hand
-// (not via @solana/spl-token's builders): spl-token 0.4.15 is CommonJS
-// that calls the bare global Buffer, which does not exist in a browser
-// bundle — its builders throw ReferenceError there while passing in
-// Node, so a vitest-only pass would hide a broken send. The layouts
-// are copied from the installed spl-token 0.4.15 source itself
-// (instructions/transferChecked.js: TransferChecked = 12, data u8 +
-// u64-LE amount + u8 decimals; instructions/associatedTokenAccount.js:
-// Create takes six keys and empty data) and the unit tests decode the
-// hand-built instructions with spl-token's own decoder, so the bytes
-// are still checked against the canonical implementation. Broadcast
-// stays disabled: these functions only produce a signed transaction,
-// never submit one.
+// signs it instead: a legacy transaction built from the derived
+// ed25519 keypair (the 32-byte Wallet Core seed), signed and serialised
+// to the standard wire format — the shape Phantom, Solflare and
+// Backpack implement through the wallet-adapter standard, and Privy
+// and WalletConnect/Reown use for sendTransaction. The builder is the
+// minimal ./solana-tx module, not @solana/web3.js: web3.js cost
+// ~180 KB minified for five names (Lane C measurement, token-verify
+// programme), most of it CommonJS the bundler cannot tree-shake.
+// send.test.ts keeps @solana/web3.js as a devDependency and checks
+// byte-for-byte that this module's output is identical to web3.js's,
+// and decodes it with Transaction.from + verifySignatures, so a drift
+// from the wire format fails a test. The two SPL instructions below
+// are built by hand (not via @solana/spl-token's builders): spl-token
+// 0.4.15 is CommonJS that calls the bare global Buffer, which does not
+// exist in a browser bundle — its builders throw ReferenceError there
+// while passing in Node, so a vitest-only pass would hide a broken
+// send. The layouts are copied from the installed spl-token 0.4.15
+// source itself (instructions/transferChecked.js: TransferChecked = 12,
+// data u8 + u64-LE amount + u8 decimals;
+// instructions/associatedTokenAccount.js: Create takes six keys and
+// empty data) and the unit tests decode the hand-built instructions
+// with spl-token's own decoder, so the bytes are still checked against
+// the canonical implementation. Broadcast stays disabled: these
+// functions only produce a signed transaction, never submit one.
 
 export type SolSignedTx =
   | {
@@ -2587,9 +2591,10 @@ export type SignSolOptions = SendDevnetOptions & {
 
 /**
  * Standard base64 (not URL-safe) for a byte array. `Buffer` is not a
- * browser global; the web3.js bundle brings the `buffer` package, but
- * this module must not rely on a Node global. Chunked like
- * wallet/vault.ts so long transactions do not blow the stack.
+ * browser global and the `buffer` package is not in the bundle (Lane C
+ * removed it with @solana/web3.js), so this module must not rely on a
+ * Node global. Chunked like wallet/vault.ts so long transactions do not
+ * blow the stack.
  */
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -2606,17 +2611,17 @@ function isValidBlockhash(blockhash: string): boolean {
   return bytes !== null && bytes.length === 32;
 }
 
-/** Base58 Solana address to a PublicKey, or null when malformed. */
-function solanaAddressToPublicKey(address: string): PublicKey | null {
+/** Base58 Solana address to a SolPublicKey, or null when malformed. */
+function solanaAddressToPublicKey(address: string): SolPublicKey | null {
   const bytes = decodeBase58(address);
   if (bytes === null || bytes.length !== 32) return null;
-  return new PublicKey(bytes);
+  return new SolPublicKey(bytes);
 }
 
 /**
- * Sign a built web3.js transaction with the vault's Solana key and
+ * Sign a built SolTransaction with the vault's Solana key and
  * self-verify the exact failure the old Wallet Core signer had: the
- * serialised bytes must parse back with Transaction.from and the
+ * serialised bytes must parse back with SolTransaction.from and the
  * signatures must verify. The derived keypair's public key must match
  * the sending address, so a derivation drift can never sign for the
  * wrong account. The seed bytes are wiped by withSigningKey after the
@@ -2627,7 +2632,7 @@ async function signSolTransaction(
   passphrase: string,
   account: number,
   from: string,
-  transaction: Transaction,
+  transaction: SolTransaction,
 ): Promise<
   | { ok: true; signedTxBase64: string; signature: string }
   | SendFailure
@@ -2652,8 +2657,8 @@ async function signSolTransaction(
             reason: 'The Solana signing key is not a 32-byte seed.',
           };
         }
-        const keypair = Keypair.fromSeed(keyBytes);
-        if (keypair.publicKey.toBase58() !== from) {
+        const publicKey = solKeypairPublicKey(keyBytes);
+        if (publicKey.toBase58() !== from) {
           return {
             ok: false,
             code: 'signing-failed',
@@ -2661,15 +2666,15 @@ async function signSolTransaction(
               'The Solana signing key does not match the sending address.',
           };
         }
-        transaction.sign(keypair);
+        transaction.sign(keyBytes);
         const serialized = transaction.serialize();
         // Self-verify: parse the wire bytes back and check the
         // signatures, the fee payer and the blockhash. The old signer
         // failed this exact step — its `encoded` output did not parse.
-        const parsed = Transaction.from(serialized);
+        const parsed = SolTransaction.from(serialized);
         if (
           !parsed.verifySignatures() ||
-          parsed.feePayer?.toBase58() !== from ||
+          parsed.feePayer.toBase58() !== from ||
           parsed.recentBlockhash !== transaction.recentBlockhash
         ) {
           return {
@@ -2797,17 +2802,17 @@ export async function signSolOffline(
       reason: 'Transaction does not match the approved intent.',
     };
   }
-  const transaction = new Transaction({
+  const transaction = new SolTransaction({
     feePayer: fromPubkey,
     recentBlockhash: blockhash,
   });
   try {
     transaction.add(
-      SystemProgram.transfer({
+      solSystemTransferInstruction(
         fromPubkey,
         toPubkey,
-        lamports: BigInt(amountBaseUnits),
-      }),
+        BigInt(amountBaseUnits),
+      ),
     );
   } catch {
     return {
@@ -2848,14 +2853,6 @@ export async function signSolOffline(
  * supported — a TransferChecked against the wrong program would fail
  * on broadcast, so the mint's program is out of scope here.
  */
-/** SPL Token program id (legacy token program). */
-const SOL_TOKEN_PROGRAM_ID = new PublicKey(
-  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-);
-/** Associated Token Program id (the program that owns ATAs). */
-const SOL_ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
-  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
-);
 /** SPL Token instruction discriminator for TransferChecked (= 12). */
 const SPL_TRANSFER_CHECKED_DISCRIMINATOR = 12;
 
@@ -2870,23 +2867,23 @@ const SPL_TRANSFER_CHECKED_DISCRIMINATOR = 12;
  * does not exist in a browser bundle (see the header comment).
  */
 function createAssociatedTokenAccountInstruction(
-  payer: PublicKey,
-  associatedToken: PublicKey,
-  owner: PublicKey,
-  mint: PublicKey,
-): TransactionInstruction {
-  return new TransactionInstruction({
+  payer: SolPublicKey,
+  associatedToken: SolPublicKey,
+  owner: SolPublicKey,
+  mint: SolPublicKey,
+): SolInstruction {
+  return {
     keys: [
       { pubkey: payer, isSigner: true, isWritable: true },
       { pubkey: associatedToken, isSigner: false, isWritable: true },
       { pubkey: owner, isSigner: false, isWritable: false },
       { pubkey: mint, isSigner: false, isWritable: false },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: SOL_SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SOL_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ],
     programId: SOL_ASSOCIATED_TOKEN_PROGRAM_ID,
-    data: Buffer.alloc(0),
-  });
+    data: new Uint8Array(0),
+  };
 }
 
 /**
@@ -2898,18 +2895,21 @@ function createAssociatedTokenAccountInstruction(
  * program. Hand-built for the same bare-Buffer reason as above.
  */
 function createTransferCheckedInstruction(
-  source: PublicKey,
-  mint: PublicKey,
-  destination: PublicKey,
-  owner: PublicKey,
+  source: SolPublicKey,
+  mint: SolPublicKey,
+  destination: SolPublicKey,
+  owner: SolPublicKey,
   amount: bigint,
   decimals: number,
-): TransactionInstruction {
-  const data = Buffer.alloc(10);
-  data.writeUInt8(SPL_TRANSFER_CHECKED_DISCRIMINATOR, 0);
-  data.writeBigUInt64LE(amount, 1);
-  data.writeUInt8(decimals, 9);
-  return new TransactionInstruction({
+): SolInstruction {
+  const data = new Uint8Array(10);
+  const view = new DataView(data.buffer);
+  view.setUint8(0, SPL_TRANSFER_CHECKED_DISCRIMINATOR);
+  // Throws RangeError when amount is outside u64, like
+  // Buffer.writeBigUInt64LE did — the caller maps it to invalid-input.
+  view.setBigUint64(1, amount, true);
+  view.setUint8(9, decimals);
+  return {
     keys: [
       { pubkey: source, isSigner: false, isWritable: true },
       { pubkey: mint, isSigner: false, isWritable: false },
@@ -2918,7 +2918,7 @@ function createTransferCheckedInstruction(
     ],
     programId: SOL_TOKEN_PROGRAM_ID,
     data,
-  });
+  };
 }
 
 export async function signSplOffline(
@@ -3022,7 +3022,7 @@ export async function signSplOffline(
       reason: 'Transaction does not match the approved intent.',
     };
   }
-  const transaction = new Transaction({
+  const transaction = new SolTransaction({
     feePayer: fromPubkey,
     recentBlockhash: blockhash,
   });
@@ -3031,7 +3031,7 @@ export async function signSplOffline(
       transaction.add(
         createAssociatedTokenAccountInstruction(
           fromPubkey,
-          new PublicKey(recipientAta),
+          new SolPublicKey(recipientAta),
           toPubkey,
           mintPubkey,
         ),
@@ -3039,9 +3039,9 @@ export async function signSplOffline(
     }
     transaction.add(
       createTransferCheckedInstruction(
-        new PublicKey(senderAta),
+        new SolPublicKey(senderAta),
         mintPubkey,
-        new PublicKey(recipientAta),
+        new SolPublicKey(recipientAta),
         fromPubkey,
         BigInt(amountBaseUnits),
         decimals,

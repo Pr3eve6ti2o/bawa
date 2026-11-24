@@ -244,7 +244,7 @@ describe('formatFiatUSD', () => {
 });
 
 describe('sumFiatUSD', () => {
-  it('sums integer minor units with Dinero', () => {
+  it('sums integer minor units', () => {
     expect(sumFiatUSD([100, 250])).toBe('$3.50');
   });
 
