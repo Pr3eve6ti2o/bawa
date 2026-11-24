@@ -106,6 +106,7 @@ P22 stays blocked from here. Its live options remain: retry on
 - `run-captcha-check/` — the general runner (`test-captcha.ts`, `package.json`)
   and the evidence from the 2026-11-17 TronScan worked example.
 - `licenses/` — full licence texts for the vendored code.
+- `guides/fuckcaptcha/` — field guides to 39 CAPTCHA types from FuckCaptcha (referred to as @fcukcaptcha) by @vsmutok (see the Field guides section below).
 
 ## Credits
 
@@ -120,9 +121,11 @@ P22 stays blocked from here. Its live options remain: retry on
   (`master` branch). Licence: **GNU General Public Licence v3.0** (see
   `licenses/GPL-3.0-SVD.txt`).
 
-All three are copyleft licences. The vendored files keep their original
+- **FuckCaptcha** (referred to as @fcukcaptcha) — https://github.com/vsmutok/FuckCaptcha (commit 410c4cab). Field guides to 39 CAPTCHA types, imported as documentation under `guides/fuckcaptcha/`. Licence: **CC0 1.0 Universal** (see `guides/fuckcaptcha/LICENSE`).
+
+The three vendored codebases are copyleft licences. The vendored files keep their original
 licence headers; the licence texts are reproduced in `licenses/`. Bawa itself
-is MIT-licensed; this folder is third-party copyleft code kept separate
+is MIT-licensed; this folder is third-party material kept separate
 under its own licences, included on the owner's explicit instruction.
 
 ## Notes and limits
@@ -136,3 +139,7 @@ under its own licences, included on the owner's explicit instruction.
   runner only.
 - The first YTDLnis location given (`deniscerri/ytdl`) does not exist
   (404); the correct repo is `deniscerri/ytdlnis`.
+
+## Field guides: FuckCaptcha
+
+`guides/fuckcaptcha/` holds the 39 Markdown guides from FuckCaptcha (referred to as @fcukcaptcha) by @vsmutok — one guide per CAPTCHA type, plus a solvers guide and a resources list. They are documentation only: no code from that project was imported. Licence: CC0 1.0 Universal (see `guides/fuckcaptcha/LICENSE`). The guides header images point at the upstream assets folder and do not render from this copy; see the README in `guides/fuckcaptcha/` for details.
