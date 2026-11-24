@@ -55,6 +55,34 @@ import seiLogo from '../assets/chains/sei.webp';
 import axelarLogo from '../assets/chains/axelar.webp';
 import nobleLogo from '../assets/chains/noble.webp';
 import junoLogo from '../assets/chains/juno.webp';
+import zoraLogo from '../assets/chains/zora.webp';
+import modeLogo from '../assets/chains/mode.webp';
+import fraxtalLogo from '../assets/chains/fraxtal.webp';
+import berachainLogo from '../assets/chains/berachain.webp';
+import arbnovaLogo from '../assets/chains/arbnova.webp';
+import worldchainLogo from '../assets/chains/worldchain.webp';
+import unichainLogo from '../assets/chains/unichain.webp';
+import inkLogo from '../assets/chains/ink.webp';
+import abstractLogo from '../assets/chains/abstract.webp';
+import soneiumLogo from '../assets/chains/soneium.webp';
+import apechainLogo from '../assets/chains/apechain.webp';
+import immutableLogo from '../assets/chains/immutable.webp';
+import fuseLogo from '../assets/chains/fuse.webp';
+import velasLogo from '../assets/chains/velas.webp';
+import xlayerLogo from '../assets/chains/xlayer.webp';
+import taikoLogo from '../assets/chains/taiko.webp';
+import astarLogo from '../assets/chains/astar.webp';
+import telosLogo from '../assets/chains/telos.webp';
+import coreLogo from '../assets/chains/core.webp';
+import songbirdLogo from '../assets/chains/songbird.webp';
+import pulsechainLogo from '../assets/chains/pulsechain.webp';
+import chilizLogo from '../assets/chains/chiliz.webp';
+import flareLogo from '../assets/chains/flare.webp';
+import hemiLogo from '../assets/chains/hemi.webp';
+import bobLogo from '../assets/chains/bob.webp';
+import flowevmLogo from '../assets/chains/flowevm.webp';
+import celestiaLogo from '../assets/chains/celestia.webp';
+import dydxLogo from '../assets/chains/dydx.webp';
 import usdcLogo from '../assets/tokens/usdc.webp';
 import usdtLogo from '../assets/tokens/usdt.webp';
 import daiLogo from '../assets/tokens/dai.webp';
@@ -142,6 +170,15 @@ const TOKEN_SYMBOL_ALIASES: Record<string, string> = {
  * Rootstock, XinFin Network, Ethereum Classic, ZetaChain, Cosmos,
  * Osmosis, XRP, Stellar, Polkadot, NEAR Protocol, Aptos, Tezos,
  * Algorand, Hedera, NativeInjective, Sei, Axelar, Noble, Juno).
+ * Lane E (token-verify programme, 2026-11-24) adds the twenty-eight
+ * chains that have no Trust Wallet Assets directory at the pin — or
+ * at HEAD: their real marks come from DefiLlama chain icons (22),
+ * CoinGecko coin images (5: Astar, Songbird, Velas, World Chain via
+ * the Worldcoin mark, Celestia via the TIA mark) and the Tatum
+ * chain-logo CDN (1: Flow EVM, SVG). Each was viewed by eye before
+ * bundling; the per-chain source is recorded in
+ * chains-expanded.ts (iconPath / iconUrl) and apps/web/README.md.
+ * Every registry chain now has a real logo.
  */
 export const CHAIN_LOGOS: Record<string, string> = {
   sol: solanaLogo,
@@ -196,6 +233,34 @@ export const CHAIN_LOGOS: Record<string, string> = {
   axelar: axelarLogo,
   noble: nobleLogo,
   juno: junoLogo,
+  zora: zoraLogo,
+  mode: modeLogo,
+  fraxtal: fraxtalLogo,
+  berachain: berachainLogo,
+  arbnova: arbnovaLogo,
+  worldchain: worldchainLogo,
+  unichain: unichainLogo,
+  ink: inkLogo,
+  abstract: abstractLogo,
+  soneium: soneiumLogo,
+  apechain: apechainLogo,
+  immutable: immutableLogo,
+  fuse: fuseLogo,
+  velas: velasLogo,
+  xlayer: xlayerLogo,
+  taiko: taikoLogo,
+  astar: astarLogo,
+  telos: telosLogo,
+  core: coreLogo,
+  songbird: songbirdLogo,
+  pulsechain: pulsechainLogo,
+  chiliz: chilizLogo,
+  flare: flareLogo,
+  hemi: hemiLogo,
+  bob: bobLogo,
+  flowevm: flowevmLogo,
+  celestia: celestiaLogo,
+  dydx: dydxLogo,
 };
 
 export function chainLogoFor(chain: string): string | undefined {
@@ -210,22 +275,24 @@ export function tokenLogoFor(symbol: string): string | undefined {
 /**
  * Native chain logo (40px default), rendered through TokenLogo so the
  * asset rows, asset detail, chain strip and receive/send pickers all
- * share one logo path: a real Trust Wallet logo when registered, an
- * honest empty state otherwise (Lane B). Chain-keyed: Arbitrum, OP Mainnet
+ * share one logo path: a real logo when registered, the deliberate
+ * link mark otherwise (Lane E). Chain-keyed: Arbitrum, OP Mainnet
  * and Base have their own marks — a symbol-keyed lookup would show the
  * Ethereum logo for all three. (Moved here from asset-rows, Lane G, so
  * the strip and pickers can use it without importing the rows module.)
- * A logo that fails to load falls back to the empty ring (Lane B),
- * never a broken image and never a ticker-letter chip.
+ * A logo that fails to load falls back to the deliberate link mark
+ * (Lane E), never a broken image and never a ticker-letter chip.
  *
  * Lane B (token-verify, 2026-11-24): the symbol-logo fallback below
  * applies ONLY to the four chains whose native token logo IS the
  * chain's mark (BTC, ETH, TRX, TON — they have no chain-keyed entry).
- * Every other chain without a chain logo gets the empty ring: the
+ * Every other chain without a chain logo gets the link mark: the
  * old fallback showed the Ethereum logo on the eleven icon-less
  * ETH-symbol chains (Zora, Mode, Arbitrum Nova, World Chain,
  * Unichain, Ink, Abstract, Soneium, Taiko, Hemi, BOB) — the wrong
  * network mark, the same defect Lane G fixed for Arbitrum/OP/Base.
+ * (Lane E wired real logos for all 28, so this path now fires only
+ * when a logo fails to load or for a chain added later without one.)
  */
 export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
   const [failed, setFailed] = useState(false);
@@ -248,19 +315,50 @@ export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number 
   if (chain === 'btc' || chain === 'eth' || chain === 'trx' || chain === 'ton') {
     return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
   }
-  return <EmptyRing label={`${chainConfig(chain).displayName} logo unavailable`} size={size} />;
+  return <FallbackMark label={`${chainConfig(chain).displayName} logo unavailable`} size={size} />;
 }
 
-/** Honest empty state: a plain ring, no fill, no text (Lane B). Shared by TokenLogo and ChainLogo so the two can never drift apart again. */
-function EmptyRing({ label, size = 40 }: { label: string; size?: number }) {
+/**
+ * The deliberate fallback mark (Lane E, shared — merge 2026-11-24):
+ * a paper disc with a full-opacity ink ring and a centred chain-link
+ * mark in ink. Shared by TokenLogo, ChainLogo and the QR card's
+ * LogoImage so the three can never drift apart again (the rule Lane B
+ * set for the empty ring, now carried by Lane E's mark). No yellow,
+ * no ticker text, no faded ring.
+ */
+export function FallbackMark({
+  label,
+  size = 40,
+  className = '',
+}: {
+  label: string;
+  size?: number;
+  className?: string;
+}) {
   const style = size === 40 ? undefined : { width: size, height: size };
   return (
     <span
       role="img"
       aria-label={label}
-      className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink opacity-40"
+      className={`flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-paper ${className}`}
       style={style}
-    />
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width="55%"
+        height="55%"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="text-ink"
+      >
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    </span>
   );
 }
 
@@ -288,15 +386,18 @@ type TokenLogoProps = {
 
 /**
  * Token logo (40px default). A missing logo — or one that fails to load —
- * renders an honest empty state (a plain ring, no fill, no text),
- * never a broken image and never a yellow text square (Lane B,
- * 2026-11-24: the yellow ticker badge read as a broken logo, owner
- * 2026-11-23; the symbol is already shown as text beside the logo,
- * so nothing is lost).
+ * renders the wallet's deliberate fallback: a paper disc with an ink
+ * ring and a centred chain-link mark (Lane E, 2026-11-24). It is
+ * clearly intentional — not a broken image, not a yellow text square
+ * (the yellow ticker badge read as a broken logo, owner 2026-11-23),
+ * and not a bare ticker: the symbol is already shown as text beside
+ * the logo, so nothing is lost. Every registry chain now has a real
+ * logo, so this mark only shows when a logo fails to load or for a
+ * chain added later without one.
  *
  * Lane A: when a resolved iconUrl is set it is tried first; a failed
  * remote icon falls back to the bundled symbol logo only when
- * allowSymbolLogo is set, and to the empty ring otherwise.
+ * allowSymbolLogo is set, and to the link mark otherwise.
  */
 export function TokenLogo({ symbol, size = 40, iconUrl, allowSymbolLogo = true }: TokenLogoProps) {
   const [iconFailed, setIconFailed] = useState(false);
@@ -334,9 +435,11 @@ export function TokenLogo({ symbol, size = 40, iconUrl, allowSymbolLogo = true }
     );
   }
 
-  // Lane B (2026-11-24): a missing logo renders an honest empty
-  // state — a plain faded ring, no fill, no ticker text. The yellow
-  // ticker badge it replaces read as a broken logo (owner,
-  // 2026-11-23: token icons as yellow text squares).
-  return <EmptyRing label={`${symbol} logo unavailable`} size={size} />;
+  // Merge (2026-11-24): Lane E's deliberate fallback — a paper disc,
+  // full-opacity ink ring, and a centred chain-link mark in ink. It
+  // reads as the wallet's own generic mark, not a missing image: no
+  // yellow, no ticker text, no faded ring. It replaces Lane B's empty
+  // ring as the shared fallback (same rule: never the bundled logo of
+  // a different token with the same symbol).
+  return <FallbackMark label={`${symbol} logo unavailable`} size={size} />;
 }

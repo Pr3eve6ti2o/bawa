@@ -282,7 +282,7 @@ describe('QrCard', () => {
     }
   });
 
-  it('falls back to an empty ring when a token has no logo', async () => {
+  it('falls back to the link mark when a token has no logo', async () => {
     const mounted = await mountCard({
       qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
       amountText: '10 PENGU',
@@ -303,13 +303,16 @@ describe('QrCard', () => {
         mounted.div.querySelector('[data-testid="qr-card-subtitle"]')?.textContent,
       ).toBe('Only BNB Smart Chain network assets can be received here.');
       expect(mounted.div.textContent).toContain('PENGU');
-      // No USDC-style logo for PENGU — an honest empty ring, not the
-      // yellow ticker badge (Lane B: badge removed 2026-11-23).
+      // No USDC-style logo for PENGU — the deliberate link mark, not
+      // the yellow ticker badge (Lane B: badge removed 2026-11-23;
+      // merge: Lane E's link mark replaces Lane B's empty ring).
       expect(mounted.div.querySelector('img[alt="PENGU logo"]')).toBeNull();
       const empty = mounted.div.querySelector('[aria-label="PENGU logo"]');
       expect(empty).not.toBeNull();
       expect(empty?.textContent).toBe('');
       expect(empty?.className).not.toContain('bg-sun');
+      expect(empty?.className).not.toContain('opacity-40');
+      expect(empty?.querySelector('svg')).not.toBeNull();
       // The centre mark falls back to the network's mark, never a broken image.
       expect(mounted.div.querySelector('#qr-card-qr svg image')).not.toBeNull();
     } finally {
@@ -317,11 +320,12 @@ describe('QrCard', () => {
     }
   });
 
-  it('shows an empty ring, not a ticker badge or the Ethereum logo, for an icon-less chain', async () => {
-    // Lane B (token-verify, 2026-11-24): Zora's native coin is ETH
-    // and Zora has no chain logo — the old chain badge rendered the
-    // yellow "ZO" ticker badge. The token mark is honestly the ETH
-    // logo; the chain badge must be the empty ring.
+  it('shows the real chain logo, not a ticker badge or the Ethereum logo, for a formerly icon-less chain', async () => {
+    // Merge (2026-11-24): Lane E wired a real logo for Zora, so the
+    // chain badge is the Zora mark now. The token mark is honestly
+    // the ETH logo (Zora's native coin is ETH); the chain badge must
+    // never be the yellow "ZO" ticker badge (Lane B) or the Ethereum
+    // logo in place of the chain's own mark.
     const mounted = await mountCard({
       qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
       amountText: null,
@@ -336,10 +340,8 @@ describe('QrCard', () => {
       const header = mounted.div.querySelector('[data-testid="qr-card-header"]');
       expect(header).not.toBeNull();
       expect(header?.querySelector('img[alt="ETH logo"]')).not.toBeNull();
-      const chainBadge = header?.querySelector('[aria-label="Zora logo"]');
+      const chainBadge = header?.querySelector('img[alt="Zora logo"]');
       expect(chainBadge).not.toBeNull();
-      expect(chainBadge?.textContent).toBe('');
-      expect(chainBadge?.className).not.toContain('bg-sun');
       expect(header?.textContent).not.toContain('ZO');
     } finally {
       await mounted.cleanup();

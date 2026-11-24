@@ -41,7 +41,7 @@ export interface TokenSearchCandidate {
   verified: boolean;
   /** Lane A: the CoinGecko token image (image.small), when the
    * detail response carries one — the candidate's icon, shown in
-   * the search results instead of the empty ring. */
+   * the search results instead of the link mark. */
   iconUrl?: string | null;
   /** Lane A: which source the icon came from. */
   iconSource?: TokenIconSource | null;

@@ -43,14 +43,14 @@
 //
 // Logos are the in-repo Trust Wallet assets (screens/token-logo):
 // the token's mark, with the chain's mark overlapping it, and an
-// honest empty ring when a logo is missing or fails to load — never
+// deliberate link mark when a logo is missing or fails to load — never
 // a broken image, never a ticker badge (Lane B, 2026-11-24: the
 // yellow ticker badge read as a broken logo, owner 2026-11-23).
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { chainConfig, type ChainId } from '../wallet/chains';
 import type { TokenRecord } from '../wallet/tokens';
-import { chainLogoFor, tokenLogoFor } from './token-logo';
+import { chainLogoFor, FallbackMark, tokenLogoFor } from './token-logo';
 
 /**
  * The short chain tag in the card label: the chain id, except BNB
@@ -143,18 +143,14 @@ function LogoImage({
       />
     );
   }
-  // Lane B (token-verify, 2026-11-24): a missing logo renders an
-  // honest empty state — a plain faded ring, no fill, no text. The
-  // old fallback was the yellow ticker badge (bg-sun + symbol text),
-  // the badge the owner ordered removed on 2026-11-23; it still
-  // showed for every icon-less chain (e.g. "ZO" on the Zora card).
-  return (
-    <span
-      role="img"
-      aria-label={alt}
-      className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full border-2 border-ink opacity-40 ${overlap ? '-ml-2' : ''}`}
-    />
-  );
+  // Merge (2026-11-24): the missing-logo fallback is the shared
+  // FallbackMark (Lane E's link mark) — the same mark TokenLogo and
+  // ChainLogo show, so the card can never drift from the rows again.
+  // The old fallback was the yellow ticker badge (bg-sun + symbol
+  // text), the badge the owner ordered removed on 2026-11-23; Lane B
+  // replaced it with the empty ring, and the merge replaces the ring
+  // with the link mark everywhere.
+  return <FallbackMark label={alt} size={px} className={overlap ? '-ml-2' : ''} />;
 }
 
 export interface QrCardProps {

@@ -44,7 +44,7 @@ export const POPULAR_RECEIVE_CHAINS: readonly ChainId[] = [
 
 /**
  * A chain's real mark: the bundled Trust Wallet logo where the repo
- * has one, and the honest empty ring where it has none (ChainLogo,
+ * has one, and the deliberate link mark where it has none (ChainLogo,
  * screens/token-logo.tsx). Lane B (token-verify, 2026-11-24): this
  * used to fall back to the symbol's token logo — the Ethereum logo
  * on the eleven icon-less ETH-symbol chains — and then to a yellow

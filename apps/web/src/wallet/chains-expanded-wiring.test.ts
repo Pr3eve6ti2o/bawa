@@ -117,9 +117,6 @@ const STELLAR_XPUB =
   'xpub6CzpMbupTF2cqWtmnPt2ZYfvyvQWwwU2PJimxZh9vWr9UcvjG3rbxGfz5eYxckWdTHjDq5yCDJtcQgzfVFSMMceBNRdwBu3PtmAtVHqR2ZM';
 
 const ED25519_NO_XPUB = ['stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera'] as const;
-// Chains with no Trust Wallet Assets directory at the verified pin
-// (chains-expanded.test.ts NO_ICON_KEYS): honest empty-ring fallback.
-const NO_ICON_KEYS = ["zora", "mode", "fraxtal", "berachain", "arbnova", "worldchain", "unichain", "ink", "abstract", "soneium", "apechain", "immutable", "fuse", "velas", "xlayer", "taiko", "astar", "telos", "core", "songbird", "pulsechain", "chiliz", "flare", "hemi", "bob", "flowevm", "celestia", "dydx"] as const;
 
 describe('chains-expanded wiring (Lane 80-APP)', () => {
   it('covers all 84 chains: the 22 existing plus the 62 expanded', () => {
@@ -265,14 +262,14 @@ describe('chains-expanded wiring (Lane 80-APP)', () => {
     }
   });
 
-  it('has a real logo for the 34 chains with one and none for the 28 without', () => {
+  it('has a real logo for all 62 expanded chains', () => {
+    // Lane E (2026-11-24): the 28 chains without a Trust Wallet Assets
+    // directory now have a bundled real mark (DefiLlama / CoinGecko /
+    // Tatum), so every expanded chain resolves to a logo.
     const withIcon = EXPANDED_CHAINS.filter((c) => c.iconUrl !== null).map((c) => c.key);
-    expect(withIcon).toHaveLength(34);
+    expect(withIcon).toHaveLength(62);
     for (const key of withIcon) {
       expect(chainLogoFor(key), key).toBeDefined();
-    }
-    for (const key of NO_ICON_KEYS) {
-      expect(chainLogoFor(key), key).toBeUndefined();
     }
   });
 });

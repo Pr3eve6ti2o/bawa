@@ -67,7 +67,7 @@
  * HEAD-checked), then the CoinGecko token image, then the verifying
  * list's logoURI — but only when its host is already an allowed
  * image origin (see ALLOWED_TOKEN_ICON_HOSTS). No source → null,
- * and the row shows the honest empty ring, never an invented icon.
+ * and the row shows the deliberate link mark, never an invented icon.
  *
  * Read-only throughout. No signing, no broadcast, no funds moved.
  */
@@ -443,7 +443,7 @@ export async function resolveTokenListVerification(input: {
  * at the pinned commit), the CoinGecko token image, then the
  * verifying list's logoURI — only when its host is allowed (see
  * ALLOWED_TOKEN_ICON_HOSTS). No source → null, and the row shows the
- * honest empty ring.
+ * deliberate link mark.
  */
 export async function resolveTokenIcon(input: {
   chain: ChainId;

@@ -66,8 +66,9 @@ describe('TokenLogo', () => {
     expect(src).not.toBe('');
   });
 
-  it('renders an unknown symbol as an honest empty state without an image', () => {
-    // Lane B: no yellow ticker badge — a plain ring, no fill, no text.
+  it('renders an unknown symbol as the deliberate link mark without an image', () => {
+    // Lane E: no yellow ticker badge and no faded empty ring — a paper
+    // disc with an ink ring and a centred chain-link mark, no text.
     mount('ZZZZ');
 
     expect(div.querySelector('img')).toBeNull();
@@ -76,10 +77,12 @@ describe('TokenLogo', () => {
     expect(empty).not.toBeNull();
     expect(empty?.textContent).toBe('');
     expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.className).not.toContain('opacity-40');
+    expect(empty?.querySelector('svg')).not.toBeNull();
     expect(empty?.getAttribute('aria-label')).toBe('ZZZZ logo unavailable');
   });
 
-  it('replaces a failed token image with an empty state', () => {
+  it('replaces a failed token image with the link mark', () => {
     mount('USDC');
 
     const img = div.querySelector('img');
@@ -95,6 +98,7 @@ describe('TokenLogo', () => {
     expect(empty).not.toBeNull();
     expect(empty?.textContent).toBe('');
     expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.querySelector('svg')).not.toBeNull();
     expect(empty?.getAttribute('aria-label')).toBe('USDC logo unavailable');
   });
 
@@ -128,9 +132,11 @@ describe('TokenLogo', () => {
     expect(img?.getAttribute('src')).toBe(iconUrl);
   });
 
-  it('falls back to the empty ring when a resolved icon fails and no symbol logo is allowed', () => {
-    // Lane A: a custom token whose icon 404s shows the honest ring —
-    // never the bundled logo of a different token with the same symbol.
+  it('falls back to the link mark when a resolved icon fails and no symbol logo is allowed', () => {
+    // Lane A: a custom token whose icon 404s shows the deliberate
+    // fallback — never the bundled logo of a different token with the
+    // same symbol. Merge (2026-11-24): Lane E's link mark replaces
+    // Lane B's empty ring as that fallback.
     const iconUrl = 'https://example.invalid/gone.png';
     act(() => {
       root.render(
@@ -148,6 +154,9 @@ describe('TokenLogo', () => {
     const empty = div.querySelector('span[role="img"]');
     expect(empty).not.toBeNull();
     expect(empty?.getAttribute('aria-label')).toBe('USDC logo unavailable');
+    expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.className).not.toContain('opacity-40');
+    expect(empty?.querySelector('svg')).not.toBeNull();
   });
 
   it('falls back to the bundled symbol logo when a resolved icon fails and it is allowed', () => {
@@ -211,6 +220,35 @@ describe('TokenLogo', () => {
       'metis',
       'aurora',
       'fantom',
+      // Lane E: the 28 chains that had no Trust Wallet Assets icon.
+      'zora',
+      'mode',
+      'fraxtal',
+      'berachain',
+      'arbnova',
+      'worldchain',
+      'unichain',
+      'ink',
+      'abstract',
+      'soneium',
+      'apechain',
+      'immutable',
+      'fuse',
+      'velas',
+      'xlayer',
+      'taiko',
+      'astar',
+      'telos',
+      'core',
+      'songbird',
+      'pulsechain',
+      'chiliz',
+      'flare',
+      'hemi',
+      'bob',
+      'flowevm',
+      'celestia',
+      'dydx',
     ];
 
     for (const chain of chains) {
@@ -282,26 +320,44 @@ describe('ChainLogo (Lane B, token-verify)', () => {
     });
   }
 
-  it('renders an icon-less ETH-symbol chain as an empty ring, never the Ethereum logo', () => {
-    // Zora's native token is ETH and Zora has no chain logo: the old
-    // symbol fallback showed the Ethereum diamond on the Zora row.
+  it('renders a failed ETH-symbol chain logo as the link mark, never the Ethereum logo', () => {
+    // Merge (2026-11-24): Lane E wired a real logo for Zora, so the
+    // no-logo path is exercised by failing the load instead. Zora's
+    // native token is ETH: the old symbol fallback showed the
+    // Ethereum diamond on the Zora row (Lane B). A failed chain logo
+    // must show Lane E's link mark, never the wrong network's mark.
     mountChain('zora');
 
+    const img = div.querySelector('img');
+    expect(img).not.toBeNull();
+    act(() => {
+      img?.dispatchEvent(new Event('error'));
+    });
     expect(div.querySelector('img')).toBeNull();
     const empty = div.querySelector('span[role="img"]');
     expect(empty).not.toBeNull();
     expect(empty?.textContent).toBe('');
     expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.className).not.toContain('opacity-40');
+    expect(empty?.querySelector('svg')).not.toBeNull();
     expect(empty?.getAttribute('aria-label')).toBe('Zora logo unavailable');
   });
 
-  it('renders an icon-less non-ETH chain as an empty ring', () => {
+  it('renders a failed non-ETH chain logo as the link mark', () => {
+    // Merge (2026-11-24): Velas has a real logo since Lane E; fail
+    // the load to reach the fallback, which is Lane E's link mark.
     mountChain('velas');
 
+    const img = div.querySelector('img');
+    expect(img).not.toBeNull();
+    act(() => {
+      img?.dispatchEvent(new Event('error'));
+    });
     expect(div.querySelector('img')).toBeNull();
     const empty = div.querySelector('span[role="img"]');
     expect(empty).not.toBeNull();
     expect(empty?.textContent).toBe('');
+    expect(empty?.querySelector('svg')).not.toBeNull();
     expect(empty?.getAttribute('aria-label')).toBe('Velas logo unavailable');
   });
 

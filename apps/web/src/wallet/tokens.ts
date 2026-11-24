@@ -40,7 +40,7 @@ export interface TokenRecord {
   verifiedSource?: VerifiedSource | null;
   /**
    * Resolved icon URL for this token, or null when no source had one.
-   * The row shows an empty ring instead — never an invented icon.
+   * The row shows the link mark instead — never an invented icon.
    */
   iconUrl?: string | null;
   /** Which source the icon URL came from (see TokenIconSource). */
