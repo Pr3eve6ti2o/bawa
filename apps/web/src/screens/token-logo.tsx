@@ -217,6 +217,15 @@ export function tokenLogoFor(symbol: string): string | undefined {
  * the strip and pickers can use it without importing the rows module.)
  * A logo that fails to load falls back to the empty ring (Lane B),
  * never a broken image and never a ticker-letter chip.
+ *
+ * Lane B (token-verify, 2026-11-24): the symbol-logo fallback below
+ * applies ONLY to the four chains whose native token logo IS the
+ * chain's mark (BTC, ETH, TRX, TON — they have no chain-keyed entry).
+ * Every other chain without a chain logo gets the empty ring: the
+ * old fallback showed the Ethereum logo on the eleven icon-less
+ * ETH-symbol chains (Zora, Mode, Arbitrum Nova, World Chain,
+ * Unichain, Ink, Abstract, Soneium, Taiko, Hemi, BOB) — the wrong
+ * network mark, the same defect Lane G fixed for Arbitrum/OP/Base.
  */
 export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
   const [failed, setFailed] = useState(false);
@@ -236,7 +245,23 @@ export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number 
       />
     );
   }
-  return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
+  if (chain === 'btc' || chain === 'eth' || chain === 'trx' || chain === 'ton') {
+    return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
+  }
+  return <EmptyRing label={`${chainConfig(chain).displayName} logo unavailable`} size={size} />;
+}
+
+/** Honest empty state: a plain ring, no fill, no text (Lane B). Shared by TokenLogo and ChainLogo so the two can never drift apart again. */
+function EmptyRing({ label, size = 40 }: { label: string; size?: number }) {
+  const style = size === 40 ? undefined : { width: size, height: size };
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink opacity-40"
+      style={style}
+    />
+  );
 }
 
 type TokenLogoProps = {
@@ -276,12 +301,5 @@ export function TokenLogo({ symbol, size = 40 }: TokenLogoProps) {
   // state — a plain faded ring, no fill, no ticker text. The yellow
   // ticker badge it replaces read as a broken logo (owner,
   // 2026-11-23: token icons as yellow text squares).
-  return (
-    <span
-      role="img"
-      aria-label={`${symbol} logo unavailable`}
-      className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink opacity-40"
-      style={style}
-    />
-  );
+  return <EmptyRing label={`${symbol} logo unavailable`} size={size} />;
 }

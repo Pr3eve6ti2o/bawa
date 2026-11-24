@@ -40,6 +40,25 @@ function isBlockscoutV2Chain(
   return (BLOCKSCOUT_V2_CHAINS as readonly string[]).includes(chain);
 }
 
+/**
+ * Lane B (token-verify, 2026-11-24): the Blockscout v2 hash lookup
+ * covers every chain whose registry entry carries a
+ * historyExplorerBase — the eight original chains above plus the ten
+ * expanded chains whose v2 API hash-matched live on 2026-11-24
+ * (mode, manta, ronin, fuse, syscoin, songbird, etc, flare,
+ * zetachain, hemi). The wiring lane set the explorer base but never
+ * extended this gate, so /track answered "not supported" for all ten
+ * even though the lookup code below already reads the base from the
+ * registry. Deriving the gate from the registry entry keeps the two
+ * from drifting apart again.
+ */
+function hasBlockscoutV2Lookup(chain: ChainId): boolean {
+  return (
+    isBlockscoutV2Chain(chain) ||
+    chainConfig(chain).historyExplorerBase !== undefined
+  );
+}
+
 export interface TrackedTx {
   hash: string;
   chain: ChainId;
@@ -391,7 +410,7 @@ export async function lookupTransaction(
     chain !== 'btc' &&
     chain !== 'trx' &&
     chain !== 'ton' &&
-    !isBlockscoutV2Chain(chain)
+    !hasBlockscoutV2Lookup(chain)
   ) {
     return {
       status: 'unsupported',
@@ -406,7 +425,7 @@ export async function lookupTransaction(
     return { status: 'error', reason: 'Invalid Bitcoin transaction hash format.' };
   }
   if (
-    isBlockscoutV2Chain(chain) &&
+    hasBlockscoutV2Lookup(chain) &&
     (hash.length !== 66 || !/^0x[0-9a-fA-F]{64}$/.test(hash))
   ) {
     return {
@@ -465,11 +484,10 @@ export async function lookupTransaction(
       }
       data = parseBtcTx(raw, tipHeight, devnet);
     } else {
-      // Lane B: the Blockscout v2 lookup is shared by ETH, Optimism,
-      // Scroll, Celo and Aurora — the host, network id and explorer come
-      // from the registry entry (ETH's own entry carries its Blockscout
-      // URLs too). Lookup is mainnet-only for the four new chains: no
-      // devnet indexer is configured for them.
+      // Lane B: the Blockscout v2 lookup is shared by every chain
+      // with a historyExplorerBase — the host, network id and explorer
+      // come from the registry entry. Lookup is mainnet-only for the
+      // non-ETH chains: no devnet indexer is configured for them.
       if (devnet && chain !== 'eth') {
         return {
           status: 'unsupported',

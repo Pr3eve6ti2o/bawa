@@ -666,6 +666,46 @@ describe('signEvmOffline new EVM chains (Lane 80-APP, 2026-11-24)', () => {
     ).resolves.toEqual({ ok: true });
   });
 
+  // Lane B (token-verify, 2026-11-24): the recipient may arrive in
+  // the wallet's own `ronin:` form — validateRecipient accepts it,
+  // so signing must too. Before this fix the sign failed after the
+  // user approved ("Invalid Ronin transaction input."): viem only
+  // serialises 0x. The wire `to` is the 0x form; the sender keeps
+  // its ronin: prefix.
+  it('signs 0.01 RON on Ronin offline to a ronin: recipient; the wire to is the 0x form', async () => {
+    const mnemonic = await createWallet();
+    const addresses = await deriveAddresses(mnemonic, '');
+    const signed = await signEvmOffline(
+      'ronin',
+      mnemonic,
+      '',
+      addresses.ronin,
+      '10000000000000000',
+      '0',
+      '20000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(addresses.ronin);
+    expect(signed.txHash).toBe(keccak256(signed.signedTxHex));
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.to?.toLowerCase()).toBe(
+      ('0x' + addresses.ronin.slice('ronin:'.length)).toLowerCase(),
+    );
+    expect(parsed.value).toBe(10000000000000000n);
+    expect(parsed.chainId).toBe(2020);
+    const from0x = '0x' + signed.from.slice('ronin:'.length);
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: from0x,
+        to: '0x' + addresses.ronin.slice('ronin:'.length),
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 2020,
+      }),
+    ).resolves.toEqual({ ok: true });
+  });
+
   it('refuses a derive-only chain (Cosmos) for EVM signing', async () => {
     const mnemonic = await createWallet();
     expect(
@@ -2192,6 +2232,54 @@ describe('signEvmTokenOffline (Lane 2)', () => {
         amountBaseUnits: '1000000000000000000',
         nonce: '0',
         chainId: 56,
+      }),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  // Lane B (token-verify, 2026-11-24): a `ronin:` recipient is valid
+  // input here too — before this fix the ERC-20 calldata build
+  // rejected it ("Invalid ERC-20 transfer recipient or amount.")
+  // after the user approved. The contract is any well-formed 0x
+  // address: offline signing format-checks it, it never touches a
+  // chain. The wire calldata names the 0x recipient.
+  it('signs a Ronin token transfer to a ronin: recipient; chain id 2020', async () => {
+    const mnemonic = await createWallet();
+    const addresses = await deriveAddresses(mnemonic, '');
+    const contract = '0x0b7007c13325c48911f73a2dad5fa154cc964a4c';
+    const signed = await signEvmTokenOffline(
+      'ronin',
+      mnemonic,
+      '',
+      contract,
+      addresses.ronin,
+      '1000000',
+      '0',
+      '20000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(addresses.ronin);
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.chainId).toBe(2020);
+    expect(parsed.to?.toLowerCase()).toBe(contract.toLowerCase());
+    expect(parsed.value ?? 0n).toBe(0n);
+    expect(parsed.data?.toLowerCase()).toBe(
+      buildErc20TransferData(
+        '0x' + addresses.ronin.slice('ronin:'.length),
+        '1000000',
+      ).toLowerCase(),
+    );
+    // The verifier compares against the recovered 0x sender, so the
+    // intent names the 0x form (same as the native Ronin test).
+    const from0x = '0x' + signed.from.slice('ronin:'.length);
+    await expect(
+      verifyEvmTokenSignedTx(signed.signedTxHex, {
+        from: from0x,
+        contract,
+        to: '0x' + addresses.ronin.slice('ronin:'.length),
+        amountBaseUnits: '1000000',
+        nonce: '0',
+        chainId: 2020,
       }),
     ).resolves.toEqual({ ok: true });
   });

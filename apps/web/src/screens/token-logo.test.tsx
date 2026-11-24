@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
-import { TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
+import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -186,5 +186,80 @@ describe('TokenLogo', () => {
     }
 
     expect(tokenLogoFor('ZZZZ')).toBeUndefined();
+  });
+});
+
+describe('ChainLogo (Lane B, token-verify)', () => {
+  let div: HTMLDivElement;
+  let root: ReturnType<typeof createRoot>;
+  let previousActEnvironment: boolean | undefined;
+
+  beforeEach(() => {
+    div = document.createElement('div');
+    root = createRoot(div);
+    previousActEnvironment = testGlobal.IS_REACT_ACT_ENVIRONMENT;
+    testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+  });
+
+  afterEach(() => {
+    act(() => {
+      root.unmount();
+    });
+    if (previousActEnvironment === undefined) {
+      delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
+    } else {
+      testGlobal.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+    }
+  });
+
+  function mountChain(chain: Parameters<typeof ChainLogo>[0]['chain']) {
+    act(() => {
+      root.render(
+        <MemoryRouter>
+          <ChainLogo chain={chain} />
+        </MemoryRouter>,
+      );
+    });
+  }
+
+  it('renders an icon-less ETH-symbol chain as an empty ring, never the Ethereum logo', () => {
+    // Zora's native token is ETH and Zora has no chain logo: the old
+    // symbol fallback showed the Ethereum diamond on the Zora row.
+    mountChain('zora');
+
+    expect(div.querySelector('img')).toBeNull();
+    const empty = div.querySelector('span[role="img"]');
+    expect(empty).not.toBeNull();
+    expect(empty?.textContent).toBe('');
+    expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.getAttribute('aria-label')).toBe('Zora logo unavailable');
+  });
+
+  it('renders an icon-less non-ETH chain as an empty ring', () => {
+    mountChain('velas');
+
+    expect(div.querySelector('img')).toBeNull();
+    const empty = div.querySelector('span[role="img"]');
+    expect(empty).not.toBeNull();
+    expect(empty?.textContent).toBe('');
+    expect(empty?.getAttribute('aria-label')).toBe('Velas logo unavailable');
+  });
+
+  it('still renders the Ethereum logo for the Ethereum chain itself', () => {
+    // ETH has no chain-keyed entry, so ChainLogo falls through to
+    // the token logo — the ETH diamond, honestly the chain's mark.
+    mountChain('eth');
+
+    const img = div.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.alt).toBe('ETH logo');
+  });
+
+  it('still renders a chain-keyed logo where one exists', () => {
+    mountChain('arb');
+
+    const img = div.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.alt).toContain('Arbitrum');
   });
 });

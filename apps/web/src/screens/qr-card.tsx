@@ -42,9 +42,10 @@
 // a broken image.
 //
 // Logos are the in-repo Trust Wallet assets (screens/token-logo):
-// the token's mark, with the chain's mark overlapping it, and a
-// ticker badge when a logo is missing or fails to load — never a
-// broken image, never an empty box.
+// the token's mark, with the chain's mark overlapping it, and an
+// honest empty ring when a logo is missing or fails to load — never
+// a broken image, never a ticker badge (Lane B, 2026-11-24: the
+// yellow ticker badge read as a broken logo, owner 2026-11-23).
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { chainConfig, type ChainId } from '../wallet/chains';
@@ -115,13 +116,11 @@ export const QR_CARD_FOOTER = 'Share the card, keep the keys.';
 function LogoImage({
   src,
   alt,
-  fallback,
   overlap = false,
   size = 'md',
 }: {
   src: string | undefined;
   alt: string;
-  fallback: string;
   /** The chain mark overlaps the token mark, with a paper ring cutting it out. */
   overlap?: boolean;
   /** lg is the 56 px header mark; md the 32 px token mark; sm the 20 px chain mark riding on it. */
@@ -131,8 +130,6 @@ function LogoImage({
   const sizeClass =
     size === 'lg' ? 'size-14' : size === 'sm' ? 'size-5' : 'size-8';
   const px = size === 'lg' ? 56 : size === 'sm' ? 20 : 32;
-  const textClass =
-    size === 'lg' ? 'text-xs' : size === 'sm' ? 'text-[8px]' : 'text-[10px]';
   if (src !== undefined && !failed) {
     return (
       <img
@@ -146,14 +143,17 @@ function LogoImage({
       />
     );
   }
+  // Lane B (token-verify, 2026-11-24): a missing logo renders an
+  // honest empty state — a plain faded ring, no fill, no text. The
+  // old fallback was the yellow ticker badge (bg-sun + symbol text),
+  // the badge the owner ordered removed on 2026-11-23; it still
+  // showed for every icon-less chain (e.g. "ZO" on the Zora card).
   return (
     <span
       role="img"
       aria-label={alt}
-      className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full border-2 border-ink bg-sun ${textClass} font-bold uppercase text-ink ${overlap ? '-ml-2' : ''}`}
-    >
-      {fallback}
-    </span>
+      className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full border-2 border-ink opacity-40 ${overlap ? '-ml-2' : ''}`}
+    />
   );
 }
 
@@ -206,14 +206,12 @@ export function QrCard({
         <LogoImage
           src={tokenLogo}
           alt={`${tokenSymbol} logo`}
-          fallback={tokenSymbol.trim().slice(0, 4) || '?'}
           size="lg"
         />
         <span className="absolute -bottom-1 -right-1 flex rounded-full border-2 border-paper bg-paper">
           <LogoImage
             src={chainLogo}
             alt={`${config.displayName} logo`}
-            fallback={chainShortLabel(chain).slice(0, 2)}
             size="sm"
           />
         </span>

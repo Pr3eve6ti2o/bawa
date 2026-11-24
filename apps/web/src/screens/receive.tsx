@@ -43,41 +43,17 @@ export const POPULAR_RECEIVE_CHAINS: readonly ChainId[] = [
 
 /**
  * A chain's real mark: the bundled Trust Wallet logo where the repo
- * has one (chainLogoFor, else the symbol's token logo — BTC, ETH,
- * TRX, TON), and a ticker badge where it has none (Gnosis, Celo,
- * Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom). Never a
- * broken image, never an empty box — the same fallback the QR card
- * uses. The old picker drew every chain as a hand-drawn blob with
- * symbol text, so BNB Smart Chain and Avalanche read as bare
- * initials; the real marks are what the owner asked the token rows
- * to use.
+ * has one, and the honest empty ring where it has none (ChainLogo,
+ * screens/token-logo.tsx). Lane B (token-verify, 2026-11-24): this
+ * used to fall back to the symbol's token logo — the Ethereum logo
+ * on the eleven icon-less ETH-symbol chains — and then to a yellow
+ * ticker badge with the symbol text, the badge the owner ordered
+ * removed on 2026-11-23. Both fallbacks are gone; the shared
+ * ChainLogo is the only mark path now, so the picker can never drift
+ * from the asset rows again.
  */
 function ChainMark({ chain }: { chain: ChainId }) {
-  const [failed, setFailed] = useState(false);
-  const config = chainConfig(chain);
-  const src =
-    chainLogoFor(chain) ?? tokenLogoFor(config.symbol);
-  if (src !== undefined && !failed) {
-    return (
-      <img
-        src={src}
-        alt=""
-        width={32}
-        height={32}
-        decoding="async"
-        className="size-8 shrink-0 rounded-full"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden="true"
-      className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-sun text-[10px] font-bold uppercase text-ink"
-    >
-      {config.symbol.trim().slice(0, 4) || '?'}
-    </span>
-  );
+  return <ChainLogo chain={chain} size={32} />;
 }
 
 /**
