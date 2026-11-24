@@ -12,6 +12,17 @@
  * - "Add chain": enable one of the 22 registry chains. No free-text
  *   chain field — a 23rd chain is impossible by design.
  *
+ * Lane 1: the contract field also accepts a ticker or name ("sushi").
+ * An address-shaped input keeps the strict format error; anything else
+ * is resolved as a ticker/name (local registry first, then CoinGecko)
+ * — one match is filled in and added, several matches are shown for
+ * the user to pick, none shows the format error. Search results carry
+ * the verified mark (✓ Verified when the token is verified by the
+ * isVerifiedToken rule, "Unverified" otherwise), and the add result
+ * says which one it is — a token found by ticker search keeps its
+ * CoinGecko listing id when the second lookup is rate-limited, so the
+ * add does not lose its verified mark.
+ *
  * Built on the existing dialog.tsx / Button / Input / Label primitives
  * and the 4-colour drawing-illustration style; the chain picker is a
  * native <select> (the auto-lock-setting precedent — no screen uses the
@@ -26,6 +37,7 @@ import { useWallet } from '../state/wallet-context';
 import {
   DEFAULT_TOKENS,
   isDuplicateToken,
+  isVerifiedToken,
   resolveTokenByTickerOrName,
   shortContract,
   tokenStandardFor,
@@ -33,6 +45,7 @@ import {
   validateSolMintAddress,
   validateTonJettonAddress,
   validateTronContractAddress,
+  type AddressValidation,
   type TokenRecord,
 } from '../wallet/tokens';
 import {
@@ -127,6 +140,43 @@ function ownerAddressFor(
   return undefined;
 }
 
+/**
+ * Lane 1: does this input look like an address the user tried to
+ * paste, rather than a ticker? Address-shaped input keeps the strict
+ * format error; anything else is resolved as a ticker/name. A ticker
+ * is at most 11 characters, so the length rules below can never catch
+ * one: EVM addresses start with 0x (or are 32+ hex chars without it),
+ * TRON addresses are 34 chars starting with T, Solana mints are
+ * 32–44 base58 chars, TON masters start with EQ/UQ/0: or are 48 chars.
+ */
+function looksLikeAddressAttempt(raw: string, chain: ChainId): boolean {
+  if (chain === 'trx') return raw.startsWith('T') && raw.length >= 20;
+  if (chain === 'sol') return raw.length >= 32;
+  if (chain === 'ton') {
+    return (
+      raw.startsWith('EQ') ||
+      raw.startsWith('UQ') ||
+      raw.startsWith('0:') ||
+      raw.length >= 40
+    );
+  }
+  return raw.startsWith('0x') || raw.length >= 32;
+}
+
+/** Format + checksum validation for one chain's contract input. */
+function validateContractFor(chain: ChainId, raw: string): AddressValidation {
+  if (chain === 'trx') return validateTronContractAddress(raw);
+  if (chain === 'sol') return validateSolMintAddress(raw);
+  if (chain === 'ton') return validateTonJettonAddress(raw);
+  return validateEvmContractAddress(raw);
+}
+
+/** One ticker/name resolution: local registry first, then CoinGecko. */
+type QueryResolution =
+  | { kind: 'found'; candidates: TokenSearchCandidate[] }
+  | { kind: 'not-found' }
+  | { kind: 'error'; reason: string };
+
 export function AddTokenDialog({
   open,
   onOpenChange,
@@ -150,6 +200,13 @@ export function AddTokenDialog({
   >(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  // Lane 1: the search candidate the user picked (via Use, or the
+  // single match auto-resolved from the contract field). Its
+  // CoinGecko id is carried into the add when the second lookup is
+  // rate-limited, so a search-found token keeps its verified mark —
+  // but only when the chain + contract being added still match it.
+  const [pickedCandidate, setPickedCandidate] =
+    useState<TokenSearchCandidate | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fresh state every time the dialog opens.
@@ -165,6 +222,7 @@ export function AddTokenDialog({
     setSearchCandidates(null);
     setSearchError(null);
     setSearching(false);
+    setPickedCandidate(null);
   }, [open ]);
 
   // The addable chains are the registry chains with derivation —
@@ -188,6 +246,39 @@ export function AddTokenDialog({
     setStatus(`${chainConfig(chainId).displayName} added`);
   };
 
+  // Lane 1: one ticker/name resolution shared by the Search button
+  // and the contract field's ticker fallback (see onSubmit). Local
+  // registry first (no network): defaults + user-added. Only then
+  // CoinGecko. A query that resolves nowhere says so honestly — a
+  // token is never invented.
+  const resolveQuery = async (query: string): Promise<QueryResolution> => {
+    const local = resolveTokenByTickerOrName(query, [
+      ...DEFAULT_TOKENS,
+      ...(wallet.customTokens ?? []),
+    ]);
+    if (local.length > 0) {
+      return {
+        kind: 'found',
+        candidates: local.map((record) => ({
+          chain: record.chain,
+          contract: record.contract,
+          name: record.name,
+          symbol: record.symbol,
+          decimals: record.decimals,
+          coingeckoId: record.coingeckoId ?? '',
+          // Lane 1: the local candidate's verified state, by the
+          // isVerifiedToken rule — a registry default is verified,
+          // an unlisted user-added token is not.
+          verified: isVerifiedToken(record),
+        })),
+      };
+    }
+    const remote = await searchTokensByNameOrTicker(query, globalThis.fetch);
+    if (remote.status === 'found') return { kind: 'found', candidates: remote.candidates };
+    if (remote.status === 'not-found') return { kind: 'not-found' };
+    return { kind: 'error', reason: remote.reason };
+  };
+
   const onSearch = async () => {
     const query = searchQuery.trim();
     if (query === '') {
@@ -198,34 +289,17 @@ export function AddTokenDialog({
     setSearching(true);
     setSearchError(null);
     setSearchCandidates(null);
+    setPickedCandidate(null);
     try {
-      // Local registry first (no network): defaults + user-added.
-      const local = resolveTokenByTickerOrName(query, [
-        ...DEFAULT_TOKENS,
-        ...(wallet.customTokens ?? []),
-      ]);
-      if (local.length > 0) {
-        setSearchCandidates(
-          local.map((record) => ({
-            chain: record.chain,
-            contract: record.contract,
-            name: record.name,
-            symbol: record.symbol,
-            decimals: record.decimals,
-            coingeckoId: record.coingeckoId ?? '',
-          })),
-        );
-        return;
-      }
-      const remote = await searchTokensByNameOrTicker(query, globalThis.fetch);
-      if (remote.status === 'found') {
-        setSearchCandidates(remote.candidates);
-      } else if (remote.status === 'not-found') {
+      const resolved = await resolveQuery(query);
+      if (resolved.kind === 'found') {
+        setSearchCandidates(resolved.candidates);
+      } else if (resolved.kind === 'not-found') {
         setSearchError(
           `No token found for "${query}". Check the spelling, or add it by contract address below.`,
         );
       } else {
-        setSearchError(`Search failed: ${remote.reason}`);
+        setSearchError(`Search failed: ${resolved.reason}`);
       }
     } finally {
       setSearching(false);
@@ -237,71 +311,43 @@ export function AddTokenDialog({
     setContract(candidate.contract);
     setSearchCandidates(null);
     setSearchError(null);
+    setPickedCandidate(candidate);
     setStatus(
       `${candidate.name} (${candidate.symbol}) on ${chainConfig(candidate.chain).displayName}. Check the contract below, then Add.`,
     );
     setError(null);
   };
 
-  const onSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    setError(null);
-    setStatus(null);
-    // TEMPORARY devnet mode (UI/UX fixes, item 2): token verification
-    // reads mainnet contracts on mainnet RPCs. Adding a token in
-    // devnet mode would verify — and persist — a mainnet token while
-    // the wallet is on test networks, so the submit is off here; the
-    // button is disabled too, this is the programmatic backstop.
-    if (wallet.devnetEnabled) {
-      setError('Adding tokens is off in devnet test mode.');
+  /**
+   * Verify a contract on-chain and add it, with its real metadata.
+   * `picked` is the search candidate the contract came from, if any:
+   * its CoinGecko id is kept when the second lookup is rate-limited
+   * (null), so a search-found token does not lose its verified mark —
+   * but only when it names this exact chain + contract.
+   */
+  const submitWith = async (
+    chainId: ChainId,
+    contractRaw: string,
+    picked: TokenSearchCandidate | null,
+  ): Promise<void> => {
+    // 1. Format + checksum (no network on bad input).
+    const format = validateContractFor(chainId, contractRaw);
+    if (!format.ok) {
+      setError(format.error);
+      inputRef.current?.focus();
       return;
     }
-    const raw = contract.trim();
-    // 1. Format + checksum (no network on bad input).
-    let normalized: string;
-    if (chain === 'trx') {
-      const format = validateTronContractAddress(raw);
-      if (!format.ok) {
-        setError(format.error);
-        inputRef.current?.focus();
-        return;
-      }
-      normalized = format.normalized;
-    } else if (chain === 'sol') {
-      const format = validateSolMintAddress(raw);
-      if (!format.ok) {
-        setError(format.error);
-        inputRef.current?.focus();
-        return;
-      }
-      normalized = format.normalized;
-    } else if (chain === 'ton') {
-      const format = validateTonJettonAddress(raw);
-      if (!format.ok) {
-        setError(format.error);
-        inputRef.current?.focus();
-        return;
-      }
-      normalized = format.normalized;
-    } else {
-      const format = validateEvmContractAddress(raw);
-      if (!format.ok) {
-        setError(format.error);
-        inputRef.current?.focus();
-        return;
-      }
-      normalized = format.normalized;
-    }
+    const normalized = format.normalized;
     // 2. Duplicate in the user-added list (checked before any network
     // call; the wallet also rejects defaults at the persistence boundary
     // and that error is surfaced below).
-    if (isDuplicateToken(wallet.customTokens ?? [], chain, normalized)) {
+    if (isDuplicateToken(wallet.customTokens ?? [], chainId, normalized)) {
       setError('Already added');
       inputRef.current?.focus();
       return;
     }
     // 3. An owner address is needed to read the balance.
-    const ownerAddress = ownerAddressFor(wallet, chain);
+    const ownerAddress = ownerAddressFor(wallet, chainId);
     if (ownerAddress === undefined) {
       setError('No address is available for this chain yet.');
       inputRef.current?.focus();
@@ -320,17 +366,17 @@ export function AddTokenDialog({
         resolveTokenCoingeckoId,
       } = await import('../wallet/adapters/token-balances');
       const verification =
-        chain === 'trx'
+        chainId === 'trx'
           ? await verifyTronToken({ contract: normalized, ownerAddress })
-          : chain === 'sol'
+          : chainId === 'sol'
             ? await verifySplToken({ contract: normalized, ownerAddress })
-            : chain === 'ton'
+            : chainId === 'ton'
               ? await verifyJettonToken({
                   contract: normalized,
                   ownerAddress,
                 })
               : await verifyEvmToken({
-                  chain,
+                  chain: chainId,
                   contract: normalized,
                   ownerAddress,
                 });
@@ -344,13 +390,24 @@ export function AddTokenDialog({
       // TonAPI rates (TON Jettons) at refresh time — the price shows
       // "Price unavailable" only when no source has it (see
       // token-prices / dex-prices).
-      const platform = COINGECKO_PLATFORM_FOR_CHAIN[chain];
-      const coingeckoId =
+      const platform = COINGECKO_PLATFORM_FOR_CHAIN[chainId];
+      const resolvedId =
         platform === undefined
           ? null
           : await resolveTokenCoingeckoId({ platform, contract: normalized });
+      // Lane 1: a token found by ticker search is CoinGecko-confirmed
+      // — keep its listing id when this lookup is rate-limited (null),
+      // so the add does not lose its verified mark.
+      const coingeckoId =
+        resolvedId ??
+        (picked !== null &&
+        picked.chain === chainId &&
+        picked.contract.toLowerCase() === normalized.toLowerCase() &&
+        picked.coingeckoId !== ''
+          ? picked.coingeckoId
+          : null);
       const record: TokenRecord = {
-        chain,
+        chain: chainId,
         contract: normalized,
         name: verification.metadata.name,
         symbol: verification.metadata.symbol,
@@ -364,10 +421,87 @@ export function AddTokenDialog({
         inputRef.current?.focus();
         return;
       }
-      setStatus('Token added');
+      // Lane 1: the add result says whether the token is verified.
+      setStatus(
+        isVerifiedToken(record) ? 'Token added — ✓ Verified' : 'Token added — Unverified',
+      );
     } finally {
       setChecking(false);
     }
+  };
+
+  const onSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setStatus(null);
+    // TEMPORARY devnet mode (UI/UX fixes, item 2): token verification
+    // reads mainnet contracts on mainnet RPCs. Adding a token in
+    // devnet mode would verify — and persist — a mainnet token while
+    // the wallet is on test networks, so the submit is off here; the
+    // button is disabled too, this is the programmatic backstop.
+    if (wallet.devnetEnabled) {
+      setError('Adding tokens is off in devnet test mode.');
+      return;
+    }
+    const raw = contract.trim();
+    const format = validateContractFor(chain, raw);
+    if (!format.ok) {
+      // Lane 1: the contract field also accepts a ticker/symbol
+      // ("sushi"). An address-shaped input keeps the strict format
+      // error; anything else is resolved as a ticker/name first — one
+      // match is filled in and added, several are shown for the user
+      // to pick, none falls back to the format error.
+      if (looksLikeAddressAttempt(raw, chain)) {
+        setError(format.error);
+        inputRef.current?.focus();
+        return;
+      }
+      setChecking(true);
+      try {
+        const resolved = await resolveQuery(raw);
+        if (resolved.kind === 'error') {
+          setError(`Search failed: ${resolved.reason}`);
+          inputRef.current?.focus();
+          return;
+        }
+        if (resolved.kind === 'not-found' || resolved.candidates.length === 0) {
+          setError(format.error);
+          inputRef.current?.focus();
+          return;
+        }
+        if (resolved.candidates.length === 1) {
+          const [only] = resolved.candidates;
+          if (only === undefined) {
+            setError(format.error);
+            inputRef.current?.focus();
+            return;
+          }
+          setPickedCandidate(only);
+          setChain(only.chain);
+          setContract(only.contract);
+          await submitWith(only.chain, only.contract, only);
+          return;
+        }
+        setSearchCandidates(resolved.candidates);
+        setPickedCandidate(null);
+        setStatus(
+          `"${raw}" matches ${resolved.candidates.length} tokens — pick one, then Add.`,
+        );
+        inputRef.current?.focus();
+        return;
+      } finally {
+        setChecking(false);
+      }
+    }
+    // The picked candidate still applies when the user pressed Use
+    // and then Add without editing the contract.
+    const picked =
+      pickedCandidate !== null &&
+      pickedCandidate.chain === chain &&
+      pickedCandidate.contract.toLowerCase() === format.normalized.toLowerCase()
+        ? pickedCandidate
+        : null;
+    await submitWith(chain, raw, picked);
   };
 
   return (
@@ -376,7 +510,7 @@ export function AddTokenDialog({
         <DialogHeader>
           <DialogTitle>Add token</DialogTitle>
           <DialogDescription>
-            Add a chain to your wallet, or add a token by its contract address.
+            Add a chain to your wallet, or add a token by ticker or contract address.
           </DialogDescription>
         </DialogHeader>
 
@@ -476,6 +610,15 @@ export function AddTokenDialog({
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-medium text-ink">
                             {candidate.name} ({candidate.symbol})
+                            {/* Lane 1: the verified mark on the search
+                                result itself — a CoinGecko-confirmed
+                                match is verified, a registry token
+                                without a listing is not. */}
+                            {candidate.verified ? (
+                              <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                            ) : (
+                              <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
+                            )}
                           </span>
                           <span className="block text-xs text-ink/70">
                             {chainConfig(candidate.chain).displayName} ·{' '}

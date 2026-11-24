@@ -453,12 +453,16 @@ function ListRow({ model }: { model: AssetRowModel }) {
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-bold text-foreground">
             {model.title}
-            {model.verified === true && (
-              // Lane 4: the tick never splits from its label — "✓" on
-              // one line and "Verified" on the next was the cramped
-              // mobile row the owner saw.
+            {/* Lane 4: the tick never splits from its label — "✓" on
+                one line and "Verified" on the next was the cramped
+                mobile row the owner saw. Lane 1: the verified mark
+                on a failed row too — a token that cannot load still
+                shows whether it is verified. */}
+            {model.verified === true ? (
               <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
-            )}
+            ) : model.verified === false ? (
+              <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
+            ) : null}
           </span>
           {' '}
           <span className="block text-xs text-muted-foreground">{model.subtitle}</span>
@@ -493,7 +497,7 @@ function ListRow({ model }: { model: AssetRowModel }) {
           amount={model.amount}
           {...(model.valueText === undefined ? {} : { value: model.valueText })}
           detail={model.detail}
-          {...(model.verified === true ? { verified: true } : {})}
+          {...(model.isToken ? { verified: model.verified === true } : {})}
           subline={model.isToken ? model.subtitle : undefined}
         />
       </Link>
@@ -545,6 +549,13 @@ function TableRow({ model }: { model: AssetRowModel }) {
                   and hide the rest of the name. */}
               <span className="block text-[15px] font-bold text-foreground">
                 {model.title}
+                {/* Lane 1: the wide table's failed row had no mark at
+                    all — the list variant already showed it. */}
+                {model.verified === true ? (
+                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                ) : model.verified === false ? (
+                  <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
+                ) : null}
               </span>
               <span className="block text-xs text-muted-foreground">
                 {model.statusText}
@@ -590,11 +601,14 @@ function TableRow({ model }: { model: AssetRowModel }) {
                   and hide the rest of the name. */}
               <span className="block text-[15px] font-bold text-foreground">
                 {model.title}
-                {model.verified === true && (
-                  // Lane 4: the tick never splits from its label (see
-                  // the list row above).
+                {/* Lane 4: the tick never splits from its label (see
+                    the list row above). Lane 1: an unverified token
+                    reads "Unverified" instead of silence. */}
+                {model.verified === true ? (
                   <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
-                )}
+                ) : model.verified === false ? (
+                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
+                ) : null}
               </span>
               <span className="block text-xs text-muted-foreground">
                 {model.subtitle}

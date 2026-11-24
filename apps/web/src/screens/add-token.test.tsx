@@ -332,16 +332,26 @@ describe('AddTokenDialog — add token mode', () => {
   });
 
   it('still adds the token when the CoinGecko lookup 404s, with no price id', async () => {
+    // SHIB is not a default, so with no listing it is Unverified —
+    // USDC would be verified by the default list even with no id.
+    const SHIB_CONTRACT = '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE';
     vi.mocked(resolveTokenCoingeckoId).mockResolvedValue(null);
+    vi.mocked(verifyEvmToken).mockResolvedValue({
+      ok: true,
+      metadata: { name: 'Shiba Inu', symbol: 'SHIB', decimals: 18 },
+      balanceBaseUnits: '0',
+    });
     const mounted = await mountDialog();
     try {
       const input = document.querySelector<HTMLInputElement>('#add-token-contract');
-      setInputValue(input!, USDC_CONTRACT);
+      setInputValue(input!, SHIB_CONTRACT);
       await submitForm(document);
       expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
       const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
       expect(record.coingeckoId).toBeNull();
       expect(document.body.textContent).toContain('Token added');
+      // Lane 1: no listing, no tick — the result says Unverified.
+      expect(document.body.textContent).toContain('Token added — Unverified');
     } finally {
       await mounted.cleanup();
     }
@@ -563,6 +573,56 @@ describe('AddTokenDialog — add token mode', () => {
 });
 
 describe('AddTokenDialog — find by ticker or name', () => {
+  // Lane 1: stub CoinGecko /search + /coins/{id} for the dialog's
+  // remote search. `details` maps coin id -> detail payload (or
+  // 'rate-limited' for a 429 on that coin's detail fetch).
+  // Real SUSHI contract, read live from CoinGecko 2026-11-24: the
+  // lowercase form is what CoinGecko returns (and what a search
+  // candidate carries).
+  const SUSHI_CONTRACT = '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2';
+  const SUSHI_DETAIL = {
+    id: 'sushi',
+    name: 'Sushi',
+    symbol: 'sushi',
+    detail_platforms: {
+      ethereum: { decimal_place: 18, contract_address: SUSHI_CONTRACT },
+    },
+  };
+  function stubCoinGeckoSearch(
+    searchCoins: unknown[],
+    details: Record<string, unknown | 'rate-limited'>,
+  ): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/api/v3/search?')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ coins: searchCoins }),
+            headers: { get: () => null },
+          };
+        }
+        const match = url.match(/\/api\/v3\/coins\/([^?]+)/);
+        const detail = match !== null ? details[match[1]!] : undefined;
+        if (detail === 'rate-limited' || detail === undefined) {
+          return {
+            ok: false,
+            status: detail === 'rate-limited' ? 429 : 404,
+            json: async () => ({}),
+            headers: { get: () => null },
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => detail,
+          headers: { get: () => null },
+        };
+      }),
+    );
+  }
+
   it('resolves USDC from the local registry and prefills chain + contract', async () => {
     // Token gaps, item 2: a ticker search resolves to the token with
     // its chain and contract — no network call for a registry token.
@@ -618,6 +678,256 @@ describe('AddTokenDialog — find by ticker or name', () => {
       const alert = document.querySelector('[role="alert"]');
       expect(alert?.textContent).toContain('No token found for "zzzznonexistent"');
       expect(mockAddCustomToken).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the verified mark on a CoinGecko search result', async () => {
+    // Lane 1: "sushi" is not in the local registry, so the remote
+    // search resolves it — and the result carries the verified mark,
+    // because its contract came from CoinGecko itself.
+    stubCoinGeckoSearch(
+      [{ id: 'sushi', name: 'Sushi', symbol: 'SUSHI' }],
+      { sushi: SUSHI_DETAIL },
+    );
+    const mounted = await mountDialog();
+    try {
+      const search = document.querySelector<HTMLInputElement>('#add-token-search');
+      setInputValue(search!, 'sushi');
+      await act(async () => {
+        clickButton(document, 'Search');
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      expect(document.body.textContent).toContain('Sushi (SUSHI)');
+      expect(document.body.textContent).toContain('✓ Verified');
+      expect(document.body.textContent).toContain('0x6b35…0fe2');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows Unverified on a search result with no CoinGecko listing', async () => {
+    // Lane 1: a user-added token with no listing is a local match —
+    // and its result says Unverified, never a tick.
+    const UNLISTED_RECORD: TokenRecord = {
+      chain: 'eth',
+      contract: '0x00000000000000000000000000000000000000A1',
+      name: 'Unlisted Token',
+      symbol: 'UNL',
+      decimals: 18,
+      coingeckoId: null,
+      addedAtMs: 1,
+    };
+    setWallet({ customTokens: [UNLISTED_RECORD] });
+    const mounted = await mountDialog();
+    try {
+      const search = document.querySelector<HTMLInputElement>('#add-token-search');
+      setInputValue(search!, 'UNL');
+      await act(async () => {
+        clickButton(document, 'Search');
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      expect(document.body.textContent).toContain('Unlisted Token (UNL)');
+      expect(document.body.textContent).toContain('Unverified');
+      expect(document.body.textContent).not.toContain('✓ Verified');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('AddTokenDialog — ticker in the contract field', () => {
+  // Real SUSHI contract, read live from CoinGecko 2026-11-24: the
+  // lowercase form is what CoinGecko returns (and what a search
+  // candidate carries); the checksummed form is what the submit
+  // normalizes it to before verifying.
+  const SUSHI_CONTRACT = '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2';
+  const SUSHI_CONTRACT_CHECKSUMMED = '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2';
+  const SUSHI_DETAIL = {
+    id: 'sushi',
+    name: 'Sushi',
+    symbol: 'sushi',
+    detail_platforms: {
+      ethereum: { decimal_place: 18, contract_address: SUSHI_CONTRACT },
+    },
+  };
+  function stubCoinGeckoSearch(
+    searchCoins: unknown[],
+    details: Record<string, unknown | 'rate-limited'>,
+  ): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('/api/v3/search?')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ coins: searchCoins }),
+            headers: { get: () => null },
+          };
+        }
+        const match = url.match(/\/api\/v3\/coins\/([^?]+)/);
+        const detail = match !== null ? details[match[1]!] : undefined;
+        if (detail === 'rate-limited' || detail === undefined) {
+          return {
+            ok: false,
+            status: detail === 'rate-limited' ? 429 : 404,
+            json: async () => ({}),
+            headers: { get: () => null },
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => detail,
+          headers: { get: () => null },
+        };
+      }),
+    );
+  }
+  async function submitTicker(value: string): Promise<void> {
+    const input = document.querySelector<HTMLInputElement>('#add-token-contract');
+    setInputValue(input!, value);
+    await submitForm(document);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+  }
+
+  it('adds sushi by typing its ticker in the contract field', async () => {
+    // Lane 1: the owner's case — "sushi" in the contract field used
+    // to fail with a format error. One unambiguous match is filled in
+    // and added, with its real CoinGecko id and the verified result.
+    stubCoinGeckoSearch(
+      [{ id: 'sushi', name: 'Sushi', symbol: 'SUSHI' }],
+      { sushi: SUSHI_DETAIL },
+    );
+    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue('sushi');
+    vi.mocked(verifyEvmToken).mockResolvedValue({
+      ok: true,
+      metadata: { name: 'Sushi', symbol: 'SUSHI', decimals: 18 },
+      balanceBaseUnits: '0',
+    });
+    const mounted = await mountDialog();
+    try {
+      await submitTicker('sushi');
+      expect(verifyEvmToken).toHaveBeenCalledWith({
+        chain: 'eth',
+        contract: SUSHI_CONTRACT_CHECKSUMMED,
+        ownerAddress: ETH_ADDRESS,
+      });
+      expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
+      const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
+      expect(record).toMatchObject({
+        chain: 'eth',
+        contract: SUSHI_CONTRACT_CHECKSUMMED,
+        name: 'Sushi',
+        symbol: 'SUSHI',
+        decimals: 18,
+        coingeckoId: 'sushi',
+      });
+      expect(document.body.textContent).toContain('Token added — ✓ Verified');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the matches when a ticker in the contract field is ambiguous', async () => {
+    // Lane 1: "usdc" matches seven registry tokens — the dialog shows
+    // them for the user to pick and adds nothing on its own.
+    const mounted = await mountDialog();
+    try {
+      await submitTicker('usdc');
+      expect(document.body.textContent).toContain('USD Coin (USDC)');
+      expect(document.body.textContent).toContain('pick one, then Add');
+      expect(verifyEvmToken).not.toHaveBeenCalled();
+      expect(mockAddCustomToken).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the format error when a ticker in the contract field resolves nowhere', async () => {
+    stubCoinGeckoSearch([], {});
+    const mounted = await mountDialog();
+    try {
+      await submitTicker('zzzznonexistent');
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+        'Enter a 40-character contract address starting with 0x',
+      );
+      expect(verifyEvmToken).not.toHaveBeenCalled();
+      expect(mockAddCustomToken).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the search error when the ticker lookup is rate-limited', async () => {
+    // Lane 1: a 429 is a search failure, not "no token found" — and
+    // not a format error either.
+    stubCoinGeckoSearch(
+      [{ id: 'sushi', name: 'Sushi', symbol: 'SUSHI' }],
+      { sushi: 'rate-limited' },
+    );
+    const mounted = await mountDialog();
+    try {
+      await submitTicker('sushi');
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+        'Search failed: CoinGecko is rate-limiting',
+      );
+      expect(verifyEvmToken).not.toHaveBeenCalled();
+      expect(mockAddCustomToken).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('keeps a picked token verified when the CoinGecko re-lookup is rate-limited', async () => {
+    // Lane 1: search finds sushi (CoinGecko-confirmed), the user
+    // picks it, then the second lookup returns null — the add keeps
+    // the picked candidate's listing id, so the token stays verified.
+    stubCoinGeckoSearch(
+      [{ id: 'sushi', name: 'Sushi', symbol: 'SUSHI' }],
+      { sushi: SUSHI_DETAIL },
+    );
+    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue(null);
+    vi.mocked(verifyEvmToken).mockResolvedValue({
+      ok: true,
+      metadata: { name: 'Sushi', symbol: 'SUSHI', decimals: 18 },
+      balanceBaseUnits: '0',
+    });
+    const mounted = await mountDialog();
+    try {
+      const search = document.querySelector<HTMLInputElement>('#add-token-search');
+      setInputValue(search!, 'sushi');
+      await act(async () => {
+        clickButton(document, 'Search');
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      const useButton = [...document.querySelectorAll('button')].find((candidate) =>
+        candidate.textContent?.includes('Use'),
+      );
+      expect(useButton).not.toBeUndefined();
+      act(() => {
+        useButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      const contract = document.querySelector<HTMLInputElement>('#add-token-contract');
+      expect(contract?.value).toBe(SUSHI_CONTRACT);
+      await submitForm(document);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
+      const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
+      expect(record.coingeckoId).toBe('sushi');
+      expect(document.body.textContent).toContain('Token added — ✓ Verified');
     } finally {
       await mounted.cleanup();
     }

@@ -611,4 +611,89 @@ describe('asset list screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('shows Unverified on a user-added token row with no CoinGecko listing', async () => {
+    // Lane 1: an unlisted token says Unverified on its row — and the
+    // verified default beside it keeps its tick.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+      vaultState: 'unlocked',
+      customTokens: [
+        {
+          chain: 'eth',
+          contract: '0x00000000000000000000000000000000000000A1',
+          name: 'Unlisted Token',
+          symbol: 'UNL',
+          decimals: 18,
+          coingeckoId: null,
+          addedAtMs: 1,
+        },
+      ],
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'zero',
+          value: '0',
+        },
+        'eth:0x00000000000000000000000000000000000000a1': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, 'UNL');
+      const row = [...mounted.div.querySelectorAll('li')].find((li) =>
+        li.textContent?.includes('UNL'),
+      );
+      expect(row?.textContent).toContain('Unverified');
+      expect(row?.textContent).not.toContain('✓ Verified');
+      const usdcRow = [...mounted.div.querySelectorAll('li')].find((li) =>
+        li.textContent?.includes('USDC'),
+      );
+      expect(usdcRow?.textContent).toContain('✓ Verified');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the verified tick on a failed token row in the wide table', async () => {
+    // Lane 1: the wide table's failed row had no mark at all — the
+    // list variant already showed it. A default token that cannot
+    // load still shows its tick.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+      vaultState: 'unlocked',
+      customTokens: [],
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'unavailable',
+          reason: 'no-adapter',
+        },
+      },
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, 'Balance unavailable');
+      const row = [...mounted.div.querySelectorAll('li')].find((li) =>
+        li.textContent?.includes('USDC'),
+      );
+      expect(row?.textContent).toContain('USDC');
+      expect(row?.textContent).toContain('✓ Verified');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

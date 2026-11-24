@@ -744,8 +744,12 @@ export function ReceiveScreen() {
                   }
                 >
                   {token.name} · {token.symbol}
-                  {isVerifiedToken(token) && (
+                  {/* Lane 1: the verified mark on every picker row —
+                      an unverified token reads "Unverified". */}
+                  {isVerifiedToken(token) ? (
                     <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                  ) : (
+                    <span className="ml-2" aria-label="Unverified token">Unverified</span>
                   )}
                   <span className="font-normal text-ink">
                     {` · ${tokenConfig.displayName} · ${shortContract(token.contract)}`}
@@ -765,7 +769,17 @@ export function ReceiveScreen() {
       {step === 'details' && (
         <div className="space-y-2">
       <p className="flex items-center justify-between gap-3 text-sm text-ink">
-        <span>{`${config.displayName} · ${assetSymbol}`}</span>
+        <span>
+          {`${config.displayName} · ${assetSymbol}`}
+          {/* Lane 1: the selected token's verified state on the
+              details step (the QR card itself is Lane 5's). */}
+          {effectiveToken !== null &&
+            (isVerifiedToken(effectiveToken) ? (
+              <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+            ) : (
+              <span className="ml-2" aria-label="Unverified token">Unverified</span>
+            ))}
+        </span>
         <Button type="button" variant="outline" onClick={() => setStep('token')}>
           Back
         </Button>

@@ -541,6 +541,39 @@ describe('send screen', () => {
     }
   });
 
+  it('shows Unverified on an unlisted token in the picker and in the summary', async () => {
+    // Lane 1: a user-added token with no CoinGecko listing says
+    // Unverified on its picker row — and in the footer summary once
+    // it is selected.
+    setWallet({
+      customTokens: [
+        {
+          chain: 'eth',
+          contract: '0x00000000000000000000000000000000000000A1',
+          name: 'Unlisted Token',
+          symbol: 'UNL',
+          decimals: 18,
+          coingeckoId: null,
+          addedAtMs: 1,
+        },
+      ],
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickContaining(mounted.div, 'Ethereum');
+      const row = [...mounted.div.querySelectorAll('li')].find((li) =>
+        li.textContent?.includes('Unlisted Token'),
+      );
+      expect(row?.textContent).toContain('Unverified');
+      expect(row?.textContent).not.toContain('✓ Verified');
+      await clickContaining(mounted.div, 'Unlisted Token');
+      expect(mounted.div.textContent).toContain('Unlisted Token · UNL');
+      expect(mounted.div.textContent).toContain('Unverified');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('prefills chain, recipient and amount from a Bawa send link', async () => {
     setWallet();
     const mounted = await mountScreen([

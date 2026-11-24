@@ -256,16 +256,21 @@ export function isDefaultToken(record: TokenRecord): boolean {
 }
 
 /**
- * Verified-tick rule (token gaps, item 2). A token is official — and
- * gets the VERIFIED tick — when it is one of the curated in-repo
+ * Verified-tick rule (token gaps, item 2; Lane 1) — the definition of
+ * "verified", written down so every surface can share it:
+ *
+ * A token is VERIFIED only when it is one of the curated in-repo
  * defaults (verified twice: in-repo + live CoinGecko) or when its
  * contract resolved to a real CoinGecko listing at add time
  * (coingeckoId set by the contract endpoint for that exact chain +
- * contract). A user-added token by raw contract with no CoinGecko
- * listing gets no tick. Pattern: Uniswap token-lists (membership in a
- * curated list is the verification; identity is chainId + address)
- * and Trust Wallet assets (a reviewed listing with logo + info.json
- * is the verification).
+ * contract). Anything else is UNVERIFIED and shows "Unverified" —
+ * never a tick: a user-added token by raw contract with no CoinGecko
+ * listing gets no tick, and a token whose listing lookup failed is
+ * unverified until the lookup succeeds, not verified on trust.
+ * Pattern: Uniswap token-lists (membership in a curated list is the
+ * verification; identity is chainId + address) and Trust Wallet
+ * assets (a reviewed listing with logo + info.json is the
+ * verification).
  */
 export function isVerifiedToken(record: TokenRecord): boolean {
   return isDefaultToken(record) || record.coingeckoId !== null;

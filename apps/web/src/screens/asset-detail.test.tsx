@@ -19,6 +19,16 @@ vi.mock('../wallet/prices', async (importOriginal) => ({
   usePrices: vi.fn(),
 }));
 
+vi.mock('../wallet/token-prices', () => ({
+  // Lane 1: the token price feed is stubbed idle — the detail tests
+  // assert the header, never a live price, and the token route must
+  // not fire real network calls from the test.
+  useTokenPrices: () => ({
+    state: { status: 'idle', entries: {} },
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock('../wallet/chains', () => ({
   availableFor: vi.fn(),
   chainConfig: vi.fn(),
@@ -117,6 +127,7 @@ async function mountScreen(path: string) {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/assets/:chain" element={<AssetDetailScreen />} />
+          <Route path="/assets/:chain/:token" element={<AssetDetailScreen />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -511,6 +522,91 @@ describe('asset detail screen', () => {
         (candidate) => candidate.textContent === 'Refresh',
       );
       expect(refreshButtons).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the verified tick on a token detail header', async () => {
+    // Lane 1: the token detail header carries the mark — USDC is a
+    // curated default, so it reads ✓ Verified.
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: { eth: { xpub: 'xpub6TestWallet1234567890abcdef' } },
+      addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
+      vaultAddresses: perChain([] as string[]),
+      hydrating: false,
+      uiState: perChain('loaded'),
+      errors: perChain(null),
+      balances: perChain({ status: 'unavailable', reason: 'no-adapter' }),
+      history: perChain(emptyHistory),
+      vaultState: 'unlocked',
+      customTokens: [],
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+      refreshTokenBalances: vi.fn(async () => {}),
+      refreshChain: vi.fn(async () => {}),
+      refreshBalances: vi.fn(async () => {}),
+      refreshHistory: vi.fn(async () => {}),
+      setSelectedChain: vi.fn(),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen('/assets/eth/usdc');
+    try {
+      const heading = mounted.div.querySelector('h1');
+      expect(heading?.textContent).toContain('USDC');
+      expect(heading?.textContent).toContain('✓ Verified');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows Unverified on an unlisted token detail header', async () => {
+    // Lane 1: a user-added token with no CoinGecko listing says
+    // Unverified on its detail header.
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: { eth: { xpub: 'xpub6TestWallet1234567890abcdef' } },
+      addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
+      vaultAddresses: perChain([] as string[]),
+      hydrating: false,
+      uiState: perChain('loaded'),
+      errors: perChain(null),
+      balances: perChain({ status: 'unavailable', reason: 'no-adapter' }),
+      history: perChain(emptyHistory),
+      vaultState: 'unlocked',
+      customTokens: [
+        {
+          chain: 'eth',
+          contract: '0x00000000000000000000000000000000000000A1',
+          name: 'Unlisted Token',
+          symbol: 'UNL',
+          decimals: 18,
+          coingeckoId: null,
+          addedAtMs: 1,
+        },
+      ],
+      tokenBalances: {
+        'eth:0x00000000000000000000000000000000000000a1': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+      refreshTokenBalances: vi.fn(async () => {}),
+      refreshChain: vi.fn(async () => {}),
+      refreshBalances: vi.fn(async () => {}),
+      refreshHistory: vi.fn(async () => {}),
+      setSelectedChain: vi.fn(),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen(
+      '/assets/eth/0x00000000000000000000000000000000000000a1',
+    );
+    try {
+      const heading = mounted.div.querySelector('h1');
+      expect(heading?.textContent).toContain('UNL');
+      expect(heading?.textContent).toContain('Unverified');
+      expect(heading?.textContent).not.toContain('✓ Verified');
     } finally {
       await mounted.cleanup();
     }

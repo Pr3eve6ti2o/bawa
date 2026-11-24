@@ -1061,9 +1061,14 @@ export function SendScreen() {
                   }
                 >
                   {label}
-                  {token !== null && isVerifiedToken(token) && (
-                    <span className="ml-2" aria-label="Verified token">✓ Verified</span>
-                  )}
+                  {/* Lane 1: the verified mark on every picker row —
+                      an unverified token reads "Unverified". */}
+                  {token !== null &&
+                    (isVerifiedToken(token) ? (
+                      <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                    ) : (
+                      <span className="ml-2" aria-label="Unverified token">Unverified</span>
+                    ))}
                   {token !== null && (
                     <span className="font-normal text-ink">
                       {` · ${config.displayName} · ${shortContract(token.contract)}`}
@@ -1096,6 +1101,14 @@ export function SendScreen() {
               {selectedToken === null
                 ? `${config.displayName} · ${config.symbol}`
                 : `${selectedToken.name} · ${selectedToken.symbol}`}
+              {/* Lane 1: the selected token's verified state, beside
+                  its name in the summary. */}
+              {selectedToken !== null &&
+                (isVerifiedToken(selectedToken) ? (
+                  <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                ) : (
+                  <span className="ml-2" aria-label="Unverified token">Unverified</span>
+                ))}
             </span>
           </span>
           <Button type="button" variant="outline" onClick={() => setStep('chain')}>

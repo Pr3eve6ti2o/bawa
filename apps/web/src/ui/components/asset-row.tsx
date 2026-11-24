@@ -45,6 +45,11 @@ function AssetRow({
               // Lane 4: the tick never splits from its label.
               <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
             )}
+            {/* Lane 1: an unverified token says so — the mark shows
+                whether the token is verified or not, never silence. */}
+            {verified === false && (
+              <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
+            )}
           </div>
           {' '}
           {subline !== undefined && (

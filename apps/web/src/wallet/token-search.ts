@@ -1,4 +1,4 @@
-// Remote ticker/name search (token gaps, item 2).
+// Remote ticker/name search (token gaps, item 2; Lane 1).
 //
 // Resolves a ticker or name through CoinGecko's keyless public API:
 // /search for candidate coins, then /coins/{id} for each hit's
@@ -7,6 +7,19 @@
 // (EVM chains + TRON + Solana — the chains tokenStandardFor offers); a
 // platform without known decimals is skipped rather than invented.
 // A query that resolves to nothing returns not-found honestly.
+//
+// Lane 1: every candidate here is CoinGecko-confirmed — the contract
+// came from CoinGecko's own detail_platforms for that exact coin —
+// so every remote candidate is VERIFIED by the isVerifiedToken rule
+// (coingeckoId set, see wallet/tokens.ts). Detail fetches run
+// exact-symbol first, then exact-name, then search order, so a
+// rate limit that bites mid-way still leaves the coin the user asked
+// for. And a detail fetch that fails (429 / 5xx / network) is an
+// ERROR, never not-found: the search found coins but their details
+// could not be read, and saying "no token found" for a real token is
+// a false negative. Not-found is returned only when the search finds
+// no coins at all, or when every detail fetch succeeds yet yields
+// nothing usable (no supported platform, no decimals).
 //
 // The local half — matching against the in-repo registry — is
 // resolveTokenByTickerOrName in tokens.ts. The Add Token dialog tries
@@ -21,6 +34,9 @@ export interface TokenSearchCandidate {
   symbol: string;
   decimals: number;
   coingeckoId: string;
+  /** Lane 1: true for every remote candidate — its contract was
+   * confirmed by CoinGecko for this exact coin (see the header). */
+  verified: boolean;
 }
 
 export type TokenSearchResult =
@@ -68,7 +84,13 @@ export async function searchTokensByNameOrTicker(
       { headers: { Accept: 'application/json' } },
     );
     if (!response.ok) {
-      return { status: 'error', reason: `CoinGecko search failed: HTTP ${response.status}` };
+      return {
+        status: 'error',
+        reason:
+          response.status === 429
+            ? 'CoinGecko is rate-limiting searches right now — try again in a minute, or add the token by contract address.'
+            : `CoinGecko search failed: HTTP ${response.status}`,
+      };
     }
     searchJson = await response.json();
   } catch (error: unknown) {
@@ -82,9 +104,38 @@ export async function searchTokensByNameOrTicker(
     : [];
   if (coins.length === 0) return { status: 'not-found' };
 
+  // Lane 1: detail fetches run exact-symbol first, then exact-name,
+  // then search order — the coin the user asked for is fetched first,
+  // so a rate limit that bites mid-way still leaves its candidates.
+  const lowerNeedle = needle.toLowerCase();
+  const coinRank = (coin: unknown): number => {
+    if (!isRecord(coin)) return 2;
+    if (
+      typeof coin['symbol'] === 'string' &&
+      coin['symbol'].toLowerCase() === lowerNeedle
+    ) {
+      return 0;
+    }
+    if (
+      typeof coin['name'] === 'string' &&
+      coin['name'].toLowerCase() === lowerNeedle
+    ) {
+      return 1;
+    }
+    return 2;
+  };
+  const ordered = coins
+    .map((coin, index) => ({ coin, index }))
+    .sort((a, b) => coinRank(a.coin) - coinRank(b.coin) || a.index - b.index)
+    .map(({ coin }) => coin);
+
   const candidates: TokenSearchCandidate[] = [];
   const seen = new Set<string>();
-  for (const coin of coins.slice(0, MAX_DETAIL_FETCHES)) {
+  // Lane 1: a detail fetch that fails is not "no token" (see the
+  // header). Only a clean run that yields nothing usable is not-found.
+  let detailFailed = false;
+  let detailRateLimited = false;
+  for (const coin of ordered.slice(0, MAX_DETAIL_FETCHES)) {
     if (!isRecord(coin) || typeof coin['id'] !== 'string') continue;
     const id = coin['id'];
     let detail: unknown;
@@ -93,9 +144,14 @@ export async function searchTokensByNameOrTicker(
         `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false`,
         { headers: { Accept: 'application/json' } },
       );
-      if (!response.ok) continue;
+      if (!response.ok) {
+        detailFailed = true;
+        if (response.status === 429) detailRateLimited = true;
+        continue;
+      }
       detail = await response.json();
     } catch {
+      detailFailed = true;
       continue;
     }
     if (!isRecord(detail)) continue;
@@ -121,10 +177,21 @@ export async function searchTokensByNameOrTicker(
       const key = `${chain}:${contract.toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      candidates.push({ chain, contract, name, symbol, decimals, coingeckoId: id });
+      // Lane 1: CoinGecko-confirmed contract — verified (see header).
+      candidates.push({ chain, contract, name, symbol, decimals, coingeckoId: id, verified: true });
     }
   }
-  if (candidates.length === 0) return { status: 'not-found' };
+  if (candidates.length === 0) {
+    if (detailFailed) {
+      return {
+        status: 'error',
+        reason: detailRateLimited
+          ? 'CoinGecko is rate-limiting searches right now — try again in a minute, or add the token by contract address.'
+          : 'CoinGecko token details could not be loaded — try again, or add the token by contract address.',
+      };
+    }
+    return { status: 'not-found' };
+  }
   // Exact symbol first, then exact name, then search order.
   const rank = (candidate: TokenSearchCandidate): number => {
     if (candidate.symbol.toLowerCase() === needle.toLowerCase()) return 0;

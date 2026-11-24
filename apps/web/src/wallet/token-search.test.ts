@@ -73,6 +73,7 @@ describe('searchTokensByNameOrTicker', () => {
           symbol: 'USDC',
           decimals: 6,
           coingeckoId: 'usd-coin',
+          verified: true,
         },
         {
           chain: 'base',
@@ -81,6 +82,7 @@ describe('searchTokensByNameOrTicker', () => {
           symbol: 'USDC',
           decimals: 6,
           coingeckoId: 'usd-coin',
+          verified: true,
         },
       ],
     });
@@ -214,5 +216,215 @@ describe('searchTokensByNameOrTicker', () => {
     await searchTokensByNameOrTicker('coin', fetchFn);
     const detailCalls = calls.filter((url) => url.includes('/api/v3/coins/'));
     expect(detailCalls).toHaveLength(3);
+  });
+
+  // Lane 1: the owner's "sushi" case. CoinGecko's /search puts the
+  // exact-symbol coin second (after sushicat); the exact match's
+  // details are fetched first, so its chains resolve even when the
+  // other hits are rate-limited — and every candidate is verified,
+  // because its contract came from CoinGecko itself.
+  it('resolves sushi to its chains, exact match first, all verified', async () => {
+    const calls: string[] = [];
+    const fetchFn = vi.fn(async (url: string) => {
+      calls.push(url);
+      if (url.includes('/api/v3/search?')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            coins: [
+              { id: 'sushicat', name: 'sushicat', symbol: 'SUSHICAT' },
+              { id: 'sushi', name: 'Sushi', symbol: 'SUSHI' },
+              { id: 'sushi-cat', name: 'Sushi Cat', symbol: 'SUSHICAT' },
+            ],
+          }),
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      if (url.includes('/api/v3/coins/sushi?')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 'sushi',
+            name: 'Sushi',
+            symbol: 'sushi',
+            detail_platforms: {
+              // Real contracts, read live from CoinGecko 2026-11-24.
+              ethereum: {
+                decimal_place: 18,
+                contract_address: '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2',
+              },
+              fantom: {
+                decimal_place: 18,
+                contract_address: '0xae75a438b2e0cb8bb01ec1e1e376de11d44477cc',
+              },
+              base: {
+                decimal_place: 18,
+                contract_address: '0x7d49a065d17d6d4a55dc13649901fdbb98b2afba',
+              },
+            },
+          }),
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      return {
+        ok: false,
+        status: 429,
+        json: async () => ({}),
+        headers: { get: (_name: string): string | null => null },
+      };
+    }) as unknown as typeof fetch;
+    const result = await searchTokensByNameOrTicker('sushi', fetchFn);
+    expect(result.status).toBe('found');
+    if (result.status === 'found') {
+      expect(result.candidates).toHaveLength(3);
+      expect(result.candidates.map((c) => c.chain)).toEqual([
+        'eth',
+        'fantom',
+        'base',
+      ]);
+      expect(result.candidates.every((c) => c.verified)).toBe(true);
+      expect(result.candidates.every((c) => c.symbol === 'SUSHI')).toBe(true);
+      expect(result.candidates.every((c) => c.coingeckoId === 'sushi')).toBe(true);
+    }
+    // The exact-symbol coin's details were fetched before the others.
+    const detailCalls = calls.filter((url) => url.includes('/api/v3/coins/'));
+    expect(detailCalls[0]).toContain('/api/v3/coins/sushi?');
+  });
+
+  // Lane 1: a genuinely ambiguous symbol — two different coins share
+  // it — shows both matches for the user to pick, never silently
+  // picks one.
+  it('shows every match when several coins share a symbol', async () => {
+    const fetchFn = searchFetch({
+      search: {
+        coins: [
+          { id: 'foo-coin', name: 'Foo Coin', symbol: 'FOO' },
+          { id: 'foo-token', name: 'Foo Token', symbol: 'FOO' },
+        ],
+      },
+      coins: {
+        'foo-coin': {
+          id: 'foo-coin',
+          name: 'Foo Coin',
+          symbol: 'foo',
+          detail_platforms: {
+            ethereum: {
+              decimal_place: 18,
+              contract_address: '0x00000000000000000000000000000000000000F0',
+            },
+          },
+        },
+        'foo-token': {
+          id: 'foo-token',
+          name: 'Foo Token',
+          symbol: 'foo',
+          detail_platforms: {
+            'binance-smart-chain': {
+              decimal_place: 18,
+              contract_address: '0x00000000000000000000000000000000000000F1',
+            },
+          },
+        },
+      },
+    });
+    const result = await searchTokensByNameOrTicker('foo', fetchFn);
+    expect(result.status).toBe('found');
+    if (result.status === 'found') {
+      expect(result.candidates).toHaveLength(2);
+      expect(result.candidates.map((c) => c.name)).toEqual([
+        'Foo Coin',
+        'Foo Token',
+      ]);
+      expect(result.candidates.map((c) => c.chain)).toEqual(['eth', 'bsc']);
+    }
+  });
+
+  // Lane 1: the search found coins but every detail fetch was
+  // rate-limited — that is an error, never a false "no token found".
+  it('reports an error, not not-found, when every detail fetch is rate-limited', async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes('/api/v3/search?')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            coins: [{ id: 'sushi', name: 'Sushi', symbol: 'SUSHI' }],
+          }),
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      return {
+        ok: false,
+        status: 429,
+        json: async () => ({}),
+        headers: { get: (_name: string): string | null => null },
+      };
+    }) as unknown as typeof fetch;
+    const result = await searchTokensByNameOrTicker('sushi', fetchFn);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toContain('rate-limiting');
+    }
+  });
+
+  it('reports an error, not not-found, when every detail fetch fails', async () => {
+    const fetchFn = searchFetch({
+      search: { coins: [{ id: 'sushi', name: 'Sushi', symbol: 'SUSHI' }] },
+      throwOn: '/api/v3/coins/',
+    });
+    const result = await searchTokensByNameOrTicker('sushi', fetchFn);
+    expect(result.status).toBe('error');
+  });
+
+  // Lane 1: a partial rate limit still yields the coin that did load.
+  it('still returns the loaded coin when another detail fetch is rate-limited', async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes('/api/v3/search?')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            coins: [
+              { id: 'sushi', name: 'Sushi', symbol: 'SUSHI' },
+              { id: 'sushicat', name: 'sushicat', symbol: 'SUSHICAT' },
+            ],
+          }),
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      if (url.includes('/api/v3/coins/sushi?')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 'sushi',
+            name: 'Sushi',
+            symbol: 'sushi',
+            detail_platforms: {
+              ethereum: {
+                decimal_place: 18,
+                contract_address: '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2',
+              },
+            },
+          }),
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      return {
+        ok: false,
+        status: 429,
+        json: async () => ({}),
+        headers: { get: (_name: string): string | null => null },
+      };
+    }) as unknown as typeof fetch;
+    const result = await searchTokensByNameOrTicker('sushi', fetchFn);
+    expect(result.status).toBe('found');
+    if (result.status === 'found') {
+      expect(result.candidates).toHaveLength(1);
+      expect(result.candidates[0]?.chain).toBe('eth');
+      expect(result.candidates[0]?.verified).toBe(true);
+    }
   });
 });

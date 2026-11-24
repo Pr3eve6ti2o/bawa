@@ -8,7 +8,7 @@ import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-f
 import { TxRow } from './tx-row';
 import { unitPriceForChain, usePrices } from '../wallet/prices';
 import { useTokenPrices } from '../wallet/token-prices';
-import { DEFAULT_TOKENS, tokenKeyOf, tokenSlug, type TokenRecord } from '../wallet/tokens';
+import { DEFAULT_TOKENS, isVerifiedToken, tokenKeyOf, tokenSlug, type TokenRecord } from '../wallet/tokens';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
@@ -328,7 +328,17 @@ export function AssetDetailScreen() {
             )}
           </span>
           <div>
-            <h1 className="text-2xl font-semibold text-ink">{displayTitle}</h1>
+            <h1 className="text-2xl font-semibold text-ink">
+              {displayTitle}
+              {/* Lane 1: the verified mark on the token detail — the
+                  token header says whether it is verified or not. */}
+              {tokenRecord !== undefined &&
+                (isVerifiedToken(tokenRecord) ? (
+                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                ) : (
+                  <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
+                ))}
+            </h1>
             <p className="text-sm text-ink">{displaySubtitle}</p>
           </div>
         </div>
