@@ -43,12 +43,14 @@ function NetworkChainRow({
   chain,
   isEnabled,
   customCount,
+  hasCustomRpc,
   lastBalanceSource,
   onToggle,
 }: {
   chain: ChainId;
   isEnabled: boolean;
   customCount: number;
+  hasCustomRpc: boolean;
   lastBalanceSource: string | undefined;
   onToggle: (chain: ChainId, enabled: boolean) => void;
 }) {
@@ -67,11 +69,13 @@ function NetworkChainRow({
               {chain}
             </code>
           </span>
-          {(customCount > 0 || lastBalanceSource !== undefined) && (
+          {(customCount > 0 || hasCustomRpc || lastBalanceSource !== undefined) && (
             <span className="block text-sm text-muted-foreground">
               {customCount > 0 &&
                 `${customCount} custom token${customCount === 1 ? '' : 's'}`}
-              {customCount > 0 && lastBalanceSource !== undefined && ' · '}
+              {customCount > 0 && (hasCustomRpc || lastBalanceSource !== undefined) && ' · '}
+              {hasCustomRpc && 'Custom RPC'}
+              {hasCustomRpc && lastBalanceSource !== undefined && ' · '}
               {lastBalanceSource !== undefined &&
                 `Last balance from ${lastBalanceSource}`}
             </span>
@@ -86,7 +90,7 @@ function NetworkChainRow({
             </span>
             <button
               type="button"
-              className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+              className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
               onClick={() => onToggle(chain, false)}
             >
               Disable
@@ -99,7 +103,7 @@ function NetworkChainRow({
             </span>
             <button
               type="button"
-              className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+              className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
               onClick={() => onToggle(chain, true)}
             >
               Enable
@@ -108,7 +112,7 @@ function NetworkChainRow({
         )}
         <Link
           to={`/assets/${chain}`}
-          className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+          className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
         >
           View
         </Link>
@@ -137,6 +141,11 @@ export function NetworkSelectionScreen() {
     customByChain.set(token.chain, (customByChain.get(token.chain) ?? 0) + 1);
   }
   const [query, setQuery] = useState('');
+  // Lane 5: bumped by the RPC manager after every mutation, so the
+  // Mainnet rows below re-read resolveRpcEndpoints and the 'Custom
+  // RPC' marker appears at once instead of after a remount.
+  const [rpcVersion, setRpcVersion] = useState(0);
+  void rpcVersion;
   const needle = query.trim();
   // A search replaces both groups with one flat filtered list (the
   // same name/symbol/id filter Receive's chain picker uses); with no
@@ -159,6 +168,9 @@ export function NetworkSelectionScreen() {
       chain={chain}
       isEnabled={enabled.has(chain)}
       customCount={customByChain.get(chain) ?? 0}
+      hasCustomRpc={resolveRpcEndpoints(chain).some(
+        (url) => !CHAINS[chain].rpcEndpoints.includes(url),
+      )}
       lastBalanceSource={balances?.[chain]?.source}
       onToggle={setChainEnabled}
     />
@@ -218,7 +230,9 @@ export function NetworkSelectionScreen() {
         </CardContent>
       </Card>
 
-      <RpcEndpointManager />
+      <RpcEndpointManager
+        onRpcChange={() => setRpcVersion((value) => value + 1)}
+      />
 
       <PriceSourcesCard />
 
@@ -270,7 +284,7 @@ function historySourceFor(chain: ChainId): string | null {
  * screen says so instead of storing a dead entry. The well-known
  * public RPCs that are allowed are offered as one-tap buttons.
  */
-function RpcEndpointManager() {
+function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
   const { refreshBalances, balances, history } = useWallet();
   const [version, setVersion] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainId>('eth');
@@ -288,6 +302,7 @@ function RpcEndpointManager() {
   /** Applies a change, then refreshes balances so the effect is visible at once. */
   const applyAndRefresh = async (note: string) => {
     refresh();
+    onRpcChange();
     setRefreshing(true);
     setMessage(`${note} Refreshing balance…`);
     try {
@@ -433,7 +448,7 @@ function RpcEndpointManager() {
           </label>
           <button
             type="button"
-            className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
             onClick={addCustom}
           >
             Add RPC
@@ -465,14 +480,14 @@ function RpcEndpointManager() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
             onClick={switchAll}
           >
             Switch all to backup
           </button>
           <button
             type="button"
-            className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
             onClick={() => {
               resetAllRpcEndpoints();
               void applyAndRefresh('All RPC endpoints reset to the defaults.');
@@ -482,7 +497,7 @@ function RpcEndpointManager() {
           </button>
           <button
             type="button"
-            className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
             disabled={checking.length > 0}
             onClick={() => void checkAll()}
           >
@@ -534,7 +549,7 @@ function RpcEndpointManager() {
                     {managed && endpoints.length >= 2 && (
                       <button
                         type="button"
-                        className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+                        className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
                         onClick={() => {
                           promoteBackupEndpoint(chain);
                           void applyAndRefresh(
@@ -547,7 +562,7 @@ function RpcEndpointManager() {
                     )}
                     <button
                       type="button"
-                      className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+                      className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
                       disabled={isChecking}
                       onClick={() => void checkChain(chain)}
                     >

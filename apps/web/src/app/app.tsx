@@ -64,6 +64,11 @@ const loadWalletManagement = () =>
     default: m.WalletManagementScreen,
   }));
 const WalletManagementScreen = lazy(loadWalletManagement);
+const loadAddressBook = () =>
+  import('../screens/address-book').then((m) => ({
+    default: m.AddressBookScreen,
+  }));
+const AddressBookScreen = lazy(loadAddressBook);
 // Lane C (install-all-usable, 2026-11-25): the WalletConnect screen
 // is a lazy route like the others. The SignClient SDK itself is a
 // second, deeper lazy chunk: the screen dynamic-imports
@@ -95,6 +100,7 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/track': loadTrackTransaction,
   '/networks': loadNetworkSelection,
   '/wallets': loadWalletManagement,
+  '/address-book': loadAddressBook,
   '/walletconnect': loadWalletConnect,
   '/lock': loadLock,
 };
@@ -525,6 +531,7 @@ export function App() {
             <Route path="track" element={<TrackTransactionScreen />} />
             <Route path="networks" element={<NetworkSelectionScreen />} />
             <Route path="wallets" element={<WalletManagementScreen />} />
+            <Route path="address-book" element={<AddressBookScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />
             <Route path="walletconnect" element={<WalletConnectScreen />} />
             <Route path="lock" element={<LockScreen />} />

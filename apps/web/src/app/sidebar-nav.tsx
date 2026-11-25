@@ -19,6 +19,7 @@ export type SidebarNavProps = {
 
 export const MORE_LINKS: NavItem[] = [
   { to: "/wallets", label: "Wallets", icon: "wallet" },
+  { to: "/address-book", label: "Address book", icon: "copy" },
   { to: "/transactions", label: "Transactions", icon: "activity" },
   { to: "/track", label: "Track a transaction", icon: "search" },
   { to: "/import-wallet", label: "Import wallet", icon: "import" },

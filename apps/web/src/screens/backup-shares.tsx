@@ -158,7 +158,7 @@ export function BackupSharesScreen() {
           <CardDescription>
             {vaultState === 'no-vault'
               ? 'This browser holds no vault wallet, so there is nothing to back up here.'
-              : 'Split the vault key into shares. Any 2 of 3 shares restore this vault — no single share can.'}
+              : 'Split the vault key into shares. Any ' + scheme.threshold + ' of ' + scheme.total + ' shares restore this vault — no single share can.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

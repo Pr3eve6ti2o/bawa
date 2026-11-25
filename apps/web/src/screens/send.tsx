@@ -24,6 +24,7 @@ import {
   useWallet,
 } from '../state/wallet-context';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
+import { readAddressBook, shortAddress } from '../wallet/address-book';
 import { EVM_TX_CHAINS, isEvmTxChain } from '../wallet/watch-only-families';
 import {
   DEVNET_CHAIN_CONFIGS,
@@ -216,6 +217,10 @@ export function SendScreen() {
   const [step, setStep] = useState<Step>('chain');
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
+  // Address book (UX-major Lane 5): entries saved on the Address book
+  // screen, read once here; picking one fills the recipient below.
+  const [bookEntries] = useState(() => readAddressBook());
+  const bookForChain = bookEntries.filter((entry) => entry.chain === chain);
   // Lane J: the dashboard Scan tile links to /send?scan=1, so the
   // scanner opens on arrival. Unknown params are ignored by
   // parseBawaSendLink, so ?scan=1 alone never becomes a send link.
@@ -1882,6 +1887,39 @@ export function SendScreen() {
               )
             )}
           </div>
+          {/* Address book (UX-major Lane 5): a saved label for this chain
+              fills the recipient. Only entries saved by the user on the
+              Address book screen appear — nothing is added from history. */}
+          {bookForChain.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="send-address-book">Saved addresses</Label>
+              <select
+                id="send-address-book"
+                value=""
+                onChange={(event) => {
+                  if (event.target.value !== '') {
+                    handleRecipientChange(event.target.value);
+                  }
+                }}
+                className="w-full rounded-bawa border-2 border-ink bg-paper px-3 py-2 text-sm text-ink"
+              >
+                <option value="">Choose a saved address…</option>
+                {bookForChain.map((entry) => (
+                  <option key={entry.id} value={entry.address}>
+                    {entry.label} — {shortAddress(entry.address)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-muted-foreground">
+                <Link
+                  to="/address-book"
+                  className="font-medium underline underline-offset-4"
+                >
+                  Manage saved addresses
+                </Link>
+              </p>
+            </div>
+          )}
           {showScanner && (
             <QrScanner
               onScan={(value) => void handleScan(value)}
