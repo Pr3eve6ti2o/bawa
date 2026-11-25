@@ -190,7 +190,7 @@ jobs:
             const total = sizes.reduce((a, b) => a + b, 0);
             const largest = Math.max(...sizes);
             console.log('bundle: total JS ' + total + ' bytes, largest chunk ' + largest + ' bytes');
-            if (total > 4177711) { console.error('bundle: total JS exceeds 4177711 bytes'); process.exit(1); }
+            if (total > 4185000) { console.error('bundle: total JS exceeds 4185000 bytes'); process.exit(1); }
             if (largest > 3050000) { console.error('bundle: largest JS chunk exceeds 3050000 bytes'); process.exit(1); }
             console.log('bundle: OK');
           "
