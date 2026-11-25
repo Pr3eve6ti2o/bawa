@@ -8,6 +8,7 @@ This index maps Bawa's wallet reference and AI Wallet Builder: where to start, w
 
 - [AGENTS.md](../AGENTS.md) — `DOCUMENTED_NOT_TESTED`: read first for repository instructions.
 - [WALLET_BUILDER.md](../WALLET_BUILDER.md) — `DOCUMENTED_NOT_TESTED`: route a request through the builder.
+- [CREATE-THIS-SPEC.md](CREATE-THIS-SPEC.md) — the single "create this" specification: every capability as explicit, ordered, machine-readable instructions with real files, numbers and constraints, each section traced to repo evidence; Part A sections (Bitget verifier, Cardano/Starknet/Kaspa, WalletConnect, Coinbase Onramp, Shamir, ERC-7730) are marked PENDING until their lanes commit. Read this with `WALLET_BUILDER.md` and `AGENTS.md`.
 - [Implementation plan](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md) — `DOCUMENTED_NOT_TESTED`: Phases 0–10, evidence vocabulary and outstanding milestones.
 - [Workflow command](../scripts/build-wallet.mjs) — `IMPLEMENTED_AND_VERIFIED` for sample request 1 (Create a Web wallet: 3/3 steps VERIFIED) and sample request 3 (Create a multi-chain wallet: 6/6 steps VERIFIED). Sample request 2 (Create an Android wallet) reports setup as SKIPPED without toolchains. Exercise dates are not stated in this index.
 - [README](../README.md) — `DOCUMENTED_NOT_TESTED`: the front door — what Bawa is, quickstart, and where to go next.

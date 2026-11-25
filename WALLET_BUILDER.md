@@ -13,7 +13,7 @@ The profiles are validated and carry individual statuses: `hd-wallet-cli`, `bitc
 - `bitcoin-wallet` — Bitcoin-focused wallet requests; transaction support must not be assumed.
 - `evm-wallet` — ETH/EVM-oriented requests; support beyond the specified ETH policy is OPEN.
 - `multichain-wallet` — Combined BTC, ETH, TRX and TON requests; TON remains generation-only and single-address.
-- `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only.
+- `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only. The web wallet now wires 84 chains (22 curated + 62 expansion — see `docs/CREATE-THIS-SPEC.md` §2); this profile's registry entry has NOT been re-validated for the 84-chain set, so the wider set is OPEN for this profile until the registry is updated.
 - `web-wallet` — Browser-wallet requests; token-ui foundation inspected in Phase 5 and adopted in Phase 6 (vendored in `apps/web/src/ui/`).
 - `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7).
 - `watch-only-wallet` — Public-data-only observation requests, without secret intake or signing; monitoring support still requires evidence.
@@ -31,7 +31,7 @@ Profile selection is routing, not a capability claim. There are eight validated 
 - **Prompts:** installed in `ai/prompts/` (`create-*.md`); inspect actual files rather than inventing filenames.
 
 Profiles: 8
-Chains: 13 (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) — see registry/capabilities.json
+Chains: 84 (22 curated by default + 62 expansion) — see registry/capabilities.json and docs/CREATE-THIS-SPEC.md §2
 
 ADR reference: ADR-0007 (docs/adr/0007-price-feed-provider.md)
 ADR reference: ADR-0008 (docs/adr/0008-ecdsa-residual-risk.md)
@@ -73,7 +73,7 @@ Any optional vault-lock restoration must follow this locking and key-storage pol
 
 The vault stays unlocked by default. Auto-lock is an optional setting on the /security page: a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period and unlocking needs the password. Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored (the lock must be real); while auto-lock is off, the raw derived key IS stored under `bawa-vault-key` so the vault can auto-unlock.
 
-Current implementation at 5e7eb1d: no lock exists; the optional restoration is not yet implemented.
+Auto-lock IS implemented (owner order 2026-11-20): an optional setting on the /security page, off by default — toggle plus duration (Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day). Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored under `bawa-vault-key` (the lock is real); while auto-lock is off, it IS stored so the vault can auto-unlock. See `apps/web/src/wallet/auto-lock.ts` and `apps/web/src/wallet/vault.ts`, and `docs/CREATE-THIS-SPEC.md` §4.
 Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.9.3**; Node range **>=22 <23**.
 Adopted `apps/web` libraries (ADR-0005): `@scure/bip39` **2.4.0**, `decimal.js` **10.6.0**, `dinero.js` **2.0.2**, and `mnemonic-words` **2.0.0**, with `bip39` **3.1.2** as a devDependency used only as a test oracle.
 Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.3**.
@@ -101,7 +101,7 @@ guards the pin.
 ```sh
 npm run typecheck   # tsc --noEmit, 0 errors
 npm run build       # copy-wasm + tsc + vite build, 0 errors
-npm run test        # vitest run — 40 files, 460 tests, all passing (2026-11-20)
+npm run test        # vitest run — 99 files, 2,799 passed + 5 skipped (verified 2026-11-24, docs/index.md)
 ```
 
 **Upstream sources.** The engine is Apache-2.0, upstream
@@ -165,6 +165,8 @@ available for an operation only when `availableFor(capability)` in
 
 <!-- END GENERATED: capabilities from apps/web/src/wallet/chains.ts. -->
 
+**Note on the table above (2026-11-25, Lane G):** the generated table covers only the 22 curated chains in `apps/web/src/wallet/chains.ts`. The 62 expansion chains live in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAINS`, `EXPANDED_CHAIN_COUNT = 62`) — 84 chains in total. Do not read the 22-row table as the chain count. See `docs/CREATE-THIS-SPEC.md` §2 for the full 84-chain specification and the per-operation availability rule (`availableFor`).
+
 If you want to use a wallet to hold funds, see the product-user route
 in [README.md](README.md) ("If you want a wallet to use"). This
 document is builder material.
@@ -207,7 +209,7 @@ For each scoped claim/check, populate an evidence table with these columns:
 | --- | --- | --- | --- | --- | --- |
 
 Report changed files, demonstrated behaviour, mocked behaviour and unresolved work separately. Redact secrets; missing evidence is OPEN.
-The current verified baseline is 217 smoke checks, 0 fail (verified 2026-11-20 on this tree); the H9 130-check figure is superseded.
+The current verified baseline is 440 engine smoke checks, 0 fail (verified 2026-11-24 on this tree; docs/engine-reproducibility.md); the H9 130-check and 217-check figures are superseded.
 A successful build proves only its build scope; a tested mock proves only mock behaviour. Neither demonstrates real transaction handling or mainnet readiness.
 
 ## Stop rules
