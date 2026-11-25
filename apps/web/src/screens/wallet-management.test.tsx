@@ -503,18 +503,18 @@ describe('wallet management — watch-only balances (Lane B)', () => {
 });
 
 describe('wallet management — export list search (Lane 6)', () => {
-  it('filters the 84-chain export list by name and shows the count', async () => {
+  it('filters the 87-chain export list by name and shows the count', async () => {
     setWallet(vi.fn(async () => {}));
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('84 of 84 chains');
+      expect(mounted.div.textContent).toContain('87 of 87 chains');
       const input =
         mounted.div.querySelector<HTMLInputElement>('#export-chain-search');
       expect(input).not.toBeNull();
       await act(async () => {
         setInputValue(input!, 'gnosis');
       });
-      expect(mounted.div.textContent).toContain('1 of 84 chains');
+      expect(mounted.div.textContent).toContain('1 of 87 chains');
       expect(mounted.div.textContent).toContain('Gnosis');
       // Zora is export-list-only, so it must be gone after filtering.
       expect(mounted.div.textContent).not.toContain('Zora');
