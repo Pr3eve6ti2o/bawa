@@ -378,9 +378,10 @@ implemented (owner order 2026-11-20). Implement and describe it as follows.
 - EVM send builder: generalised EVM signer (chainId 56 for BSC;
   `docs/BSC-SEND-FIX.md`). The Receive/Send QR flow, the 22-button grid
   fix (single "Create wallet" button with a message saying what it is
-  and that creating it gives access to 22 chains — the count refers to
-  the curated set), and the Scan icon are covered by the finish-product
-  programme (`docs/FINISH-PRODUCT-PROGRAMME.md`).
+  and that creating it gives access to 87 chains —
+  `create-hub.tsx:76`, `welcome.tsx:35,57,85`; the count is the full
+  wired set, 22 enabled by default), and the Scan icon are covered by
+  the finish-product programme (`docs/FINISH-PRODUCT-PROGRAMME.md`).
 
 ## §6. Token verification by contract address
 
@@ -680,8 +681,9 @@ The survey's verified facts, which Lane C implemented from:
   owner decision recorded in `docs/DECISIONS.md`.**
 - **Lazy-load only, as a separate chunk.** Measured, not estimated:
   minimal `import { SignClient }`, esbuild bundle + minify: **2.21.0 =
-  396,013 B minified / 121,377 B gzip** (~75× the headroom); 2.26.0 =
-  455,831 B / 137,742 B gzip. It cannot go in the main bundle under the
+  396,013 B minified / 121,377 B gzip** (~75× the survey-time headroom
+  of ~5,304 B; ~378× the current 1,048 B headroom — see §0.2);
+  2.26.0 = 455,831 B / 137,742 B gzip. It cannot go in the main bundle under the
   4,650,000-byte budget (§0.2). Load it by dynamic import, only when the
   user opens the WalletConnect flow.
 - **Measured cost in Bawa's build (Lane C tree):** total JS 4,577,447
@@ -759,7 +761,8 @@ The survey's verified facts, which Lane D implemented from:
   aimed at self-custody wallets as the destination.
 - **Lazy-load only.** Measured via Bundlephobia: **7,473 B minified /
   2,841 B gzip** — 7,473 B alone exceeds the ~5,304 B headroom at survey
-  time (1.4× over). It cannot be bundled eagerly; load it by dynamic
+  time (1.4× over; headroom is now 1,048 B under the 4,650,000 budget —
+  see §0.2, 2026-11-26). It cannot be bundled eagerly; load it by dynamic
   import on the Buy screen only, or re-baseline the budget by owner
   order first. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
@@ -819,7 +822,10 @@ The survey's verified facts, which Lane E implemented from:
 - **Shares are raw bytes, not words.** This is NOT SLIP-39 (shares are
   raw bytes, incompatible with SLIP-39 word-shares). Bawa must add
   user-facing encoding (base64 and/or QR) for the shares.
-- **Measured cost in Bawa's build:** lazy chunk 4,785 B; main-bundle
+- **Measured cost in Bawa's build:** the backup-shares route chunk is
+  10,085 B (`dist/assets/backup-shares-*.js`, verified 2026-11-26 on
+  this tree — build log: 10.08 kB); the Shamir library alone is 4,785
+  B — do not quote the library size as the chunk cost. Main-bundle
   delta +923 B. The library is loaded by dynamic import on the backup
   screen only.
 - **Vault change (flagged for review):** `autoUnlock()` now imports the
