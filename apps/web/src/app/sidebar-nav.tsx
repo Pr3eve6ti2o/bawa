@@ -68,6 +68,17 @@ export function SidebarNav({
         >
           <BawaIcon name="wallet" className="size-6" />
         </div>
+        {/* Brand wordmark (Lane 1): the desktop shell showed the name
+            "Bawa" nowhere above the fold — the sidebar had a bare icon
+            tile and the header only the account link. The wordmark
+            renders only when expanded; collapsed stays icon-only, and
+            it is a plain label, not a nav item (no route or order
+            change — the 13 links below are untouched). */}
+        {!collapsed && (
+          <span className="ml-3 truncate font-display text-xl font-bold tracking-tight text-ink">
+            Bawa
+          </span>
+        )}
       </div>
 
       <nav
