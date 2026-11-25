@@ -375,7 +375,6 @@ export function DashboardScreen() {
           vertically centred they floated mid-air in the 5fr column next
           to the wide hero. Mobile is unchanged: the row follows the hero
           in the single column, balance first, actions second. */}
-      <div className="grid grid-cols-4 gap-2 lg:self-end">
       <div className="grid grid-cols-5 gap-2 lg:self-end">
         {ACTIONS.map(({ to, icon, label }) => (
           <Link
