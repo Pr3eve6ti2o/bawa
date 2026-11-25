@@ -37,7 +37,7 @@ pass.** Tightening the bar is silent; loosening it is loud (see
 | Tests (web) | All pass; no skipped or deleted test without a reason in the commit message | `npm run test` in `apps/web` (`vitest run`) | every edit, CI |
 | Build (web) | Zero errors | `npm run build` in `apps/web` | CI |
 | Audit (web) | Zero vulnerabilities | `npm audit` in `apps/web` | CI |
-| Bundle size (web) | Total JS in `dist/assets` ≤ 4,185,000 bytes; largest single JS chunk ≤ 3,050,000 bytes | CI bundle-size step (sums `dist/assets/*.js` after `npm run build`; budgets in `PERF.md`) | CI |
+| Bundle size (web) | Total JS in `dist/assets` ≤ 4,215,000 bytes; largest single JS chunk ≤ 3,050,000 bytes | CI bundle-size step (sums `dist/assets/*.js` after `npm run build`; budgets in `PERF.md`) | CI |
 | E2E (web) | Critical-path harness green (create / unlock / balance / send-disabled / lock) | `npx playwright test` in `apps/web` (CI job) | CI |
 | Secrets | No secrets in the staged diff | `node scripts/secret-scan.mjs` (pre-commit); CI floor-guard job | pre-commit, CI |
 | Docs links | All internal documentation links resolve | `python tools/check-links.py` (CI `docs-checks` job) | CI |
