@@ -142,22 +142,22 @@ bawa/
     devnet issues log, performance and security-findings records, and
     the dated 2026-11-18 research reports.
   apps/
-    web/            (435 files) The wallet web app: React 19 + TypeScript
+    web/            (467 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
-                    (routing, shell), `src/screens` (58 files, one
+                    (routing, shell), `src/screens` (63 files, one
                     screen per route), `src/state` (wallet context; the refresh lives
-                    in wallet-context), `src/wallet` (94 files: chains, vault,
+                    in wallet-context), `src/wallet` (89 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
                     (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),
-                    `src/assets` (chain/token icons), `e2e/` (14
+                    `src/assets` (chain/token icons), `e2e/` (15
                     Playwright specs, plus helpers and manifest),
                     `scripts/` (wasm copy,
                     palette audit, chains generation).
     android/        (30 files) The Android starter (Kotlin): app, core
                     (derivation/confirmation policy, key validation),
                     ui screens and ViewModel.
-  docs/             (225 files) The guide and programme records, in
+  docs/             (227 files) The guide and programme records, in
                     Diátaxis order (see the sections above): numbered
                     docs 01-16, platform guides, reference, evidence,
                     archive. The single entry point is this index.
@@ -166,7 +166,7 @@ bawa/
                     schemas (`profile`, `registry`).
   packages/
     contracts/      The `@bawa/contracts` package (package + index).
-  scripts/          (20 files) Builder and gate scripts (`.mjs`):
+  scripts/          (22 files) Builder and gate scripts (`.mjs`):
                     `build-wallet`, `generate-project`, `plan-build`,
                     `classify-request`, `quality-gates`, `gate-verdict`,
                     `secret-scan`, `check-wallet-cycles`,

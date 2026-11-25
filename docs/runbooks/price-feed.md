@@ -37,7 +37,7 @@ Verified against the multichain-create tree by Lane P1's Prerequisite 0
 diff (2026-11-20). Two claims the apply plan's brief made about this
 feed are **wrong** and are corrected here — do not repeat them:
 
-- Source: CoinGecko first, DexScreener and TonAPI as fallback for unlisted tokens, 22 chains (`PRICE_IDS` / `PRICE_ASSET_IDS`),
+- Source: CoinGecko first, DexScreener and TonAPI as fallback for unlisted tokens, 87 chains (`PRICE_IDS` 87 entries / 64 unique ids, `PRICE_ASSET_IDS`),
   `fetchPrices`, `usePrices`, `portfolioTotal`. One GET, 10 s timeout,
   **no retry**. 429 maps to `rate-limited` with `Retry-After` seconds
   honoured as `retryAfterMs`; non-2xx → `provider`; abort → `timeout`;

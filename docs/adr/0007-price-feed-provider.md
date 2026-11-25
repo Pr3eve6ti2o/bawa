@@ -219,6 +219,8 @@ Amendment (2026-11-23): the live price feed now covers all 22 chains in the chai
 
 Amendment (2026-11-24): the live price feed now covers all 84 chains in the chain registry (apps/web/src/wallet/prices.ts), using 61 unique CoinGecko ids — most ETH-native chains share Ethereum's id (ethereum); opBNB shares BNB Smart Chain's id (binancecoin); Rootstock shares Bitcoin's id (bitcoin); Noble shares USD Coin's id (usd-coin); Sei EVM and Sei Cosmos share Sei's id (sei-network). No other part of this record changes.
 
+Amendment (2026-11-26, guide-update pass): the live price feed now covers all 87 chains in the chain registry (apps/web/src/wallet/prices.ts), using 64 unique CoinGecko ids — counted first-hand from `PRICE_IDS` (`prices.ts:70`, 87 entries; duplicates: ethereum ×21, bitcoin ×2, binancecoin ×2, sei-network ×2). The 2026-11-24 amendment's "61 unique ids" was a miscount, corrected here. No other part of this record changes.
+
 ## Consequences
 
 - `apps/web/src/wallet/prices.ts` is the feed: one batched CoinGecko call per

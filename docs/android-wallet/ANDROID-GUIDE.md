@@ -25,6 +25,8 @@ _How-to guide. Read from top to bottom on your first pass._
 
 > **Scope note (2026-11-20):** Bawa’s repository direction is mainnet-first (ADR-0003). This Android wallet guide’s testnet-only scope is for demonstration/testing, not the repository default.
 
+> **Status block (2026-11-26, guide-update pass):** the Android starter builds and launches. `./gradlew testDebugUnitTest` — BUILD SUCCESSFUL, **17/17, 0 failures**; `./gradlew assembleDebug` — BUILD SUCCESSFUL in 47 s, `app-debug.apk` **52,456,212 bytes**; emulator launch verified (software-accelerated, `-accel off`). Full evidence: `docs/android-evidence.md`. The guide's "Not run / unresolved" line above (no Gradle build, no APK, no emulator run) is superseded for the build and launch steps only — the Android wallet creation, restore and testnet spend have still not been exercised end to end, and the on-device fixture gate has still never run. The data gap in spec §2.6 stands: no chain registry, RPCs, tokens, prices or icons in the starter, and `ENGINE_BINDING_AVAILABLE = false` (`DerivationPolicy.kt:56`).
+
 ## Pick a starting point
 
 Read from top to bottom on your first pass. If you're building and only need one part, read section A first, then jump to that section; you must still pass the fixture gate in D.7 before any wallet action.

@@ -662,6 +662,15 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   card and its PNG exporter. E2E: `e2e/qr-card-templates.spec.ts`
   (every template shares a PNG decoding to the payment URI; viewports
   390/820/1440/1919) and `e2e/png-decode.ts`.
+- **Template A unproven on phone cameras; live-camera scan unverified
+  (open, 2026-11-26):** every template's PNG decodes to the payment
+  URI through the repo's own jsQR decoder (`e2e/qr-card-templates.spec.ts`,
+  7/7), but no template has been scanned with a real phone camera —
+  Template A least of all (dark teal field, white-silhouette centre
+  mark, deliberately no white ring by the bottom-right alignment
+  pattern). The live-camera scan in the app is likewise unverified and
+  needs the owner's phone. Do not claim phone-scan parity until a
+  phone-camera scan of each template is recorded.
 - **No QR/share-card code exists in the Bitget or OKX orgs** (survey):
   the only QR file found is a deprecated WalletConnect v1 QR modal in a
   demo. The seven templates are Bawa-original; there is nothing to import.
@@ -1196,3 +1205,13 @@ counted among the 47: `viewport-zoom` (never `user-scalable=no`;
 | Find | Licence | Useful for |
 | --- | --- | --- |
 | `mcp-interviewer` (Python CLI) | MIT | Verification tooling: constraint + functional testing of MCP servers. Bawa's agent tooling depends on MCP servers; RAMPART covers safety testing and SkillSpector covers skill scanning, but neither tests the MCP servers themselves. Small, single-purpose, agent-side QA for the guide's own execution tooling. |
+
+### §18.6 Main-only reference material — `captcha/` (Lane B, 2026-11-26)
+
+`captcha/` exists ONLY on `main` (82 files) and stays main-only — do
+NOT port anything from it into token-gaps or this spec's build. It is
+reference material, not part of the wallet: the FuckCaptcha CC0-1.0
+field guides plus a read-only captcha runner. The runner requires
+`CAPTCHA_URL` and never submits forms, clicks, signs or sends. It is
+recorded here so a later lane knows it exists and where it lives, and
+does not mistake its absence from token-gaps for a gap.

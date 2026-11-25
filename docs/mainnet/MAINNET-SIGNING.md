@@ -192,7 +192,9 @@ on the first failure. The checks are:
   in wallet-core 4.8.4). `Transfer.amount` is `Uint8Array` in the
   proto: the amount must be passed as minimal big-endian bytes of the
   nanotons value — a JS number is silently dropped and the signer
-  builds a zero-amount message.
+  builds a zero-amount message. **4.8.4-era statement — not re-verified
+  against the 4.9.3 pin** (no `.d.ts` for it in the installed package);
+  treat as needing re-verification (guide-update pass, 2026-11-26).
 - Independent verification: own BOC parser (`parseTonBoc`, with the
   cell-hash function `tonCellHash`), own Ed25519 verify
   (`ed25519Verify` via Node `crypto` JWK). The signed BOC's envelope

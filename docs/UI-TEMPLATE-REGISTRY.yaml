@@ -13,6 +13,12 @@ bawa_reviewed_snapshot:
     The catalogue and this registry are ready to add to Bawa, but the external
     template repositories listed below are not vendored in the reviewed Bawa
     snapshot. Do not tell users that they are already present locally.
+  snapshot_stale_note: >-
+    Guide-update pass, 2026-11-26: this snapshot review was NOT re-run
+    against the token-gaps tree; the 2026-11-10 main snapshot above stands
+    as the last review. `local_web_or_android_app_found: false` is stale —
+    apps/web and apps/android exist in this tree. Re-run the snapshot
+    review before citing this registry as current.
 
 selection_policy:
   source_of_truth: docs/UI-TEMPLATE-REGISTRY.yaml

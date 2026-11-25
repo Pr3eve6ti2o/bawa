@@ -2362,3 +2362,19 @@ are in the design system (§2.5, §6); the 44 px gap in `Button`
 (`sm` 32 px, `xs` 28 px, `icon-sm` 32 px) was still open at merge
 time and is being closed by the ux-major programme (uncommitted at
 the guide-update pass — nothing to record yet).
+
+## §29 — Live-preview republish + G1–G15 closed (2026-11-26, guide-update pass)
+
+**Republish:** `gh-pages` is at `3635412` — "Publish token-gaps
+`7a170f4` to GitHub Pages (redesign + 87 chains + WalletConnect + Buy
++ Shamir + ERC-7730, bundle re-baselined to 4,650,000)" — verified
+first-hand by `git ls-remote` + `git log origin/gh-pages` on
+2026-11-26. The Pages site serves the token-gaps `7a170f4` build.
+
+**Live-preview gaps G1–G15: closed.** D1–D3 are fixed in code on
+token-gaps; D4 (indexer slowness on some chains) is inherent to the
+upstream indexers, not a Bawa defect — no code fix is owed for it.
+**Caution, standing:** a `browser.open` text fetch of the Pages site
+still renders "84 chains" from a stale crawl cache — trust the
+served asset hash, not the fetched text, when checking the live
+chain count.

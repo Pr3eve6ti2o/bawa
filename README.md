@@ -30,6 +30,8 @@ Real screenshots of the example web wallet running from this branch, taken with 
 | <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" height="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" height="360"> |
 | Portfolio, assets and recent activity. | The same wallet on mobile. |
 
+> **Note (2026-11-26, guide-update pass):** these two screenshots predate the November redesign (taken 2026-11-23) — they show the pre-redesign dashboard. Re-taking them via CDP is pending; no live browser was available in this lane. Treat them as stale until re-taken.
+
 ### Create your own
 
 Prefer to build one yourself? Follow [Create the example web wallet](docs/CREATE-EXAMPLE-WALLET.md) — or run it straight from a terminal:

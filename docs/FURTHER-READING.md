@@ -42,10 +42,10 @@ Use these for integration guidance on multi-coin wallet creation and import, add
 | Source | How to use it |
 | --- | --- |
 | [Wallet Core repository README](https://github.com/trustwallet/wallet-core) | Read the README for the upstream, cross-platform wallet library on which Bawa's tools depend. |
-| [Wallet Core releases](https://github.com/trustwallet/wallet-core/releases) | Check release notes and tags for the upstream library, including the pinned 4.9.2 release. |
-| [Wallet Core 4.9.2 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.2) | The pinned upstream reference (tag 4.9.2, commit 17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3); re-pin and re-verify whenever the Core pin moves. |
-| [Wallet Core registry (4.9.2)](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.2/registry.json) | The upstream registry data interpreted by docs/12; pinned at tag 4.9.2. |
-| [Wallet Core BC footguns (4.9.2)](https://github.com/trustwallet/wallet-core/blob/4.9.2/docs/bc-footguns.md) | Known backward-compatibility constraints for Wallet Core, recorded from real incidents; added upstream with 4.8.7. |
+| [Wallet Core releases](https://github.com/trustwallet/wallet-core/releases) | Check release notes and tags for the upstream library, including the pinned 4.9.3 release. |
+| [Wallet Core 4.9.3 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.3) | The pinned upstream reference (tag 4.9.3, commit 7a21615fad32edd8dc0b040d845de3973cde2c5a, published 2026-11-11); re-pin and re-verify whenever the Core pin moves. |
+| [Wallet Core registry (4.9.3)](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.3/registry.json) | The upstream registry data interpreted by docs/12; pinned at tag 4.9.3. |
+| [Wallet Core BC footguns (4.9.3)](https://github.com/trustwallet/wallet-core/blob/4.9.3/docs/bc-footguns.md) | Known backward-compatibility constraints for Wallet Core, recorded from real incidents; added upstream with 4.8.7. |
 
 ## Vendor documentation
 

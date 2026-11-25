@@ -198,6 +198,20 @@ Wallet Core registry described above. Statuses are `IMPLEMENTED_AND_VERIFIED`,
 receive, balance, history, fee-quote, plan-transfer, local-sign,
 verify-signature.
 
+**Re-validation note (2026-11-26, guide-update pass):**
+`multichain-extended-wallet` (`registry/profiles.json`) lists 9
+chains — SOL, BSC, Polygon (matic), Arbitrum (arb), OP Mainnet (op),
+Base, Avalanche (avax), Litecoin (ltc), Dogecoin (doge) — and all 9
+have balance `IMPLEMENTED_AND_VERIFIED` in `chainSupport` and a
+balance adapter in the app (none is in the 21 derive-only chains,
+`chain-registry.test.ts`). History in the registry lags the app for
+5 of the 9 (matic, arb, base, avax, bsc read `NOT_SUPPORTED` in the
+registry but are history-verified in `chains.ts`) — the known
+registry-data lag, not a profile defect. The profile's chains list
+itself is correct as written; the open item is the 83 chains
+`chainSupport` scopes to this profile alone while `profiles.json`
+lists only these 9 (validator failure, see `docs/index.md`).
+
 ```mermaid
 flowchart TB
     accTitle: Bawa chain support overview
