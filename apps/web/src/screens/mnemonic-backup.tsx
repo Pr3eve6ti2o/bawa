@@ -206,10 +206,28 @@ export function MnemonicBackupScreen() {
               </Button>
             </>
           ) : (
+            <>
             <p className="text-sm leading-relaxed">
               Your 24 words are the only backup. The reveal below asks
               for your vault password and a short safety quiz first.
             </p>
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm leading-relaxed">
+              <li>Confirm your vault password.</li>
+              <li>Answer three safety questions.</li>
+              <li>Write down the 24 words, in order, on paper.</li>
+              <li>
+                Test recovery before you need it: restore the words in a
+                fresh browser profile, from{' '}
+                <Link
+                  to="/import-wallet"
+                  className="font-medium underline underline-offset-4"
+                >
+                  Import wallet
+                </Link>
+                .
+              </li>
+            </ol>
+            </>
           )}
         </CardContent>
       </Card>

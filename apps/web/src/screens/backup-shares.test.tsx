@@ -41,6 +41,28 @@ const FAKE_SHARES = [
   'bawa-share-v1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=',
 ];
 
+it('states the chosen scheme in the header, not always 2 of 3', async () => {
+  // UX-major Lane 5: the intro used to say 'Any 2 of 3 shares restore
+  // this vault' even after the user picked 3 of 5. The header now
+  // follows the selected scheme.
+  setWallet('unlocked');
+  const mounted = await mountScreen();
+  try {
+    expect(mounted.div.textContent).toContain('Any 2 of 3 shares restore');
+    const radio = mounted.div.querySelector(
+      'input[value="3 of 5"]',
+    ) as HTMLInputElement | null;
+    expect(radio).not.toBeNull();
+    await act(async () => {
+      radio!.click();
+    });
+    expect(mounted.div.textContent).toContain('Any 3 of 5 shares restore');
+    expect(mounted.div.textContent).not.toContain('Any 2 of 3 shares restore');
+  } finally {
+    await mounted.cleanup();
+  }
+});
+
 function setWallet(vaultState: string): void {
   vi.mocked(useWallet).mockReturnValue({
     vaultState,

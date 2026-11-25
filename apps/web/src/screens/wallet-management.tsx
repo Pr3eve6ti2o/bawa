@@ -187,6 +187,9 @@ export function WalletManagementScreen() {
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [copiedChain, setCopiedChain] = useState<string | null>(null);
+  // Lane 5: forgetting every stored key at once is destructive, so
+  // it takes two taps like Delete vault (DESIGN-SYSTEM §6).
+  const [forgetAllArmed, setForgetAllArmed] = useState(false);
 
   async function showExtendedKey(chain: ChainId) {
     if (loadingKey !== null || !exportAccountExtendedPublicKey) return;
@@ -533,6 +536,17 @@ export function WalletManagementScreen() {
                 Solana and TON addresses change with the account as well;
                 account 0 keeps its original address.
               </p>
+              <p className="text-sm text-muted-foreground">
+                These are the four original chains. Your address on any
+                other chain is on that chain&apos;s asset page — see{' '}
+                <Link
+                  to="/assets"
+                  className="font-medium text-primary underline underline-offset-4"
+                >
+                  all assets
+                </Link>
+                .
+              </p>
 
               <div className="space-y-3">
                 <h2 className="text-sm font-semibold">
@@ -797,10 +811,17 @@ export function WalletManagementScreen() {
           type="button"
           variant="outline"
           onClick={() => {
+            if (!forgetAllArmed) {
+              setForgetAllArmed(true);
+              return;
+            }
             for (const { id } of watchChains) removeXpub(id);
+            setForgetAllArmed(false);
           }}
         >
-          Forget all stored keys
+          {forgetAllArmed
+            ? 'Tap again to forget all stored keys'
+            : 'Forget all stored keys'}
         </Button>
       )}
     </section>

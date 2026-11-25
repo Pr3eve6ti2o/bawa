@@ -241,6 +241,59 @@ describe('wallet management — vault account selection', () => {
       await mounted.cleanup();
     }
   });
+
+  it('forgetting all stored keys takes two taps', async () => {
+    // UX-major Lane 5: a one-tap destructive action with no confirm
+    // (DESIGN-SYSTEM §6). The first tap arms it; only the second
+    // forgets anything.
+    const removeXpub = vi.fn();
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: {
+        btc: null,
+        eth: null,
+        trx: null,
+        ton: null,
+        sol: {
+          chain: 'sol',
+          xpub: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+          label: '',
+          derivedCount: 1,
+        },
+      },
+      removeXpub,
+      vaultAccount: { account: 0, index: 0 },
+      setVaultAccount: vi.fn(async () => {}),
+      vaultAddresses: TEST_ADDRESSES,
+      vaultAccounts: [0],
+      vaultPassphraseNeeded: false,
+      createVaultAccounts: vi.fn(async () => []),
+      selectVaultAccount: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      const first = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Forget all stored keys',
+      ) as HTMLButtonElement;
+      expect(first).toBeDefined();
+      await act(async () => {
+        first.click();
+      });
+      expect(removeXpub).not.toHaveBeenCalled();
+      const armed = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) =>
+          candidate.textContent === 'Tap again to forget all stored keys',
+      ) as HTMLButtonElement;
+      expect(armed).toBeDefined();
+      await act(async () => {
+        armed.click();
+      });
+      expect(removeXpub).toHaveBeenCalledTimes(87);
+      expect(removeXpub).toHaveBeenCalledWith('btc');
+      expect(removeXpub).toHaveBeenCalledWith('sol');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
 
 describe('wallet management — accounts list and bulk creation', () => {

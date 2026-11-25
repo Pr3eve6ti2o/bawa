@@ -304,6 +304,47 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
     }
   });
 
+  it('marks a chain with a custom RPC on its Mainnet row', async () => {
+    // UX-major Lane 5: a custom RPC used to be visible only inside the
+    // RPC manager for the picked chain. The Mainnet list row now says
+    // 'Custom RPC', so the custom entry is not mixed silently into the
+    // curated list.
+    setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      // The Mainnet list row (not the RPC manager's 'Custom RPC URL'
+      // label, which always contains those words): find the row for
+      // Ethereum that is not the RPC-manager row.
+      const mainnetRow = () =>
+        [...mounted.div.querySelectorAll('li')].find(
+          (li) =>
+            li.textContent?.includes('Ethereum') &&
+            !li.textContent?.includes('Primary'),
+        );
+      expect(mainnetRow()?.textContent).not.toContain('Custom RPC');
+      const input = mounted.div.querySelector(
+        'input[placeholder^="https://"]',
+      ) as HTMLInputElement | null;
+      const add = [...mounted.div.querySelectorAll('button')].find(
+        (b) => b.textContent === 'Add RPC',
+      );
+      await act(async () => {
+        if (input) {
+          const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            'value',
+          )?.set;
+          setter?.call(input, 'https://rpc.flashbots.net');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      await clickButton(add!);
+      expect(mainnetRow()?.textContent).toContain('Custom RPC');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('rejects a custom RPC outside the allowed connection list and stores nothing', async () => {
     // Lane F: the browser refuses fetches to origins outside the CSP
     // connect-src allowlist, so such a URL is rejected with a plain

@@ -207,6 +207,11 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       );
       expect(div.textContent).toContain('Words written on paper');
       expect(div.textContent).toContain('Never photographed');
+      // UX-major Lane 5: the backup reads as one ordered path, with a
+      // testable recovery step (restore in a fresh profile).
+      expect(div.textContent).toContain('Confirm your vault password.');
+      expect(div.textContent).toContain('Answer three safety questions.');
+      expect(div.textContent).toContain('Test recovery before you need it');
     } finally {
       await cleanup();
     }

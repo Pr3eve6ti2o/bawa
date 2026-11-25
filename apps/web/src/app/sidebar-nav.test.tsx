@@ -121,10 +121,12 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
     }
   });
 
-  it('keeps the More menu destinations unchanged (10 links)', () => {
-    expect(MORE_LINKS).toHaveLength(10);
+  it('keeps the More menu destinations unchanged (11 links)', () => {
+    // UX-major Lane 5: Address book joins the More menu after Wallets.
+    expect(MORE_LINKS).toHaveLength(11);
     expect(MORE_LINKS.map(({ to }) => to)).toEqual([
       '/wallets',
+      '/address-book',
       '/transactions',
       '/track',
       '/import-wallet',
