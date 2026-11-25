@@ -23,6 +23,13 @@
  * only checked for cycles.
  *
  * Test files (*.test.*) are skipped: test-only cycles do not ship.
+ *
+ * Type-only imports (`import type` / `export type`) are not cycle edges:
+ * TypeScript erases them, so they cannot form a runtime module cycle.
+ * (The engine/boundary.ts <-> engine/coin-type-keys.ts pair is exactly
+ * this: coin-type-keys.ts imports ChainId/WalletCore as types only,
+ * while boundary.ts imports the value COIN_TYPE_KEY_FOR_CHAIN.) The
+ * layer check still sees every import, type-only or not.
  */
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -94,7 +101,9 @@ for (const file of files) {
     for (const match of lines[i].matchAll(IMPORT_RE)) {
       const target = resolveImport(file, match[1]);
       if (target === null) continue; // asset/css/json import: not a module edge
-      fileEdges.push({ to: target, line: i + 1 });
+      // Type-only imports are erased at compile time: no runtime edge.
+      const typeOnly = /^(?:import|export)\s+type\b/.test(match[0]);
+      fileEdges.push({ to: target, line: i + 1, typeOnly });
       const fromLayer = layerOf(file);
       const toLayer = layerOf(target);
       const allowed = ALLOWED[fromLayer];
@@ -121,7 +130,9 @@ for (const start of files) {
   const path = [start];
   while (stack.length > 0) {
     const top = stack[stack.length - 1];
-    const neighbours = (edges.get(top.file) ?? []).map((e) => e.to);
+    const neighbours = (edges.get(top.file) ?? [])
+      .filter((e) => !e.typeOnly)
+      .map((e) => e.to);
     if (top.index < neighbours.length) {
       const next = neighbours[top.index];
       top.index += 1;
