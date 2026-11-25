@@ -10,6 +10,7 @@ import {
   MAX_RECENT_CHAINS,
   readRecentChains,
   RECENT_CHAINS_KEY,
+  SEND_RECENT_CHAINS_KEY,
 } from './chain-search-select';
 import type { ChainId } from '../engine/boundary';
 
@@ -258,6 +259,44 @@ describe('ChainSearchSelect', () => {
       JSON.stringify(['sol', 'not-a-chain', 42, 'eth']),
     );
     expect(readRecentChains()).toEqual(['sol', 'eth']);
+  });
+
+  it('keeps Send recents under the Send key, apart from watch-only recents', () => {
+    // Redesign Lane 3 (Send): Send passes SEND_RECENT_CHAINS_KEY so
+    // the chains a user sends on never mix with the chains they watch
+    // — and a watch-only recent never surfaces on the Send step.
+    window.localStorage.setItem(RECENT_CHAINS_KEY, JSON.stringify(['eth']));
+    const onChange = vi.fn();
+    act(() => {
+      root.render(
+        <ChainSearchSelect
+          chains={CHAINS}
+          value="btc"
+          onChange={onChange}
+          id="test-chain-search"
+          recentKey={SEND_RECENT_CHAINS_KEY}
+        />,
+      );
+    });
+    // No Recent row from the watch-only key.
+    expect(container.textContent).not.toContain('Recent');
+    openList();
+    const solana = options().find(
+      (option) => option.textContent === 'Solana SOL',
+    );
+    expect(solana).not.toBeUndefined();
+    act(() => {
+      solana!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (solana as HTMLElement).click();
+    });
+    expect(onChange).toHaveBeenCalledWith('sol');
+    expect(readRecentChains(SEND_RECENT_CHAINS_KEY)).toEqual(['sol']);
+    expect(readRecentChains()).toEqual(['eth']);
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(SEND_RECENT_CHAINS_KEY) ?? '[]',
+      ),
+    ).toEqual(['sol']);
   });
 
   it('selects with ArrowDown and Enter, and closes with Escape', () => {

@@ -5,6 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { SendScreen } from './send';
 import { useWallet } from '../state/wallet-context';
+import { usePrices } from '../wallet/prices';
 import { getAdapterForMode } from '../wallet/adapters';
 import type { ChainAdapter } from '../wallet/adapters/types';
 
@@ -138,6 +139,24 @@ vi.mock('../wallet/vault', async (importOriginal) => {
   };
 });
 
+// Redesign Lane 3: the details step shows a fiat equivalent under the
+// amount, so the screen now reads the price feeds. The native feed is
+// mocked with a fresh ETH/BSC quote (real unitPriceForChain /
+// isFreshQuote / fiat math — only the hook's fetch is stubbed); the
+// token feed stays idle, so no token price is ever asserted here and
+// no real network call fires from the test.
+vi.mock('../wallet/prices', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../wallet/prices')>()),
+  usePrices: vi.fn(),
+}));
+
+vi.mock('../wallet/token-prices', () => ({
+  useTokenPrices: () => ({
+    state: { status: 'idle', entries: {} },
+    refresh: vi.fn(),
+  }),
+}));
+
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
@@ -160,6 +179,29 @@ function setWallet(overrides: Record<string, unknown> = {}): void {
     tokenBalances: {},
     ...overrides,
   } as unknown as ReturnType<typeof useWallet>);
+}
+
+function setPrices(): void {
+  // Fresh quotes (10-minute max age): 0.5 ETH is $1,000, 0.5 BNB $150.
+  const now = Date.now();
+  const fresh = (chain: 'eth' | 'bsc', usdPrice: string) => ({
+    status: 'fresh' as const,
+    quote: {
+      chain,
+      usdPrice,
+      providerUpdatedAtMs: now,
+      fetchedAtMs: now,
+      source: 'CoinGecko' as const,
+    },
+  });
+  vi.mocked(usePrices).mockReturnValue({
+    state: {
+      status: 'ready',
+      entries: { eth: fresh('eth', '2000'), bsc: fresh('bsc', '300') },
+      lastFetchedAtMs: now,
+    },
+    refresh: vi.fn(),
+  } as unknown as ReturnType<typeof usePrices>);
 }
 
 function setInputValue(input: HTMLInputElement, value: string): void {
@@ -282,11 +324,42 @@ async function clickContaining(div: HTMLDivElement, text: string): Promise<void>
   });
 }
 
+async function openChainPicker(div: HTMLDivElement): Promise<void> {
+  // Redesign Lane 3: the chain step is a search picker (role=
+  // "combobox" + listbox), not a chip row. Focus (and click, for the
+  // already-focused case) opens the list.
+  const input = div.querySelector('#chain-search') as HTMLInputElement | null;
+  expect(input).not.toBeNull();
+  await act(async () => {
+    input?.focus();
+    input?.click();
+  });
+}
+
+function chainOptionNames(div: HTMLDivElement): string[] {
+  // The option label reads "<Display name> <CHAIN ID>"; strip the id.
+  return [...div.querySelectorAll('[role="option"]')].map((candidate) => {
+    const label = candidate.querySelector('span')?.textContent ?? '';
+    return label.replace(/\s+[A-Z0-9]+$/, '').trim();
+  });
+}
+
+async function pickChain(div: HTMLDivElement, name: string): Promise<void> {
+  await openChainPicker(div);
+  const options = [...div.querySelectorAll('[role="option"]')];
+  const names = chainOptionNames(div);
+  const at = names.indexOf(name);
+  expect(at).toBeGreaterThanOrEqual(0);
+  await act(async () => {
+    (options[at] as HTMLElement).click();
+  });
+}
+
 async function reachReview(div: HTMLDivElement): Promise<void> {
   // Round 2, item 8: chain step, then token step, then the merged
   // address + amount step — pick the native asset first, which lands
   // on the details step with recipient and amount together.
-  await clickContaining(div, 'Ethereum');
+  await pickChain(div, 'Ethereum');
   await clickContaining(div, 'Ethereum · ETH');
   const recipient = div.querySelector(
     '#send-recipient',
@@ -305,6 +378,10 @@ async function reachReview(div: HTMLDivElement): Promise<void> {
 beforeEach(() => {
   vi.clearAllMocks();
   sessionStorage.clear();
+  // Recents live in localStorage and would otherwise leak between
+  // tests (a Recent row changes what the chain step shows).
+  localStorage.clear();
+  setPrices();
 });
 
 describe('send screen', () => {
@@ -362,7 +439,7 @@ describe('send screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'BNB Smart Chain');
+      await pickChain(mounted.div, 'BNB Smart Chain');
       await clickContaining(mounted.div, 'BNB Smart Chain · BNB');
       const recipient = mounted.div.querySelector(
         '#send-recipient',
@@ -413,7 +490,7 @@ describe('send screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Cosmos Hub');
+      await pickChain(mounted.div, 'Cosmos Hub');
       expect(mounted.div.textContent).toContain(
         "Sending on Cosmos Hub isn't available yet",
       );
@@ -475,12 +552,15 @@ describe('send screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      const chips = [
-        ...mounted.div.querySelectorAll(
-          '[role="group"][aria-label="Chain"] button',
-        ),
-      ].map((button) => button.textContent?.trim());
-      expect(chips).toEqual(['Bitcoin', 'Ethereum', 'TRON', 'TON']);
+      // Redesign Lane 3: the picker is a search listbox now — open it
+      // and read its options instead of the old chip row.
+      await openChainPicker(mounted.div);
+      expect(chainOptionNames(mounted.div)).toEqual([
+        'Bitcoin',
+        'Ethereum',
+        'TRON',
+        'TON',
+      ]);
     } finally {
       await mounted.cleanup();
     }
@@ -533,8 +613,10 @@ describe('send screen', () => {
     try {
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect(amount).not.toBeNull();
+      // Redesign Lane 3: the full banner shows on the chain step only;
+      // the details step keeps the compact one-line devnet note.
       expect(mounted.div.textContent).toContain(
-        'Devnet test mode. BNB Smart Chain has no test network — pick a chain with one.',
+        'Devnet test mode — BNB Smart Chain has no test network.',
       );
       expect(mounted.div.textContent).toContain(
         'Step 3 of 6: Address & amount',
@@ -562,7 +644,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       const recipient = mounted.div.querySelector(
         '#send-recipient',
@@ -584,11 +666,172 @@ describe('send screen', () => {
     }
   });
 
+  it('validates the recipient on blur, before Review is pressed', async () => {
+    // Redesign Lane 3: the recipient is checked when the field loses
+    // focus (ui-ux-pro-max inline validation) — the user learns the
+    // address is bad where they typed it, not only after Review.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, 'not-an-address');
+      });
+      // jsdom only fires blur on a focused element: focus first, then
+      // blur, or the blur handler never runs at all.
+      await act(async () => {
+        recipient.focus();
+      });
+      await act(async () => {
+        recipient.blur();
+      });
+      await waitForText(mounted.div, 'Invalid Ethereum address.');
+      expect(mounted.div.textContent).toContain('Invalid Ethereum address.');
+      expect(mounted.div.textContent).not.toContain('Review your send');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a focused error summary when Review fails', async () => {
+    // Redesign Lane 3: the old preview error rendered below the
+    // action row, where a failed Review looked like nothing had
+    // happened. The summary sits at the top of the step, lists each
+    // failure with a link to its field, and takes focus.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, 'not-an-address');
+      });
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, 'Check before you review');
+      const summary = mounted.div.querySelector(
+        'div[role="alert"]',
+      ) as HTMLDivElement | null;
+      expect(summary).not.toBeNull();
+      expect(summary?.textContent).toContain('Invalid Ethereum address.');
+      expect(document.activeElement).toBe(summary);
+      expect(mounted.div.textContent).not.toContain('Review your send');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('flags an over-balance amount inline, before Review is pressed', async () => {
+    // Redesign Lane 3: the typed amount is checked against the loaded
+    // balance as soon as it parses (Bitget transfer-form pattern) —
+    // the wallet holds 1 ETH, so 2 ETH is too much, and Review must
+    // not need a preview call to say so.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, RECIPIENT);
+      });
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      await act(async () => {
+        setInputValue(amount, '2');
+      });
+      await waitForText(mounted.div, 'Amount exceeds available balance.');
+      expect(mounted.div.textContent).toContain('Amount exceeds available balance.');
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, 'Check before you review');
+      expect(mounted.div.textContent).not.toContain('Review your send');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the fiat equivalent under the amount, and on review', async () => {
+    // Redesign Lane 3: the mocked ETH quote is $2,000, so 0.5 ETH is
+    // ≈ $1,000.00 on the details step — and the same figure under the
+    // amount hero on review.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, RECIPIENT);
+      });
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      await act(async () => {
+        setInputValue(amount, '0.5');
+      });
+      await waitForText(mounted.div, '≈ $1,000.00');
+      expect(mounted.div.textContent).toContain('≈ $1,000.00');
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, 'Review your send');
+      expect(mounted.div.textContent).toContain('≈ $1,000.00');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('a chain without a wallet stays on the chain step with the reason', async () => {
+    // Redesign Lane 3: the picker offers every chain, but a chain
+    // with no wallet here cannot be picked — the step says why and
+    // stays put instead of advancing into a token step with nothing
+    // to send from.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Bitcoin');
+      expect(mounted.div.textContent).toContain(
+        'No Bitcoin wallet here yet. Create or import one first.',
+      );
+      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
+      expect(mounted.div.querySelector('#send-recipient')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('offers Paste beside the recipient, and says so when the clipboard is unavailable', async () => {
+    // Redesign Lane 3: Paste is a visible control now, not a hidden
+    // long-press menu. jsdom has no clipboard, so the denial path —
+    // an honest note, not a silent failure — is what this asserts.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      await click(mounted.div, 'Paste');
+      await waitForText(
+        mounted.div,
+        'Clipboard paste is not available in this browser',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Clipboard paste is not available in this browser',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows a camera error when the scanner cannot start', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       await clickLabel(mounted.div, 'Scan QR code');
       await waitForText(
@@ -611,7 +854,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       const button = mounted.div.querySelector(
         'button[aria-label="Scan QR code"]',
@@ -638,28 +881,31 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      // Step 1 is chains only (Round 2, item 8): all 84 registry chains
-      // have a picker button (disabled without a wallet on that chain),
-      // and no token list yet.
-      const chips = [
-        ...mounted.div.querySelectorAll(
-          '[role="group"][aria-label="Chain"] button',
-        ),
-      ];
-      expect(chips).toHaveLength(84);
+      // Step 1 is chains only (Round 2, item 8). Redesign Lane 3: the
+      // 84 chains live in the search picker's listbox now, not a chip
+      // wall — open it and all 84 are there, with no token list yet.
+      await openChainPicker(mounted.div);
+      const names = chainOptionNames(mounted.div);
+      expect(names).toHaveLength(84);
       for (const name of ['Bitcoin', 'Ethereum', 'TRON', 'TON', 'Solana', 'BNB Smart Chain', 'Polygon', 'Arbitrum One', 'OP Mainnet', 'Base', 'Avalanche C-Chain', 'Litecoin', 'Dogecoin', 'ZKsync Era', 'Cronos', 'Cosmos Hub', 'Stellar', 'Ronin', 'Filecoin']) {
-        expect(mounted.div.textContent).toContain(name);
+        expect(names).toContain(name);
       }
       expect(mounted.div.textContent).not.toContain('USD Coin');
       // Picking a chain advances to the token step: the full token list
-      // for the selected chain, with the verified tick and short
-      // contract under each token.
-      await clickContaining(mounted.div, 'Ethereum');
+      // for the selected chain, with the verified tick — and each row
+      // shows its balance (the native row holds the 1 ETH stub
+      // balance). The short contract fragment no longer sits on the
+      // rows (Redesign Lane 3); the full contract is on review.
+      await pickChain(mounted.div, 'Ethereum');
       expect(mounted.div.textContent).toContain('USD Coin');
       expect(mounted.div.textContent).toContain('Tether USD');
       expect(mounted.div.textContent).toContain('ChainLink Token');
       expect(mounted.div.textContent).toContain('Verified');
-      expect(mounted.div.textContent).toContain('0xA0b8…eB48');
+      expect(mounted.div.textContent).not.toContain('0xA0b8…eB48');
+      const nativeRow = [...mounted.div.querySelectorAll('li')].find((li) =>
+        li.textContent?.includes('Ethereum · ETH'),
+      );
+      expect(nativeRow?.textContent).toContain('1 ETH');
     } finally {
       await mounted.cleanup();
     }
@@ -684,7 +930,7 @@ describe('send screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       const row = [...mounted.div.querySelectorAll('li')].find((li) =>
         li.textContent?.includes('Unlisted Token'),
       );
@@ -707,7 +953,13 @@ describe('send screen', () => {
       // The link moves the flow to the amount step with both prefilled.
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect((amount as HTMLInputElement).value).toBe('0.5');
-      expect(mounted.div.textContent).toContain(RECIPIENT);
+      // Redesign Lane 3: the details step no longer mirrors the
+      // recipient in a "To" row — the address lives in the input, so
+      // assert its value, not the page text.
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe(RECIPIENT);
     } finally {
       await mounted.cleanup();
     }
@@ -724,7 +976,10 @@ describe('send screen', () => {
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect((amount as HTMLInputElement).value).toBe('25');
       expect(mounted.div.textContent).toContain('Amount (USDC)');
-      expect(mounted.div.textContent).toContain(RECIPIENT);
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe(RECIPIENT);
     } finally {
       await mounted.cleanup();
     }
@@ -745,7 +1000,7 @@ describe('send screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
         button.textContent?.includes('USD Coin'),
       );
@@ -809,7 +1064,7 @@ describe('send screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Polygon');
+      await pickChain(mounted.div, 'Polygon');
       const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
         button.textContent?.includes('USD Coin'),
       );
@@ -852,7 +1107,7 @@ describe('send screen', () => {
     );
     const mounted = await mountScreen();
     try {
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       await waitForText(
         mounted.div,
@@ -877,7 +1132,11 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
       expect(mounted.div.querySelector('#send-recipient')).toBeNull();
       expect(mounted.div.querySelector('#send-amount')).toBeNull();
-      expect(mounted.div.textContent).toContain('Bitcoin');
+      // Redesign Lane 3: the listbox is closed on mount, so the chain
+      // names live in the picker's options, not the page text — open
+      // it and Bitcoin is offered; no token list yet either way.
+      await openChainPicker(mounted.div);
+      expect(chainOptionNames(mounted.div)).toContain('Bitcoin');
       expect(mounted.div.textContent).not.toContain('USD Coin');
     } finally {
       await mounted.cleanup();
@@ -892,7 +1151,7 @@ describe('send screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       expect(mounted.div.textContent).toContain('Step 2 of 6: Token');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
@@ -917,7 +1176,7 @@ describe('send screen', () => {
     const mounted = await mountScreen();
     try {
       // The token step lists the chain's assets: pick the chain first.
-      await clickContaining(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'Ethereum');
       const list = mounted.div.querySelector(
         'section[aria-labelledby="send-token-heading"] ul',
       );
@@ -992,7 +1251,10 @@ describe('send screen', () => {
       await mounted.rerender();
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect((amount as HTMLInputElement).value).toBe('0.5');
-      expect(mounted.div.textContent).toContain(RECIPIENT);
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe(RECIPIENT);
     } finally {
       await mounted.cleanup();
     }
@@ -1031,7 +1293,10 @@ describe('send screen', () => {
       await mounted.rerender();
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect((amount as HTMLInputElement).value).toBe('0.5');
-      expect(mounted.div.textContent).toContain(RECIPIENT);
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe(RECIPIENT);
       expect(mounted.div.textContent).toContain(account2);
     } finally {
       await mounted.cleanup();
@@ -1068,7 +1333,10 @@ describe('send screen', () => {
     try {
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect((amount as HTMLInputElement).value).toBe('0.5');
-      expect(mounted.div.textContent).toContain(RECIPIENT);
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe(RECIPIENT);
       // Applied links clear the stored copy.
       expect(sessionStorage.getItem('bawa-pending-send-link')).toBeNull();
     } finally {
