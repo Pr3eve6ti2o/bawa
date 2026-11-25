@@ -141,7 +141,7 @@ export interface ExpandedChainFacts {
   notes: string;
 }
 
-/** The 62 verified new chains (45 EVM + 10 non-EVM + 7 Cosmos-ecosystem). */
+/** The 65 verified new chains (45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference). */
 export const EXPANDED_CHAINS: ExpandedChainFacts[] = [
   {
     key: "zksync",

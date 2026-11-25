@@ -145,29 +145,41 @@ step stops the work; it is never silently skipped or faked.
 ## §2. Chains — 87, not 13, not 22, not 84
 
 **The count is 87: 22 curated chains in `apps/web/src/wallet/chains.ts`
-plus 62 expansion chains in `apps/web/src/wallet/chains-expanded.ts`
-(`EXPANDED_CHAINS`, line 116; `EXPANDED_CHAIN_COUNT = 62`, line 1792)
-plus 3 OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) —
-registered in `chains.ts` (`SUPPORTED_CHAINS` ends with them) with
-full fact records in `chains-expanded.ts`.**
+plus 65 expansion chains in `apps/web/src/wallet/chains-expanded.ts`
+(`EXPANDED_CHAINS`, line 148; `EXPANDED_CHAIN_COUNT = 65`, line 1903).
+The 65 break down as 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3
+OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) — whose full
+fact records live in the same file (cardano `:1821`, kaspa `:1848`,
+starknet `:1875`), not in a separate file. `SUPPORTED_CHAINS`
+(`chains.ts:1680`) holds all 87.**
 The expansion programme wired 84 into the app (adapters, prices,
 icons, explorers; `docs/EXPANSION-PROGRAMME.md`); Lane B added the
 three, so the app now wires 87. The 22-row capability
 table in `WALLET_BUILDER.md` covers only the curated `chains.ts` set; the
-62 expanded chains have their facts in `chains-expanded.ts`, each
-cross-checked against at least two sources and each RPC called live on
-2026-11-24. `docs/02-chains/README.md` §2 previously said Solana was
+65 expanded chains have their facts in `chains-expanded.ts`, each
+cross-checked against at least two sources. Each expanded chain ships
+two live-verified RPC endpoints — 130 in total
+(`rpcEndpoints`, 65 arrays × 2; each called live 2026-11-24) — and
+45 of the 65 have a live-clicked explorer transaction page
+(`explorerTxLive: true`); the other 20 were not live-clicked, do not
+claim they were. Price fallbacks per source on the 65 (see §7):
+CoinGecko 65, CoinLore 56, Coinbase 46, DexScreener 15; 60 of the 65
+have at least one non-CoinGecko fallback in their chain record.
+`docs/02-chains/README.md` §2 previously said Solana was
 reference-only — that is stale and fixed: Solana is a wired chain in the
 87-chain set.
 
 **Rule for every chain.** A chain supports an operation only if
 `availableFor(capability)` in `chains.ts` returns it. Verified today for
 the curated 22: derive/restore/receive/balance verified on all 22;
-history verified for BTC, ETH, TRX, TON, SOL, LTC, DOGE only; fee-quote,
+history verified for BTC, ETH, TRX, TON, SOL, LTC, DOGE, MATIC, ARB,
+OP, Base, AVAX, CELO, Linea, Mantle, Scroll and Aurora (17 chains);
+the other five — BSC, Gnosis, opBNB, Metis, Fantom — have no working
+keyless history indexer and stay blocked. Fee-quote,
 unsigned-plan, local-sign and post-sign-verify verified for BTC, ETH, TRX
-only (TON fee-quote and post-sign-verify blocked — see §5). For the 62
+only (TON fee-quote and post-sign-verify blocked — see §5). For the 65
 expanded chains, derivation evidence is the Wallet Core 4.9.3 derivation
-probe of 2026-11-24 recorded in `chains.ts:339-351`; do not claim send,
+probe of 2026-11-24 recorded in `chains.ts:339-347`; do not claim send,
 history, or fee behaviour for an expanded chain without its own adapter
 evidence.
 
@@ -213,11 +225,14 @@ pubkey covers all chains.
 
 ### §2.3 RPCs and explorers
 
-Every expanded chain ships at least one RPC verified live on 2026-11-24
-(EVM: `eth_chainId` + `eth_blockNumber` + `eth_getBlockByNumber`
-freshness sweep; non-EVM: protocol-native status probes) in
-`chains-expanded.ts` (`rpcEvidence` per chain). Do not swap in an
-unverified RPC. Explorer transaction pages: `explorerTxLive: false`
+Every expanded chain ships two RPC endpoints verified live on
+2026-11-24 — 130 in total (65 chains × 2; the 3 OKX chains add 6 to
+the expansion programme's 124) — in `chains-expanded.ts`
+(`rpcEvidence` per chain; EVM: `eth_chainId` + `eth_blockNumber` +
+`eth_getBlockByNumber` freshness sweep; non-EVM: protocol-native
+status probes). Do not swap in an unverified RPC.
+Explorer transaction pages: 45 of the 65 have
+`explorerTxLive: true` (live-clicked); `explorerTxLive: false`
 means the tx page was NOT live-clicked — do not claim it was.
 
 ### §2.4 XRP, Stellar, NEAR — already in the registry
@@ -924,7 +939,7 @@ were re-measured from that tree (see the rows below).
 | §0.3 4-colour cap + `--qr-*` | `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Correct in DECISIONS §24; now stated in this spec | Verified |
 | §0.4 no fake data | `apps/web/src/wallet/price-fallbacks.ts` header; `chains.ts` `availableFor` | Correct | Verified |
 | §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 87-chain app — noted as OPEN, not silently widened | Fixed (note updated 84 → 87) |
-| §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:116`, `:1792` (`EXPANDED_CHAIN_COUNT = 62`); §2.5 (3 OKX-reference chains) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87) |
+| §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:148`, `:1903` (`EXPANDED_CHAIN_COUNT = 65` — 45 EVM + 10 non-EVM + 7 Cosmos + 3 OKX-reference in the same file); §2.5 (Cardano `:1821`, Kaspa `:1848`, Starknet `:1875`) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87; 62 → 65, guide-update pass) |
 | §2.1 derivation paths | `chains.ts:403-455` (EVM_PATH, SOL/TON); `WALLET_BUILDER.md` policy table | Correct; SOL indexed form added from code | Verified |
 | §2.2 icons / assets pin | `chains-expanded.ts` header; `TRUST_WALLET_ASSETS_PIN` | Correct | Verified |
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |

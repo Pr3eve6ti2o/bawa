@@ -1,6 +1,6 @@
 # Bawa — value proposition
 
-**Version:** v1 — 2026-11-23 (marketing-fix Lane 3)
+**Version:** v1 — 2026-11-23 (marketing-fix Lane 3); chain count updated 2026-11-26 (guide-update pass): 22 → 87 chains, 22 enabled by default — see the dated note at the end.
 **Status:** wording for Lane 4 to take into the root README rewrite. Every
 claim below was checked against the build on branch `panel-rebuild/marketing-fix`
 at `4c4cad9` before it was written; the evidence pointer after each claim is
@@ -9,12 +9,12 @@ feature that is still "coming soon".
 
 ## The one line
 
-> **Your keys, your coins — on 22 chains, in your browser.**
+> **Your keys, your coins — on 87 chains, in your browser.**
 
 Subline, for the README and the welcome screen:
 
 > Bawa is a self-custodial wallet that runs in your browser. One recovery
-> phrase covers 22 chains. Your keys are made on this device, encrypted
+> phrase covers 87 chains, 22 enabled by default. Your keys are made on this device, encrypted
 > with your vault password, and never leave it. Sending stays switched off
 > until it is separately approved — so nothing here can move your funds.
 
@@ -32,12 +32,14 @@ this wallet does not ask for.
    freeze them. (Evidence: `apps/web/src/wallet/core.ts` — "Generate a
    24-word mnemonic from 256 bits of secure entropy"; Security screen
    copy in `apps/web/src/screens/security-settings.tsx`.)
-2. **One phrase, 22 chains.** Bitcoin, Ethereum, Solana, TRON, TON, BNB
+2. **One phrase, 87 chains.** Bitcoin, Ethereum, Solana, TRON, TON, BNB
    Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Litecoin,
    Dogecoin, Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora
-   and Fantom — one wallet, one address per chain, one recovery phrase.
+   and Fantom — the 22 curated chains, enabled by default — plus 65
+   more, one wallet, one address per chain, one recovery phrase.
    (Evidence: `SUPPORTED_CHAINS` in `apps/web/src/wallet/chains.ts`,
-   22 entries.)
+   87 entries; the full 87-chain set is specified in
+   `docs/CREATE-THIS-SPEC.md` §2.)
 3. **A fresh address for every payment.** The Receive card always shows
    your next unused address, and you can make a new receiving address at
    any time. (Evidence: HD rotation, `apps/web/src/screens/receive.tsx`
@@ -98,12 +100,12 @@ MetaMask). Bawa follows the same pattern and differs in one place that
 matters: **it is safe by default in a way the others are not** — sending
 is off, not on. That is the honest answer to "why choose this wallet over
 those": you choose it when you want a wallet that can receive, watch and
-track across 22 chains while being unable, by construction, to send your
+track across 87 chains while being unable, by construction, to send your
 money away — and you can read the code that makes that true.
 
 ## Words to use / words to avoid
 
-Use: self-custodial, your keys, one recovery phrase, 22 chains, real
+Use: self-custodial, your keys, one recovery phrase, 87 chains (22 enabled by default), real
 balances, real prices, watch-only, safe by default, sending switched off,
 open source, no account.
 
@@ -111,13 +113,13 @@ Avoid: "designed in our studio", "handmade", "small-batch", "limited
 runs" (maker claims — Wulu standing rule, same honesty bar); "bank-grade",
 "military-grade", "unhackable", "guaranteed safe" (unprovable); "free
 money", "earn", "rewards" (there is no earning feature); "supports
-every chain" (it supports 22 — name them).
+every chain" (it supports 87 — name the curated 22).
 
 ## Proof points (for Lane 4 — cite these, not adjectives)
 
 | Claim | Evidence in this repo |
 |---|---|
-| 22 chains | `SUPPORTED_CHAINS`, `apps/web/src/wallet/chains.ts` |
+| 87 chains (22 enabled by default) | `SUPPORTED_CHAINS`, `apps/web/src/wallet/chains.ts` |
 | 24-word BIP-39 phrase, 256-bit entropy | `apps/web/src/wallet/core.ts` |
 | BIP-32 HD derivation | `@scure/bip32` via `apps/web/src/wallet/core.ts` |
 | Prices in USD from CoinGecko | `apps/web/src/wallet/prices.ts` |
@@ -150,3 +152,11 @@ every chain" (it supports 22 — name them).
   only, matching the banner above it.
 - Nothing in the Partial/Retry logic (Lane 1) or the QR templates
   (Lane 7) was touched.
+
+## Note — 2026-11-26 (guide-update pass)
+
+Chain count corrected 22 → 87 throughout (22 curated chains enabled
+by default, plus 65 expansion chains). The two "What changed in the app
+for this (Lane 3, 2026-11-23)" bullets that say "22 chains" are Lane 3's
+record of what the app did then and are left as written; the live
+wording above is the 87-chain wording.

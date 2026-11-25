@@ -26,8 +26,8 @@
   <!-- Purpose banner -->
   <rect class="tintS" x="16" y="10" width="868" height="48" rx="10"/>
   <text class="t" x="30" y="30" font-size="15.5" font-weight="700">Bawa — an HD-wallet reference + AI Wallet Builder</text>
-  <text class="b" x="884" y="30" font-size="11.5" text-anchor="end">Trust Wallet Core 4.9.3 · 84 chains · mainnet</text>
-  <text class="b" x="30" y="48" font-size="11.5">One 24-word phrase, one account, 84 chains. The guide and builder turn this core into real wallets.</text>
+  <text class="b" x="884" y="30" font-size="11.5" text-anchor="end">Trust Wallet Core 4.9.3 · 87 chains · mainnet</text>
+  <text class="b" x="30" y="48" font-size="11.5">One 24-word phrase, one account, 87 chains. The guide and builder turn this core into real wallets.</text>
 
   <!-- Row 1 : Build -->
   <rect class="panel" x="16" y="66" width="420" height="64" rx="12"/>

@@ -46,7 +46,7 @@ For Web/Android UI selection, consult `docs/UI-TEMPLATE-REGISTRY.yaml` and `docs
 | Verify derivation / run the differential test | Selected profile | `docs/TESTING.md`; `docs/mainnet/MAINNET-VECTORS.md` | `python3 test/differential_test.py`; `tools/hdwallet-gen/compare.js` | Independent differential coverage is BTC/ETH index 0 only, not other indices or TRX/TON. Report actual execution results. |
 | Mainnet fee check / unsigned transaction / local signing | Helper request; no separate validated profile | `docs/SECURITY-RELEASE-GATES.md`; `docs/mainnet/MAINNET-GUIDE.md`; `docs/mainnet/MAINNET-GUARDS.md`; `docs/mainnet/MAINNET-UNSIGNED-TX.md`; `docs/mainnet/MAINNET-SIGNING.md`; `docs/mainnet/MAINNET-VECTORS.md`; `docs/mainnet/M35-REHEARSAL-PROCEDURE.md` | `tools/mainnet-fees/fees.mjs`; `tools/mainnet-guards/mainnet-guards.mjs`; `tools/mainnet-tx/unsigned-tx.mjs`; `tools/mainnet-signing/local-signing.mjs` | Helpers exist; inspect before use. Signing is local-only and never broadcasts. Verification must not sign or broadcast; real-funds gates and required approvals still apply. |
 Profiles: 8
-Chains: 84 (22 curated by default + 62 expansion — see registry/capabilities.json)
+Chains: 87 (22 curated by default + 65 expansion — see registry/capabilities.json)
 
 ADR reference: ADR-0007 (docs/adr/0007-price-feed-provider.md)
 ADR reference: ADR-0008 (docs/adr/0008-ecdsa-residual-risk.md)

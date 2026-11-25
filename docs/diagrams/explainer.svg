@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="400" height="692" viewBox="0 0 400 692" role="img" aria-labelledby="expTitle expDesc">
-  <title id="expTitle">One phrase, one account, 84 chains</title>
-  <desc id="expDesc">Bawa is an HD-wallet reference and AI Wallet Builder: one 24-word recovery phrase creates one HD wallet account, which derives one address on each of 87 chains. The 57 0x EVM chains all derive m/44'/60'/0'/0/0, so they share one address (Ronin shares the key with a ronin: prefix); the other 30 have their own paths. TON and SOL use Ed25519, the rest use secp256k1 — one literal pubkey for all chains is impossible in any standards-compliant wallet. Chain labels use the wallet registry's own native symbols. The web wallet is one example output — the HD wallet stands alone; Android and more wallets are planned.</desc>
+  <title id="expTitle">One phrase, one account, 87 chains</title>
+  <desc id="expDesc">Bawa is an HD-wallet reference and AI Wallet Builder: one 24-word recovery phrase creates one HD wallet account, which derives one address on each of 87 chains. The 57 chains at m/44'/60'/0'/0/0 share one key — 56 EVM chains render it as the same 0x address (Ronin shares the key with a ronin: prefix) and Injective renders it bech32; the other 30 have their own paths. TON and SOL use Ed25519, the rest use secp256k1 — one literal pubkey for all chains is impossible in any standards-compliant wallet. Chain labels use the wallet registry's own native symbols. The web wallet is one example output — the HD wallet stands alone; Android and more wallets are planned.</desc>
   <style>
     .t { font-family: "Baloo 2", "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
     .b { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
@@ -22,7 +22,7 @@
 
   <!-- Purpose line -->
   <text class="t" x="200" y="26" font-size="14.5" font-weight="700" text-anchor="middle">Bawa — an HD-wallet reference + AI Wallet Builder</text>
-  <text class="b" x="200" y="42" font-size="10.5" text-anchor="middle">One 24-word phrase, one account, 84 chains.</text>
+  <text class="b" x="200" y="42" font-size="10.5" text-anchor="middle">One 24-word phrase, one account, 87 chains.</text>
   <path d="M120,50 q10,-4 20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0 t20,0" fill="none" stroke="#FF6B4A" stroke-width="2.5" stroke-linecap="round"/>
 
   <!-- Phrase card -->
@@ -58,7 +58,7 @@
   <text class="m" x="30" y="317" font-size="10.5">TON m/44'/607'/0' · SOL m/44'/501'/0' — Ed25519</text>
 
   <!-- Chains -->
-  <text class="t" x="16" y="348" font-size="13.5" font-weight="700">84 chains</text>
+  <text class="t" x="16" y="348" font-size="13.5" font-weight="700">87 chains</text>
   <text class="b" x="384" y="348" font-size="10.5" text-anchor="end">pale yellow = EVM · one shared address</text>
   <g font-size="9.5">
     <rect class="chip" x="16" y="356" width="180" height="14" rx="6"/><text class="b" x="24" y="366.5">Bitcoin · BTC</text>
