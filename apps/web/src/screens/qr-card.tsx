@@ -36,6 +36,23 @@
 // the same card in the picked template, so the shared image is the
 // card, not a bare QR.
 //
+// UX-major Lane 1 (2026-11-26, hands-on Muse, 0 Sol): the owner
+// said the card still looked way too bad next to the Bitget card, so
+// all seven templates were redesigned against it, not tweaked —
+// codes grown toward Bitget's 62%-of-card share (B/G 200 -> 216,
+// C 216 -> 224, D 210 -> 222, E 210 -> 218, F 208 -> 216; A already
+// 218), tile padding doubled on B/G (8 -> 16 px) and C's quiet zone
+// raised to 6 modules, addresses raised a step everywhere (B/C/G
+// 12 -> 13 px, D/E/F strips 13 -> 14 px; A already 17 px bold),
+// amounts given real weight steps (B bold, C 16 px bold, F 22 px
+// like E), C's uneven -mt rhythm evened to 24 px, D's PNG tile
+// matched to its in-app tile (code + 48), brand marks grown (A
+// 44 -> 48 px, B/G 24 -> 28 px), and E's black tab fixed in the PNG
+// exporter (its square shadow rect poked past the tile's rounded
+// corner — the shadow is a rounded rect now). A/F muted subtitles
+// stay low-contrast by design (the confined --qr-* exception,
+// DESIGN-SYSTEM.md §2.2), never reused outside the card.
+//
 // The centre logo rides on the QR via qrcode.react's imageSettings
 // (excavate: true, error level H): the modules under the mark are
 // cleared when the code is drawn, so the code still decodes —
@@ -484,7 +501,11 @@ export function QrCard({
     <QRCodeSVG
       value={qrValue}
       size={qrVisual.size}
-      marginSize={4}
+      // UX-major Lane 1: C has no tile, so its quiet zone is the
+      // margin alone — 6 modules there (was 4 everywhere), the
+      // generous breathing Bitget's bare code has. The other
+      // templates keep 4 modules inside their tiles.
+      marginSize={template === 'c' ? 6 : 4}
       level="H"
       fgColor={qrVisual.fg}
       bgColor={qrVisual.bg}
@@ -579,8 +600,8 @@ export function QrCard({
         <p className="text-[15px] text-qr-muted">{QR_CARD_SHARE_LINK_TEXT}</p>
         <div className="flex w-full items-center justify-center gap-3 rounded-bawa-sm bg-qr-bar px-4 py-5">
           <BrandMark
-            markClassName="size-11 rounded-xl bg-coral text-[22px]"
-            textClassName="text-[22px] font-extrabold text-white"
+            markClassName="size-12 rounded-xl bg-coral text-2xl"
+            textClassName="text-2xl font-extrabold text-white"
           />
         </div>
       </div>
@@ -588,23 +609,28 @@ export function QrCard({
   }
 
   if (template === 'c') {
+    // UX-major Lane 1: one even 24 px rhythm (was gap-8 with
+    // -mt-2/-mt-6/-mt-4/-mt-6 hacks — the subtitle crowded the title
+    // and the wordmark floated far below Copy, which is why C read as
+    // unfinished). Tighter top/bottom pads, larger title and amount,
+    // 13 px address, grey wordmark instead of faint.
     return (
       <div
         data-testid="qr-card"
         data-template="c"
-        className="flex w-full flex-col items-center gap-8 bg-white px-6 py-10"
+        className="flex w-full flex-col items-center gap-6 bg-white px-6 py-6"
       >
         <LogoImage src={centreLogoSrc} alt={`${tokenSymbol} logo`} size="xl" />
         <h2
           data-testid="qr-card-title"
-          className="-mt-2 text-center text-[26px] font-semibold leading-tight text-qr-nearblack"
+          className="text-center text-[28px] font-semibold leading-tight text-qr-nearblack"
         >
           {title}
         </h2>
         <NetworkSubtitle
           subtitle={subtitle}
           networkName={networkName}
-          className="-mt-6 text-center text-sm text-qr-grey"
+          className="text-center text-sm text-qr-grey"
           boldClassName="font-bold text-qr-nearblack"
         />
         <div data-testid="qr-card-tile" className="shrink-0">
@@ -618,12 +644,12 @@ export function QrCard({
         >
           {QR_CARD_SCAN_LINE}
         </p>
-        <p className="-mt-4 text-center text-[15px] font-semibold text-qr-nearblack">
+        <p className="text-center text-base font-bold text-qr-nearblack">
           {amountText ?? 'Any amount'}
         </p>
         <p
           data-testid="qr-card-address"
-          className="-mt-4 w-full break-all text-center font-mono text-xs text-qr-grey"
+          className="w-full break-all text-center font-mono text-[13px] text-qr-grey"
         >
           {address}
         </p>
@@ -632,11 +658,11 @@ export function QrCard({
           onClick={onCopyAddress}
           disabled={onCopyAddress === undefined}
           aria-label="Copy receiving address"
-          className="-mt-6 cursor-pointer px-2 py-3 text-[13px] font-semibold text-qr-nearblack underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
+          className="cursor-pointer px-2 py-3 text-[13px] font-semibold text-qr-nearblack underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
         >
           Copy
         </button>
-        <p className="mt-2 text-[13px] font-semibold tracking-wide text-qr-faint">
+        <p className="text-[13px] font-semibold tracking-wide text-qr-grey">
           Bawa
         </p>
       </div>
@@ -690,7 +716,7 @@ export function QrCard({
         <div className="-mx-6 flex w-[calc(100%+3rem)] items-center gap-3 bg-ink px-6 py-4">
           <p
             data-testid="qr-card-address"
-            className="min-w-0 flex-1 break-all font-mono text-[13px] leading-5 text-white"
+            className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-white"
           >
             {address}
           </p>
@@ -728,7 +754,7 @@ export function QrCard({
           <div className="-mx-6 flex w-[calc(100%+3rem)] items-center gap-3 bg-ink px-6 py-4">
             <p
               data-testid="qr-card-address"
-              className="min-w-0 flex-1 break-all font-mono text-[13px] leading-5 text-white"
+              className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-white"
             >
               {address}
             </p>
@@ -769,13 +795,15 @@ export function QrCard({
         subtitleBoldClassName="font-bold text-white"
         tileClassName="rounded-[24px] bg-white p-6"
         amountClassName="text-white"
-        amountSizeClassName="text-xl"
+        // UX-major Lane 1: F's amount is 22 px like E's (was 20) —
+        // the two centred cards share one amount step now.
+        amountSizeClassName="text-[22px]"
         underlineClassName="bg-sun"
         strip={
           <div className="flex w-full items-center gap-3 rounded-xl bg-paper px-4 py-4">
             <p
               data-testid="qr-card-address"
-              className="min-w-0 flex-1 break-all font-mono text-[13px] leading-5 text-ink"
+              className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-ink"
             >
               {address}
             </p>
@@ -840,7 +868,7 @@ export function QrCard({
         />
         <div
           data-testid="qr-card-tile"
-          className="rounded-bawa-sm border-2 border-ink bg-paper p-2 shadow-[var(--bawa-shadow)]"
+          className="rounded-bawa-sm border-2 border-ink bg-paper p-4 shadow-[var(--bawa-shadow)]"
         >
           <div id="qr-card-qr" className="shrink-0">
             {qrCode}
@@ -866,7 +894,7 @@ export function QrCard({
           </p>
           <p
             data-testid="qr-card-address"
-            className="w-full break-all text-center font-mono text-xs text-ink"
+            className="w-full break-all text-center font-mono text-[13px] text-ink"
           >
             {address}
           </p>
@@ -882,8 +910,8 @@ export function QrCard({
           </button>
           <div className="flex w-full items-center justify-center border-t-2 border-ink pt-3">
             <BrandMark
-              markClassName="size-6 rounded-[6px] bg-coral text-base"
-              textClassName="font-display text-base font-bold text-ink"
+              markClassName="size-7 rounded-[6px] bg-coral text-lg"
+              textClassName="font-display text-lg font-bold text-ink"
             />
           </div>
         </div>
@@ -940,13 +968,16 @@ export function QrCard({
           the card read as one thing. */}
       <div
         data-testid="qr-card-tile"
-        className="rounded-bawa-sm border-2 border-ink bg-paper p-2 shadow-[var(--bawa-shadow)]"
+        className="rounded-bawa-sm border-2 border-ink bg-paper p-4 shadow-[var(--bawa-shadow)]"
       >
         <div id="qr-card-qr" className="shrink-0">
           {qrCode}
         </div>
       </div>
-      <p className="text-center font-display text-[22px] text-ink">
+      {/* UX-major Lane 1: the amount is bold (was regular — the PNG
+          already drew it 700, so in-app and PNG disagreed), and the
+          tile padding is 16 px (was 8), so the code breathes. */}
+      <p className="text-center font-display text-[22px] font-bold text-ink">
         {amountText ?? 'Any amount'}
       </p>
       {/* The address in its own framed strip: the full string, never
@@ -969,7 +1000,7 @@ export function QrCard({
         </div>
         <p
           data-testid="qr-card-address"
-          className="w-full break-all rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1.5 text-center font-mono text-xs text-ink"
+          className="w-full break-all rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1.5 text-center font-mono text-[13px] text-ink"
         >
           {address}
         </p>
@@ -988,8 +1019,8 @@ export function QrCard({
       </p>
       <div className="flex w-full items-center justify-center border-t-2 border-ink pt-3">
         <BrandMark
-          markClassName="size-6 rounded-[6px] bg-coral text-base"
-          textClassName="font-display text-base font-bold text-ink"
+          markClassName="size-7 rounded-[6px] bg-coral text-lg"
+          textClassName="font-display text-lg font-bold text-ink"
         />
       </div>
     </div>

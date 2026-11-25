@@ -192,10 +192,10 @@ describe('QrCard', () => {
       expect(card?.querySelector('[data-testid="qr-card-subtitle"]')?.textContent).toBe(
         'Only Base network assets can be received here.',
       );
-      // The QR is large (200 px) and carries the asset's mark in its centre.
+      // The QR is large (216 px) and carries the asset's mark in its centre.
       const qrSvg = card?.querySelector('#qr-card-qr svg');
       expect(qrSvg).not.toBeNull();
-      expect(qrSvg?.getAttribute('width')).toBe('200');
+      expect(qrSvg?.getAttribute('width')).toBe('216');
       expect(qrSvg?.querySelector('title')?.textContent).toBe(
         'ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&uint256=25000000',
       );
@@ -433,7 +433,7 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       const card = mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card?.getAttribute('data-template')).toBe('c');
       const qrSvg = card?.querySelector('#qr-card-qr svg');
-      expect(qrSvg?.getAttribute('width')).toBe('216');
+      expect(qrSvg?.getAttribute('width')).toBe('224');
       expect(
         card?.querySelector('[data-testid="qr-card-instruction"]')?.textContent,
       ).toBe('Scan or share this QR code to receive crypto.');
@@ -450,7 +450,7 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       const card = mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card?.getAttribute('data-template')).toBe('d');
       const qrSvg = card?.querySelector('#qr-card-qr svg');
-      expect(qrSvg?.getAttribute('width')).toBe('210');
+      expect(qrSvg?.getAttribute('width')).toBe('222');
       expect(card?.querySelector('.bg-sun')).not.toBeNull();
       expect(card?.querySelector('.bg-ink')).not.toBeNull();
       expect(card?.textContent).toContain('Bawa Wallet');
@@ -465,7 +465,7 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       const card = mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card?.getAttribute('data-template')).toBe('e');
       const qrSvg = card?.querySelector('#qr-card-qr svg');
-      expect(qrSvg?.getAttribute('width')).toBe('210');
+      expect(qrSvg?.getAttribute('width')).toBe('218');
       // The sun field is the card root itself, not a descendant.
       expect(card?.className).toContain('bg-sun');
       expect(card?.querySelector('.bg-ink')).not.toBeNull();
@@ -482,7 +482,7 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       const card = mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card?.getAttribute('data-template')).toBe('f');
       const qrSvg = card?.querySelector('#qr-card-qr svg');
-      expect(qrSvg?.getAttribute('width')).toBe('208');
+      expect(qrSvg?.getAttribute('width')).toBe('216');
       // The ink field is the card root itself, not a descendant.
       expect(card?.className).toContain('bg-ink');
       expect(card?.querySelector('.bg-white')).not.toBeNull();
@@ -499,7 +499,7 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       const card = mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card?.getAttribute('data-template')).toBe('g');
       const qrSvg = card?.querySelector('#qr-card-qr svg');
-      expect(qrSvg?.getAttribute('width')).toBe('200');
+      expect(qrSvg?.getAttribute('width')).toBe('216');
       expect(card?.querySelector('.border-dashed')).not.toBeNull();
       expect(card?.querySelector('.bg-sun')).not.toBeNull();
       expect(card?.textContent).toContain('Bawa Wallet');

@@ -741,21 +741,28 @@ export const DEFAULT_QR_CARD_TEMPLATE: QrCardTemplate = 'b';
  * The QR itself per template: code size in design px (including its
  * 4-module quiet zone, as qrcode.react renders it), module colours,
  * and the centre-mark size. A is the only inverted code. The logo
- * sizes are the DESIGN.md caps — A 13%, B 22%, C 15%, D 20% of the
- * code — and match the in-app card's imageSettings exactly, so the
- * PNG centre disc covers the excavation hole the SVG already has.
+ * sizes are the DESIGN.md caps — A 13%, B 20%, C 14%, D 19%, E 19%,
+ * F 19%, G 20% of the code — and match the in-app card's
+ * imageSettings exactly, so the PNG centre disc covers the
+ * excavation hole the SVG already has.
+ *
+ * UX-major Lane 1 (2026-11-26): the codes grew toward Bitget's
+ * 62%-of-card share (measured: Bitget 319 px = 62.3% of its card).
+ * B/G 200 -> 216 (60% of the 360 card), C 216 -> 224, D 210 -> 222
+ * (62%), E 210 -> 218, F 208 -> 216. A stays 218 (already 62%).
+ * Every logo stays inside the 25% cap at error level H.
  */
 export const QR_CARD_TEMPLATE_QR: Record<
   QrCardTemplate,
   { size: number; fg: string; bg: string; logo: number }
 > = {
   a: { size: 218, fg: '#FFFFFF', bg: '#011F29', logo: 28 },
-  b: { size: 200, fg: '#2B2B2B', bg: '#FFFDF7', logo: 44 },
-  c: { size: 216, fg: '#111111', bg: '#FFFFFF', logo: 32 },
-  d: { size: 210, fg: '#2B2B2B', bg: '#FFFFFF', logo: 42 },
-  e: { size: 210, fg: '#2B2B2B', bg: '#FFFFFF', logo: 42 },
-  f: { size: 208, fg: '#2B2B2B', bg: '#FFFFFF', logo: 40 },
-  g: { size: 200, fg: '#2B2B2B', bg: '#FFFDF7', logo: 44 },
+  b: { size: 216, fg: '#2B2B2B', bg: '#FFFDF7', logo: 44 },
+  c: { size: 224, fg: '#111111', bg: '#FFFFFF', logo: 32 },
+  d: { size: 222, fg: '#2B2B2B', bg: '#FFFFFF', logo: 42 },
+  e: { size: 218, fg: '#2B2B2B', bg: '#FFFFFF', logo: 42 },
+  f: { size: 216, fg: '#2B2B2B', bg: '#FFFFFF', logo: 40 },
+  g: { size: 216, fg: '#2B2B2B', bg: '#FFFDF7', logo: 44 },
 };
 
 /** The footer: Bawa's own words — share the card, keep the keys. */
@@ -1391,7 +1398,10 @@ function layoutCentredCard(
   const px = (v: number): number => Math.round(v * s);
   const qrSpec = QR_CARD_TEMPLATE_QR[template];
   const addressLines = wrapCardText(details.address, px(addressMaxW), (text) => {
-    ctx.font = MONO_FONT(px(13));
+    // UX-major Lane 1: the strip address is 14 px (was 13) — Bitget
+    // sets its address at 17 px bold; the strip split improves too
+    // (42 chars: 35 + 7 instead of 38 + 4).
+    ctx.font = MONO_FONT(px(14));
     return ctx.measureText(text).width;
   });
   const logoY = px(32);
@@ -1495,31 +1505,35 @@ function layoutQrCard(
   if (template === 'c') {
     const qrSpec = QR_CARD_TEMPLATE_QR.c;
     const addressLines = wrapCardText(details.address, px(320), (text) => {
-      ctx.font = MONO_FONT(px(12));
+      ctx.font = MONO_FONT(px(13));
       return ctx.measureText(text).width;
     });
-    let y = px(40);
+    // UX-major Lane 1: one even 24 px rhythm down the whole card
+    // (was 8/32/32/16/16/8/40 — the subtitle crowded the title and
+    // the wordmark floated 40 px below Copy, which is why C read as
+    // unfinished). Top and bottom pads are 24 px too.
+    let y = px(24);
     const logoY = hasLogo ? y : null;
     if (hasLogo) y += px(40 + 24);
     const titleY = y;
-    y += px(32 + 8);
+    y += px(32 + 24);
     const noteY = y;
-    y += px(subtitleLines.length * 20 + 32);
+    y += px(subtitleLines.length * 20 + 24);
     const qrY = y;
     const qrX = (px(390) - px(qrSpec.size)) / 2;
-    y += px(qrSpec.size + 32);
+    y += px(qrSpec.size + 24);
     const instructionY = y;
-    y += px(20 + 16);
+    y += px(20 + 24);
     const amountY = y;
-    y += px(20 + 16);
+    y += px(20 + 24);
     const addressY = y;
-    y += px(addressLines.length * 18 + 8);
+    y += px(addressLines.length * 18 + 24);
     const copyY = y;
     ctx.font = BODY_FONT(px(13), 600);
     const copyW = ctx.measureText('Copy').width;
-    y += px(18 + 40);
+    y += px(18 + 24);
     const wordmarkY = y;
-    const height = y + px(18 + 40);
+    const height = y + px(18 + 24);
     return {
       template: 'c',
       height,
@@ -1542,7 +1556,7 @@ function layoutQrCard(
   if (template === 'd') {
     const qrSpec = QR_CARD_TEMPLATE_QR.d;
     const addressLines = wrapCardText(details.address, px(298), (text) => {
-      ctx.font = MONO_FONT(px(13));
+      ctx.font = MONO_FONT(px(14));
       return ctx.measureText(text).width;
     });
     const titleLines = wrapRichWords(
@@ -1556,7 +1570,10 @@ function layoutQrCard(
     const titleY = px(24);
     const subtitleY = titleY + px(headerH + 12);
     const tileY = subtitleY + px(subtitleLines.length * 22 + 24);
-    const tileSize = px(300);
+    // UX-major Lane 1: the tile is the code + its 24 px padding each
+    // side, exactly as the in-app tile (was a fixed 300 px, so the PNG
+    // tile carried 45 px of padding against the in-app 24).
+    const tileSize = px(qrSpec.size + 48);
     const tileX = Math.round((px(390) - tileSize) / 2);
     const qrX = tileX + Math.round((tileSize - px(qrSpec.size)) / 2);
     const qrY = tileY + Math.round((tileSize - px(qrSpec.size)) / 2);
@@ -1619,20 +1636,23 @@ function layoutQrCard(
   if (template === 'g') {
     const qrSpec = QR_CARD_TEMPLATE_QR.g;
     const addressLines = wrapCardText(details.address, px(320), (text) => {
-      ctx.font = MONO_FONT(px(12));
+      // UX-major Lane 1: the stub address is 13 px (was 12).
+      ctx.font = MONO_FONT(px(13));
       return ctx.measureText(text).width;
     });
     const cardX = px(15);
     const cardW = px(360);
     const cardY = px(24);
-    const tileSize = px(qrSpec.size + 16 + 4);
+    // UX-major Lane 1: the tile padding is 16 px a side (was 8), so
+    // the code breathes like Bitget's — tile = code + 32 + border 4.
+    const tileSize = px(qrSpec.size + 32 + 4);
     const logoY = cardY + px(20);
     const titleY = cardY + px(20 + 64 + 20);
     const subtitleY = titleY + px(34 + 8);
     const tileX = cardX + Math.round((cardW - tileSize) / 2);
     const tileY = subtitleY + px(subtitleLines.length * 20 + 20);
-    const qrX = tileX + px(8 + 2);
-    const qrY = tileY + px(8 + 2);
+    const qrX = tileX + px(16 + 2);
+    const qrY = tileY + px(16 + 2);
     const tearY = tileY + tileSize + px(24);
     const amountY = tearY + px(20);
     const addressY = amountY + px(28 + 12);
@@ -1673,13 +1693,18 @@ function layoutQrCard(
   // Template B (default): Bawa's own paper card, respaced.
   const qrSpec = QR_CARD_TEMPLATE_QR.b;
   const addressLines = wrapCardText(details.address, px(304), (text) => {
-    ctx.font = MONO_FONT(px(12));
+    // UX-major Lane 1: the address is 13 px (was 12) — Bitget sets
+    // its address at 17 px bold; a 42-char address now wraps to
+    // 2 lines here, as it already does in-app and on Bitget.
+    ctx.font = MONO_FONT(px(13));
     return ctx.measureText(text).width;
   });
   const cardX = px(15);
   const cardW = px(360);
   const cardY = px(24);
-  const tileSize = px(qrSpec.size + 16 + 4);
+  // UX-major Lane 1: the tile padding is 16 px a side (was 8), so the
+  // code breathes like Bitget's — tile = code + 32 + border 4.
+  const tileSize = px(qrSpec.size + 32 + 4);
   const addressBoxH = px(addressLines.length * 18 + 20);
   let cardH =
     px(20 + 64 + 20 + 34 + 8 + subtitleLines.length * 20 + 20) +
@@ -1691,8 +1716,8 @@ function layoutQrCard(
   const height = cardY + cardH + px(24);
   const tileX = cardX + (cardW - tileSize) / 2;
   const tileY = cardY + px(20 + 64 + 20 + 34 + 8 + subtitleLines.length * 20 + 20);
-  const qrX = tileX + px(8 + 2);
-  const qrY = tileY + px(8 + 2);
+  const qrX = tileX + px(16 + 2);
+  const qrY = tileY + px(16 + 2);
   const amountY = tileY + tileSize + px(4 + 20);
   const labelY = amountY + px(28 + 20);
   const addressBoxY = labelY + px(24 + 8);
@@ -1876,17 +1901,19 @@ function drawQrCard(
     drawCopyGlyph(ctx, g.copyX + px(12), g.copyY + px(12), px(20), '#FFFFFF');
     drawText(ctx, details.shareLinkText ?? QR_CARD_SHARE_LINK_TEXT, width / 2, g.linkY, BODY_FONT(px(15)), muted);
     // Brand bar: near-black, full-bleed, Bawa's own wordmark.
+    // UX-major Lane 1: the mark is 48 px and the wordmark 24 px
+    // (was 44/22) — Bitget's bar is a statement, not a footnote.
     ctx.fillStyle = '#121818';
     ctx.fillRect(0, g.brandY, width, g.brandH);
-    const brandFont = BODY_FONT(px(22), 800);
+    const brandFont = BODY_FONT(px(24), 800);
     ctx.font = brandFont;
     const brandW = ctx.measureText(QR_CARD_BRAND).width;
-    const markPx = px(44);
+    const markPx = px(48);
     const groupW = markPx + px(16) + brandW;
     const groupX = (width - groupW) / 2;
     const markY = g.brandY + (g.brandH - markPx) / 2;
     fillRoundRect(ctx, groupX, markY, markPx, markPx, px(12), QR_CARD_CORAL);
-    drawText(ctx, 'B', groupX + markPx / 2, markY + markPx / 2 - px(11), DISPLAY_FONT(px(22), 800), '#FFFFFF');
+    drawText(ctx, 'B', groupX + markPx / 2, markY + markPx / 2 - px(11), DISPLAY_FONT(px(24), 800), '#FFFFFF');
     drawText(ctx, QR_CARD_BRAND, groupX + markPx + px(16), g.brandY + g.brandH / 2 - px(11), brandFont, '#FFFFFF', 'left');
     return;
   }
@@ -1898,17 +1925,22 @@ function drawQrCard(
     if (centre !== null && g.logoY !== null) {
       ctx.drawImage(centre, width / 2 - px(20), g.logoY, px(40), px(40));
     }
-    drawText(ctx, details.title, width / 2, g.titleY, BODY_FONT(px(26), 600), '#111111');
+    drawText(ctx, details.title, width / 2, g.titleY, BODY_FONT(px(28), 600), '#111111');
     drawSubtitleBlock(ctx, g.subtitleLines, width / 2, g.noteY, px(20), px(14), '#6B7280', '#111111');
     ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
     centreMark(ctx, deps, images, 'c', g.qrX + px(qrSpec.size) / 2, g.qrY + px(qrSpec.size) / 2, s);
     drawText(ctx, QR_CARD_SCAN_LINE, width / 2, g.instructionY, BODY_FONT(px(14)), '#6B7280');
-    drawText(ctx, details.amountText, width / 2, g.amountY, BODY_FONT(px(15), 600), '#111111');
-    drawAddressLines(ctx, g.addressLines, width / 2, g.addressY, px(18), MONO_FONT(px(12)), '#6B7280');
+    // UX-major Lane 1: the amount is 16 px bold (was 15 semibold)
+    // and the address 13 px (was 12) — C's quiet type now has the
+    // same weight steps as the other templates.
+    drawText(ctx, details.amountText, width / 2, g.amountY, BODY_FONT(px(16), 700), '#111111');
+    drawAddressLines(ctx, g.addressLines, width / 2, g.addressY, px(18), MONO_FONT(px(13)), '#6B7280');
     drawText(ctx, 'Copy', width / 2, g.copyY, BODY_FONT(px(13), 600), '#111111');
     ctx.fillStyle = '#111111';
     ctx.fillRect(width / 2 - g.copyW / 2, g.copyY + px(17), g.copyW, px(1));
-    drawText(ctx, 'Bawa', width / 2, g.wordmarkY, BODY_FONT(px(13), 600), '#9CA3AF');
+    // The wordmark is grey, not faint (was #9CA3AF): still quiet,
+    // no longer invisible at a glance.
+    drawText(ctx, 'Bawa', width / 2, g.wordmarkY, BODY_FONT(px(13), 600), '#6B7280');
     return;
   }
 
@@ -1947,7 +1979,7 @@ function drawQrCard(
     // Address strip: full-bleed ink, copy mark at the right.
     ctx.fillStyle = QR_CARD_INK;
     ctx.fillRect(0, g.stripY, width, g.stripH);
-    drawAddressLines(ctx, g.addressLines, px(24), g.addressY, px(20), MONO_FONT(px(13)), '#FFFFFF', 'left');
+    drawAddressLines(ctx, g.addressLines, px(24), g.addressY, px(20), MONO_FONT(px(14)), '#FFFFFF', 'left');
     drawCopyGlyph(ctx, g.copyX, g.copyY, px(20), '#FFFFFF');
     // Brand row, left-aligned.
     fillRoundRect(ctx, px(24), g.brandY, px(36), px(36), px(8), QR_CARD_INK);
@@ -1961,9 +1993,11 @@ function drawQrCard(
     ctx.fillStyle = QR_CARD_SUN;
     ctx.fillRect(0, 0, width, g.height);
     drawCentredHeader(ctx, images, g, details, width, s, QR_CARD_INK, QR_CARD_INK, QR_CARD_INK);
-    // White QR tile: hard offset shadow, ink frame, QR inside.
-    ctx.fillStyle = QR_CARD_INK;
-    ctx.fillRect(g.tileX + px(4), g.tileY + px(4), g.tileSize, g.tileSize);
+    // White QR tile: hard offset shadow, ink frame, QR inside. The
+    // shadow is a ROUNDED rect with the tile's own 24 px radius —
+    // UX-major Lane 1: the old square shadow rect poked past the
+    // tile's rounded top-right corner as a small black tab.
+    fillRoundRect(ctx, g.tileX + px(4), g.tileY + px(4), g.tileSize, g.tileSize, px(24), QR_CARD_INK);
     fillRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), '#FFFFFF');
     strokeRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), QR_CARD_INK, px(2));
     ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
@@ -1974,7 +2008,7 @@ function drawQrCard(
     // Address strip: full-bleed ink, copy mark at the right.
     ctx.fillStyle = QR_CARD_INK;
     ctx.fillRect(0, g.stripY, width, g.stripH);
-    drawAddressLines(ctx, g.addressLines, px(24), g.addressY, px(20), MONO_FONT(px(13)), '#FFFFFF', 'left');
+    drawAddressLines(ctx, g.addressLines, px(24), g.addressY, px(20), MONO_FONT(px(14)), '#FFFFFF', 'left');
     drawCopyGlyph(ctx, g.copyX, g.copyY, px(20), '#FFFFFF');
     // Brand row, left-aligned.
     fillRoundRect(ctx, px(24), g.brandY, px(36), px(36), px(8), QR_CARD_INK);
@@ -1992,12 +2026,12 @@ function drawQrCard(
     fillRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), '#FFFFFF');
     ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
     centreMark(ctx, deps, images, 'f', g.qrX + px(qrSpec.size) / 2, g.qrY + px(qrSpec.size) / 2, s);
-    drawText(ctx, details.amountText, width / 2, g.amountY, DISPLAY_FONT(px(20), 700), '#FFFFFF');
+    drawText(ctx, details.amountText, width / 2, g.amountY, DISPLAY_FONT(px(22), 700), '#FFFFFF');
     ctx.fillStyle = QR_CARD_SUN;
     ctx.fillRect(width / 2 - px(24), g.underlineY, px(48), px(4));
     // Address strip: paper, rounded, copy mark at the right.
     fillRoundRect(ctx, g.stripX, g.stripY, g.stripW, g.stripH, px(12), QR_PAPER_COLOR);
-    drawAddressLines(ctx, g.addressLines, g.stripX + px(16), g.addressY, px(20), MONO_FONT(px(13)), QR_CARD_INK, 'left');
+    drawAddressLines(ctx, g.addressLines, g.stripX + px(16), g.addressY, px(20), MONO_FONT(px(14)), QR_CARD_INK, 'left');
     drawCopyGlyph(ctx, g.copyX, g.copyY, px(20), QR_CARD_INK);
     // Brand row: sun mark with an ink B, white wordmark.
     fillRoundRect(ctx, px(24), g.brandY, px(36), px(36), px(8), QR_CARD_SUN);
@@ -2071,7 +2105,7 @@ function drawQrCard(
     fillCircle(ctx, g.cardX + g.cardW, g.tearY + px(1), px(8), QR_PAPER_COLOR);
     strokeCircle(ctx, g.cardX + g.cardW, g.tearY + px(1), px(8), QR_CARD_INK, px(2));
     drawText(ctx, details.amountText, width / 2, g.amountY, DISPLAY_FONT(px(22), 700), QR_CARD_INK);
-    drawAddressLines(ctx, g.addressLines, width / 2, g.addressY, px(18), MONO_FONT(px(12)), QR_CARD_INK);
+    drawAddressLines(ctx, g.addressLines, width / 2, g.addressY, px(18), MONO_FONT(px(13)), QR_CARD_INK);
     // Copy pill: ink outline, centred.
     const pillW = g.copyW + px(24);
     const pillH = px(24);
@@ -2079,16 +2113,18 @@ function drawQrCard(
     strokeRoundRect(ctx, pillX, g.copyY - px(4), pillW, pillH, px(6), QR_CARD_INK, px(2));
     drawText(ctx, 'Copy', width / 2, g.copyY - px(4) + pillH / 2 - px(6), BODY_FONT(px(12), 600), QR_CARD_INK);
     // Brand strip: ink rule, coral B mark, wordmark.
+    // UX-major Lane 1: the mark is 28 px and the wordmark 18 px
+    // (was 24/16) — the strip reads as a footer, not a footnote.
     ctx.fillStyle = QR_CARD_INK;
     ctx.fillRect(g.cardX + px(20), g.ruleY, g.cardW - px(40), px(2));
-    const brandFont = DISPLAY_FONT(px(16), 700);
+    const brandFont = DISPLAY_FONT(px(18), 700);
     ctx.font = brandFont;
     const brandW = ctx.measureText(QR_CARD_BRAND).width;
-    const markPx = px(24);
+    const markPx = px(28);
     const groupW = markPx + px(8) + brandW;
     const groupX = (width - groupW) / 2;
     fillRoundRect(ctx, groupX, g.brandY, markPx, markPx, px(6), QR_CARD_CORAL);
-    drawText(ctx, 'B', groupX + markPx / 2, g.brandY + markPx / 2 - px(8), DISPLAY_FONT(px(16), 700), '#FFFFFF');
+    drawText(ctx, 'B', groupX + markPx / 2, g.brandY + markPx / 2 - px(8), DISPLAY_FONT(px(18), 700), '#FFFFFF');
     drawText(ctx, QR_CARD_BRAND, groupX + markPx + px(8), g.brandY + markPx / 2 - px(8), brandFont, QR_CARD_INK, 'left');
     return;
   }
@@ -2160,22 +2196,24 @@ function drawQrCard(
     QR_CARD_INK,
     px(2),
   );
-  drawAddressLines(ctx, g.addressLines, width / 2, g.addressY, px(18), MONO_FONT(px(12)), QR_CARD_INK);
+  drawAddressLines(ctx, g.addressLines, width / 2, g.addressY, px(18), MONO_FONT(px(13)), QR_CARD_INK);
   if (details.subline !== undefined && g.sublineY !== null) {
     drawText(ctx, details.subline, width / 2, g.sublineY, BODY_FONT(px(14)), QR_CARD_INK);
   }
   drawText(ctx, QR_CARD_FOOTER, width / 2, g.footerY, BODY_FONT(px(14)), QR_CARD_INK);
   // Brand strip: ink rule, coral B mark, wordmark.
+  // UX-major Lane 1: the mark is 28 px and the wordmark 18 px
+  // (was 24/16) — the strip reads as a footer, not a footnote.
   ctx.fillStyle = QR_CARD_INK;
   ctx.fillRect(g.cardX + px(20), g.ruleY, g.cardW - px(40), px(2));
-  const brandFont = DISPLAY_FONT(px(16), 700);
+  const brandFont = DISPLAY_FONT(px(18), 700);
   ctx.font = brandFont;
   const brandW = ctx.measureText(QR_CARD_BRAND).width;
-  const markPx = px(24);
+  const markPx = px(28);
   const groupW = markPx + px(8) + brandW;
   const groupX = (width - groupW) / 2;
   fillRoundRect(ctx, groupX, g.brandY, markPx, markPx, px(6), QR_CARD_CORAL);
-  drawText(ctx, 'B', groupX + markPx / 2, g.brandY + markPx / 2 - px(8), DISPLAY_FONT(px(16), 700), '#FFFFFF');
+  drawText(ctx, 'B', groupX + markPx / 2, g.brandY + markPx / 2 - px(8), DISPLAY_FONT(px(18), 700), '#FFFFFF');
   drawText(ctx, QR_CARD_BRAND, groupX + markPx + px(8), g.brandY + markPx / 2 - px(8), brandFont, QR_CARD_INK, 'left');
 }
 

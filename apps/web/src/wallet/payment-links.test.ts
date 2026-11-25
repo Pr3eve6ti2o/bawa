@@ -812,6 +812,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
     fillRect: ReturnType<typeof vi.fn>;
     drawImage: ReturnType<typeof vi.fn>;
     fillText: ReturnType<typeof vi.fn>;
+    arcTo: ReturnType<typeof vi.fn>;
   } {
     const canvases: { width: number; height: number }[] = [];
     const contexts: {
@@ -821,6 +822,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fillRect: ReturnType<typeof vi.fn>;
       drawImage: ReturnType<typeof vi.fn>;
       fillText: ReturnType<typeof vi.fn>;
+      arcTo: ReturnType<typeof vi.fn>;
     } | null = null;
     let imageCount = 0;
     const deps: QrRenderDeps = {
@@ -829,6 +831,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
         const drawImage = vi.fn();
         const fillText = vi.fn();
         const putImageData = vi.fn();
+        const arcTo = vi.fn();
         const ctx = {
           fillStyle: '',
           strokeStyle: '',
@@ -844,7 +847,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
           beginPath: vi.fn(),
           moveTo: vi.fn(),
           lineTo: vi.fn(),
-          arcTo: vi.fn(),
+          arcTo,
           arc: vi.fn(),
           closePath: vi.fn(),
           fill: vi.fn(),
@@ -873,7 +876,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
           },
         };
         canvases.push(canvas);
-        if (main === null) main = { fillRect, drawImage, fillText };
+        if (main === null) main = { fillRect, drawImage, fillText, arcTo };
         return canvas;
       },
       createImage: () => {
@@ -912,6 +915,9 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       get fillText() {
         return main!.fillText;
       },
+      get arcTo() {
+        return main!.arcTo;
+      },
     };
   }
 
@@ -923,26 +929,27 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
     expect(file.type).toBe('image/png');
     // 640 wide; the layout is the DESIGN.md B geometry at scale
     // 640/390 (px(v) = round(v * 640/390)): card 25/39, 591 wide,
-    // 1093 tall with the subline, canvas 1171 + 46 = 1217 tall.
+    // cardH 1192 with the subline (tile 252: code 216 + 16 px padding
+    // a side + 4 border — UX-major Lane 1), canvas 1270 tall.
     // One address line at 10px a character (42 chars fit the 499px
     // address width); one subtitle line (50 chars fit the 525px
     // subtitle width).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1217);
+    expect(fakes.canvas.height).toBe(1270);
     // Paper painted first, over the whole card.
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1217);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1270);
     // Lane H (Oishi hard offset shadow): an ink rect offset 4 design
-    // px down-right behind the tile (140 + 7, 344 + 7, 361, 361).
-    expect(fakes.fillRect).toHaveBeenCalledWith(147, 351, 361, 361);
-    // The QR is drawn 200 design px wide (328 canvas px), centred,
+    // px down-right behind the tile (113.5 + 7, 344 + 7, 414, 414).
+    expect(fakes.fillRect).toHaveBeenCalledWith(120.5, 351, 414, 414);
+    // The QR is drawn 216 design px wide (354 canvas px), centred,
     // inside its tile at the top. It is the third draw — the header
     // token and chain badge are drawn first — so it is found by its
     // width, not by call order.
-    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 328)!;
-    expect(qrDraw[1]).toBe(156);
-    expect(qrDraw[2]).toBe(360);
-    expect(qrDraw[3]).toBe(328);
-    expect(qrDraw[4]).toBe(328);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 354)!;
+    expect(qrDraw[1]).toBe(143.5);
+    expect(qrDraw[2]).toBe(374);
+    expect(qrDraw[3]).toBe(354);
+    expect(qrDraw[4]).toBe(354);
     // The header carries the token mark (52 design px) with the chain
     // mark as its badge (20 design px); the centre mark (44 design
     // px) sits in the code over its excavation hole.
@@ -950,7 +957,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
     expect(logoDraws).toHaveLength(3);
     expect(logoDraws[0]!.slice(1)).toEqual([277, 82, 85, 85]);
     expect(logoDraws[1]!.slice(1)).toEqual([342, 147, 33, 33]);
-    expect(logoDraws[2]!.slice(1)).toEqual([284, 488, 72, 72]);
+    expect(logoDraws[2]!.slice(1)).toEqual([284.5, 515, 72, 72]);
     // The card's facts, in the on-screen order: title, subtitle
     // (network bolded, one fillText per word), amount, label, Copy,
     // address, subline, footer, brand mark, wordmark.
@@ -992,10 +999,10 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fakes.deps,
     );
     expect(fakes.canvas.width).toBe(1080);
-    expect(fakes.canvas.height).toBe(1976);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 1080, 1976);
-    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 554)!;
-    expect(qrDraw.slice(1)).toEqual([264, 609, 554, 554]);
+    expect(fakes.canvas.height).toBe(2065);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 1080, 2065);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 598)!;
+    expect(qrDraw.slice(1)).toEqual([241.5, 631, 598, 598]);
   });
 
   it('draws Template A — dark teal, inverted code, brand bar', async () => {
@@ -1077,9 +1084,9 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fakes.deps,
     );
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1080);
-    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 354)!;
-    expect(qrDraw.slice(1)).toEqual([143, 322, 354, 354]);
+    expect(fakes.canvas.height).toBe(1066);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 368)!;
+    expect(qrDraw.slice(1)).toEqual([136, 308, 368, 368]);
     // QR, top logo, centre mark — no tile badges, no brand bar.
     expect(fakes.drawImage).toHaveBeenCalledTimes(3);
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
@@ -1119,9 +1126,9 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fakes.deps,
     );
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1150);
-    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 345)!;
-    expect(qrDraw.slice(1)).toEqual([148, 363, 345, 345]);
+    expect(fakes.canvas.height).toBe(1101);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 364)!;
+    expect(qrDraw.slice(1)).toEqual([139, 329, 364, 364]);
     // QR, header disc logo, centre mark.
     expect(fakes.drawImage).toHaveBeenCalledTimes(3);
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
@@ -1179,7 +1186,9 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       'B',
       'Bawa Wallet',
     ]);
-    expect(fakes.canvas.height).toBe(1171 + 30);
+    // 1201 before (two address lines), +53 for the bigger B tile
+    // (code 216 + 16 px padding a side — UX-major Lane 1).
+    expect(fakes.canvas.height).toBe(1171 + 30 + 53);
   });
 
   it('still shares the card when both logos fail to load', async () => {
@@ -1237,23 +1246,31 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fakes.deps,
     );
     // px(v) = round(v * 640/390): logo 53, title 243, subtitle 318,
-    // tile 423 wide at (109, 393), QR 345 at (148, 432), amount 855,
-    // strip (0, 963, 640, 85), brand 1087, canvas 1185 tall. One
+    // tile 437 wide at (102, 393), QR 358 at (141, 432), amount 869,
+    // strip (0, 977, 640, 85), brand 1101, canvas 1199 tall. One
     // subtitle line (460 px fits the 558 px width); one address line
-    // (420 px fits the 489 px strip width).
+    // (420 px fits the 489 px strip width). Tile +14 canvas px vs
+    // before (code 218 — UX-major Lane 1).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1185);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1185);
-    expect(fakes.fillRect).toHaveBeenCalledWith(116, 400, 423, 423);
-    expect(fakes.fillRect).toHaveBeenCalledWith(281, 917, 79, 7);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 963, 640, 85);
-    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 345)!;
-    expect(qrDraw.slice(1)).toEqual([148, 432, 345, 345]);
+    expect(fakes.canvas.height).toBe(1199);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1199);
+    // The tile shadow is a ROUNDED rect with the tile's 24 px radius
+    // (UX-major Lane 1): the old square shadow rect poked past the
+    // tile's rounded top-right corner as a black tab. The square
+    // shadow is gone, and the rounded shadow's top-right corner arc
+    // sits at the offset position (tile 102/393 + px(4) = 109/400,
+    // size 437, radius 39): arcTo(546, 400, 546, 439, 39).
+    expect(fakes.fillRect).not.toHaveBeenCalledWith(116, 400, 423, 423);
+    expect(fakes.arcTo).toHaveBeenCalledWith(546, 400, 546, 439, 39);
+    expect(fakes.fillRect).toHaveBeenCalledWith(281, 931, 79, 7);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 977, 640, 85);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 358)!;
+    expect(qrDraw.slice(1)).toEqual([141, 432, 358, 358]);
     const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
     expect(logoDraws).toHaveLength(3);
     expect(logoDraws[0]!.slice(1)).toEqual([267, 79, 105, 105]);
     expect(logoDraws[1]!.slice(1)).toEqual([360, 172, 33, 33]);
-    expect(logoDraws[2]!.slice(1)).toEqual([286, 570, 69, 69]);
+    expect(logoDraws[2]!.slice(1)).toEqual([285.5, 576.5, 69, 69]);
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
     expect(texts).toEqual([
       'Receive USDC',
@@ -1279,21 +1296,22 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       { ...DETAILS, template: 'f' },
       fakes.deps,
     );
-    // px(v) = round(v * 640/390): tile 420 wide at (110, 393), QR 341
-    // at (149, 432), amount 852, strip (39, 960, 561, 85), brand 1084,
-    // canvas 1182 tall. One subtitle line; one address line (420 px
-    // fits the 430 px strip width).
+    // px(v) = round(v * 640/390): tile 433 wide at (104, 393), QR 354
+    // at (143, 432), amount 865, strip (39, 973, 561, 85), brand 1097,
+    // canvas 1195 tall. One subtitle line; one address line (420 px
+    // fits the 430 px strip width). Tile +13 canvas px vs before
+    // (code 216 — UX-major Lane 1).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1182);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1182);
-    expect(fakes.fillRect).toHaveBeenCalledWith(281, 914, 79, 7);
-    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 341)!;
-    expect(qrDraw.slice(1)).toEqual([149, 432, 341, 341]);
+    expect(fakes.canvas.height).toBe(1195);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1195);
+    expect(fakes.fillRect).toHaveBeenCalledWith(281, 927, 79, 7);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 354)!;
+    expect(qrDraw.slice(1)).toEqual([143, 432, 354, 354]);
     const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
     expect(logoDraws).toHaveLength(3);
     expect(logoDraws[0]!.slice(1)).toEqual([267, 79, 105, 105]);
     expect(logoDraws[1]!.slice(1)).toEqual([360, 172, 33, 33]);
-    expect(logoDraws[2]!.slice(1)).toEqual([286.5, 569.5, 66, 66]);
+    expect(logoDraws[2]!.slice(1)).toEqual([287, 576, 66, 66]);
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
     expect(texts).toEqual([
       'Receive USDC',
@@ -1319,21 +1337,23 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       { ...DETAILS, template: 'g' },
       fakes.deps,
     );
-    // px(v) = round(v * 640/390): card (25, 39, 591, 1005), tile 361
-    // at (140, 345), QR 328 at (156, 361), tear 745, amount 778,
-    // copy 900, brand 972, canvas 1083 tall. One subtitle line (460 px
+    // px(v) = round(v * 640/390): card (25, 39, 591, 1058), tile 414
+    // at (114, 345), QR 354 at (144, 375), tear 798, amount 831,
+    // copy 953, brand 1025, canvas 1136 tall. One subtitle line (460 px
     // fits the 525 px width); one address line (420 px fits 525 px).
+    // Tile +53 canvas px vs before (code 216 + 16 px padding a side
+    // — UX-major Lane 1).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1083);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1083);
-    expect(fakes.fillRect).toHaveBeenCalledWith(147, 352, 361, 361);
-    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 328)!;
-    expect(qrDraw.slice(1)).toEqual([156, 361, 328, 328]);
+    expect(fakes.canvas.height).toBe(1136);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1136);
+    expect(fakes.fillRect).toHaveBeenCalledWith(121, 352, 414, 414);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 354)!;
+    expect(qrDraw.slice(1)).toEqual([144, 375, 354, 354]);
     const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
     expect(logoDraws).toHaveLength(3);
     expect(logoDraws[0]!.slice(1)).toEqual([277, 82, 85, 85]);
     expect(logoDraws[1]!.slice(1)).toEqual([342, 147, 33, 33]);
-    expect(logoDraws[2]!.slice(1)).toEqual([284, 489, 72, 72]);
+    expect(logoDraws[2]!.slice(1)).toEqual([285, 516, 72, 72]);
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
     expect(texts).toEqual([
       'Receive USDC',

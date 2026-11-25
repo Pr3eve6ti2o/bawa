@@ -720,16 +720,17 @@ describe('receive screen', () => {
     }
   });
 
-  it('keeps every step compact: searchable picker, 200 px full QR card, truncated share link', async () => {
+  it('keeps every step compact: searchable picker, 216 px full QR card, truncated share link', async () => {
     // Lane H: the chain step is a searchable picker (Popular first,
     // the rest behind All networks), not a 22-button grid; the QR
-    // card's code is 200 px, and the long share link shows as one
+    // card's code is 216 px, and the long share link shows as one
     // truncated line. Layout heights are asserted in CDP.
     //
     // Lane 5 (2026-11-24): the 136 px value was Lane E's fold fix
     // (the template row sat 55 px below the fold at 192) — the
     // owner has since ordered the full card with a large QR, so
-    // 200 is the size now (QR-cards Lane E respaced the card) and
+    // 216 is the size now (UX-major Lane 1 grew the B code 200 -> 216
+    // toward Bitget's 62%-of-card share) and
     // the template row is reached with
     // one short scroll at 390 px instead of sitting above the fold.
     setWallet();
@@ -744,7 +745,7 @@ describe('receive screen', () => {
       await reachDetails(mounted.div);
       const qrSvg = mounted.div.querySelector('#receive-qr svg');
       expect(qrSvg).not.toBeNull();
-      expect(qrSvg?.getAttribute('width')).toBe('200');
+      expect(qrSvg?.getAttribute('width')).toBe('216');
       const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
       expect(link).not.toBeNull();
       expect(link?.className).toContain('truncate');
