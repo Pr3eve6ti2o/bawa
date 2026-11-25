@@ -153,6 +153,11 @@ export function NetworkModePill() {
     await toggle(!devnetEnabled);
   }
 
+  // UX-major Lane 2 (DESIGN-SYSTEM §2.5): the pill is a thumb-sized
+  // 44 px control now (it was 24 px with a 10 px label — below both the
+  // touch rule and the 11 px readability floor). Same sun fill, 2 px ink
+  // border and bold label; text-xs (12 px) is the smallest token at or
+  // above the floor. The header is 72 px, so a 44 px pill fits as built.
   return (
     <>
       <button
@@ -169,7 +174,7 @@ export function NetworkModePill() {
         onClick={() => {
           void handleToggle();
         }}
-        className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink disabled:opacity-60"
+        className="flex h-11 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-xs font-bold text-ink disabled:opacity-60"
       >
         {devnetEnabled ? 'Devnet test mode' : 'Mainnet'}
       </button>
@@ -259,6 +264,17 @@ function AppLayout() {
 
   return (
     <div className="min-h-dvh bg-paper sm:py-6 desktop:py-0">
+      {/* UX-major Lane 2: skip link (WCAG 2.4.1) — first focusable
+          element, visible on focus, jumps to #main-content below. The
+          focus classes are minimal on purpose: the global :focus-visible
+          rule supplies the 2 px ink outline + wavy coral underline, and
+          the text inherits ink on paper. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:py-3"
+      >
+        Skip to content
+      </a>
       {/* Desktop shell is full-bleed at desktop: (980px): below desktop: the app is a centred
           430px phone frame, but at desktop: the frame used to cap at 1440px, so
           on a 1919px viewport the content column sat in the left ~1230px
@@ -308,7 +324,12 @@ function AppLayout() {
             <NetworkModePill />
           </header>
 
-          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 desktop:hidden">
+          {/* Mobile header (mobile-native §7): viewport-fit=cover is
+              live in index.html, so the page extends under the notch /
+              Dynamic Island — the header pads down by the safe-area
+              inset (20 px where there is none, so non-notched phones
+              render exactly as before). */}
+          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] desktop:hidden">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                 <BawaIcon name="wallet" className="size-5" aria-hidden="true" />
@@ -346,6 +367,8 @@ function AppLayout() {
               lengths readable; the narrow task screens keep their own
               480px cap above. */}
           <main
+            id="main-content"
+            tabIndex={-1}
             className={`mx-auto w-full max-w-[1024px] flex-1 px-5 desktop:px-6 desktop:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px] ${
               isFocusedFlow ? 'pb-0' : 'pb-24'
             }`}
@@ -369,7 +392,13 @@ function AppLayout() {
             <div
               role="menu"
               aria-label="More"
-              className="rounded-bawa border-2 border-ink bg-paper p-2 max-desktop:fixed max-desktop:bottom-[76px] max-desktop:left-1/2 max-desktop:z-20 max-desktop:max-h-[60vh] max-desktop:w-[calc(100%-2rem)] max-desktop:max-w-[398px] max-desktop:-translate-x-1/2 max-desktop:overflow-y-auto desktop:hidden"
+              // Mobile sheet (mobile-native §7): bottom clears the bottom
+              // nav PLUS the home-indicator inset — the nav grows by the
+              // inset (its pb-[env(safe-area-inset-bottom)]), so a fixed
+              // 76 px offset would overlap it on notched phones.
+              // overscroll-contain keeps the sheet's own scroll from
+              // chaining to the page behind it (§6).
+              className="overscroll-contain rounded-bawa border-2 border-ink bg-paper p-2 max-desktop:fixed max-desktop:bottom-[calc(76px+env(safe-area-inset-bottom))] max-desktop:left-1/2 max-desktop:z-20 max-desktop:max-h-[60vh] max-desktop:w-[calc(100%-2rem)] max-desktop:max-w-[398px] max-desktop:-translate-x-1/2 max-desktop:overflow-y-auto desktop:hidden"
             >
               {MORE_LINKS.map(({ to, label }) => (
                 <Link
@@ -379,7 +408,7 @@ function AppLayout() {
                   onClick={() => setMoreOpen(false)}
                   onMouseEnter={() => preloadRoute(to)}
                   onFocus={() => preloadRoute(to)}
-                className="block rounded-bawa-sm px-3 py-2.5 text-sm font-medium text-ink hover:bg-sun"
+                className="block rounded-bawa-sm px-3 py-3 text-sm font-medium text-ink hover:bg-sun"
               >
                 {label}
               </Link>

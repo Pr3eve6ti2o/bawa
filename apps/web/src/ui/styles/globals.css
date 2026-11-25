@@ -474,9 +474,15 @@
   }
 
   /* Round 2, item 7 (mobile-native §2, §5): no grey tap flash, and taps
-     fire immediately instead of waiting out the double-tap-zoom delay. */
+     fire immediately instead of waiting out the double-tap-zoom delay.
+     UX-major Lane 2 (mobile-native §6 + baseline): overscroll none
+     (an app shell, not a document — pull-to-refresh must not hijack
+     scroll) and no font inflation in landscape. */
   html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overscroll-behavior: none;
   }
 
   button,
@@ -486,12 +492,14 @@
   }
 
   /* Controls are not selectable text (mobile-native §8): a long-press
-     on a button must not select its label. Content — addresses, error
+     on a button must not select its label, and iOS must not pop the
+     copy/share callout on a control. Content — addresses, error
      messages, hashes — stays selectable. */
   button,
   [role="button"] {
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   ::selection {
@@ -627,6 +635,20 @@
     .bawa-draw-circle,
     .bawa-dot {
       animation: none;
+    }
+
+    /* UX-major Lane 2 (Front-End-Checklist motion rule): the two
+       bawa animations above were the only ones that switched off.
+       Everything else — sidebar width, button press scale, hover
+       transitions — now also renders at once for reduced-motion
+       users. No visual change otherwise. */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
   }
 

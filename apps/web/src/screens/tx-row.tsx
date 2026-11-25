@@ -90,7 +90,11 @@ export function TxRow({
       : `${formatDate(tx.timestamp)} · ${statusWord(tx)}`;
 
   return (
-    <li className={className ?? 'rounded-lg border p-3'}>
+    // UX-major Lane 2: the standalone row uses the same 2 px ink border
+    // + wobble radius as every other card (the old rounded-lg + 1 px
+    // border was the odd one out). The row stays >= 56 px tall via its
+    // content + p-3; the direction tile is decorative inside the link.
+    <li className={className ?? 'rounded-bawa border-2 border-ink bg-paper p-3'}>
       <Link
         to={`/transactions/${tx.hash}`}
         className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"

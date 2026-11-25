@@ -33,19 +33,25 @@ const buttonVariants = cva(
       size: {
         hero: "h-14 justify-center gap-2 rounded-bawa px-8 text-lg has-[>svg]:px-6",
         lg: "h-12 justify-center gap-2 rounded-bawa px-6 text-base has-[>svg]:px-4",
+        // UX-major Lane 2 (DESIGN-SYSTEM §2.5): every tappable control
+        // is >= 44 px. The old default/sm/xs/icon/compact sizes were
+        // 40/32/28/40/36 px — below the rule. The variant names stay
+        // (call sites in other lanes use sm), but every size now
+        // renders a 44 px hit area; sm/xs stay visually lighter via
+        // their padding and text size.
         default:
-          "h-10 justify-center gap-2 rounded-bawa px-4 py-2 text-sm has-[>svg]:px-3",
-        sm: "h-8 justify-center gap-1.5 rounded-bawa px-3 text-sm has-[>svg]:px-2.5",
-        xs: "h-7 justify-center gap-1 rounded-bawa px-2 text-xs has-[>svg]:px-1.5",
-        icon: "size-10 justify-center gap-2 rounded-bawa",
-        "icon-sm": "size-8 justify-center gap-2 rounded-bawa",
+          "h-11 justify-center gap-2 rounded-bawa px-4 py-2 text-sm has-[>svg]:px-3",
+        sm: "h-11 justify-center gap-1.5 rounded-bawa px-3 text-sm has-[>svg]:px-2.5",
+        xs: "h-11 justify-center gap-1 rounded-bawa px-2 text-xs has-[>svg]:px-1.5",
+        icon: "size-11 justify-center gap-2 rounded-bawa",
+        "icon-sm": "size-11 justify-center gap-2 rounded-bawa",
         tall: "h-11 justify-center gap-2 rounded-bawa px-4 py-2 text-sm has-[>svg]:px-3",
         pill: "h-11 justify-center gap-2 rounded-[22px] px-3 text-sm has-[>svg]:px-3",
         wrap: "h-auto justify-center gap-2 rounded-bawa px-4 py-3 text-center text-sm whitespace-normal has-[>svg]:px-3",
         "wrap-start":
           "h-auto justify-start gap-2 rounded-bawa px-4 py-3 text-left text-sm whitespace-normal has-[>svg]:px-3",
         compact:
-          "h-9 justify-center gap-2 rounded-bawa px-4 py-2 text-sm has-[>svg]:px-3",
+          "h-11 justify-center gap-2 rounded-bawa px-4 py-2 text-sm has-[>svg]:px-3",
       },
     },
     defaultVariants: {

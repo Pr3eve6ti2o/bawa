@@ -317,7 +317,12 @@ export function DashboardScreen() {
             )}
           </button>
         </div>
-        <p className="text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker"><NumberTicker text={heroText} /></span></p>
+        {/* UX-major Lane 2: break-words — a long total (whale wallet,
+            "$12,345,678.90 (Partial)") wraps inside the card at 390 px
+            instead of clipping past its edge; tabular-nums (break-ui)
+            stops the digits jittering while the ticker counts; normal
+            totals render exactly as before. */}
+        <p className="break-words tabular-nums text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker"><NumberTicker text={heroText} /></span></p>
         <p className="font-display text-xl text-ink">Total value in US dollars.</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
@@ -382,7 +387,12 @@ export function DashboardScreen() {
             to={to}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun"
           >
-            <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+            {/* UX-major Lane 2 (break-ui, measured first-hand): the 56 px
+                discs overflow their 49.6 px tracks at 320 px viewport
+                (page +14 px) — below 360 px they render at 44 px, which
+                fits the track with the label. 390 px and up are
+                untouched. */}
+            <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink max-[359px]:size-11">
               {icon}
             </span>
             <span className="text-xs leading-4 font-medium text-ink">{label}</span>
@@ -428,7 +438,10 @@ export function DashboardScreen() {
               setAssetsTab(nextTab);
               document.getElementById(`dashboard-assets-${nextTab}-tab`)?.focus();
             }}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
+            // UX-major Lane 2: min-h-11 (44 px tab) + rounded-bawa-sm
+            // (the old rounded-lg was a geometric radius, and py-2
+            // alone made a 36 px tab — below DESIGN-SYSTEM §2.5).
+            className={`min-h-11 rounded-bawa-sm px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
               assetsTab === tab
                 ? 'bg-sun text-ink'
                 : 'text-ink hover:bg-sun'
@@ -448,7 +461,11 @@ export function DashboardScreen() {
         {assetsTab === 'tokens' ? (
           <div className="lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 xl:grid-cols-[2fr_1fr]">
           <section aria-label="Assets">
-            <div className="flex items-center justify-between">
+            {/* UX-major Lane 2: the row wraps below 360 px — at 320 px
+                "Assets" + both pills are ~300 px against 280 px of
+                room, and the row ran past the viewport edge (probe:
+                dashboard@320 overflow +14). */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-ink">Assets</h2>
               <div className="flex shrink-0 items-center gap-2">
                 <Button

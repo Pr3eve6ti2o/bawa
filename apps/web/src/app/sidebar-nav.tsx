@@ -98,7 +98,10 @@ export function SidebarNav({
               onFocus={() => onPreloadRoute?.(item.to)}
               className={({ isActive }) =>
                 [
-                  "flex w-full items-center gap-3 rounded-bawa px-3 py-2 text-sm transition-colors",
+                  // UX-major Lane 2: py-3 (44 px row) — the old py-2
+                  // rows were 36 px, below the DESIGN-SYSTEM §2.5
+                  // touch rule for nav items.
+                  "flex w-full items-center gap-3 rounded-bawa px-3 py-3 text-sm transition-colors",
                   collapsed ? "justify-center" : "",
                   isActive
                     ? "bg-sun font-semibold text-ink"
@@ -148,7 +151,7 @@ export function SidebarNav({
           aria-expanded={!collapsed}
           title={collapseLabel}
           className={[
-            "flex w-full items-center gap-3 rounded-bawa bg-paper px-3 py-2 text-sm text-ink transition-colors hover:bg-sun",
+            "flex w-full items-center gap-3 rounded-bawa bg-paper px-3 py-3 text-sm text-ink transition-colors hover:bg-sun",
             collapsed ? "justify-center" : "",
           ].join(" ")}
         >
