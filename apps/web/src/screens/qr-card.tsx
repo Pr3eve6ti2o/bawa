@@ -24,8 +24,9 @@
 // shows whichever template is selected, and Share/Download send this
 // same card.
 //
-// Four card templates (design/DESIGN.md in bawa-qr-cards), picked on
-// the Receive screen — default B (Paper), the current card respaced
+// Seven card templates (design/DESIGN.md in bawa-qr-cards + Lane 4
+// DESIGN.md in bawa-redesign-receive/design), picked on the Receive
+// screen — default B (Paper), the current card respaced
 // (gaps 8 px to 20 px, title 24 px to 28 px, QR 192 px to 200 px,
 // brand strip added). A (Dark Teal) is the showcase variant, closest
 // to the owner's Bitget bar, with an inverted white-on-dark code —
@@ -304,14 +305,17 @@ function CopyGlyph({ className }: { className: string }): React.ReactElement {
 function BrandMark({
   markClassName,
   textClassName,
+  markTextClassName = 'text-white',
 }: {
   markClassName: string;
   textClassName: string;
+  /** Template F's sun mark carries an ink B; every other mark carries a white B. */
+  markTextClassName?: string;
 }): React.ReactElement {
   return (
     <span className="flex items-center gap-2">
       <span
-        className={`flex items-center justify-center font-display font-bold text-white ${markClassName}`}
+        className={`flex items-center justify-center font-display font-bold ${markTextClassName} ${markClassName}`}
       >
         B
       </span>
@@ -335,6 +339,119 @@ export interface QrCardProps {
   networkDisplayName?: string;
   /** Which of the four card templates to render; default 'b' (Paper). */
   template?: QrCardTemplate;
+}
+
+/**
+ * The centred card skeleton shared by templates E (Sun) and F (Ink):
+ * header disc, title, subtitle, white tile, amount + underline, address
+ * strip, brand row. The two differ only in colours, the tile frame, and
+ * the strip — passed in as props, so the skeleton is written once.
+ */
+function CentredQrCard({
+  template,
+  rootClassName,
+  titleClassName,
+  subtitleClassName,
+  subtitleBoldClassName,
+  tileClassName,
+  amountClassName,
+  amountSizeClassName,
+  underlineClassName,
+  strip,
+  markClassName,
+  markTextClassName,
+  brandTextClassName,
+  tokenLogo,
+  chainLogo,
+  tokenSymbol,
+  config,
+  title,
+  subtitle,
+  networkName,
+  amountText,
+  qrCode,
+}: {
+  template: 'e' | 'f';
+  rootClassName: string;
+  titleClassName: string;
+  subtitleClassName: string;
+  subtitleBoldClassName: string;
+  tileClassName: string;
+  amountClassName: string;
+  /** E's amount is 22 px, F's 20 px — as the PNG draws them. */
+  amountSizeClassName: string;
+  underlineClassName: string;
+  strip: React.ReactNode;
+  markClassName: string;
+  markTextClassName: string;
+  brandTextClassName: string;
+  tokenLogo: string | undefined;
+  chainLogo: string | undefined;
+  tokenSymbol: string;
+  config: { displayName: string };
+  title: string;
+  subtitle: string;
+  networkName: string;
+  amountText: string | null;
+  qrCode: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <div
+      data-testid="qr-card"
+      data-template={template}
+      className={`flex w-full flex-col items-center gap-5 rounded-bawa-sm p-6 ${rootClassName}`}
+    >
+      <div
+        data-testid="qr-card-header"
+        className="relative rounded-full bg-white p-1"
+      >
+        <LogoImage src={tokenLogo} alt={`${tokenSymbol} logo`} size="lg" />
+        <span className="absolute -bottom-1 -right-1 flex rounded-full border-2 border-white bg-white">
+          <LogoImage
+            src={chainLogo}
+            alt={`${config.displayName} logo`}
+            size="sm"
+          />
+        </span>
+      </div>
+      <h2
+        data-testid="qr-card-title"
+        className={`text-center text-[30px] font-extrabold leading-tight ${titleClassName}`}
+      >
+        {title}
+      </h2>
+      <NetworkSubtitle
+        subtitle={subtitle}
+        networkName={networkName}
+        className={`text-center text-[15px] leading-[22px] ${subtitleClassName}`}
+        boldClassName={subtitleBoldClassName}
+      />
+      <div data-testid="qr-card-tile" className={tileClassName}>
+        <div id="qr-card-qr" className="shrink-0">
+          {qrCode}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <p
+          className={`text-center font-display font-bold ${amountSizeClassName} ${amountClassName}`}
+        >
+          {amountText ?? 'Any amount'}
+        </p>
+        <span
+          className={`mx-auto block h-1 w-12 ${underlineClassName}`}
+          aria-hidden="true"
+        />
+      </div>
+      {strip}
+      <div className="flex w-full items-center">
+        <BrandMark
+          markClassName={markClassName}
+          markTextClassName={markTextClassName}
+          textClassName={brandTextClassName}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function QrCard({
@@ -515,7 +632,7 @@ export function QrCard({
           onClick={onCopyAddress}
           disabled={onCopyAddress === undefined}
           aria-label="Copy receiving address"
-          className="-mt-6 cursor-pointer text-[13px] font-semibold text-qr-nearblack underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
+          className="-mt-6 cursor-pointer px-2 py-3 text-[13px] font-semibold text-qr-nearblack underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
         >
           Copy
         </button>
@@ -582,7 +699,7 @@ export function QrCard({
             onClick={onCopyAddress}
             disabled={onCopyAddress === undefined}
             aria-label="Copy receiving address"
-            className="flex shrink-0 cursor-pointer items-center justify-center text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="-m-3 flex shrink-0 cursor-pointer items-center justify-center p-3 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CopyGlyph className="size-5 shrink-0" />
           </button>
@@ -591,6 +708,185 @@ export function QrCard({
           markClassName="size-9 rounded-lg bg-ink text-xl"
           textClassName="font-display text-[22px] font-extrabold text-white"
         />
+      </div>
+    );
+  }
+
+  if (template === 'e') {
+    return (
+      <CentredQrCard
+        template="e"
+        rootClassName="bg-sun"
+        titleClassName="text-ink"
+        subtitleClassName="text-ink"
+        subtitleBoldClassName="font-bold text-ink"
+        tileClassName="rounded-[24px] border-2 border-ink bg-white p-6 shadow-[var(--bawa-shadow)]"
+        amountClassName="text-ink"
+        amountSizeClassName="text-[22px]"
+        underlineClassName="bg-coral"
+        strip={
+          <div className="-mx-6 flex w-[calc(100%+3rem)] items-center gap-3 bg-ink px-6 py-4">
+            <p
+              data-testid="qr-card-address"
+              className="min-w-0 flex-1 break-all font-mono text-[13px] leading-5 text-white"
+            >
+              {address}
+            </p>
+            <button
+              type="button"
+              onClick={onCopyAddress}
+              disabled={onCopyAddress === undefined}
+              aria-label="Copy receiving address"
+              className="-m-3 flex shrink-0 cursor-pointer items-center justify-center p-3 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CopyGlyph className="size-5 shrink-0" />
+            </button>
+          </div>
+        }
+        markClassName="size-9 rounded-lg bg-ink text-xl"
+        markTextClassName="text-white"
+        brandTextClassName="font-display text-[22px] font-extrabold text-ink"
+        tokenLogo={tokenLogo}
+        chainLogo={chainLogo}
+        tokenSymbol={tokenSymbol}
+        config={config}
+        title={title}
+        subtitle={subtitle}
+        networkName={networkName}
+        amountText={amountText}
+        qrCode={qrCode}
+      />
+    );
+  }
+
+  if (template === 'f') {
+    return (
+      <CentredQrCard
+        template="f"
+        rootClassName="bg-ink"
+        titleClassName="text-white"
+        subtitleClassName="text-qr-faint"
+        subtitleBoldClassName="font-bold text-white"
+        tileClassName="rounded-[24px] bg-white p-6"
+        amountClassName="text-white"
+        amountSizeClassName="text-xl"
+        underlineClassName="bg-sun"
+        strip={
+          <div className="flex w-full items-center gap-3 rounded-xl bg-paper px-4 py-4">
+            <p
+              data-testid="qr-card-address"
+              className="min-w-0 flex-1 break-all font-mono text-[13px] leading-5 text-ink"
+            >
+              {address}
+            </p>
+            <button
+              type="button"
+              onClick={onCopyAddress}
+              disabled={onCopyAddress === undefined}
+              aria-label="Copy receiving address"
+              className="-m-3 flex shrink-0 cursor-pointer items-center justify-center p-3 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CopyGlyph className="size-5 shrink-0" />
+            </button>
+          </div>
+        }
+        markClassName="size-9 rounded-lg bg-sun text-xl"
+        markTextClassName="text-ink"
+        brandTextClassName="font-display text-[22px] font-extrabold text-white"
+        tokenLogo={tokenLogo}
+        chainLogo={chainLogo}
+        tokenSymbol={tokenSymbol}
+        config={config}
+        title={title}
+        subtitle={subtitle}
+        networkName={networkName}
+        amountText={amountText}
+        qrCode={qrCode}
+      />
+    );
+  }
+
+  if (template === 'g') {
+    return (
+      <div
+        data-testid="qr-card"
+        data-template="g"
+        className="relative flex w-full flex-col items-center gap-5 rounded-bawa-sm border-2 border-ink bg-paper p-5"
+      >
+        <div
+          data-testid="qr-card-header"
+          className="relative mt-1 rounded-full border-2 border-ink bg-paper p-1"
+        >
+          <LogoImage src={tokenLogo} alt={`${tokenSymbol} logo`} size="lg" />
+          <span className="absolute -bottom-1 -right-1 flex rounded-full border-2 border-paper bg-paper">
+            <LogoImage
+              src={chainLogo}
+              alt={`${config.displayName} logo`}
+              size="sm"
+            />
+          </span>
+        </div>
+        <h2
+          data-testid="qr-card-title"
+          className="text-center font-display text-[28px] leading-tight text-ink"
+        >
+          {title}
+        </h2>
+        <NetworkSubtitle
+          subtitle={subtitle}
+          networkName={networkName}
+          className="text-center text-sm text-ink"
+          boldClassName="font-bold"
+        />
+        <div
+          data-testid="qr-card-tile"
+          className="rounded-bawa-sm border-2 border-ink bg-paper p-2 shadow-[var(--bawa-shadow)]"
+        >
+          <div id="qr-card-qr" className="shrink-0">
+            {qrCode}
+          </div>
+        </div>
+        <div className="relative w-[calc(100%+2.5rem)]">
+          <div
+            className="border-t-2 border-dashed border-ink"
+            aria-hidden="true"
+          />
+          <span
+            className="absolute -left-2 -top-2 size-4 rounded-full border-2 border-ink bg-paper"
+            aria-hidden="true"
+          />
+          <span
+            className="absolute -right-2 -top-2 size-4 rounded-full border-2 border-ink bg-paper"
+            aria-hidden="true"
+          />
+        </div>
+        <div className="-mx-5 -mb-5 flex w-[calc(100%+2.5rem)] flex-col items-center gap-4 rounded-b-bawa-sm bg-sun px-5 pb-5 pt-5">
+          <p className="text-center font-display text-[22px] font-bold text-ink">
+            {amountText ?? 'Any amount'}
+          </p>
+          <p
+            data-testid="qr-card-address"
+            className="w-full break-all text-center font-mono text-xs text-ink"
+          >
+            {address}
+          </p>
+          <button
+            type="button"
+            onClick={onCopyAddress}
+            disabled={onCopyAddress === undefined}
+            aria-label="Copy receiving address"
+            className="flex min-h-11 cursor-pointer items-center gap-1 rounded-bawa-sm border-2 border-ink bg-sun px-3 text-xs font-semibold text-ink hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CopyGlyph className="size-4 shrink-0" />
+            Copy
+          </button>
+          <div className="flex w-full items-center justify-center border-t-2 border-ink pt-3">
+            <BrandMark
+              markClassName="size-6 rounded-[6px] bg-coral text-base"
+              textClassName="font-display text-base font-bold text-ink"
+            />
+          </div>
+        </div>
       </div>
     );
   }
@@ -665,7 +961,7 @@ export function QrCard({
             onClick={onCopyAddress}
             disabled={onCopyAddress === undefined}
             aria-label="Copy receiving address"
-            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1 text-xs font-semibold text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1 text-xs font-semibold text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CopyGlyph className="size-4 shrink-0" />
             Copy

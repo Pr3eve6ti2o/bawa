@@ -1,6 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
-import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
@@ -837,150 +836,10 @@ export function ReceiveScreen() {
                 template={cardTemplate}
               />
             </div>
-            {/* QR-cards programme, Lane E: the card-style picker —
-                the same segmented-control idiom as the QR-type row
-                below it (active segment sun, aria-pressed). Picking
-                a style restyles the card above and drives which
-                template Share/Download draw to PNG. Default Paper. */}
-            <p className="w-full text-center text-sm font-semibold text-ink">
-              Card style — tap to switch
-            </p>
-            <div
-              role="group"
-              aria-label="Card style"
-              className="flex w-full gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
-            >
-              {QR_CARD_TEMPLATES.map((candidate) => {
-                const active = candidate.id === cardTemplate;
-                return (
-                  <button
-                    key={candidate.id}
-                    type="button"
-                    aria-pressed={active}
-                    aria-label={`Show ${candidate.label} card style`}
-                    title={candidate.hint}
-                    onClick={() => setCardTemplate(candidate.id)}
-                    className={`flex flex-1 cursor-pointer flex-col items-center gap-0.5 rounded-bawa-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'hover:bg-sun'}`}
-                  >
-                    <span className="font-semibold">{candidate.label}</span>
-                    <span className="text-[10px] leading-tight">{candidate.hint}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {paymentUriUnavailable && (
-              <p className="text-sm text-ink">
-                Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
-                standard payment-request link, so the QR encodes the address only. The share
-                link below still carries the amount.)
-              </p>
-            )}
-            {/* Lane H (COSS Segmented Control + Aceternity Animated
-                Tabs, re-skinned to ink borders and sun): the three
-                QR templates are one control with three segments, not
-                two loose buttons — the active segment stays in the
-                control, marked sun with aria-pressed, instead of
-                leaving the row. Tapping another segment swaps it
-                into the main slot. The unavailable payment segment
-                stays disabled with its reason, never a dead box. */}
-            <p className="w-full text-center text-sm font-semibold text-ink">
-              {`QR type: ${effectiveLabel} — tap to switch`}
-            </p>
-            <div
-              role="group"
-              aria-label="QR type"
-              className="flex w-full gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
-            >
-              {qrTemplates.map((candidate) => {
-                const active = candidate.id === effectiveTemplate;
-                return (
-                  <button
-                    key={candidate.id}
-                    type="button"
-                    disabled={candidate.value === null}
-                    aria-pressed={active}
-                    aria-label={`Show ${candidate.label.toLowerCase()} QR`}
-                    onClick={() => setTemplate(candidate.id)}
-                    className={`flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-bawa-sm p-1 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'bg-sun' : 'hover:bg-sun'}`}
-                  >
-                    {candidate.value !== null ? (
-                      <QRCodeSVG
-                        value={candidate.value}
-                        size={64}
-                        marginSize={2}
-                        level="H"
-                        fgColor="#2B2B2B"
-                        bgColor="#FFFDF7"
-                        title={candidate.value}
-                      />
-                    ) : (
-                      <span className="flex h-16 w-16 items-center justify-center border-2 border-dashed border-ink text-center">
-                        {candidate.id === 'payment' && paymentNeedsAmount
-                          ? 'Needs amount'
-                          : 'Not available'}
-                      </span>
-                    )}
-                    <span className="text-[10px] leading-tight">{candidate.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {paymentHint !== null && (
-              <p className="w-full text-center text-xs text-ink">{paymentHint}</p>
-            )}
-            {/* Action row (deep audit, Lane A, moved up from the
-                bottom of the card where Copy/Share/Download sat
-                below the 390px fold). It sits here, after the
-                template row: the three QR templates own the
-                above-fold slot (Lane 7, owner correction
-                2026-11-23), so the actions are one short scroll
-                below the templates instead of at the card bottom. Lane E (fix-all):
-                the five buttons are size sm — at default size they wrapped
-                into 3 rows (136 px); sm fits 2 rows (72 px). Live at 390 px:
-                template row bottom 749 vs fold 770, actions fully revealed
-                after a 57 px scroll (was 141 px); total scroll 489 px to 405 px. */}
-<div className="flex flex-wrap justify-center gap-2">
-              <Button type="button" size="sm" onClick={() => void copyAddress()}>
-                Copy address
-              </Button>
-              {canRotate && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void newReceiveAddress()}
-                  disabled={isRotating || !nextReceiveAddress}
-                >
-                  {isRotating ? 'Making address…' : 'New address'}
-                </Button>
-              )}
-              <Button type="button" variant="outline" size="sm" onClick={() => void sharePayment()}>
-                Share
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => void copyLink()}>
-                Copy link
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => void downloadQr()}>
-                Download card
-              </Button>
-            </div>
-            {/* Fix-all Lane H, item 7: rotated addresses are not
-                aggregated into the dashboard — it shows only the main
-                address on each chain — so the note says so plainly
-                next to the control that rotates them. */}
-            {canRotate && (
-              <p className="w-full text-center text-xs leading-[18px] text-muted-foreground">
-                New addresses come from the same phrase. Funds sent to an
-                earlier address still belong to this wallet, but the
-                dashboard only shows your main address on each chain.
-              </p>
-            )}
-            {/* Lane 7: the amount sits under the templates — the QR
-                and its three types are the point of this step, and
-                the amount is the optional refinement that enables
-                the payment request for tokens. The full address
-                stays on the card above; the duplicate line that
-                repeated it below the card is gone. */}
+            {/* Lane 4 (redesign): the amount sits directly under the card —
+                it is displayed on the card and encoded in its QR, so its
+                control belongs beside the card, not a screen below the
+                actions. The full address stays on the card above. */}
             <div className="w-full space-y-1">
               <Label htmlFor="receive-amount" className="text-sm font-medium">
                 Amount (optional) — {assetSymbol}
@@ -998,19 +857,167 @@ export function ReceiveScreen() {
                 <p role="alert" className="text-sm text-ink bawa-squiggle-underline">{amountError}</p>
               ) : null}
             </div>
-            {/* The address number is the HD indicator — which receiving
-                address of this account this is — so it stays, kept to
-                one line. */}
-            {vaultAddress !== undefined && !isWatchOnly && (
-              <p className="w-full text-center text-xs text-ink">
-                {`Receiving address ${receiveIndex + 1} of this account.`}
+{/* Lane 4 (redesign): the share actions sit directly under the
+                card + amount unit, in the design system's order — Share,
+                Download card, Copy link. Share is the one coral primary,
+                full-width at thumb height; the other two share the row
+                below it. The old row's "Copy address" is gone (the card's
+                own Copy button does that job, in context beside the
+                address); "New address" moved to the rotation block below,
+                beside the line it explains. All buttons are lg (48 px):
+                the old sm (32 px) sizes were below the 44 px touch rule. */}
+            <div className="flex w-full flex-col gap-2">
+              <Button type="button" size="lg" onClick={() => void sharePayment()}>
+                Share
+              </Button>
+              <div className="flex w-full gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => void downloadQr()}
+                >
+                  Download card
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => void copyLink()}
+                >
+                  Copy link
+                </Button>
+              </div>
+            </div>
+            {/* P8 (desktop-layout-v2 follow-up, kept per owner decision
+                2026-11-23): the status line renders only when a copy/share
+                action has something to report — an always-rendered empty
+                <p> leaves ~40 px of dead space under the buttons. Lane 4:
+                it sits here, next to the actions it reports on. */}
+            {copyStatus !== '' && (
+              <p role="status" className="w-full text-center text-sm text-ink">
+                {copyStatus}
               </p>
             )}
+                        {/* Lane 4 (redesign): the card-style picker is a 2-row grid
+                of label-only buttons — seven templates cannot fit the old
+                4-segment row with a hint each (hints wrapped to 3 lines).
+                All seven are visible at once, no scrolling; the active
+                template's hint shows as one line under the grid. Same
+                contract: role group, aria-pressed, active = sun,
+                accessible names "Show {label} card style". */}
+            <p className="w-full text-center text-sm font-semibold text-ink">
+              Card style — tap to switch
+            </p>
+            <div
+              role="group"
+              aria-label="Card style"
+              className="grid w-full grid-cols-4 gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
+            >
+              {QR_CARD_TEMPLATES.map((candidate) => {
+                const active = candidate.id === cardTemplate;
+                return (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    aria-pressed={active}
+                    aria-label={`Show ${candidate.label} card style`}
+                    title={candidate.hint}
+                    onClick={() => setCardTemplate(candidate.id)}
+                    className={`flex min-h-11 cursor-pointer flex-col items-center justify-center rounded-bawa-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'hover:bg-sun'}`}
+                  >
+                    <span className="font-semibold">{candidate.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="w-full text-center text-xs text-ink">
+              {QR_CARD_TEMPLATES.find((candidate) => candidate.id === cardTemplate)?.hint}
+            </p>
+            {paymentUriUnavailable && (
+              <p className="text-sm text-ink">
+                Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
+                standard payment-request link, so the QR encodes the address only. The share
+                link below still carries the amount.)
+              </p>
+            )}
+                        {/* Lane 4 (redesign): the three QR templates stay one control
+                with three segments (Lane H's idiom) — but the 64 px mini
+                QR thumbnails are gone: all three looked identical at that
+                size and no 64 px code is scannable, so they cost ~70 px of
+                height for zero information. Compact labelled segments
+                (12 px, 44 px hit area); the unavailable segment still
+                stays disabled with its reason, never a dead box. */}
+            <p className="w-full text-center text-sm font-semibold text-ink">
+              {`QR type: ${effectiveLabel} — tap to switch`}
+            </p>
+            <div
+              role="group"
+              aria-label="QR type"
+              className="flex w-full gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
+            >
+              {qrTemplates.map((candidate) => {
+                const active = candidate.id === effectiveTemplate;
+                const reason =
+                  candidate.value === null
+                    ? candidate.id === 'payment' && paymentNeedsAmount
+                      ? 'Needs amount'
+                      : 'Not available'
+                    : null;
+                return (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    disabled={candidate.value === null}
+                    aria-pressed={active}
+                    aria-label={`Show ${candidate.label.toLowerCase()} QR`}
+                    onClick={() => setTemplate(candidate.id)}
+                    className={`flex min-h-11 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-bawa-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'bg-sun' : 'hover:bg-sun'}`}
+                  >
+                    <span className="font-semibold">{candidate.label}</span>
+                    {reason !== null && (
+                      <span className="text-xs leading-tight">{reason}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {paymentHint !== null && (
+              <p className="w-full text-center text-xs text-ink">{paymentHint}</p>
+            )}
+                        
             {/* The share link is long; the row shows one truncated line
                 (the full link stays in the DOM and copies whole). */}
             <p data-testid="receive-share-link" title={shareLink} className="w-full truncate text-center font-mono text-xs text-ink">
               {shareLink}
             </p>
+            {/* Lane 4 (redesign): address rotation lives here, with the
+                line it explains — not in the share row. "New address" is
+                address management, not sharing. */}
+            {vaultAddress !== undefined && !isWatchOnly && (
+              <p className="w-full text-center text-xs text-ink">
+                {`Receiving address ${receiveIndex + 1} of this account.`}
+              </p>
+            )}
+            {canRotate && (
+              <div className="flex w-full flex-col items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void newReceiveAddress()}
+                  disabled={isRotating || !nextReceiveAddress}
+                >
+                  {isRotating ? 'Making address…' : 'New address'}
+                </Button>
+                <p className="w-full text-center text-xs leading-[18px] text-muted-foreground">
+                  New addresses come from the same phrase. Funds sent to an
+                  earlier address still belong to this wallet, but the
+                  dashboard only shows your main address on each chain.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -1020,25 +1027,19 @@ export function ReceiveScreen() {
             </Link>
           </div>
         )}
-        {/* P8 (desktop-layout-v2 follow-up, kept per owner decision
-            2026-11-23): the status line renders only when a copy/share
-            action has something to report — an always-rendered empty
-            <p> leaves ~40 px of dead space under the buttons. */}
-        {copyStatus !== '' && (
-          <p role="status" className="mt-3 text-center text-sm text-ink">
-            {copyStatus}
-          </p>
-        )}
       </Card>
 
+      {/* Lane 4 (redesign): the network warning was said three times
+          (alert above the card + these two paragraphs). One paragraph
+          now carries it, below the card. */}
       <p className="text-sm text-ink">
         {(() => {
           const devnetConfig = devnetEnabled
             ? devnetChainConfigOrUndefined(chain)
             : undefined;
           return devnetConfig
-            ? `Devnet — this address is for the ${devnetConfig.devnetName} test network. Test tokens have no value. Funds sent on another network cannot be recovered.`
-            : `Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered.`;
+            ? `Devnet — this address is for the ${devnetConfig.devnetName} test network. Test tokens have no value. Funds sent on another network cannot be recovered — only share this address to receive funds, and check it carefully before accepting funds.`
+            : `Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered — only share this address to receive funds, and check it carefully before accepting funds.`;
         })()}
       </p>
 
@@ -1047,10 +1048,6 @@ export function ReceiveScreen() {
           This address can only receive TON. To send or withdraw TON, you need an external wallet.
         </p>
       )}
-
-      <p className="text-sm text-ink">
-        Only share this address to receive funds. Check the address carefully before accepting funds.
-      </p>
         </div>
       )}
     </div>

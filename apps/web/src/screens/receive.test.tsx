@@ -229,7 +229,16 @@ describe('receive screen', () => {
     const mounted = await mountScreen();
     try {
       await reachDetails(mounted.div);
-      await clickButton(mounted.div, 'Copy address');
+      // Lane 4: the standalone 'Copy address' button is gone — the
+      // card's own Copy button (in context beside the address) is the
+      // one copy control now.
+      const copyButton = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.getAttribute('aria-label') === 'Copy receiving address',
+      );
+      expect(copyButton).not.toBeUndefined();
+      await act(async () => {
+        copyButton?.click();
+      });
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
@@ -642,7 +651,7 @@ describe('receive screen', () => {
     }
   });
 
-  it('shows three QR templates and swaps the main QR on a small QR tap', async () => {
+  it('shows three QR templates and swaps the main QR on a segment tap', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
@@ -652,9 +661,11 @@ describe('receive screen', () => {
       await clickButton(mounted.div, 'USD Coin');
       const mainBefore = mounted.div.querySelector('svg title')?.textContent;
       expect(mainBefore).toBe(VAULT_ETH);
-      // Lane 7: the heading names the shown template, the small QRs
-      // are 64 px, and the unavailable payment template says why
-      // instead of sitting there as a dead box.
+      // Lane 7: the heading names the shown template, and the
+      // unavailable payment template says why instead of sitting
+      // there as a dead box. Lane 4: the segments are compact labels
+      // now — the 64 px mini-QR thumbnails are gone (all three looked
+      // identical at that size and no 64 px code is scannable).
       expect(mounted.div.textContent).toContain('QR type: Address');
       // Lane H (COSS Segmented Control): the switcher is one control
       // with all three templates as segments — the active one is
@@ -677,15 +688,23 @@ describe('receive screen', () => {
           button.getAttribute('aria-label') === 'Show payment request QR',
       );
       expect(paymentSegment?.textContent).toContain('Payment request');
+      // Lane 4: labels are 12 px semibold (the old 10 px labels sat
+      // below the readability floor); the reason line under a disabled
+      // segment is 12 px too.
+      expect(paymentSegment?.querySelector('span:first-child')?.className).toContain(
+        'font-semibold',
+      );
       expect(paymentSegment?.querySelector('span:last-child')?.className).toContain(
-        'text-[10px]',
+        'text-xs',
       );
       const linkQr = [...mounted.div.querySelectorAll('button')].find(
         (button) =>
           button.getAttribute('aria-label') === 'Show share link QR',
       );
       expect(linkQr).not.toBeUndefined();
-      expect(linkQr?.querySelector('svg')?.getAttribute('width')).toBe('64');
+      // Lane 4: no thumbnail SVG in the segment — the label does the work.
+      expect(linkQr?.querySelector('svg')).toBeNull();
+      expect(linkQr?.textContent).toContain('Share link');
       const paymentQr = [...mounted.div.querySelectorAll('button')].find(
         (button) =>
           button.getAttribute('aria-label') === 'Show payment request QR',
@@ -699,8 +718,7 @@ describe('receive screen', () => {
       await act(async () => {
         linkQr?.click();
       });
-      // Tapping the small share-link QR swaps it into the main slot;
-      // the address QR drops into the small row.
+      // Tapping the Share link segment swaps it into the main slot.
       const mainAfter = mounted.div.querySelector('svg title')?.textContent;
       expect(mainAfter).not.toBe(mainBefore);
       expect(mainAfter).toContain('chain=eth');
@@ -710,9 +728,8 @@ describe('receive screen', () => {
           button.getAttribute('aria-label') === 'Show address QR',
       );
       expect(addressQr).not.toBeUndefined();
-      expect(addressQr?.querySelector('svg')?.getAttribute('width')).toBe(
-        '64',
-      );
+      expect(addressQr?.querySelector('svg')).toBeNull();
+      expect(addressQr?.textContent).toContain('Address');
     } finally {
       await mounted.cleanup();
     }
@@ -1417,7 +1434,7 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
   });
 });
 
-describe('receive screen — card style picker (QR-cards programme, Lane E)', () => {
+describe('receive screen — card style picker (QR-cards programme, Lane E; Lane 4 redesign)', () => {
   it('defaults to Paper and switches the card template when picked', async () => {
     setWallet();
     const mounted = await mountScreen();
@@ -1426,12 +1443,19 @@ describe('receive screen — card style picker (QR-cards programme, Lane E)', ()
       const group = mounted.div.querySelector('[aria-label="Card style"]');
       expect(group).not.toBeNull();
       const buttons = [...group!.querySelectorAll('button')];
+      // Lane 4: seven label-only buttons (the old per-segment hints
+      // wrapped to 3 lines at four templates); the active template's
+      // hint shows as one line under the grid instead.
       expect(buttons.map((button) => button.textContent)).toEqual([
-        'PaperBawa drawing style',
-        'Dark TealClosest to the Bitget bar',
-        'MinimalPlain and quiet',
-        'PosterBold, for sharing',
+        'Paper',
+        'Dark Teal',
+        'Sun',
+        'Ink',
+        'Ticket',
+        'Minimal',
+        'Poster',
       ]);
+      expect(mounted.div.textContent).toContain('Bawa drawing style');
       const card = () => mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card()?.getAttribute('data-template')).toBe('b');
       expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true');
@@ -1441,10 +1465,83 @@ describe('receive screen — card style picker (QR-cards programme, Lane E)', ()
       expect(card()?.getAttribute('data-template')).toBe('a');
       expect(buttons[1]?.getAttribute('aria-pressed')).toBe('true');
       expect(buttons[0]?.getAttribute('aria-pressed')).toBe('false');
+      expect(mounted.div.textContent).toContain('Closest to the Bitget bar');
       await act(async () => {
-        buttons[3]?.click();
+        buttons[2]?.click();
+      });
+      expect(card()?.getAttribute('data-template')).toBe('e');
+      expect(mounted.div.textContent).toContain('Bright sun field');
+      await act(async () => {
+        buttons[6]?.click();
       });
       expect(card()?.getAttribute('data-template')).toBe('d');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('puts the amount, then Share, then the pickers — in that order', async () => {
+    // Lane 4: the amount input sits directly under the card (it is
+    // displayed on the card and encoded in its QR), Share is the first
+    // action after the card + amount unit, and the style picker comes
+    // after the actions — not the other way round.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      const amount = mounted.div.querySelector('#receive-amount');
+      const share = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.textContent === 'Share',
+      );
+      const style = mounted.div.querySelector('[aria-label="Card style"]');
+      expect(amount).not.toBeNull();
+      expect(share).not.toBeUndefined();
+      expect(style).not.toBeNull();
+      expect(
+        (amount as HTMLElement).compareDocumentPosition(share as Node) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        (share as HTMLElement).compareDocumentPosition(style as Node) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      // Share is the one coral primary, full-width, 48 px.
+      expect(share?.className).toContain('bg-coral');
+      expect(share?.className).toContain('h-12');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('has one copy control (the card copy) and New address with the rotation note', async () => {
+    // Lane 4: the standalone 'Copy address' button is gone — the
+    // card's Copy is the one copy control; 'New address' sits with
+    // the "Receiving address N" line it explains, after the share link.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      expect(
+        [...mounted.div.querySelectorAll('button')].find(
+          (button) => button.textContent === 'Copy address',
+        ),
+      ).toBeUndefined();
+      const copyLink = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.textContent === 'Copy link',
+      );
+      expect(copyLink).not.toBeUndefined();
+      const newAddress = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.textContent === 'New address',
+      );
+      expect(newAddress).not.toBeUndefined();
+      const shareLink = mounted.div.querySelector(
+        '[data-testid="receive-share-link"]',
+      );
+      expect(shareLink).not.toBeNull();
+      expect(
+        (shareLink as HTMLElement).compareDocumentPosition(newAddress as Node) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     } finally {
       await mounted.cleanup();
     }

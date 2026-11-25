@@ -1229,6 +1229,129 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       qrCardToPngBlob(SVG, { ...DETAILS, width: 100 }, fakes.deps),
     ).rejects.toThrow('invalid image size');
   });
+  it('draws the E Sun card at 640 px — sun field, white tile, ink strip', async () => {
+    const fakes = cardDeps();
+    await qrCardToPngBlob(
+      SVG,
+      { ...DETAILS, template: 'e' },
+      fakes.deps,
+    );
+    // px(v) = round(v * 640/390): logo 53, title 243, subtitle 318,
+    // tile 423 wide at (109, 393), QR 345 at (148, 432), amount 855,
+    // strip (0, 963, 640, 85), brand 1087, canvas 1185 tall. One
+    // subtitle line (460 px fits the 558 px width); one address line
+    // (420 px fits the 489 px strip width).
+    expect(fakes.canvas.width).toBe(640);
+    expect(fakes.canvas.height).toBe(1185);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1185);
+    expect(fakes.fillRect).toHaveBeenCalledWith(116, 400, 423, 423);
+    expect(fakes.fillRect).toHaveBeenCalledWith(281, 917, 79, 7);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 963, 640, 85);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 345)!;
+    expect(qrDraw.slice(1)).toEqual([148, 432, 345, 345]);
+    const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
+    expect(logoDraws).toHaveLength(3);
+    expect(logoDraws[0]!.slice(1)).toEqual([267, 79, 105, 105]);
+    expect(logoDraws[1]!.slice(1)).toEqual([360, 172, 33, 33]);
+    expect(logoDraws[2]!.slice(1)).toEqual([286, 570, 69, 69]);
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual([
+      'Receive USDC',
+      'Only',
+      'Base',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '25 USDC',
+      ADDRESS,
+      'B',
+      'Bawa Wallet',
+    ]);
+  });
+
+  it('draws the F Ink card at 640 px — ink field, white tile, paper strip', async () => {
+    const fakes = cardDeps();
+    await qrCardToPngBlob(
+      SVG,
+      { ...DETAILS, template: 'f' },
+      fakes.deps,
+    );
+    // px(v) = round(v * 640/390): tile 420 wide at (110, 393), QR 341
+    // at (149, 432), amount 852, strip (39, 960, 561, 85), brand 1084,
+    // canvas 1182 tall. One subtitle line; one address line (420 px
+    // fits the 430 px strip width).
+    expect(fakes.canvas.width).toBe(640);
+    expect(fakes.canvas.height).toBe(1182);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1182);
+    expect(fakes.fillRect).toHaveBeenCalledWith(281, 914, 79, 7);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 341)!;
+    expect(qrDraw.slice(1)).toEqual([149, 432, 341, 341]);
+    const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
+    expect(logoDraws).toHaveLength(3);
+    expect(logoDraws[0]!.slice(1)).toEqual([267, 79, 105, 105]);
+    expect(logoDraws[1]!.slice(1)).toEqual([360, 172, 33, 33]);
+    expect(logoDraws[2]!.slice(1)).toEqual([286.5, 569.5, 66, 66]);
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual([
+      'Receive USDC',
+      'Only',
+      'Base',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '25 USDC',
+      ADDRESS,
+      'B',
+      'Bawa Wallet',
+    ]);
+  });
+
+  it('draws the G Ticket card at 640 px — paper top, sun bottom, tear line', async () => {
+    const fakes = cardDeps();
+    await qrCardToPngBlob(
+      SVG,
+      { ...DETAILS, template: 'g' },
+      fakes.deps,
+    );
+    // px(v) = round(v * 640/390): card (25, 39, 591, 1005), tile 361
+    // at (140, 345), QR 328 at (156, 361), tear 745, amount 778,
+    // copy 900, brand 972, canvas 1083 tall. One subtitle line (460 px
+    // fits the 525 px width); one address line (420 px fits 525 px).
+    expect(fakes.canvas.width).toBe(640);
+    expect(fakes.canvas.height).toBe(1083);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1083);
+    expect(fakes.fillRect).toHaveBeenCalledWith(147, 352, 361, 361);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 328)!;
+    expect(qrDraw.slice(1)).toEqual([156, 361, 328, 328]);
+    const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
+    expect(logoDraws).toHaveLength(3);
+    expect(logoDraws[0]!.slice(1)).toEqual([277, 82, 85, 85]);
+    expect(logoDraws[1]!.slice(1)).toEqual([342, 147, 33, 33]);
+    expect(logoDraws[2]!.slice(1)).toEqual([284, 489, 72, 72]);
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual([
+      'Receive USDC',
+      'Only',
+      'Base',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '25 USDC',
+      ADDRESS,
+      'Copy',
+      'B',
+      'Bawa Wallet',
+    ]);
+  });
 });
 
 describe('wrapCardText — the card address wrap', () => {

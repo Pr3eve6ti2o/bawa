@@ -20,6 +20,9 @@ setupMaskedScreenshots();
 const TEMPLATES = [
   { id: 'b', label: 'Paper' },
   { id: 'a', label: 'Dark Teal' },
+  { id: 'e', label: 'Sun' },
+  { id: 'f', label: 'Ink' },
+  { id: 'g', label: 'Ticket' },
   { id: 'c', label: 'Minimal' },
   { id: 'd', label: 'Poster' },
 ] as const;

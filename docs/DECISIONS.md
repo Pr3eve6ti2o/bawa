@@ -2088,3 +2088,103 @@ passed), vitest 2809 passed / 5 skipped / 99 files, eslint 0, E2E
 all four PNGs against the Bitget screenshot and Lane D's previews,
 and the Receive screen at 390/820/1440/1919.
 
+
+## §25 — Receive redesign + three more QR templates (Lane 4) — 2026-11-25
+
+**Decision: add templates E (Sun), F (Ink), G (Ticket) — seven templates
+total, default still B — and reorder the Receive details step so the
+amount sits under the card and Share is the first action after it.
+No new colours, no new dependency, no re-baseline. The bundle is over
+budget by 7,289 bytes; reported, not re-baselined (see 5).**
+
+What was done (branch `redesign/receive-qr`, local-only, not pushed):
+
+- `apps/web/src/wallet/payment-links.ts`: `QrCardTemplate` extended to
+  `'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g'`; `QR_CARD_TEMPLATES` now
+  lists seven (order: b, a, e, f, g, c, d); `QR_CARD_TEMPLATE_QR` gains
+  E 210 ink-on-white logo 42 (20%), F 208 ink-on-white logo 40 (19%),
+  G 200 ink-on-paper logo 44 (22%). Layout + draw branches for E/F/G
+  added to `layoutQrCard` / `drawQrCard` (E/F share a centred-card
+  layout helper and a header helper — factored after the first build
+  showed the bundle over; saved 607 bytes). The PNG exporter draws the
+  same card as the in-app one for every template, as before.
+- `apps/web/src/screens/qr-card.tsx`: in-app E/F/G branches
+  (`data-template` e/f/g). E and F share a `CentredQrCard` component.
+  G is the two-tone ticket: paper top, sun bottom, dashed tear rule
+  with punched notches. `BrandMark` gains an optional
+  `markTextClassName` (F's sun mark carries an ink B). In-card Copy
+  controls raised to 44 px hit areas (B's pill `min-h-11`, C's text
+  Copy `py-3`, D's glyph button `p-3 -m-3` — visuals unchanged).
+- `apps/web/src/screens/receive.tsx`: details step reordered to card →
+  amount → Share (coral, full-width, lg) → Download card + Copy link
+  (outline, half-width, lg) → status → 7-template grid picker →
+  compact QR-type segments → share-link line → rotation block
+  ("Receiving address N" + New address + note). "Copy address" removed
+  (the card's own Copy button is the one copy control). The QR-type
+  row's 64 px mini-QR thumbnails removed (all three looked identical
+  at that size and no 64 px code is scannable). The two below-card
+  warnings merged into one paragraph. Action buttons raised from `sm`
+  (32 px) to `lg` (48 px); picker segments to 44 px hit areas.
+- Tests: `payment-links.test.ts` gains hand-computed E/F/G geometry at
+  640 px (E 640×1185, F 640×1182, G 640×1083); `qr-card.test.tsx` gains
+  E/F/G renders and the bold-network loop now covers all seven;
+  `receive.test.tsx` gains order assertions (amount → Share → picker)
+  and the one-copy-control / New-address-placement tests; E2E
+  `qr-card-templates.spec.ts` covers all seven templates.
+
+1. **No new colours.** E/F/G are composed entirely from the four core
+   colours plus the ten `--qr-*` tokens from §24 — no new literal was
+   added, and the palette audit still passes with the same 40 approved
+   literals. The §24 exception is not extended; it is reused.
+2. **No new inverted code.** A stays the only inverted template. E, F
+   and G are all dark-on-light (ink on white/paper), so the new
+   templates add no new decode risk — but their phone-camera results
+   are still unconfirmed, like every other template's.
+3. **Design-system §6 reading, recorded.** §6 says Share / Download /
+   Copy-link sit "directly under the card". This lane reads that as
+   "the first actions after the card unit" — the amount input sits
+   between card and Share because the amount is displayed on the card
+   and encoded in its QR. The alternative (Share immediately under the
+   card, amount above it) would push the QR ~90 px further down the
+   page, which the audit showed is already half-cut at the mobile
+   fold. If the owner wants the letter of §6, the amount goes above
+   the card.
+4. **Proposed owner decision (NOT built): two-column desktop Receive.**
+   At 1919 the details column is ~448 px with ~700 px empty each side.
+   A two-column desktop layout (card left, controls right) would put
+   the whole share task on one 1440/1919 screen, but DESIGN-SYSTEM
+   §4.1 caps `/receive` at a 480 px single column "at every width".
+   Recorded here for the owner; desktop stays single-column until
+   ruled.
+5. **Bundle over budget — reported, not re-baselined.** Lane tree:
+   total JS **4,192,289** vs 4,185,000 budget (**over by 7,289,
+   0.17%**); largest chunk 2,905,015 (under 3,050,000). The lane adds
+   12,104 bytes over the `7fea3e4` baseline (4,180,185; headroom was
+   4,815). One legitimate shrink was done (E/F factoring in the card
+   and the exporter, 607 bytes saved); no designed functionality was
+   cut to fit. The CI bundle gate fails on this branch until the owner
+   orders a re-baseline or a trim elsewhere.
+6. **Audit findings (measured first-hand, CDP, 390/820/1440/1919).**
+   The QR was half-cut at the mobile fold (card starts 318 px down,
+   QR ~560 px, fold ~770 px with the fixed bottom nav); the amount
+   input sat 406 px below the card it controls; the 4-segment picker
+   could not hold 7 templates (hints already wrapping to 3 lines);
+   Share was 3rd of 5 buttons, below the fold at every viewport; the
+   network warning was said three times. All five are fixed by the
+   reorder above except the fold itself: the card + header stack is
+   still taller than a 390 px viewport, so Share is one short scroll
+   away rather than visible on arrival — the header stack (asset row,
+   owner-restored tagline, network alert) was not cut. Chain/token
+   steps were clean and are untouched.
+
+7. **Parity notes found in verification (same class as A's accepted
+   gap, §24.3).** (a) G's address wraps to 2 lines in-app at 390 (the
+   in-app card is 322 px wide) but fits 1 line in the PNG (390 design
+   units) — a width-driven wrap difference, like A's. (b) G's PNG
+   border is a plain rounded rect; the in-app card uses the hand-drawn
+   wobble radius (canvas `roundRect` cannot express it). (c) E's
+   address wraps with a 3–4 character tail ("A37") in both the in-app
+   card and the PNG — full address, no truncation. (d) Cosmetic:
+   "Download card" wraps to two lines in its half-width button at 390,
+   and "Payment request" wraps the same way in the QR-type row. Both
+   stay legible and tappable.

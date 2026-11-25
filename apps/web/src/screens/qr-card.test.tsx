@@ -459,8 +459,58 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
     }
   });
 
+  it('renders Sun with the sun field, coral underline and ink strip', async () => {
+    const mounted = await mountCard({ ...baseProps, template: 'e' });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card?.getAttribute('data-template')).toBe('e');
+      const qrSvg = card?.querySelector('#qr-card-qr svg');
+      expect(qrSvg?.getAttribute('width')).toBe('210');
+      // The sun field is the card root itself, not a descendant.
+      expect(card?.className).toContain('bg-sun');
+      expect(card?.querySelector('.bg-ink')).not.toBeNull();
+      expect(card?.textContent).toContain('Bawa Wallet');
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('renders Ink with the dark field, white tile and sun underline', async () => {
+    const mounted = await mountCard({ ...baseProps, template: 'f' });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card?.getAttribute('data-template')).toBe('f');
+      const qrSvg = card?.querySelector('#qr-card-qr svg');
+      expect(qrSvg?.getAttribute('width')).toBe('208');
+      // The ink field is the card root itself, not a descendant.
+      expect(card?.className).toContain('bg-ink');
+      expect(card?.querySelector('.bg-white')).not.toBeNull();
+      expect(card?.textContent).toContain('Bawa Wallet');
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('renders Ticket with the dashed tear line and sun bottom zone', async () => {
+    const mounted = await mountCard({ ...baseProps, template: 'g' });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card?.getAttribute('data-template')).toBe('g');
+      const qrSvg = card?.querySelector('#qr-card-qr svg');
+      expect(qrSvg?.getAttribute('width')).toBe('200');
+      expect(card?.querySelector('.border-dashed')).not.toBeNull();
+      expect(card?.querySelector('.bg-sun')).not.toBeNull();
+      expect(card?.textContent).toContain('Bawa Wallet');
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('bolds the network name in the subtitle in every template', async () => {
-    for (const template of ['a', 'b', 'c', 'd'] as const) {
+    for (const template of ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as const) {
       const mounted = await mountCard({ ...baseProps, template });
       try {
         const subtitle = mounted.div.querySelector(
