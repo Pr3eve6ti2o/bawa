@@ -179,9 +179,13 @@ export function MnemonicBackupScreen() {
     setWrong([false, false, false]);
   }
 
+  // Lane 5: the four safety facts used to sit in this card and push
+  // the Reveal section two screens down on a phone. They now live in
+  // the guidance section below the reveal, where they still read
+  // before anyone acts — the card keeps only the short line.
   return (
-    <div className="space-y-4">
-      <Card radius="xl">
+    <div className="flex flex-col space-y-4">
+      <Card radius="xl" className="order-1">
         <CardHeader>
           <CardTitle>Mnemonic backup</CardTitle>
           <CardDescription>
@@ -202,45 +206,35 @@ export function MnemonicBackupScreen() {
               </Button>
             </>
           ) : (
-            // Round 2: one compact list instead of four separate
-            // paragraphs — same four facts, a third of the height.
-            <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
-              <li>
-                The 24 words you wrote down when the wallet was created are
-                the only backup. Write them on paper and store the paper
-                offline in two places.
-              </li>
-              <li>
-                If you lose these words, the wallet cannot be recovered —
-                Bawa cannot reset your recovery phrase.
-              </li>
-              <li>
-                Never photograph the words, share them or paste them into any
-                app or website.
-              </li>
-              <li>
-                An extended public key alone cannot recover spending access —
-                it only restores watch-only monitoring. Spending access is
-                restored from the 24 words.
-              </li>
-            </ul>
+            <p className="text-sm leading-relaxed">
+              Your 24 words are the only backup. The reveal below asks
+              for your vault password and a short safety quiz first.
+            </p>
           )}
         </CardContent>
       </Card>
 
       {profiles !== null && (
-        <section aria-labelledby="backup-profiles" className="space-y-2">
+        <section aria-labelledby="backup-profiles" className="order-3 space-y-2">
           <h2 id="backup-profiles" className="text-lg font-semibold">
             Recovery profiles
           </h2>
-          <p className="text-sm leading-relaxed text-ink">
-            This vault was created with the recovery profiles below. Restoring
-            with a different profile recovers different addresses — back up
-            the profile names with the words.
-          </p>
-          {/* Round 2: one compact row per profile instead of four tall
-              cards — the profile id and its stored state on one line. */}
-          <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+          {/* Lane 5: the 24-row profile list used to sit between the
+              intro and the Reveal section, pushing the reveal two
+              screens down. The rows are internal derivation ids the
+              user cannot act on without the words, so they collapse
+              into a disclosure; the heading and the list stay in the
+              DOM, unchanged. */}
+          <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-ink">
+              Show the derivation profiles
+            </summary>
+            <p className="mt-2 text-sm leading-relaxed text-ink">
+              This vault was created with the recovery profiles below. Restoring
+              with a different profile recovers different addresses — back up
+              the profile names with the words.
+            </p>
+          <ul className="mt-2 divide-y rounded-bawa-sm border-2 border-ink bg-paper">
             {BACKUP_PROFILES.map((profileId) => {
               const stored = profiles.includes(profileId);
               return (
@@ -260,15 +254,39 @@ export function MnemonicBackupScreen() {
               );
             })}
           </ul>
+          </details>
         </section>
       )}
 
       {profiles !== null && (
-        <section aria-label="Backup guidance" className="space-y-2">
+        <section aria-label="Backup guidance" className="order-4 space-y-2">
           <p className="text-sm text-ink">
             These are reminders, not proof that the steps are done. This
             app cannot verify that you have followed them.
           </p>
+          {/* Lane 5: the four safety facts, moved here from the top
+              card so the Reveal section comes first. Same four facts,
+              same words. */}
+          <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
+            <li>
+              The 24 words you wrote down when the wallet was created are
+              the only backup. Write them on paper and store the paper
+              offline in two places.
+            </li>
+            <li>
+              If you lose these words, the wallet cannot be recovered —
+              Bawa cannot reset your recovery phrase.
+            </li>
+            <li>
+              Never photograph the words, share them or paste them into any
+              app or website.
+            </li>
+            <li>
+              An extended public key alone cannot recover spending access —
+              it only restores watch-only monitoring. Spending access is
+              restored from the 24 words.
+            </li>
+          </ul>
           {/* Round 2: one compact list, not four cards. No check mark:
               these are reminders, not completed steps. */}
           <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
@@ -286,7 +304,7 @@ export function MnemonicBackupScreen() {
       )}
 
       {profiles !== null && (
-        <section aria-labelledby="reveal-heading" className="space-y-3">
+        <section aria-labelledby="reveal-heading" className="order-2 space-y-3">
           <h2 id="reveal-heading" className="text-lg font-semibold">
             Reveal recovery phrase
           </h2>
@@ -412,7 +430,7 @@ export function MnemonicBackupScreen() {
         </section>
       )}
 
-      <Link to="/" className="inline-block text-sm underline underline-offset-4">
+      <Link to="/" className="order-5 inline-block text-sm underline underline-offset-4">
         Back to wallet
       </Link>
     </div>

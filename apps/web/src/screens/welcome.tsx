@@ -13,8 +13,15 @@ import { useWallet } from "../state/wallet-context";
 export function WelcomeScreen() {
   const { devnetEnabled } = useWallet();
   return (
-    <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6 lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
-      <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
+    // Lane 5 (redesign): the fork comes first on mobile. Below the
+    // desktop breakpoint this section is a flex column, so the fork
+    // (order-1) renders before the intro (order-2): a first-time user
+    // used to reach "Create a wallet" at y=1320 on a 390 px phone,
+    // after three paragraphs and the Network row. At lg: the children
+    // keep their explicit grid placement, so the desktop two-column
+    // layout (intro left, fork right) is unchanged.
+    <section aria-labelledby="welcome-title" className="mx-auto flex w-full max-w-[480px] flex-col space-y-6 lg:grid lg:max-w-none lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
+      <div className="order-2 rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <div aria-hidden="true" className="flex items-end gap-3 text-ink">
           <BawaIcon name="wallet" className="size-16 -rotate-3" />
           <BawaIcon name="coins" className="size-10 rotate-3" />
@@ -79,7 +86,7 @@ export function WelcomeScreen() {
         </ul>
       </div>
 
-      <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
+      <div className="order-1 grid gap-4 lg:order-none lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
         <Card radius="xl" tone="card">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>
@@ -89,7 +96,7 @@ export function WelcomeScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild className="w-full">
+            <Button asChild size="lg" className="w-full">
               <Link to="/create-wallet">Create a wallet</Link>
             </Button>
           </CardContent>
@@ -105,14 +112,27 @@ export function WelcomeScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild variant="outline" className="w-full">
+            <Button asChild variant="outline" size="lg" className="w-full">
               <Link to="/import-wallet">Import a wallet</Link>
             </Button>
           </CardContent>
         </Card>
+        {/* Lane 5: Watch-only is the tertiary entry (DESIGN-SYSTEM §6).
+            It opens Import straight on the Watch-only tab, so a user
+            who only wants to look never has to find the tab. */}
+        <p className="px-2 text-center text-sm leading-relaxed text-ink">
+          Just want to look?{' '}
+          <Link
+            to="/import-wallet?mode=watch-only"
+            className="font-medium underline underline-offset-4"
+          >
+            Watch a wallet
+          </Link>{' '}
+          from its public address — no wallet needed.
+        </p>
       </div>
 
-      <aside className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:col-span-3 lg:col-start-1 lg:row-start-2">
+      <aside className="order-3 space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <p>
           {devnetEnabled
             ? "Devnet test mode. This wallet connects to a test network with valueless test tokens."

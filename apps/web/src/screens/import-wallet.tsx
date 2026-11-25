@@ -6,7 +6,7 @@
 // must never be pasted there — secret-like input is rejected and cleared at
 // once. Watch-only accounts can never sign.
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import type { WatchOnlyWallet } from '@bawa/contracts';
 import { validateWatchOnlyImport, type ChainId } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
@@ -21,7 +21,7 @@ import {
   IMPORT_PHRASE_HINT,
   splitMnemonicAndPassphrase,
 } from '../wallet/bip39-validation';
-import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
+import { chainConfig, profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { ChainSearchSelect } from './chain-search-select';
 import { WalletReadyActions } from './wallet-ready-actions';
 import { Alert, AlertDescription } from '../ui/components/alert';
@@ -56,6 +56,66 @@ export function expandUniquePrefix(value: string): string {
   return matches.length === 1
     ? `${value.slice(0, start)}${matches[0]} `
     : value;
+}
+
+// Lane 5 (redesign): chain auto-detection for the watch-only form
+// (DESIGN-SYSTEM §6: address input → "Detected: Ethereum" → confirm).
+// The form used to demand the chain BEFORE the address, so pasting a
+// valid Ethereum address while Bitcoin was selected failed with
+// "invalid base58 character in extended key" and cleared the input.
+// Only UNAMBIGUOUS patterns detect: a 0x address, bech32/legacy
+// prefixes that belong to one chain, bech32 human-readable parts
+// (cosmos1, osmo1, …), and fixed-length forms (Stellar G…, Tezos
+// tz1…, Hedera 0.0.…). Solana-style base58 (32–44 chars) and raw
+// 64-hex are deliberately NOT detected — too many chains share those
+// shapes — so the picker stays where the user put it for them.
+// Extended keys (xpub/zpub/Ltub/dpub/…) never match: they carry no
+// address prefix to detect from.
+// Conservative patterns only — a match must be unambiguous. No Solana
+// base58 (any base58 string would match), no raw 64-hex (could be
+// anything), no xpub (a key, not an address). Order matters only where
+// patterns overlap: Bitcoin P2PKH `1…` (25–34 chars) is checked before
+// Polkadot SS58 `1…` (48 chars) — the lengths are disjoint, but the
+// table keeps the documented order.
+const WATCH_ONLY_PATTERNS: ReadonlyArray<readonly [RegExp, ChainId]> = [
+  [/^0x[0-9a-fA-F]{40}$/, 'eth'],
+  [/^0x[0-9a-fA-F]{64}$/, 'aptos'],
+  [/^bc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{11,}$/, 'btc'],
+  [/^1[1-9A-HJ-NP-Za-km-z]{25,34}$/, 'btc'],
+  [/^ltc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{11,}$/, 'ltc'],
+  [/^L[1-9A-HJ-NP-Za-km-z]{25,34}$/, 'ltc'],
+  [/^D[1-9A-HJ-NP-Za-km-z]{25,34}$/, 'doge'],
+  [/^T[1-9A-HJ-NP-Za-km-z]{33}$/, 'trx'],
+  [/^(UQ|EQ)[0-9A-Za-z_-]{46}$/, 'ton'],
+  [/^0:[0-9a-fA-F]{64}$/, 'ton'],
+  [/^cosmos1[0-9a-z]{38}$/, 'cosmos'],
+  [/^osmo1[0-9a-z]{38}$/, 'osmosis'],
+  [/^inj1[0-9a-z]{38}$/, 'injective'],
+  [/^celestia1[0-9a-z]{38}$/, 'celestia'],
+  [/^dydx1[0-9a-z]{38}$/, 'dydx'],
+  [/^sei1[0-9a-z]{38}$/, 'seicosmos'],
+  [/^axelar1[0-9a-z]{38}$/, 'axelar'],
+  [/^noble1[0-9a-z]{38}$/, 'noble'],
+  [/^juno1[0-9a-z]{38}$/, 'juno'],
+  [/^r[0-9A-HJ-NP-Za-km-z]{24,34}$/, 'xrp'],
+  [/^f1[1-9a-z]{37}$/, 'filecoin'],
+  [/^ronin:[0-9a-fA-F]{40}$/, 'ronin'],
+  [/^G[A-Z0-9]{55}$/, 'stellar'],
+  [/^tz1[1-9A-HJ-NP-Za-km-z]{33}$/, 'tezos'],
+  [/^0\.0\.\d+$/, 'hedera'],
+  // Polkadot SS58 addresses start with '1' like Bitcoin P2PKH, but
+  // are 48 characters — Bitcoin P2PKH tops out at 35. Length is the
+  // disambiguator.
+  [/^1[1-9A-HJ-NP-Za-km-z]{47}$/, 'polkadot'],
+];
+
+export function detectWatchOnlyChain(value: string): ChainId | null {
+  const input = value.trim();
+  if (input === '') return null;
+  for (const [pattern, chain] of WATCH_ONLY_PATTERNS) {
+    if (pattern.test(input)) return chain;
+  }
+  return null;
 }
 
 // Merge lane (2026-11-24): the picker used to hardcode the original 22
@@ -236,13 +296,27 @@ export function ImportWalletScreen() {
   const imported = chains
     .map((id) => xpubs[id])
     .filter((wallet): wallet is WatchOnlyWallet => wallet !== null);
-  const [mode, setMode] = useState<ImportMode>('phrase');
+  // Lane 5: Welcome's tertiary "Watch a wallet" links here with
+  // ?mode=watch-only, so a user who only wants to look lands straight
+  // on the Watch-only tab instead of having to find it.
+  const location = useLocation();
+  const [mode, setMode] = useState<ImportMode>(() =>
+    new URLSearchParams(location.search).get('mode') === 'watch-only'
+      ? 'watch-only'
+      : 'phrase',
+  );
 
   // Mode B (watch-only) state — existing behaviour, unchanged.
   const [chain, setChain] = useState<ChainId>('btc');
   const [xpub, setXpub] = useState('');
   const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Lane 5: the chain detected from what the user pasted, if the
+  // value is unambiguous (see detectWatchOnlyChain). Shown under the
+  // input as "Detected: Ethereum" — the picker follows the paste, so
+  // a valid address for another chain is never rejected for being
+  // pasted under the wrong chain.
+  const [detectedChain, setDetectedChain] = useState<ChainId | null>(null);
   // Lane B: the result of the last successful watch-only add — how many
   // chains an address fanned out to, and how many were already watched.
   const [notice, setNotice] = useState<string | null>(null);
@@ -410,6 +484,19 @@ export function ImportWalletScreen() {
     }
   }
 
+  // Lane 5: detect the chain from the pasted value as it is typed,
+  // and let the picker follow an unambiguous paste (see
+  // detectWatchOnlyChain). The input is never cleared here — only a
+  // rejected submit clears it, as before.
+  function handleWatchOnlyInput(value: string): void {
+    setXpub(value);
+    setError(null);
+    setNotice(null);
+    const detected = detectWatchOnlyChain(value);
+    setDetectedChain(detected);
+    if (detected !== null && detected !== chain) setChain(detected);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isAdding) return;
@@ -427,7 +514,16 @@ export function ImportWalletScreen() {
       // Clear again inside the failure block (already cleared above by
       // the T41 step): the rejection path must clear before reporting.
       setXpub('');
-      setError(`${validation.message || 'Invalid public key or address.'} The input was cleared; never paste a mnemonic, seed or private key here.`);
+      // Lane 5: a value that is a valid address for ANOTHER chain was
+      // the commonest rejection (a 0x address pasted under Bitcoin).
+      // Name the chain it looks like instead of reporting the raw
+      // validator jargon ("invalid base58 character in extended key").
+      const detected = detectWatchOnlyChain(publicKey);
+      setError(
+        detected !== null && detected !== chain
+          ? `That looks like a ${chainConfig(detected).displayName} address, not a ${chainConfig(chain).displayName} one. The input was cleared — pick ${chainConfig(detected).displayName} above and try again. Never paste a mnemonic or private key here.`
+          : `${validation.message || 'Invalid public key or address.'} The input was cleared; never paste a mnemonic, seed or private key here.`,
+      );
       return;
     }
 
@@ -478,7 +574,7 @@ export function ImportWalletScreen() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Import a wallet</CardTitle>
-            <Badge variant="secondary">Watch-only labelled below</Badge>
+            <Badge variant="secondary">Watch-only can never sign or spend</Badge>
           </div>
           <CardDescription>
             Restore a wallet from its recovery phrase, or track a wallet
@@ -541,9 +637,23 @@ export function ImportWalletScreen() {
                     autoComplete="off"
                     autoCapitalize="none"
                     spellCheck={false}
-                    placeholder="12, 15, 18, 21 or 24 words, or 25 if your wallet uses an extra word"
+                    placeholder="12 to 24 words, in order"
                     required
                   />
+                  {/* Lane 5: live word count (DESIGN-SYSTEM §6). The
+                      old placeholder carried the whole instruction and
+                      clipped at 390 px; the count is what the user
+                      needs while typing. */}
+                  {phrase.trim() !== '' && (
+                    <p className="text-sm text-muted-foreground">
+                      {(() => {
+                        const count = phrase.trim().split(/\s+/).length;
+                        return [12, 15, 18, 21, 24].includes(count)
+                          ? `${count} words — ready to restore.`
+                          : `${count} ${count === 1 ? 'word' : 'words'} — a phrase has 12, 15, 18, 21 or 24 words.`;
+                      })()}
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     Only enter a recovery phrase on this screen, on this
                     device. Never paste it into any other app or website.
@@ -559,7 +669,7 @@ export function ImportWalletScreen() {
                     <AlertDescription>{phraseError}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" disabled={isRestoring}>
+                <Button type="submit" size="lg" disabled={isRestoring}>
                   {isRestoring ? 'Restoring…' : 'Restore wallet'}
                 </Button>
               </fieldset>
@@ -787,24 +897,11 @@ export function ImportWalletScreen() {
 
       {mode === 'watch-only' && (
         <>
-             <Alert>
-     <AlertDescription>
-       Watch-only accounts cannot sign transactions. A public address
-       watches every chain it belongs to — one 0x address covers all 59
-       EVM chains. An extended public key watches one chain.
-     </AlertDescription>
-   </Alert>
-   <p id="watch-only-notice" className="text-sm leading-relaxed text-muted-foreground">
-            Only extended PUBLIC keys or public addresses are accepted. Private extended keys (xprv/zprv)
-            are rejected. Import the account-level key (depth 3, account 0) for the selected chain,
-            or paste a public address — an address watches every chain it belongs to.
-            Never paste a mnemonic, seed or private key here.
-            An extended public key lets its holder track this account&apos;s
-            derivable addresses, balances and transaction history. Imported
-            keys are stored in this browser (localStorage). They are readable by this site&apos;s
-            scripts and by extensions with access to this site.
-          </p>
-
+          {/* Lane 5: the form comes first. The two warning paragraphs
+              used to sit above it, so the chain picker, address input
+              and Add button were all below the fold on a phone. The
+              warnings are unchanged — they now live in a disclosure
+              below the imported list, where they are one tap away. */}
           <form
             className="space-y-4"
             noValidate
@@ -830,16 +927,24 @@ export function ImportWalletScreen() {
                 id="wallet-xpub" name="xpub" type="text"
                 className="font-mono"
                 value={xpub}
-                onChange={(event) => {
-                  setXpub(event.target.value);
-                  setError(null);
-                  setNotice(null);
-                }}
+                onChange={(event) => handleWatchOnlyInput(event.target.value)}
                 autoComplete="off" autoCapitalize="none" spellCheck={false}
                 placeholder={inputConfigByChain[chain].placeholder} required disabled={isAdding}
                 aria-invalid={error !== null}
                 aria-describedby={error ? 'watch-only-notice import-error' : 'watch-only-notice'}
               />
+              {/* Lane 5: the detected chain, shown explicitly
+                  (DESIGN-SYSTEM §6). The picker follows an
+                  unambiguous paste, so this line confirms what
+                  happened instead of leaving the user to guess. */}
+              {detectedChain !== null && (
+                <p className="text-sm font-medium text-ink">
+                  Detected: {chainConfig(detectedChain).displayName}
+                  {detectedChain === 'eth'
+                    ? ' — watches all 59 EVM chains.'
+                    : '.'}
+                </p>
+              )}
               {chain === 'ton' && (
                 <p className="text-sm text-muted-foreground">
                   Single public address. No child addresses are derived: the TON path is fully hardened.
@@ -870,7 +975,7 @@ export function ImportWalletScreen() {
                 {notice}
               </p>
             )}
-            <Button type="submit" disabled={isAdding}>
+            <Button type="submit" size="lg" disabled={isAdding}>
               {isAdding ? 'Adding…' : 'Add'}
             </Button>
           </form>
@@ -910,6 +1015,36 @@ export function ImportWalletScreen() {
               </ul>
             )}
           </section>
+
+          {/* Lane 5: the watch-only warnings, moved below the form
+              (they used to bury it). Same words, one tap away. The
+              notice paragraph keeps its id: the address input above
+              references it with aria-describedby. */}
+          <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-ink">
+              What watch-only can and cannot do
+            </summary>
+            <div className="mt-3 space-y-3">
+              <Alert>
+                <AlertDescription>
+                  Watch-only accounts cannot sign transactions. A public
+                  address watches every chain it belongs to — one 0x
+                  address covers all 59 EVM chains. An extended public
+                  key watches one chain.
+                </AlertDescription>
+              </Alert>
+              <p id="watch-only-notice" className="text-sm leading-relaxed text-muted-foreground">
+                Only extended PUBLIC keys or public addresses are accepted. Private extended keys (xprv/zprv)
+                are rejected. Import the account-level key (depth 3, account 0) for the selected chain,
+                or paste a public address — an address watches every chain it belongs to.
+                Never paste a mnemonic, seed or private key here.
+                An extended public key lets its holder track this account&apos;s
+                derivable addresses, balances and transaction history. Imported
+                keys are stored in this browser (localStorage). They are readable by this site&apos;s
+                scripts and by extensions with access to this site.
+              </p>
+            </div>
+          </details>
         </>
       )}
 

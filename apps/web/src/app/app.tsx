@@ -216,13 +216,18 @@ function AppLayout() {
     }
   }, [vaultState, pathname, navigate]);
   // Focused flows hide the navigation chrome (Safe PageLayout pattern):
-  // the create-wallet flow and the send flow. Send review is a state
-  // inside /send rather than its own route, so the whole /send flow
-  // hides the nav; the review step sits inside it. The desktop header
-  // stays: it carries the account context and the Mainnet pill, not
-  // navigation.
+  // the create-wallet flow, the send flow, and the mnemonic-backup
+  // flow (Lane 5, redesign: the backup screen is a focused flow —
+  // DESIGN-SYSTEM §6 — the phrase is revealed there, and the bottom
+  // nav is one accidental tap away from leaving mid-reveal). Send
+  // review is a state inside /send rather than its own route, so the
+  // whole /send flow hides the nav; the review step sits inside it.
+  // The desktop header stays: it carries the account context and the
+  // Mainnet pill, not navigation.
   const isFocusedFlow =
-    pathname === '/create-wallet' || pathname === '/send';
+    pathname === '/create-wallet' ||
+    pathname === '/send' ||
+    pathname === '/mnemonic-backup';
   // Narrow task screens get a local 480px cap inside the content frame;
   // /assets itself stays full-width, only /assets/<chain> is narrow.
   // Welcome self-caps in welcome.tsx (it also renders on the home route).
