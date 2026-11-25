@@ -98,5 +98,8 @@ export async function createTestWallet(page: Page, password: string = TEST_PASSW
     await inputs.nth(i).fill(words[position] ?? '');
   }
   await page.getByRole('button', { name: 'Confirm and create wallet' }).click();
-  await page.getByText('Your wallet is ready').waitFor();
+  // Merge fix: exact match — Lane 5's create-flow disclosure says
+  // "…and your wallet is ready" inside its summary paragraph, which
+  // a substring getByText also matches (strict-mode violation).
+  await page.getByText('Your wallet is ready', { exact: true }).waitFor();
 }
