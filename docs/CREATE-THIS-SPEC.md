@@ -540,9 +540,22 @@ such and never bundle it.**
   account.
 - **Not verified first-hand:** end-to-end behaviour needs the `okx` CLI
   binary at runtime; the first live run will confirm it.
-- `okx-dex-market` (onchainos) is NOT a verified alternative: its
-  keyless operation could not be verified without running OKX's
-  installer — do not assume it works without an OKX account.
+- `okx-dex-market` (onchainos-skills) — verdict CORRECTED 2026-11-26
+  (guide-update pass): the source proves anonymous auth exists —
+  `cli/src/client.rs:213`, "Create a client with JWT auth when logged
+  in, otherwise anonymous auth", and "anonymous" appears 41 times in
+  that file — so the earlier verdict ("keyless operation could not be
+  verified without running OKX's installer") was wrong: only 2 of the
+  8 onchainos skills mention wallet login. Keyless read-only DEX
+  market/token data (price by contract, batch prices, K-lines, index
+  price, token search/metadata/risk, holders, smart-money signals,
+  wallet PnL) is the strongest CoinGecko-alternative candidate of the
+  survey. Caveats, still open: live keyless operation end-to-end is
+  NOT verified (no live run yet); the free-quota size is unstated
+  (x402 payment only after it is exhausted); UK geo-restriction with
+  API-key bypass; WebSocket needs login; native SOL needs the wSOL
+  address. Do not adopt it as the price source until a live keyless
+  run is recorded.
 
 ## §8. QR cards — seven templates, PNG parity
 
@@ -1022,7 +1035,7 @@ not the current budget.**
 
 | Find | Licence | Reason rejected |
 | --- | --- | --- |
-| `okx-dex-market` (onchainos-skills) as a CoinGecko alternative | MIT | Keyless operation could not be verified — its preflight routes through OKX's installer/account flow. Do not assume it works without an OKX account (same verdict as §7.1). |
+| `okx-dex-market` (onchainos-skills) as a CoinGecko alternative | MIT | Source proves anonymous auth (`cli/src/client.rs:213`, "anonymous" ×41) — keyless read-only DEX data is the strongest candidate; live end-to-end still unverified, free-quota size unstated, UK geo-restriction, WebSocket needs login, native SOL needs the wSOL address. Do not adopt until a live keyless run is recorded (verdict corrected 2026-11-26; §7.1). |
 | Multi-AI-Workflow (multi-model orchestration: Claude + Codex + Gemini) | MIT | Conflicts with the standing Astra-only / Sol-only model rule for Bawa. Not adopted. |
 | `yn`, Firecrawl | AGPL-3.0, AGPL-3.0 | Copyleft: no code copied into Bawa. Firecrawl noted only as a possible self-hosted research tool (needs API key / self-host); not adopted. |
 | Wanwu (multi-agent platform), QwenPaw (Qwen desktop agent app) | Apache-2.0, Apache-2.0 | Heavy agent platforms / a different product, not wallet inputs. No Bawa application. |
