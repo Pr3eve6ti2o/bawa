@@ -294,7 +294,7 @@ export function DashboardScreen() {
     <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
       <h1 className="sr-only">Portfolio</h1>
 
-      <div className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-5">
+      <div className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[13px] leading-[18px] font-medium text-ink">Portfolio balance</p>
           <button
@@ -303,7 +303,7 @@ export function DashboardScreen() {
             aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
             title={hideBalance ? 'Show balance' : 'Hide balance'}
             onClick={() => toggleHideBalance()}
-            className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="flex size-11 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
             {hideBalance ? (
               <BawaIcon name="eye-off" className="size-5" />
@@ -313,7 +313,7 @@ export function DashboardScreen() {
           </button>
         </div>
         <p className="text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker"><NumberTicker text={heroText} /></span></p>
-        <p className="font-display text-xl text-ink">The total value of your coins, in US dollars.</p>
+        <p className="font-display text-xl text-ink">Total value in US dollars.</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}
@@ -344,23 +344,33 @@ export function DashboardScreen() {
             {humanReasonMessage(hero.priceError, 'price')}
           </p>
         )}
-        {isLocked ? (
-          <Button type="button" variant="outline" asChild>
-            <Link to="/lock">Unlock</Link>
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={heroLoading}
-            onClick={() => void refreshBalances()}
-          >
-            {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
-          </Button>
-        )}
-        <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
+        {/* Refresh actions sit in one row with the 8px touch-target gap
+            (DESIGN-SYSTEM §2.5): two adjacent outline buttons with no
+            gap read as one control and are a miss-tap risk. Same
+            labels, same order, same behaviour — only the gap. */}
+        <div className="flex flex-wrap gap-2">
+          {isLocked ? (
+            <Button type="button" variant="outline" asChild>
+              <Link to="/lock">Unlock</Link>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={heroLoading}
+              onClick={() => void refreshBalances()}
+            >
+              {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
+            </Button>
+          )}
+          <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
+        </div>
       </div>
-      <div className="grid grid-cols-4 gap-2 lg:self-center">
+      {/* Actions sit at the hero's baseline on desktop (lg:self-end):
+          vertically centred they floated mid-air in the 5fr column next
+          to the wide hero. Mobile is unchanged: the row follows the hero
+          in the single column, balance first, actions second. */}
+      <div className="grid grid-cols-4 gap-2 lg:self-end">
         {ACTIONS.map(({ to, icon, label }) => (
           <Link
             key={to}
