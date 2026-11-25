@@ -305,7 +305,24 @@ export function CreateWalletScreen() {
               }[step]
             }`}
           </p>
-          <ol aria-label="Wallet creation steps" className="space-y-5">
+          {/* Lane 5: on a phone the four step cards filled the whole
+              first viewport and pushed the password form below the
+              fold (Generate sat at y=1404 on a 390 px screen). The
+              numbered row + "Step X of 4" line above already say
+              where you are, so the detailed list is a disclosure on
+              mobile and the full list on desktop. The list stays
+              mounted either way — only its visibility changes. */}
+          <details className="mb-5 lg:hidden">
+            <summary className="cursor-pointer text-body-sm font-medium text-foreground">
+              What happens next
+            </summary>
+            <p className="mt-2 text-body-sm leading-relaxed text-ink">
+              Set a vault password, write down 24 words, confirm 3 of
+              them, and your wallet is ready. Your phrase is shown
+              once, after a short risk check.
+            </p>
+          </details>
+          <ol aria-label="Wallet creation steps" className="hidden space-y-5 lg:block">
             <li>
               <StepCard
                 icon={<span>1</span>}

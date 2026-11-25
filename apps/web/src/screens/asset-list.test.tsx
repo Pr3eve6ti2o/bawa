@@ -13,10 +13,29 @@ vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
 }));
 
-vi.mock('../wallet/chains', () => ({
-  availableFor: vi.fn(),
-  chainConfig: vi.fn(),
-}));
+vi.mock('../wallet/chains', () => {
+  const chainConfig = vi.fn();
+  return {
+    availableFor: vi.fn(),
+    chainConfig,
+    // Merge fix (Lane 5 moved filterChains here from
+    // chain-search-select): the mock must provide it, because this
+    // screen's import graph loads the picker, which re-exports it.
+    // Same rule as the real helper, driven by the mocked chainConfig.
+    filterChains: (chains: readonly ChainId[], query: string): ChainId[] => {
+      const needle = String(query).trim().toLowerCase();
+      if (needle === '') return [...chains];
+      return chains.filter((chain) => {
+        const config = chainConfig(chain);
+        return (
+          config.displayName.toLowerCase().includes(needle) ||
+          config.symbol.toLowerCase().includes(needle) ||
+          chain.toLowerCase().includes(needle)
+        );
+      });
+    },
+  };
+});
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;

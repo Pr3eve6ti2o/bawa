@@ -109,10 +109,41 @@ export function CreateScreen() {
           </li>
           <li>
             <strong>One shared address on Ethereum-style chains.</strong>{' '}
-            Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base,
-            Avalanche, Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis,
-            Aurora and Fantom all use the same address — they share one
-            derivation path, so one key opens all of them.
+            {/* Lane 5: the sixteen chains as chips, not one run-on
+                sentence — same words, same order, same separators, so
+                the text reads identically (and the honest copy is
+                untouched); the chips just make the list scannable. */}
+            {[
+              'Ethereum',
+              'BNB Smart Chain',
+              'Polygon',
+              'Arbitrum',
+              'Optimism',
+              'Base',
+              'Avalanche',
+              'Gnosis',
+              'Celo',
+              'Linea',
+              'Mantle',
+              'Scroll',
+              'opBNB',
+              'Metis',
+              'Aurora',
+              'Fantom',
+            ].map((chain, index, list) => (
+              <span key={chain}>
+                <span className="mr-0 inline-flex items-center rounded-bawa-sm border-2 border-ink bg-paper px-2 py-0.5 text-[13px] font-medium text-ink">
+                  {chain}
+                </span>
+                {index < list.length - 2
+                  ? ', '
+                  : index === list.length - 2
+                    ? ' and '
+                    : ' '}
+              </span>
+            ))}
+            all use the same address — they share one derivation path,
+            so one key opens all of them.
           </li>
           <li>
             <strong>A different address everywhere else.</strong> Bitcoin,

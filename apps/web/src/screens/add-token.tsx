@@ -34,7 +34,7 @@
  */
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ChainId } from '../engine/boundary';
-import { availableFor, chainConfig } from '../wallet/chains';
+import { availableFor, chainConfig, filterChains } from '../wallet/chains';
 import { ChainLogo } from './token-logo';
 import { useWallet } from '../state/wallet-context';
 import {
@@ -160,6 +160,9 @@ export function AddTokenDialog({
   const [searchCandidates, setSearchCandidates] = useState<
     TokenSearchCandidate[] | null
   >(null);
+  // Lane 5: the Add-chain list is 84 rows with no way to find one.
+  // Same filter helper as the watch-only chain picker.
+  const [chainQuery, setChainQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   // Lane 1: the search candidate the user picked (via Use, or the
@@ -185,6 +188,7 @@ export function AddTokenDialog({
     setSearchError(null);
     setSearching(false);
     setPickedCandidate(null);
+    setChainQuery('');
   }, [open ]);
 
   // The addable chains are the registry chains with derivation —
@@ -196,6 +200,7 @@ export function AddTokenDialog({
   const addableChains = availableFor('derive');
   const enabledChains = wallet.enabledChains ?? [...addableChains];
   const chainDisplayName = chainConfig(chain).displayName;
+  const filteredAddChains = filterChains(addableChains, chainQuery);
 
   const switchMode = (next: 'token' | 'chain') => {
     setMode(next);
@@ -530,8 +535,21 @@ export function AddTokenDialog({
         </div>
 
         {mode === 'chain' ? (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="add-chain-search">Find a chain</Label>
+            <Input
+              id="add-chain-search"
+              value={chainQuery}
+              onChange={(event) => setChainQuery(event.target.value)}
+              placeholder="e.g. Arbitrum"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
+            />
           <ul className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
-            {addableChains.map((chainId) => {
+            {filteredAddChains.map((chainId) => {
               const config = chainConfig(chainId);
               const enabled = enabledChains.includes(chainId);
               return (
@@ -561,7 +579,13 @@ export function AddTokenDialog({
                 </li>
               );
             })}
+            {filteredAddChains.length === 0 && (
+              <li className="px-3 py-2 text-sm text-ink">
+                No chains match &ldquo;{chainQuery.trim()}&rdquo;.
+              </li>
+            )}
           </ul>
+          </div>
         ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             {wallet.devnetEnabled && (
@@ -572,12 +596,16 @@ export function AddTokenDialog({
             )}
             <div className="flex flex-col gap-2">
               <Label htmlFor="add-token-search">Find by name or ticker</Label>
-              <div className="flex gap-2">
+              {/* Lane 5: the Search button used to sit beside the input
+                  at every width, squeezing the input until its
+                  placeholder clipped at 390 px. Stacked on phones,
+                  side by side from sm up. */}
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   id="add-token-search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="e.g. USDC or USD Coin"
+                  placeholder="e.g. USDC"
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
@@ -715,7 +743,7 @@ export function AddTokenDialog({
               </p>
             )}
 
-            <Button type="submit" disabled={checking || wallet.devnetEnabled}>
+            <Button type="submit" size="lg" disabled={checking || wallet.devnetEnabled}>
               {checking ? 'Checking…' : 'Add'}
             </Button>
           </form>

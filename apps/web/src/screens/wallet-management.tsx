@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import type { WatchOnlyWallet } from "@bawa/contracts";
 import { ensureAdapters, useWallet } from "../state/wallet-context";
-import { accountPathFor, chainConfig, SUPPORTED_CHAINS, type ChainId } from "../wallet/chains";
+import { accountPathFor, chainConfig, filterChains, SUPPORTED_CHAINS, type ChainId } from "../wallet/chains";
 import {
   CHAIN_DECIMALS,
   formatNativeWithSymbol,
 } from "../wallet/chain-amount-format";
 import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
 import { ChainLogo } from "./token-logo";
-import { filterChains } from "./chain-search-select";
 import { Badge } from "../ui/components/badge";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
@@ -171,6 +171,9 @@ export function WalletManagementScreen() {
   const [shownKeys, setShownKeys] = useState<Record<string, string>>({});
   // Lane 6 redesign: the export list below covers all 84 chains, so it
   // gets the same name/symbol/id search the Networks list uses.
+  // Merge (Lane 5 + Lane 6): the search lives inside Lane 5's
+  // disclosure below, so the 84-row list stays collapsed until asked
+  // for and searchable once opened.
   const [exportQuery, setExportQuery] = useState("");
   const exportNeedle = exportQuery.trim();
   const exportVisible = (
@@ -305,9 +308,33 @@ export function WalletManagementScreen() {
           <CardTitle>Your accounts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Lane 6 redesign: this explainer sat above the Create
-              controls (~150 words). The words are unchanged, behind one
-              tap, so the controls come first. */}
+          {/* Lane 5: with no vault the actions come first — the
+              explainer below is about a phrase the user does not have
+              yet, and it used to push Create/Import under the bottom
+              nav's edge on a phone. With a vault the explainer stays
+              exactly where it was. */}
+          {!hasVault && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                You don&apos;t have a wallet yet. Create one from a new
+                recovery phrase, or import the phrase of a wallet you
+                already have.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button type="button" size="lg" asChild>
+                  <Link to="/create-wallet">Create a wallet</Link>
+                </Button>
+                <Button type="button" variant="outline" size="lg" asChild>
+                  <Link to="/import-wallet">Import a wallet</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+          {hasVault && (
+          // Merge (Lane 5 + Lane 6): Lane 5 puts the actions first when
+          // there is no vault; with a vault the explainer keeps Lane 6's
+          // one-tap disclosure, so the words are unchanged and the
+          // controls still come first.
           <details>
             <summary className="cursor-pointer text-sm font-semibold">
               How accounts work
@@ -333,6 +360,7 @@ export function WalletManagementScreen() {
               .
             </p>
           </details>
+          )}
 
           {vaultPassphraseNeeded && hasVault && (
             <p className="text-sm text-muted-foreground">
@@ -348,10 +376,10 @@ export function WalletManagementScreen() {
             </p>
           )}
 
-          {hasVault ? (
+          {hasVault && (
             <>
               <div className="space-y-3">
-                <h2 className="text-sm font-semibold">Create wallet</h2>
+                <h2 className="text-sm font-semibold">Create more accounts</h2>
                 <div className="space-y-2">
                   <Label htmlFor="create-accounts-count">
                     How many new accounts would you like to create?
@@ -519,29 +547,41 @@ export function WalletManagementScreen() {
                   no extended public key — their paths are fully hardened
                   — so use the address itself.
                 </p>
-                <div className="space-y-2">
-                  <Label htmlFor="export-chain-search">
-                    Search chains
-                  </Label>
-                  <Input
-                    id="export-chain-search"
-                    type="search"
-                    placeholder="Search by name, symbol or chain ID"
-                    value={exportQuery}
-                    onChange={(event) => setExportQuery(event.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {exportVisible.length} of {exportChains.length} chains.
-                </p>
-                {exportVisible.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No chains match &ldquo;{exportNeedle}&rdquo;. Try a name,
-                    symbol or chain ID.
+                {/* Lane 5: the 84-row key list used to render in full
+                    and make this page ~18,000 px tall on a phone,
+                    burying the watch-only section below it. The keys
+                    are a bot power feature; they collapse into a
+                    disclosure. Everything inside is unchanged. */}
+                <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-ink">
+                    Show the extended public keys
+                  </summary>
+                  {/* Merge (Lane 5 + Lane 6): Lane 6's search lives
+                      inside Lane 5's disclosure, so the 84-row list is
+                      collapsed until asked for and searchable once open. */}
+                  <div className="mt-3 space-y-2">
+                    <Label htmlFor="export-chain-search">
+                      Search chains
+                    </Label>
+                    <Input
+                      id="export-chain-search"
+                      type="search"
+                      placeholder="Search by name, symbol or chain ID"
+                      value={exportQuery}
+                      onChange={(event) => setExportQuery(event.target.value)}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {exportVisible.length} of {exportChains.length} chains.
                   </p>
-                ) : (
-                <ul className="space-y-2">
+                  {exportVisible.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No chains match &ldquo;{exportNeedle}&rdquo;. Try a name,
+                      symbol or chain ID.
+                    </p>
+                  ) : (
+                  <ul className="mt-3 space-y-2">
                   {exportVisible.map(({ id, name }) => {
                     const isSingleAddress = id === "ton" || id === "sol";
                     const shown = shownKeys[id];
@@ -603,28 +643,13 @@ export function WalletManagementScreen() {
                 </ul>
                 )}
                 {exportError && (
-                  <p role="alert" className="text-sm text-destructive">
+                  <p role="alert" className="mt-3 text-sm text-destructive">
                     {exportError}
                   </p>
                 )}
+                </details>
               </div>
             </>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                You don&apos;t have a wallet yet. Create one from a new
-                recovery phrase, or import the phrase of a wallet you
-                already have.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button type="button" asChild>
-                  <Link to="/create-wallet">Create a wallet</Link>
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link to="/import-wallet">Import a wallet</Link>
-                </Button>
-              </div>
-            </div>
           )}
         </CardContent>
       </Card>
@@ -638,57 +663,102 @@ export function WalletManagementScreen() {
             from them. To stop watching one, choose “Forget stored key”.
           </p>
           <ul className="space-y-4">
-          {watchChains.map(({ id, name }) => {
-            const wallet = xpubs[id];
-            if (!wallet) return null;
-            const shortXpub = `${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`;
-            // The watched address is the first derived address for the
-            // entry (for an address entry that IS the address; for an
-            // xpub entry its first derived address) — the same address
-            // the refresh path reads. Older mocked contexts may not
-            // provide addresses; fall back to the stored value.
-            const watchedAddress =
-              addresses[id]?.[0]?.address ?? wallet.xpub;
-
-            return (
-              <li key={id}>
-                <Card radius="xl">
-                  <CardHeader gap="md" className="sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <ChainLogo chain={id} />
-                      <div className="min-w-0 space-y-1">
-                        <span className="flex items-center gap-2">
-                          <CardTitle>{name}</CardTitle>
-                          {/* Lane 6 redesign: the row itself says
-                              Watch-only — the section heading above was
-                              the only label, and it scrolls away. */}
-                          <Badge>Watch-only</Badge>
-                        </span>
-                        <p className="break-words text-sm text-muted-foreground">
-                          {wallet.label || "Unlabelled wallet"}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => removeXpub(id)}
-                      aria-label={`Forget stored ${name} key`}
-                    >
-                      Forget stored key
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    <span className="sr-only">{id === "ton" ? "TON public address: " : "Extended public key: "}</span>
-                    <code className="break-all text-sm">{shortXpub}</code>
-                    <div className="mt-2">
-                      <WatchOnlyBalance chain={id} address={watchedAddress} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </li>
-            );
-          })}
+          {(() => {
+            // Lane 5: one import is one card. A plain 0x address fans
+            // out to 59 chains, and the old code rendered a full Card
+            // per chain — one watched address was 59 cards tall, and
+            // the section sat at y=17,628 on a 390 px phone. The group
+            // keeps the same per-chain balance (same component, same
+            // fetch) as one compact row each, with the same per-chain
+            // "Forget stored key" control and the same truncated value.
+            const groups: Record<
+              string,
+              { id: ChainId; name: string; wallet: WatchOnlyWallet }[]
+            > = {};
+            for (const { id, name } of watchChains) {
+              const wallet = xpubs[id];
+              if (!wallet) continue;
+              (groups[wallet.xpub] ??= []).push({ id, name, wallet });
+            }
+            return Object.entries(groups).map(([value, entries]) => {
+              const first = entries[0];
+              if (first === undefined) return null;
+              const shortXpub = `${value.slice(0, 12)}…${value.slice(-8)}`;
+              return (
+                <li key={value}>
+                  <Card radius="xl">
+                    <CardHeader>
+                      {/* Merge (Lane 5 + Lane 6): Lane 5's grouped card,
+                          with Lane 6's Watch-only badge on the group, so
+                          the label is visible without scrolling to the
+                          section heading. */}
+                      <span className="flex items-center gap-2">
+                        <CardTitle>
+                          {first.wallet.label || 'Unlabelled wallet'}
+                        </CardTitle>
+                        <Badge>Watch-only</Badge>
+                      </span>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <span className="sr-only">
+                        Stored public key or address:{' '}
+                      </span>
+                      <code className="block break-all text-sm">
+                        {shortXpub}
+                      </code>
+                      <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+                        {entries.map(({ id, name, wallet }) => {
+                          // The watched address is the first derived
+                          // address for the entry (for an address entry
+                          // that IS the address; for an xpub entry its
+                          // first derived address) — the same address
+                          // the refresh path reads. Older mocked
+                          // contexts may not provide addresses; fall
+                          // back to the stored value.
+                          const watchedAddress =
+                            addresses[id]?.[0]?.address ?? wallet.xpub;
+                          return (
+                            <li
+                              key={id}
+                              className="px-3 py-2"
+                            >
+                              {/* Lane 5: the balance gets the full row
+                                  width below the header line. Squeezed
+                                  into the same flex row as the Forget
+                                  button it wrapped to three lines
+                                  ("Balance:" / number / ticker) at 390
+                                  px — the balance is the point of the
+                                  row, so it reads on one line now. */}
+                              <div className="flex items-start gap-3">
+                                <ChainLogo chain={id} size={32} />
+                                <p className="min-w-0 flex-1 text-sm font-semibold">
+                                  {name}
+                                </p>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => removeXpub(id)}
+                                  aria-label={`Forget stored ${name} key`}
+                                >
+                                  Forget stored key
+                                </Button>
+                              </div>
+                              <div className="mt-1">
+                                <WatchOnlyBalance
+                                  chain={id}
+                                  address={watchedAddress}
+                                />
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            });
+          })()}
           </ul>
         </div>
       ) : (

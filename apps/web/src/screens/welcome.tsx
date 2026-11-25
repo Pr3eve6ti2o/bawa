@@ -10,22 +10,16 @@ import {
 } from "../ui/components/card";
 import { useWallet } from "../state/wallet-context";
 
-// Lane 1 redesign (DESIGN-SYSTEM §6, Welcome): a new user's only jobs
-// are Create or Import, so the actions lead. DOM order is the mobile
-// order — short intro, then the two action cards, then the detail —
-// while the desktop grid keeps the actions in the sticky right column
-// (they already sat there, visible without scrolling). Every sentence
-// below is the previous copy, re-split, not rewritten: the intro keeps
-// paragraph 1 plus the sending-off sentence, the details card keeps the
-// rest of paragraph 2, the guide paragraph and the feature list. The
-// in-card "Network MAINNET" bar is gone: it duplicated the header
-// Mainnet/Devnet pill (same info, two places); the pill stays the one
-// network indicator. All test-asserted strings are kept verbatim.
 export function WelcomeScreen() {
   const { devnetEnabled } = useWallet();
   return (
-    <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6 lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
-      <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
+    // Merge (Lane 1 + Lane 5): Lane 5's fork-first mobile order (the
+    // Create/Import cards render before the intro below lg) and its
+    // "Watch a wallet" tertiary entry, with Lane 1's removal of the
+    // in-card Network bar kept — it duplicated the header
+    // Mainnet/Devnet pill, and the aside below still states the mode.
+    <section aria-labelledby="welcome-title" className="mx-auto flex w-full max-w-[480px] flex-col space-y-6 lg:grid lg:max-w-none lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
+      <div className="order-2 rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <div aria-hidden="true" className="flex items-end gap-3 text-ink">
           <BawaIcon name="wallet" className="size-16 -rotate-3" />
           <BawaIcon name="coins" className="size-10 rotate-3" />
@@ -43,49 +37,11 @@ export function WelcomeScreen() {
           encrypted with your vault password. They never leave it.
         </p>
         <p className="mt-2 max-w-xl text-body-md text-ink">
-          Sending is switched off until it is separately approved, so
-          nothing here can move your funds. No account, no sign-up.
-        </p>
-      </div>
-
-      <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
-        <Card radius="xl" tone="card">
-          <CardHeader className="px-6 pt-6">
-            <CardTitle>Create a wallet</CardTitle>
-            <CardDescription>
-              One recovery phrase for 84 chains. Set a vault password,
-              write down 24 words, and your wallet is ready.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild size="lg" className="w-full">
-              <Link to="/create-wallet">Create a wallet</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card radius="xl" tone="card">
-          <CardHeader className="px-6 pt-6">
-            <CardTitle>Import a wallet</CardTitle>
-            <CardDescription>
-              Restore a wallet from its recovery phrase, or paste an extended
-              public key (xpub) to view its derived addresses watch-only.
-              Never paste recovery words, seeds or private keys into a
-              watch-only import.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/import-wallet">Import a wallet</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-2">
-        <p className="max-w-xl text-body-md text-ink">
           It shows your real balances and live prices, gives you a
           receiving address and QR code for every chain, and lets you watch
           any wallet from its public key — without holding its secrets.
+          Sending is switched off until it is separately approved, so
+          nothing here can move your funds. No account, no sign-up.
         </p>
         <p className="mt-2 max-w-xl text-body-md text-ink">
           Bawa is also a guide for humans and AI agents that builds wallets
@@ -121,7 +77,53 @@ export function WelcomeScreen() {
         </ul>
       </div>
 
-      <aside className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:col-span-3 lg:col-start-1 lg:row-start-3">
+      <div className="order-1 grid gap-4 lg:order-none lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
+        <Card radius="xl" tone="card">
+          <CardHeader className="px-6 pt-6">
+            <CardTitle>Create a wallet</CardTitle>
+            <CardDescription>
+              One recovery phrase for 84 chains. Set a vault password,
+              write down 24 words, and your wallet is ready.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="mt-auto px-6 pb-6">
+            <Button asChild size="lg" className="w-full">
+              <Link to="/create-wallet">Create a wallet</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card radius="xl" tone="card">
+          <CardHeader className="px-6 pt-6">
+            <CardTitle>Import a wallet</CardTitle>
+            <CardDescription>
+              Restore a wallet from its recovery phrase, or paste an extended
+              public key (xpub) to view its derived addresses watch-only.
+              Never paste recovery words, seeds or private keys into a
+              watch-only import.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="mt-auto px-6 pb-6">
+            <Button asChild variant="outline" size="lg" className="w-full">
+              <Link to="/import-wallet">Import a wallet</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        {/* Lane 5: Watch-only is the tertiary entry (DESIGN-SYSTEM §6).
+            It opens Import straight on the Watch-only tab, so a user
+            who only wants to look never has to find the tab. */}
+        <p className="px-2 text-center text-sm leading-relaxed text-ink">
+          Just want to look?{' '}
+          <Link
+            to="/import-wallet?mode=watch-only"
+            className="font-medium underline underline-offset-4"
+          >
+            Watch a wallet
+          </Link>{' '}
+          from its public address — no wallet needed.
+        </p>
+      </div>
+
+      <aside className="order-3 space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <p>
           {devnetEnabled
             ? "Devnet test mode. This wallet connects to a test network with valueless test tokens."

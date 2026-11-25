@@ -16,9 +16,12 @@
 // role="option" rows. Arrow keys move, Enter picks, Escape closes.
 import { useMemo, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import type { ChainId } from '../engine/boundary';
-import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
+import { chainConfig, filterChains, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
+
+/** Re-exported from wallet/chains (Lane 5) so existing importers keep working. */
+export { filterChains };
 
 /** localStorage key for the recently picked watch-only chains. */
 export const RECENT_CHAINS_KEY = 'bawa:watch-only-recent-chains';
@@ -26,20 +29,6 @@ export const RECENT_CHAINS_KEY = 'bawa:watch-only-recent-chains';
 export const MAX_RECENT_CHAINS = 5;
 
 const VALID_CHAIN_IDS = new Set<ChainId>(SUPPORTED_CHAINS);
-
-/** Chains whose name, symbol or id contains the query (case-insensitive). */
-export function filterChains(chains: readonly ChainId[], query: string): ChainId[] {
-  const needle = query.trim().toLowerCase();
-  if (needle === '') return [...chains];
-  return chains.filter((chain) => {
-    const config = chainConfig(chain);
-    return (
-      config.displayName.toLowerCase().includes(needle) ||
-      config.symbol.toLowerCase().includes(needle) ||
-      chain.toLowerCase().includes(needle)
-    );
-  });
-}
 
 /** The stored recents, newest first, with stale ids dropped. */
 export function readRecentChains(): ChainId[] {

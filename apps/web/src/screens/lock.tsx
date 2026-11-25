@@ -354,6 +354,10 @@ export function LockScreen() {
             </>
           )}
 
+          {/* Lane 5: the auto-lock note only applies with a vault. With
+              no vault it told a user with no wallet to "configure it in
+              Security settings" — dead guidance on the setup screen. */}
+          {!noVault && (
           <p
             style={{
               margin: 0,
@@ -365,6 +369,7 @@ export function LockScreen() {
             Auto-lock affects signing access, not watch-only use. Configure it in
             Security settings.
           </p>
+          )}
         </CardContent>
       </Card>
     </div>

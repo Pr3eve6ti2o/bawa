@@ -1733,6 +1733,30 @@ export function availableFor(capability: CapabilityName): ChainId[] {
   );
 }
 
+/**
+ * Chains whose name, symbol or id contains the query (case-insensitive).
+ * Lane 5: moved here from chain-search-select — the Add Token dialog
+ * and the Receive token step filter by the same rule, and importing the
+ * helper from the picker pulled the whole picker component (and its
+ * logo + input imports) into their chunks. The picker re-exports this,
+ * so its tests and existing importers keep working unchanged.
+ */
+export function filterChains(
+  chains: readonly ChainId[],
+  query: string,
+): ChainId[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === '') return [...chains];
+  return chains.filter((chain) => {
+    const config = chainConfig(chain);
+    return (
+      config.displayName.toLowerCase().includes(needle) ||
+      config.symbol.toLowerCase().includes(needle) ||
+      chain.toLowerCase().includes(needle)
+    );
+  });
+}
+
 /** Throws a typed error naming the exact unavailable combination. */
 export function assertSupported(chain: ChainId, capability: CapabilityName): void {
   const config = chainConfig(chain);

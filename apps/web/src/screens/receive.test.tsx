@@ -12,40 +12,59 @@ vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
 }));
 
-vi.mock('../wallet/chains', () => ({
-  availableFor: vi.fn(),
-  chainConfig: vi.fn(),
-  // Lane A: every chain rotates, SOL and TON included.
-  canRotateReceiveAddress: () => true,
-  SUPPORTED_CHAINS: [
-    'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
-  ],
-  // payment-links.ts (EIP-681) reads evmChainId off CHAINS.
-  CHAINS: {
-    btc: { evmChainId: null },
-    eth: { evmChainId: 1 },
-    trx: { evmChainId: null },
-    ton: { evmChainId: null },
-    sol: { evmChainId: null },
-    bsc: { evmChainId: 56 },
-    matic: { evmChainId: 137 },
-    arb: { evmChainId: 42161 },
-    op: { evmChainId: 10 },
-    base: { evmChainId: 8453 },
-    avax: { evmChainId: 43114 },
-    gnosis: { evmChainId: 100 },
-    celo: { evmChainId: 42220 },
-    linea: { evmChainId: 59144 },
-    mantle: { evmChainId: 5000 },
-    scroll: { evmChainId: 534352 },
-    opbnb: { evmChainId: 204 },
-    metis: { evmChainId: 1088 },
-    aurora: { evmChainId: 1313161554 },
-    fantom: { evmChainId: 250 },
-    ltc: { evmChainId: null },
-    doge: { evmChainId: null },
-  },
-}));
+vi.mock('../wallet/chains', () => {
+  const chainConfig = vi.fn();
+  return {
+    availableFor: vi.fn(),
+    chainConfig,
+    // Merge fix (Lane 5 moved filterChains here from
+    // chain-search-select): the mock must provide it, because Receive
+    // imports the picker, which re-exports it. Same rule as the real
+    // helper, driven by the mocked chainConfig.
+    filterChains: (chains: readonly ChainId[], query: string): ChainId[] => {
+      const needle = String(query).trim().toLowerCase();
+      if (needle === '') return [...chains];
+      return chains.filter((chain) => {
+        const config = chainConfig(chain);
+        return (
+          config.displayName.toLowerCase().includes(needle) ||
+          config.symbol.toLowerCase().includes(needle) ||
+          chain.toLowerCase().includes(needle)
+        );
+      });
+    },
+    // Lane A: every chain rotates, SOL and TON included.
+    canRotateReceiveAddress: () => true,
+    SUPPORTED_CHAINS: [
+      'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
+    ],
+    // payment-links.ts (EIP-681) reads evmChainId off CHAINS.
+    CHAINS: {
+      btc: { evmChainId: null },
+      eth: { evmChainId: 1 },
+      trx: { evmChainId: null },
+      ton: { evmChainId: null },
+      sol: { evmChainId: null },
+      bsc: { evmChainId: 56 },
+      matic: { evmChainId: 137 },
+      arb: { evmChainId: 42161 },
+      op: { evmChainId: 10 },
+      base: { evmChainId: 8453 },
+      avax: { evmChainId: 43114 },
+      gnosis: { evmChainId: 100 },
+      celo: { evmChainId: 42220 },
+      linea: { evmChainId: 59144 },
+      mantle: { evmChainId: 5000 },
+      scroll: { evmChainId: 534352 },
+      opbnb: { evmChainId: 204 },
+      metis: { evmChainId: 1088 },
+      aurora: { evmChainId: 1313161554 },
+      fantom: { evmChainId: 250 },
+      ltc: { evmChainId: null },
+      doge: { evmChainId: null },
+    },
+  };
+});
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
