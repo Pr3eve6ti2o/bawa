@@ -130,7 +130,7 @@ TON testnet, app sends 1–3 with transaction hashes;
 
 <!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
      Regenerate when chains.ts changes; the CI drift check fails otherwise.
-     Generated 2026-11-26 from chains.ts at 02e4d2f0f3c342b0f738855bcb3ab8823e2da61a. -->
+     Generated 2026-11-26 from chains.ts at 2a6cd801d24c67de73e29efe1f061343fd13a750. -->
 
 | Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify | simulate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
