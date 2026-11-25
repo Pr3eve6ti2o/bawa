@@ -9,6 +9,11 @@
 // Only data the caller already has is shown; no risk score is invented.
 // `from` is optional so existing callers keep working unchanged.
 import { Button } from '../ui/components/button';
+import { CopyButton } from '../ui/components/copy-button';
+import {
+  isSameAddress,
+  shortenAddress,
+} from '../wallet/address-detection';
 import {
   resolveContractCall,
   type ClearSigningInput,
@@ -32,6 +37,13 @@ export type SendReviewProps = {
   fiatAmount?: string;
   /** Token contract / mint / master, when the send is a token transfer. Shown as its own row so the signer can check it. */
   tokenContract?: string;
+  /**
+   * Copycat warning from the details step, when the selected token is
+   * unverified but a verified token with the same name or symbol
+   * exists on this chain under a different contract. Shown as its own
+   * alert so the signer checks the contract before signing.
+   */
+  tokenWarning?: string;
   /**
    * EVM contract call this send makes, when it makes one (ERC-20
    * token sends). Shown as a human-readable clear-signing section
@@ -88,6 +100,7 @@ export function SendReview({
   feeNote,
   fiatAmount,
   tokenContract,
+  tokenWarning,
   contractCall,
   disabledReason,
   stage,
@@ -98,6 +111,10 @@ export function SendReview({
   const { heading, helper } = approvalStageCopy[stage];
   const clearSigning =
     contractCall === undefined ? null : resolveContractCall(contractCall);
+  // Lane 3 (UX-major): a send to your own address is worth one plain
+  // line on the review — it is usually a mistake, and never a secret.
+  const isSelfSend =
+    from !== undefined && from !== '' && isSameAddress(recipient, from);
 
   return (
     <section
@@ -146,8 +163,22 @@ export function SendReview({
 
           <div className="flex items-start justify-between gap-4 py-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Recipient</dt>
-            <dd className="min-w-0 break-all text-right text-sm">
-              {recipient}
+            <dd className="min-w-0 text-right text-sm">
+              {/* Lane 3 (UX-major): shortened, full on tap — the signer
+                  checks the short form at a glance and the whole
+                  address, with Copy, before signing. The full value is
+                  never lost: a shortened address is never the only copy. */}
+              <details>
+                <summary className="cursor-pointer font-mono">
+                  {shortenAddress(recipient)}
+                </summary>
+                <p className="mt-1 break-all font-mono">{recipient}</p>
+                <CopyButton
+                  value={recipient}
+                  label="Copy recipient address"
+                  className="mt-2"
+                />
+              </details>
             </dd>
           </div>
 
@@ -182,6 +213,22 @@ export function SendReview({
           </div>
         </dl>
       </div>
+
+      {isSelfSend && (
+        <p role="note" className="text-sm text-ink">
+          You are sending to your own address.
+        </p>
+      )}
+
+      {tokenWarning !== undefined && (
+        <div
+          role="alert"
+          className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-3 text-warning-text"
+        >
+          <p className="font-semibold">Check the token</p>
+          <p className="break-words text-sm">{tokenWarning}</p>
+        </div>
+      )}
 
       {contractCall !== undefined && (
         <div className="space-y-2 rounded-xl border border-border p-4">

@@ -95,6 +95,10 @@ import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
 import { ChainSearchSelect, SEND_RECENT_CHAINS_KEY } from './chain-search-select';
 import type { ClearSigningInput } from '../wallet/clear-signing';
+import {
+  describeRecipientDetection,
+  findVerifiedNamesake,
+} from '../wallet/address-detection';
 import { ChainLogo, TokenLogo } from './token-logo';
 import { TokenPickerRow } from './token-picker-row';
 import type { SendApprovalStage } from './send-approval';
@@ -237,6 +241,30 @@ export function SendScreen() {
 
   const from = (vaultAddresses[chain] ?? [])[0] ?? '';
   const config = chainConfig(chain);
+  // Lane 3 (UX-major): smart detection for the recipient field — what
+  // the pasted value looks like, and whether it belongs to this
+  // network. Pure and synchronous, so it updates as the user types;
+  // it never blocks Review and never approves a send (validateRecipient
+  // still decides). The copycat check is local registry data only: an
+  // unverified selected token sharing a name/symbol with a verified
+  // token on the same chain.
+  const recipientDetection = useMemo(
+    () =>
+      describeRecipientDetection({
+        value: recipient,
+        chain,
+        chainName: config.displayName,
+        chainIsEvm: isEvmTxChain(chain),
+        from,
+        tokenContract: selectedToken?.contract,
+        tokenSymbol: selectedToken?.symbol,
+      }),
+    [recipient, chain, config.displayName, from, selectedToken],
+  );
+  const tokenNamesake =
+    selectedToken === null
+      ? null
+      : findVerifiedNamesake(selectedToken, allTokens);
   // Devnet test-network name, or undefined when this chain has no
   // test network. The picker never offers such a chain, but a shared
   // send link can force one (applyPrefill sets the chain and jumps to
@@ -1769,6 +1797,19 @@ export function SendScreen() {
           <p className="text-sm text-muted-foreground">
             Check the address — sent funds cannot be reversed.
           </p>
+          {/* Lane 3 (UX-major): copycat warning — the selected token is
+              unverified, but a verified token with the same name or
+              symbol exists on this chain under a different contract.
+              The token is never called a scam: the user is told to
+              check the contract address. */}
+          {tokenNamesake !== null && selectedToken !== null && (
+            <p
+              role="alert"
+              className="rounded-xl border border-warning-border bg-warning-surface p-3 text-sm text-warning-text"
+            >
+              {`Unverified ${selectedToken.symbol} — a verified ${tokenNamesake.symbol} exists on ${config.displayName}. Check the contract address before sending.`}
+            </p>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="send-recipient">Recipient address</Label>
@@ -1814,6 +1855,19 @@ export function SendScreen() {
             {recipientError && (
               <p id="send-recipient-error" role="alert" className="text-sm text-ink bawa-squiggle-underline">
                 {recipientError}
+              </p>
+            )}
+            {/* Lane 3 (UX-major): what the pasted value looks like — the
+                network it belongs to, or a warning when it belongs to
+                another network, is a secret, or is the token's own
+                contract. Advisory only: Review is still gated by
+                validateRecipient, and a warning never blocks it. */}
+            {recipientDetection !== null && (
+              <p
+                role={recipientDetection.tone === 'warn' ? 'alert' : 'note'}
+                className="text-sm text-ink"
+              >
+                {recipientDetection.text}
               </p>
             )}
             {pasteNote !== null ? (
@@ -1950,6 +2004,11 @@ export function SendScreen() {
             feeNote={preview.feeNote}
             tokenContract={selectedToken?.contract}
             contractCall={reviewContractCall}
+            tokenWarning={
+              tokenNamesake !== null && selectedToken !== null
+                ? `Unverified ${selectedToken.symbol} — a verified ${tokenNamesake.symbol} exists on ${config.displayName}. Check the contract address before signing.`
+                : undefined
+            }
             disabledReason={BROADCAST_DISABLED_MESSAGE}
             stage={approvalStage}
             devnetNetworkName={devnetName}
