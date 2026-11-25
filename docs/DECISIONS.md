@@ -1983,3 +1983,108 @@ desktop-layout-v2.
    regression test. Proved live in CDP: NOTOK, NOTOK, then status 1
    with the real tx, and 0x75dfb5f5... renders under Recent
    transactions (five real Linea txs for the watched address).
+
+## §24 — QR share-card programme, Lane E (implement + verify + merge) — 2026-11-25
+
+**Decision: ship the four QR-card templates (B Paper default, A Dark
+Teal, C Minimal, D Poster) with the PNG exporter drawing the same
+card as the in-app one, and a template picker on Receive driving
+both. The palette exception, the A centre-mark fix, the in-app wrap
+gap, and the bundle overage below are recorded here, not hidden.**
+
+What was done (branch `panel-rebuild/qr-cards-lane-e`, merged into
+`panel-rebuild/token-gaps`):
+
+- `apps/web/src/wallet/payment-links.ts`: `qrCardToPngBlob` /
+  `qrCardToPngFile` rewritten in place (no parallel exporter) — the
+  full card per template, measured first then drawn, 1080 px export
+  from Receive, 640 px default. `QrCardTemplate`, `QR_CARD_TEMPLATES`,
+  `DEFAULT_QR_CARD_TEMPLATE = 'b'`, `QR_CARD_TEMPLATE_QR`.
+- `apps/web/src/screens/qr-card.tsx`: the four in-app templates
+  (`data-template`, default B); `NetworkSubtitle` bolds the network
+  name in every template.
+- `apps/web/src/screens/receive.tsx`: "Card style — tap to switch"
+  picker (all four templates, `aria-pressed`, active `bg-sun`)
+  driving the card and the PNG; share/download/copy-link flow itself
+  unchanged.
+- E2E: `e2e/qr-card-templates.spec.ts` (every template shares a PNG
+  decoding to the payment URI; viewports 390/820/1440/1919) and
+  `e2e/png-decode.ts` (the decoder extracted from
+  `item4-qr-share.spec.ts`, which now imports it).
+
+1. **Palette exception — the one confined breach of the 4-colour
+   cap.** The templates need their colours (dark-teal family, two
+   greys, near-black, pre-blended white-dim for D's subtitle), so
+   ten named `--qr-*` tokens were added to `globals.css` (`--qr-teal`,
+   `--qr-teal-deep`, `--qr-teal-band`, `--qr-teal-copy`, `--qr-bar`,
+   `--qr-muted`, `--qr-grey`, `--qr-faint`, `--qr-nearblack`,
+   `--qr-white-dim`), exposed as `bg-qr-*` / `text-qr-*` utilities,
+   and exactly those ten literals (+ the minified `#111` form of
+   `#111111`) were added to the `palette-audit.mjs` allowlist and to
+   the `globals.test.ts` palette assertion. The cap still governs the
+   whole app: the tokens are used ONLY by the QR card and its PNG
+   exporter, and no further literal may be added without a recorded
+   decision here. Raw arbitrary hex in `qr-card.tsx` was replaced by
+   the token utilities; the audit passes (40 approved literals).
+2. **Template A centre mark — the white diamond, not a white
+   circle.** First viewed PNG showed a blank white circle on the
+   coral disc: the repo's chain logos carry the glyph on a near-white
+   disc (ETH asset measured: disc luminance 244, glyph <= 131), so a
+   plain `source-in` white fill keeps the whole disc. Fix, in both
+   the PNG exporter (`buildWhiteSilhouette`) and the in-app hook
+   (`useDiscLogoImage`): after drawing the logo, pixels brighter
+   than luminance 160 go transparent, then the `source-in` white
+   fill — the dark glyph alone becomes the white mark. A logo whose
+   glyph is itself light degrades to no mark rather than a white
+   circle. Unit test proves the threshold (fake pixels 50/244/100/244
+   -> alphas 255/0/255/0). Re-viewed PNG shows the white ETH diamond
+   on coral, as in Lane D's preview.
+3. **In-app address wrap — known parity gap, accepted.** The PNG is
+   full-bleed 352 px and wraps a 42-char address to 2 lines in A (21
+   per line), as specified. In-app the card is 322 px wide (the
+   screen's locked `Card padding="sm"` + content column), so the A
+   footer address wraps to 3 lines at 390 px (measured: card 322,
+   band 274, address container 178 px at 17 px JetBrains Mono) and
+   B's address box to 2 lines instead of the PNG's 1. Fixing it
+   would need shrinking the address font below the design size or
+   widening the card past the locked layout — both worse than the
+   extra line. The full address is shown in-app, nothing truncated
+   or overlapping; the shared PNG is exactly per spec. At desktop
+   widths the in-app card wraps to 2 lines.
+4. **Bundle over budget — reported, not re-baselined.** Merged
+   tree: total JS 4,180,185 bytes against the 4,177,711 budget
+   (over by 2,474, 0.06%); largest chunk 2,905,015 (under the
+   3,050,000 limit). The lane adds 19,655 bytes over the
+   token-gaps `ed412d6` baseline (4,160,530); the headroom was
+   17,181. Two legitimate shrinks were tried (shared subtitle /
+   address draw helpers, D title de-duplication) and saved ~60
+   bytes; no designed functionality was cut to fit. The CI bundle
+   gate will fail on token-gaps until the owner orders a
+   re-baseline or a trim.
+5. **Template A stays conditional on a phone decode test.** The
+   jsQR matrix below proves A decodes in Chromium, but A is
+   inverted (white on dark teal) and the phone-camera matrix (iOS +
+   Android) cannot be done on the VM — unconfirmed, do not claim it.
+
+**Decode matrix (repo jsQR, `inversionAttempts: "attemptBoth"`,
+real exporter + real app SVGs for logo-on, Python `qrcode` EC-H
+SVGs for logo-off): 32/32 passed** — 2 payloads (bare address v7
+45x45, payment URI `ethereum:0x…@1` v8 49x49) x 4 templates x logo
+on/off x 640/1080 px. Extras 9/9: D at the 320 px export floor (300
+is below the exporter's 320 minimum and is rejected, not rendered);
+Solana base58 (44 chars) in A/D at 640/1080; Bitcoin bech32 (62
+chars) in A/D at 1080, including one logo-on cell (disc over
+non-excavated modules). The 62-char address wraps to 3 lines in A
+(the band grows, no clipping) and 2 in D. Harness note: the first
+matrix run failed 16/16 logo-on cells because the extraction read
+the SVGs with `outerHTML`, which drops the `xmlns` the data-URL
+image load needs — the app serialises with `XMLSerializer`, which
+keeps it; the harness was fixed to do the same and then passed
+32/32. The matrix harness itself was temporary and deleted.
+
+**Gates on the merged tree:** tsc 0, build 0 (palette audit
+passed), vitest 2809 passed / 5 skipped / 99 files, eslint 0, E2E
+`qr-card-templates` + `item4-qr-share` 2/2 passed. Viewed by eye:
+all four PNGs against the Bitget screenshot and Lane D's previews,
+and the Receive screen at 390/820/1440/1919.
+

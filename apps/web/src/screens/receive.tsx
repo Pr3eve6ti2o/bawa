@@ -5,7 +5,7 @@ import { useWallet } from '../state/wallet-context';
 import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
-import { buildBawaSendLink, buildPaymentUri, qrCardToPngFile } from '../wallet/payment-links';
+import { buildBawaSendLink, buildPaymentUri, DEFAULT_QR_CARD_TEMPLATE, QR_CARD_TEMPLATES, qrCardToPngFile, type QrCardTemplate } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
   isDefaultToken,
@@ -18,7 +18,7 @@ import {
 } from '../wallet/tokens';
 import { AddTokenDialog } from './add-token';
 import { filterChains } from './chain-search-select';
-import { QrCard, qrCardTokenLabel } from './qr-card';
+import { QrCard, qrCardSubtitle, qrCardTitle, qrCardTokenLabel, qrCardTokenSubline } from './qr-card';
 import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
 import { TokenPickerRow } from './token-picker-row';
 import { Alert, AlertDescription } from '../ui/components/alert';
@@ -142,6 +142,10 @@ export function ReceiveScreen() {
   // Item 20: stepped flow — network, then token, then amount + QR.
   const [step, setStep] = useState<'chain' | 'token' | 'details'>('chain');
   const [template, setTemplate] = useState<QrTemplate | null>(null);
+  // QR-cards programme, Lane E: which of the four card templates
+  // the card renders in — and which one Share/Download draw to PNG.
+  // Default B (Paper), Bawa's own system.
+  const [cardTemplate, setCardTemplate] = useState<QrCardTemplate>(DEFAULT_QR_CARD_TEMPLATE);
   // Lane H: the network picker — a search query, and whether the
   // grouped "All networks" list is open. Both reset when a network
   // is picked (selectChain below), so the next visit starts clean.
@@ -440,6 +444,14 @@ export function ReceiveScreen() {
   async function qrPngFile(): Promise<File | null> {
     const svg = qrRef.current?.querySelector('#qr-card-qr svg');
     if (!svg || !address || !chain) return null;
+    // The PNG is the same card the screen shows, in the picked
+    // template — PNG parity first, template variants second. The
+    // export is 1080 px wide (the DESIGN.md target); the 640 px
+    // floor is the exporter's default for its other callers.
+    const networkName =
+      devnetEnabled
+        ? (devnetChainConfigOrUndefined(chain)?.devnetName ?? config.displayName)
+        : config.displayName;
     try {
       return await qrCardToPngFile(
         new XMLSerializer().serializeToString(svg),
@@ -447,6 +459,21 @@ export function ReceiveScreen() {
           amountText: amountText ?? 'Any amount',
           address,
           tokenLabel: qrCardTokenLabel(effectiveToken, chain),
+          title: qrCardTitle(effectiveToken, chain),
+          subtitle: qrCardSubtitle(
+            chain,
+            devnetEnabled
+              ? (devnetChainConfigOrUndefined(chain)?.devnetName ??
+                config.displayName)
+              : undefined,
+          ),
+          networkName,
+          subline:
+            effectiveToken === null
+              ? undefined
+              : qrCardTokenSubline(effectiveToken, chain),
+          template: cardTemplate,
+          width: 1080,
           tokenLogoSrc: tokenLogoFor(
             effectiveToken === null ? config.symbol : effectiveToken.symbol,
           ),
@@ -807,7 +834,39 @@ export function ReceiveScreen() {
                       config.displayName)
                     : undefined
                 }
+                template={cardTemplate}
               />
+            </div>
+            {/* QR-cards programme, Lane E: the card-style picker —
+                the same segmented-control idiom as the QR-type row
+                below it (active segment sun, aria-pressed). Picking
+                a style restyles the card above and drives which
+                template Share/Download draw to PNG. Default Paper. */}
+            <p className="w-full text-center text-sm font-semibold text-ink">
+              Card style — tap to switch
+            </p>
+            <div
+              role="group"
+              aria-label="Card style"
+              className="flex w-full gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
+            >
+              {QR_CARD_TEMPLATES.map((candidate) => {
+                const active = candidate.id === cardTemplate;
+                return (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    aria-pressed={active}
+                    aria-label={`Show ${candidate.label} card style`}
+                    title={candidate.hint}
+                    onClick={() => setCardTemplate(candidate.id)}
+                    className={`flex flex-1 cursor-pointer flex-col items-center gap-0.5 rounded-bawa-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'hover:bg-sun'}`}
+                  >
+                    <span className="font-semibold">{candidate.label}</span>
+                    <span className="text-[10px] leading-tight">{candidate.hint}</span>
+                  </button>
+                );
+              })}
             </div>
             {paymentUriUnavailable && (
               <p className="text-sm text-ink">

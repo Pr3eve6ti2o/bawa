@@ -12,6 +12,7 @@ import {
   qrCardTokenSubline,
 } from './qr-card';
 import { chainConfig } from '../wallet/chains';
+import type { QrCardTemplate } from '../wallet/payment-links';
 import type { TokenRecord } from '../wallet/tokens';
 
 vi.mock('../wallet/chains', () => ({
@@ -139,6 +140,7 @@ describe('QrCard', () => {
     chain: ChainKey;
     onCopyAddress?: () => void;
     networkDisplayName?: string;
+    template?: QrCardTemplate;
   }) {
     vi.mocked(chainConfig).mockImplementation(
       (chain) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
@@ -190,10 +192,10 @@ describe('QrCard', () => {
       expect(card?.querySelector('[data-testid="qr-card-subtitle"]')?.textContent).toBe(
         'Only Base network assets can be received here.',
       );
-      // The QR is large (192 px) and carries the asset's mark in its centre.
+      // The QR is large (200 px) and carries the asset's mark in its centre.
       const qrSvg = card?.querySelector('#qr-card-qr svg');
       expect(qrSvg).not.toBeNull();
-      expect(qrSvg?.getAttribute('width')).toBe('192');
+      expect(qrSvg?.getAttribute('width')).toBe('200');
       expect(qrSvg?.querySelector('title')?.textContent).toBe(
         'ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&uint256=25000000',
       );
@@ -382,4 +384,96 @@ describe('QrCard', () => {
       await mounted.cleanup();
     }
   });
+
+describe('QrCard templates (QR-cards programme, Lane E)', () => {
+  const baseProps = {
+    qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+    amountText: '0.5 ETH',
+    address: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+    token: null,
+    chain: 'eth' as const,
+  };
+
+  it('defaults to the Paper template with the brand strip', async () => {
+    const mounted = await mountCard(baseProps);
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card?.getAttribute('data-template')).toBe('b');
+      expect(card?.textContent).toContain('Bawa Wallet');
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('renders Dark Teal with the inverted 218 px code and the Bawa link line', async () => {
+    const mounted = await mountCard({ ...baseProps, template: 'a' });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card?.getAttribute('data-template')).toBe('a');
+      const qrSvg = card?.querySelector('#qr-card-qr svg');
+      expect(qrSvg?.getAttribute('width')).toBe('218');
+      expect(card?.querySelector('[data-testid="qr-card-title"]')?.textContent).toBe(
+        'Receive ETH',
+      );
+      expect(card?.textContent).toContain('Open the Bawa link');
+      expect(card?.textContent).toContain('Bawa Wallet');
+      // A has no footer line — the link line takes its place.
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('renders Minimal with the instruction line and the Bawa wordmark', async () => {
+    const mounted = await mountCard({ ...baseProps, template: 'c' });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card?.getAttribute('data-template')).toBe('c');
+      const qrSvg = card?.querySelector('#qr-card-qr svg');
+      expect(qrSvg?.getAttribute('width')).toBe('216');
+      expect(
+        card?.querySelector('[data-testid="qr-card-instruction"]')?.textContent,
+      ).toBe('Scan or share this QR code to receive crypto.');
+      expect(card?.textContent).toContain('Bawa');
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('renders Poster with the sun underline and the ink address strip', async () => {
+    const mounted = await mountCard({ ...baseProps, template: 'd' });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card?.getAttribute('data-template')).toBe('d');
+      const qrSvg = card?.querySelector('#qr-card-qr svg');
+      expect(qrSvg?.getAttribute('width')).toBe('210');
+      expect(card?.querySelector('.bg-sun')).not.toBeNull();
+      expect(card?.querySelector('.bg-ink')).not.toBeNull();
+      expect(card?.textContent).toContain('Bawa Wallet');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('bolds the network name in the subtitle in every template', async () => {
+    for (const template of ['a', 'b', 'c', 'd'] as const) {
+      const mounted = await mountCard({ ...baseProps, template });
+      try {
+        const subtitle = mounted.div.querySelector(
+          '[data-testid="qr-card-subtitle"]',
+        );
+        expect(subtitle?.textContent).toBe(
+          'Only Ethereum network assets can be received here.',
+        );
+        expect(subtitle?.querySelector('strong')?.textContent).toBe('Ethereum');
+      } finally {
+        await mounted.cleanup();
+      }
+    }
+  });
+});
 });

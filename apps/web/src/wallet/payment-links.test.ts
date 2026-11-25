@@ -778,7 +778,7 @@ describe('qrSvgToPngFile — sharing the QR as an image (UI/UX fixes, item 4)', 
   });
 });
 
-describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1)', () => {
+describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-cards Lane E)', () => {
   const SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192"><rect width="192" height="192" fill="#FFFDF7"/><rect x="10" y="10" width="20" height="20" fill="#2B2B2B"/></svg>';
   const ADDRESS = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
@@ -786,45 +786,96 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1)', () =
     amountText: '25 USDC',
     address: ADDRESS,
     tokenLabel: 'usdc (base)',
+    title: 'Receive USDC',
+    subtitle: 'Only Base network assets can be received here.',
+    networkName: 'Base',
+    subline: 'USD Coin · Base',
     tokenLogoSrc: 'https://example.invalid/usdc.webp',
     chainLogoSrc: 'https://example.invalid/base.webp',
   };
 
-  // Fake render deps with text support: the card measures and draws
-  // text, so the fake context records fillText and measures each
-  // character as 10px wide. Images load in call order — the QR
-  // first, then the two logos — and logos can be made to fail.
+  // Fake render deps with text + path support: the card measures and
+  // draws text, so the fake context records fillText and measures
+  // each character as 10px wide. Every canvas is a fresh object with
+  // its own context — the main canvas is canvases[0]; Template A's
+  // white silhouette builds an offscreen canvas of its own, and its
+  // calls must not pollute the main canvas's assertions. Images load
+  // in call order — the QR first, then the two logos — and logos can
+  // be made to fail.
   function cardDeps(options: { failLogos?: boolean } = {}): {
     deps: QrRenderDeps;
+    canvases: { width: number; height: number }[];
+    contexts: {
+      putImageData: ReturnType<typeof vi.fn>;
+    }[];
     canvas: { width: number; height: number };
     fillRect: ReturnType<typeof vi.fn>;
     drawImage: ReturnType<typeof vi.fn>;
     fillText: ReturnType<typeof vi.fn>;
   } {
-    const fillRect = vi.fn();
-    const drawImage = vi.fn();
-    const fillText = vi.fn();
-    const ctx = {
-      fillStyle: '',
-      font: '',
-      textAlign: '',
-      textBaseline: '',
-      fillRect,
-      drawImage,
-      fillText,
-      measureText: (text: string) => ({ width: text.length * 10 }),
-    };
-    const canvas = {
-      width: 0,
-      height: 0,
-      getContext: () => ctx,
-      toBlob: (callback: (blob: Blob | null) => void) => {
-        callback(new Blob(['\x89PNG fake-bytes'], { type: 'image/png' }));
-      },
-    };
+    const canvases: { width: number; height: number }[] = [];
+    const contexts: {
+      putImageData: ReturnType<typeof vi.fn>;
+    }[] = [];
+    let main: {
+      fillRect: ReturnType<typeof vi.fn>;
+      drawImage: ReturnType<typeof vi.fn>;
+      fillText: ReturnType<typeof vi.fn>;
+    } | null = null;
     let imageCount = 0;
     const deps: QrRenderDeps = {
-      createCanvas: () => canvas,
+      createCanvas: () => {
+        const fillRect = vi.fn();
+        const drawImage = vi.fn();
+        const fillText = vi.fn();
+        const putImageData = vi.fn();
+        const ctx = {
+          fillStyle: '',
+          strokeStyle: '',
+          lineWidth: 1,
+          globalCompositeOperation: 'source-over',
+          font: '',
+          textAlign: '',
+          textBaseline: '',
+          fillRect,
+          drawImage,
+          fillText,
+          measureText: (text: string) => ({ width: text.length * 10 }),
+          beginPath: vi.fn(),
+          moveTo: vi.fn(),
+          lineTo: vi.fn(),
+          arcTo: vi.fn(),
+          arc: vi.fn(),
+          closePath: vi.fn(),
+          fill: vi.fn(),
+          stroke: vi.fn(),
+          save: vi.fn(),
+          restore: vi.fn(),
+          clip: vi.fn(),
+          // Four pixels: dark glyph, light disc background, dark
+          // glyph, light disc background — the silhouette threshold
+          // must keep the dark two and clear the light two.
+          getImageData: () => ({
+            data: new Uint8ClampedArray([
+              50, 50, 50, 255, 244, 244, 244, 255, 100, 100, 100, 255, 244,
+              244, 244, 255,
+            ]),
+          }),
+          putImageData,
+        };
+        contexts.push({ putImageData });
+        const canvas = {
+          width: 0,
+          height: 0,
+          getContext: () => ctx,
+          toBlob: (callback: (blob: Blob | null) => void) => {
+            callback(new Blob(['\x89PNG fake-bytes'], { type: 'image/png' }));
+          },
+        };
+        canvases.push(canvas);
+        if (main === null) main = { fillRect, drawImage, fillText };
+        return canvas;
+      },
       createImage: () => {
         const index = imageCount++;
         const image = {
@@ -845,69 +896,322 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1)', () =
         return image;
       },
     };
-    return { deps, canvas, fillRect, drawImage, fillText };
+    return {
+      deps,
+      canvases,
+      contexts,
+      get canvas() {
+        return canvases[0]!;
+      },
+      get fillRect() {
+        return main!.fillRect;
+      },
+      get drawImage() {
+        return main!.drawImage;
+      },
+      get fillText() {
+        return main!.fillText;
+      },
+    };
   }
 
-  it('draws the card — QR, amount, address, token label — in order', async () => {
+  it('draws the full B card — header, title, subtitle, tile, amount, address, subline, footer, brand — in order', async () => {
     const fakes = cardDeps();
     const file = await qrCardToPngFile(SVG, DETAILS, 'bawa-receive-base-usdc.png', fakes.deps);
     expect(file).toBeInstanceOf(File);
     expect(file.name).toBe('bawa-receive-base-usdc.png');
     expect(file.type).toBe('image/png');
-    // 640 wide; one address line at 10px a character (42 chars fit
-    // the 568px content width): 36 + 392 + 28 + 16 + 44 + 16 + 28 +
-    // 20 + 44 + 36 = 660 tall. The QR sits in a 392px tile (360px QR
-    // + 16px pad each side) with the token + chain badges overlapping
-    // its bottom edge; the badge overhang (28px) is part of the height.
+    // 640 wide; the layout is the DESIGN.md B geometry at scale
+    // 640/390 (px(v) = round(v * 640/390)): card 25/39, 591 wide,
+    // 1093 tall with the subline, canvas 1171 + 46 = 1217 tall.
+    // One address line at 10px a character (42 chars fit the 499px
+    // address width); one subtitle line (50 chars fit the 525px
+    // subtitle width).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(660);
+    expect(fakes.canvas.height).toBe(1217);
     // Paper painted first, over the whole card.
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 660);
-    // Lane H (Oishi hard offset shadow): an ink rect offset 8 px
-    // down-right behind the tile.
-    expect(fakes.fillRect).toHaveBeenCalledWith(132, 44, 392, 392);
-    // The QR is drawn 360px wide, centred, inside its tile at the top.
-    const qrDraw = fakes.drawImage.mock.calls[0]!;
-    expect(qrDraw[1]).toBe(140);
-    expect(qrDraw[2]).toBe(52);
-    expect(qrDraw[3]).toBe(360);
-    expect(qrDraw[4]).toBe(360);
-    // The badges overlap the tile's bottom edge: the token mark 44px,
-    // the chain mark 28px at its lower right.
-    const logoDraws = fakes.drawImage.mock.calls.slice(1);
-    expect(logoDraws).toHaveLength(2);
-    expect(logoDraws[0]![3]).toBe(44);
-    expect(logoDraws[1]![3]).toBe(28);
-    // The card's facts, in the on-screen order: amount, address, label.
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1217);
+    // Lane H (Oishi hard offset shadow): an ink rect offset 4 design
+    // px down-right behind the tile (140 + 7, 344 + 7, 361, 361).
+    expect(fakes.fillRect).toHaveBeenCalledWith(147, 351, 361, 361);
+    // The QR is drawn 200 design px wide (328 canvas px), centred,
+    // inside its tile at the top. It is the third draw — the header
+    // token and chain badge are drawn first — so it is found by its
+    // width, not by call order.
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 328)!;
+    expect(qrDraw[1]).toBe(156);
+    expect(qrDraw[2]).toBe(360);
+    expect(qrDraw[3]).toBe(328);
+    expect(qrDraw[4]).toBe(328);
+    // The header carries the token mark (52 design px) with the chain
+    // mark as its badge (20 design px); the centre mark (44 design
+    // px) sits in the code over its excavation hole.
+    const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
+    expect(logoDraws).toHaveLength(3);
+    expect(logoDraws[0]!.slice(1)).toEqual([277, 82, 85, 85]);
+    expect(logoDraws[1]!.slice(1)).toEqual([342, 147, 33, 33]);
+    expect(logoDraws[2]!.slice(1)).toEqual([284, 488, 72, 72]);
+    // The card's facts, in the on-screen order: title, subtitle
+    // (network bolded, one fillText per word), amount, label, Copy,
+    // address, subline, footer, brand mark, wordmark.
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
-    expect(texts).toEqual(['25 USDC', ADDRESS, 'usdc (base)']);
+    expect(texts).toEqual([
+      'Receive USDC',
+      'Only',
+      'Base',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '25 USDC',
+      'Receiving address',
+      'Copy',
+      ADDRESS,
+      'USD Coin · Base',
+      'Share the card, keep the keys.',
+      'B',
+      'Bawa Wallet',
+    ]);
+  });
+
+  it('draws the same B card at 1080 px — same layout, scaled', async () => {
+    const fakes = cardDeps();
+    await qrCardToPngBlob(
+      SVG,
+      {
+        amountText: '0.5 ETH',
+        address: ADDRESS,
+        tokenLabel: 'Ethereum',
+        title: 'Receive ETH',
+        subtitle: 'Only Ethereum network assets can be received here.',
+        networkName: 'Ethereum',
+        width: 1080,
+      },
+      fakes.deps,
+    );
+    expect(fakes.canvas.width).toBe(1080);
+    expect(fakes.canvas.height).toBe(1976);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 1080, 1976);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 554)!;
+    expect(qrDraw.slice(1)).toEqual([264, 609, 554, 554]);
+  });
+
+  it('draws Template A — dark teal, inverted code, brand bar', async () => {
+    const fakes = cardDeps();
+    await qrCardToPngBlob(
+      SVG,
+      {
+        amountText: '0.5 ETH',
+        address: ADDRESS,
+        tokenLabel: 'Ethereum',
+        title: 'Receive ETH',
+        subtitle: 'Only Ethereum network assets can be received here.',
+        networkName: 'Ethereum',
+        template: 'a',
+        tokenLogoSrc: 'https://example.invalid/eth.webp',
+        chainLogoSrc: 'https://example.invalid/eth.webp',
+      },
+      fakes.deps,
+    );
+    // A at 640: card at 394, band 535 + footer 187 = 722, link 22,
+    // brand bar 84 — 1362 tall. The address wraps to the 414px
+    // footer width: 41 + 1 characters at 10px a character.
+    expect(fakes.canvas.width).toBe(640);
+    expect(fakes.canvas.height).toBe(1362);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1362);
+    // The brand bar is full-bleed at the bottom.
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 1224, 640, 138);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 358)!;
+    expect(qrDraw.slice(1)).toEqual([141, 453, 358, 358]);
+    // QR, header token, chain badge, white-silhouette centre mark.
+    expect(fakes.drawImage).toHaveBeenCalledTimes(4);
+    const centreDraw = fakes.drawImage.mock.calls[3]!;
+    expect(centreDraw[3]).toBeCloseTo(29.44, 1);
+    // The silhouette threshold ran on the offscreen canvas (the
+    // second canvas created): the light disc-background pixels were
+    // cleared to transparent, the dark glyph pixels kept.
+    const silhouetteCtx = fakes.contexts[1]!;
+    expect(silhouetteCtx.putImageData).toHaveBeenCalledTimes(1);
+    const thresholded = silhouetteCtx.putImageData.mock.calls[0]![0].data;
+    expect([...thresholded]).toEqual([
+      50, 50, 50, 255, 244, 244, 244, 0, 100, 100, 100, 255, 244, 244, 244, 0,
+    ]);
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual([
+      'Receive ETH',
+      'Only',
+      'Ethereum',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '0.5 ETH',
+      'Receiving address',
+      ADDRESS.slice(0, 41),
+      ADDRESS.slice(41),
+      'Open the Bawa link ›',
+      'B',
+      'Bawa Wallet',
+    ]);
+  });
+
+  it('draws Template C — minimal, no tile, no footer band', async () => {
+    const fakes = cardDeps();
+    await qrCardToPngBlob(
+      SVG,
+      {
+        amountText: '0.5 ETH',
+        address: ADDRESS,
+        tokenLabel: 'Ethereum',
+        title: 'Receive ETH',
+        subtitle: 'Only Ethereum network assets can be received here.',
+        networkName: 'Ethereum',
+        template: 'c',
+        tokenLogoSrc: 'https://example.invalid/eth.webp',
+        chainLogoSrc: 'https://example.invalid/eth.webp',
+      },
+      fakes.deps,
+    );
+    expect(fakes.canvas.width).toBe(640);
+    expect(fakes.canvas.height).toBe(1080);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 354)!;
+    expect(qrDraw.slice(1)).toEqual([143, 322, 354, 354]);
+    // QR, top logo, centre mark — no tile badges, no brand bar.
+    expect(fakes.drawImage).toHaveBeenCalledTimes(3);
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual([
+      'Receive ETH',
+      'Only',
+      'Ethereum',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      'Scan or share this QR code to receive crypto.',
+      '0.5 ETH',
+      ADDRESS,
+      'Copy',
+      'Bawa',
+    ]);
+  });
+
+  it('draws Template D — coral poster, white tile, ink address strip', async () => {
+    const fakes = cardDeps();
+    await qrCardToPngBlob(
+      SVG,
+      {
+        amountText: '0.5 ETH',
+        address: ADDRESS,
+        tokenLabel: 'Ethereum',
+        title: 'Receive ETH',
+        subtitle: 'Only Ethereum network assets can be received here.',
+        networkName: 'Ethereum',
+        template: 'd',
+        tokenLogoSrc: 'https://example.invalid/eth.webp',
+        chainLogoSrc: 'https://example.invalid/eth.webp',
+      },
+      fakes.deps,
+    );
+    expect(fakes.canvas.width).toBe(640);
+    expect(fakes.canvas.height).toBe(1150);
+    const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 345)!;
+    expect(qrDraw.slice(1)).toEqual([148, 363, 345, 345]);
+    // QR, header disc logo, centre mark.
+    expect(fakes.drawImage).toHaveBeenCalledTimes(3);
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual([
+      'Receive ETH',
+      'Only',
+      'Ethereum',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '0.5 ETH',
+      ADDRESS,
+      'B',
+      'Bawa Wallet',
+    ]);
   });
 
   it('wraps a long address onto two lines and grows the card', async () => {
     const fakes = cardDeps();
-    // 62 characters at 10px = 620px: 56 on the first line, 6 on the second.
+    // 62 characters at 10px = 620px: 49 on the first line, 13 on the
+    // second (the B address width is 499px).
     const longAddress = `bc1q${'a'.repeat(58)}`;
     await qrCardToPngBlob(
       SVG,
-      { amountText: '0.5 BTC', address: longAddress, tokenLabel: 'Bitcoin' },
+      {
+        amountText: '0.5 BTC',
+        address: longAddress,
+        tokenLabel: 'Bitcoin',
+        title: 'Receive BTC',
+        subtitle: 'Only Bitcoin network assets can be received here.',
+        networkName: 'Bitcoin',
+      },
       fakes.deps,
     );
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
-    expect(texts).toEqual(['0.5 BTC', longAddress.slice(0, 56), longAddress.slice(56), 'Bitcoin']);
-    expect(fakes.canvas.height).toBe(660 + 28);
+    expect(texts).toEqual([
+      'Receive BTC',
+      'Only',
+      'Bitcoin',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '0.5 BTC',
+      'Receiving address',
+      'Copy',
+      longAddress.slice(0, 49),
+      longAddress.slice(49),
+      'Share the card, keep the keys.',
+      'B',
+      'Bawa Wallet',
+    ]);
+    expect(fakes.canvas.height).toBe(1171 + 30);
   });
 
   it('still shares the card when both logos fail to load', async () => {
     const fakes = cardDeps({ failLogos: true });
     const file = await qrCardToPngFile(SVG, DETAILS, 'bawa-receive-base-usdc.png', fakes.deps);
     expect(file).toBeInstanceOf(File);
-    // Only the QR is drawn; the label is still there, centred alone.
+    // Only the QR is drawn; the header and centre marks are skipped,
+    // and every line of copy is still there.
     expect(fakes.drawImage).toHaveBeenCalledTimes(1);
     const texts = fakes.fillText.mock.calls.map((call) => call[0]);
-    expect(texts).toEqual(['25 USDC', ADDRESS, 'usdc (base)']);
+    expect(texts).toEqual([
+      'Receive USDC',
+      'Only',
+      'Base',
+      'network',
+      'assets',
+      'can',
+      'be',
+      'received',
+      'here.',
+      '25 USDC',
+      'Receiving address',
+      'Copy',
+      ADDRESS,
+      'USD Coin · Base',
+      'Share the card, keep the keys.',
+      'B',
+      'Bawa Wallet',
+    ]);
   });
 
-  it('rejects a blank SVG and missing payment details', async () => {
+  it('rejects a blank SVG, missing payment details and a bad width', async () => {
     const fakes = cardDeps();
     await expect(qrCardToPngBlob('   ', DETAILS, fakes.deps)).rejects.toThrow(
       'no QR image',
@@ -918,6 +1222,12 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1)', () =
     await expect(
       qrCardToPngBlob(SVG, { ...DETAILS, tokenLabel: '' }, fakes.deps),
     ).rejects.toThrow('payment details are missing');
+    await expect(
+      qrCardToPngBlob(SVG, { ...DETAILS, title: '' }, fakes.deps),
+    ).rejects.toThrow('payment details are missing');
+    await expect(
+      qrCardToPngBlob(SVG, { ...DETAILS, width: 100 }, fakes.deps),
+    ).rejects.toThrow('invalid image size');
   });
 });
 

@@ -13,6 +13,24 @@ const allowed = new Set([
   '#2B2B2B', // Ink
   '#FF6B4A', // Coral
   '#FFD93B', // Sun
+  // QR-card template colours (QR-cards programme, Lane E,
+  // 2026-11-25; design/DESIGN.md in bawa-qr-cards). The one
+  // confined exception to the 4-colour cap: named --qr-* tokens in
+  // src/ui/styles/globals.css, used only by the Receive QR card's
+  // four templates and its PNG exporter. No other screen may use
+  // them, and no further literal may be added without a recorded
+  // decision in docs/DECISIONS.md.
+  '#023139', // QR Dark Teal page
+  '#011F29', // QR Dark Teal QR band
+  '#0E2127', // QR Dark Teal footer band
+  '#1B2023', // QR Dark Teal copy circle
+  '#121818', // QR Dark Teal brand bar
+  '#7A9491', // QR Dark Teal secondary text
+  '#6B7280', // QR Minimal secondary text
+  '#9CA3AF', // QR Minimal wordmark
+  '#111111', // QR Minimal ink
+  '#111', // QR Minimal ink, minified form (Tailwind shortens #111111)
+  '#FFE9E4', // QR Poster subtitle (white 85% on coral, pre-blended)
   // Tailwind v4 framework internals: no visible colour in this app.
   '#0000', // Transparent: shadow/ring defaults and the preflight button reset.
   '#0000001A', // Default shadow colour in the unused `.shadow` utility rule.

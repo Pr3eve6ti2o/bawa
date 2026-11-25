@@ -589,16 +589,17 @@ describe('receive screen', () => {
     }
   });
 
-  it('keeps every step compact: searchable picker, 192 px full QR card, truncated share link', async () => {
+  it('keeps every step compact: searchable picker, 200 px full QR card, truncated share link', async () => {
     // Lane H: the chain step is a searchable picker (Popular first,
     // the rest behind All networks), not a 22-button grid; the QR
-    // card's code is 192 px, and the long share link shows as one
+    // card's code is 200 px, and the long share link shows as one
     // truncated line. Layout heights are asserted in CDP.
     //
     // Lane 5 (2026-11-24): the 136 px value was Lane E's fold fix
     // (the template row sat 55 px below the fold at 192) — the
     // owner has since ordered the full card with a large QR, so
-    // 192 is the size again and the template row is reached with
+    // 200 is the size now (QR-cards Lane E respaced the card) and
+    // the template row is reached with
     // one short scroll at 390 px instead of sitting above the fold.
     setWallet();
     const mounted = await mountScreen();
@@ -612,7 +613,7 @@ describe('receive screen', () => {
       await reachDetails(mounted.div);
       const qrSvg = mounted.div.querySelector('#receive-qr svg');
       expect(qrSvg).not.toBeNull();
-      expect(qrSvg?.getAttribute('width')).toBe('192');
+      expect(qrSvg?.getAttribute('width')).toBe('200');
       const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
       expect(link).not.toBeNull();
       expect(link?.className).toContain('truncate');
@@ -1075,12 +1076,28 @@ describe('receive screen — sharing the QR as an image (UI/UX fixes, item 4)', 
     });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
       fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 1,
+      globalCompositeOperation: 'source-over',
       fillRect: () => {},
       drawImage: () => {},
       // The card renderer measures and draws text; jsdom's canvas
-      // has neither, so the fake measures 10px a character.
+      // has neither, so the fake measures 10px a character. The
+      // card also draws circles, rounded rects and clips (QR-cards
+      // Lane E), so those are no-ops here too.
       fillText: () => {},
       measureText: (text: string) => ({ width: text.length * 10 }),
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      arcTo: () => {},
+      arc: () => {},
+      closePath: () => {},
+      fill: () => {},
+      stroke: () => {},
+      save: () => {},
+      restore: () => {},
+      clip: () => {},
     } as unknown as CanvasRenderingContext2D);
     vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(
       (callback: (blob: Blob | null) => void) => {
@@ -1375,6 +1392,40 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
       expect(mainTitle()).toContain('chain=eth');
       expect(mainTitle()).toContain(`to=${VAULT_ETH}`);
       expect(mainTitle()).toContain('amount=25');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('receive screen — card style picker (QR-cards programme, Lane E)', () => {
+  it('defaults to Paper and switches the card template when picked', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      const group = mounted.div.querySelector('[aria-label="Card style"]');
+      expect(group).not.toBeNull();
+      const buttons = [...group!.querySelectorAll('button')];
+      expect(buttons.map((button) => button.textContent)).toEqual([
+        'PaperBawa drawing style',
+        'Dark TealClosest to the Bitget bar',
+        'MinimalPlain and quiet',
+        'PosterBold, for sharing',
+      ]);
+      const card = () => mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card()?.getAttribute('data-template')).toBe('b');
+      expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true');
+      await act(async () => {
+        buttons[1]?.click();
+      });
+      expect(card()?.getAttribute('data-template')).toBe('a');
+      expect(buttons[1]?.getAttribute('aria-pressed')).toBe('true');
+      expect(buttons[0]?.getAttribute('aria-pressed')).toBe('false');
+      await act(async () => {
+        buttons[3]?.click();
+      });
+      expect(card()?.getAttribute('data-template')).toBe('d');
     } finally {
       await mounted.cleanup();
     }

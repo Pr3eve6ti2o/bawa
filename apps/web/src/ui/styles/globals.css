@@ -62,6 +62,29 @@
   --bawa-coral: #FF6B4A;
   --bawa-sun: #FFD93B;
 
+  /* QR-card template colours (QR-cards programme, Lane E,
+     2026-11-25; design/DESIGN.md in bawa-qr-cards). The 4-colour
+     cap above still governs the whole app — these ten values are
+     the one confined exception, used ONLY by the Receive QR card's
+     four templates (screens/qr-card.tsx) and the PNG exporter that
+     draws the same card (wallet/payment-links.ts). Template A
+     (Dark Teal) needs its dark-teal family; Template C (Minimal)
+     needs its greys; Template D's subtitle is white at 85% over
+     coral, pre-blended to a solid so no rgba literal is needed
+     (--qr-white-dim is that blend, not a new colour job). No other
+     screen may use them; the palette audit allowlists exactly
+     these literals (scripts/palette-audit.mjs). */
+  --qr-teal: #023139;
+  --qr-teal-deep: #011F29;
+  --qr-teal-band: #0E2127;
+  --qr-teal-copy: #1B2023;
+  --qr-bar: #121818;
+  --qr-muted: #7A9491;
+  --qr-grey: #6B7280;
+  --qr-faint: #9CA3AF;
+  --qr-nearblack: #111111;
+  --qr-white-dim: #FFE9E4;
+
   --bawa-stroke: 2px;
   --bawa-border: 2px solid var(--bawa-ink);
   --bawa-border-dashed: 2px dashed var(--bawa-ink);
@@ -344,6 +367,19 @@
   --color-ink: var(--bawa-ink);
   --color-coral: var(--bawa-coral);
   --color-sun: var(--bawa-sun);
+
+  /* QR-card template colours — see the --qr-* note in :root above.
+     Utilities: bg-qr-teal, text-qr-muted, and so on. */
+  --color-qr-teal: var(--qr-teal);
+  --color-qr-teal-deep: var(--qr-teal-deep);
+  --color-qr-teal-band: var(--qr-teal-band);
+  --color-qr-teal-copy: var(--qr-teal-copy);
+  --color-qr-bar: var(--qr-bar);
+  --color-qr-muted: var(--qr-muted);
+  --color-qr-grey: var(--qr-grey);
+  --color-qr-faint: var(--qr-faint);
+  --color-qr-nearblack: var(--qr-nearblack);
+  --color-qr-white-dim: var(--qr-white-dim);
 
   --radius-bawa: var(--bawa-radius);
   --radius-bawa-sm: var(--bawa-radius-sm);
