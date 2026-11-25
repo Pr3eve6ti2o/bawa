@@ -46,6 +46,14 @@ survey, the guide must match the implementation.
 | E | Shamir backup shares | §13 | PENDING — no code committed |
 | F | ERC-7730 clear signing | §14 | PENDING — no code committed |
 
+Lane H (2026-11-26, "install all usable" mining pass) re-checked
+§6.6, §11 and §14 against the merged Part A code in the
+`usable-lane-h-mining` worktree (base `637c139`, which has Lanes A,
+C, D, E, F merged) and updated those sections in place; the rest of
+this table is still the at-writing-time record above, and the
+coordinator's re-check pass reconciles the remaining PENDING rows
+after the rebase. Lane H's own record is §18.
+
 ## §0. Hard constraints — these are not negotiable
 
 1. **Broadcast is disabled on mainnet until separately authorised.**
@@ -339,24 +347,65 @@ recorded (`token-verification.ts:31`).
 `tokens.pancakeswap.finance`. The Default list is 13 tokens last recorded
 (`token-verification.ts:45`); use the Extended list.
 
-### §6.6 Bitget Agent API — extra verifier — PENDING Lane A
+### §6.6 Bitget Agent API — extra verifier — IMPLEMENTED (Lane A) + agent-side deep check (Lane H)
 
-**Status: PENDING.** The Bitget Agent API is a no-key token/security/
-market API (`https://copenapi.bgwapi.io`) reached through the MIT
+**Status: IMPLEMENTED in the browser leg (Lane A) and verified live;
+agent-side deep check added by Lane H, 2026-11-26.** The Bitget Agent
+API is a no-key token/security/market API
+(`https://copenapi.bgwapi.io`) reached through the MIT
 `bitget-wallet-skill` / `bitget-wallet-cli` / `bitget-wallet-mcp`
 (Python scripts / MCP server: 21 market tools + smart-money + RWA).
 Survey verdict: token info, security audit, dev/rug check, market info,
 K-line, holders — an extra token-verification source with **zero bundle
-cost** (Python/server-side, never in the browser bundle). It is the
-smallest-cost win in the survey. Conditions: the API's live answers were
-NOT verified first-hand (docs and scripts read, no live calls made) —
-Lane A must make a live call and record the result before the guide
-claims it works. Swap/transfer scripts in those repos are reference
-only: Bawa forbids mainnet broadcast (§0.1). The TS SDK
+cost** (Python/server-side, never in the browser bundle).
+
+**Browser leg (Lane A, merged).** `apps/web/src/wallet/
+token-verification.ts`: `bitgetSignedPost` reproduces the skill's
+`_request` signing (BKHmacAuth, unsalted SHA-256 of method + path +
+body + timestamp — no secret) with WebCrypto; `bitgetTokenInfoMatches`
+requires the exact chain + contract AND a non-empty symbol and name
+(a fake answers a zeroed stub); `bitgetSecurityClean` vetoes on a
+highRisk audit (a fake answers highRisk false with support 0 — audit
+pending — so the audit alone never verifies). **Browser limit,
+verified first-hand:** the API's OPTIONS handler demands
+X-SIGN/X-TIMESTAMP, which a CORS preflight never carries, so from a
+browser the call fails at the preflight and the leg verifies nothing —
+it is wired fail-closed and verifies the moment the API allows
+browser calls. The leg is therefore NOT the live verification path
+today.
+
+**Agent-side leg (Lane H, this programme).** `scripts/
+verify-token-bitget.mjs` (Node >= 22, global fetch, zero
+dependencies, zero bundle cost) runs the SAME two signed POSTs from
+Node, where there is no preflight, and adds the deep fields the
+browser leg does not use: top-10 / insider / sniper / dev holder
+percents, dev rug percent + counts, LP lock percent, from the
+`batchGetBaseInfo` entry. Thresholds are the skill docs' own
+(`bitget-wallet-skill/docs/market-data.md`): dev_rug_percent > 20%
+red flag; sniper_holder_percent > 10% warning; top10 > 50%
+concentration risk; trade tax >= 50% risk, >= 10% warn. Verdicts:
+VERIFIED / VERIFIED-WITH-WARNINGS / HIGH-RISK / UNVERIFIED, exit 0
+for verified, 1 otherwise, 2 for usage errors. Tests:
+`scripts/verify-token-bitget.test.mjs` (plain node:test, mocked
+fetch, 9 tests). **Live verification, 2026-11-26, loud-stone:**
+USDC (eth) VERIFIED, exit 0 (price 1.001, holders 9,272,568,
+top-10 22.5%); PEPE (eth) VERIFIED, exit 0; fake contract
+`0x0000…0001` UNVERIFIED, exit 1 (zeroed stub, no symbol/name).
+Two live findings recorded in the script: (1) the API sits behind
+Cloudflare and returns 403 "error code: 1010" for a bare
+Python-urllib User-Agent — Node's fetch and python-requests
+User-Agents answer 200; the script sets an explicit User-Agent.
+(2) The "percent" fields arrive as FRACTIONS (USDC top-10 0.2248,
+PEPE 0.3807), so the script normalises (0, 1] x100 to the docs'
+0–100 scale before comparing; the dev_rug_percent scale has no live
+non-zero sample and is normalised like its sibling fields — that
+inference is stated in the code, not hidden. Usage:
+`node scripts/verify-token-bitget.mjs --chain eth --contract 0x...`.
+Swap/transfer scripts in those repos are reference only: Bawa
+forbids mainnet broadcast (§0.1). The TS SDK
 `@bitget-wallet/api` (`tob-api-sdk-ts`) is NOT the route: it needs an API
 key + HMAC secret (never in the browser — backend proxy only, which Bawa
 has none) and its dist JS is 182,504 B unminified (~34× the headroom).
-Re-check this section against Lane A's committed code.
 
 ### §6.7 What is deliberately NOT a verifier
 
@@ -551,6 +600,26 @@ survey's verified facts, which Lane C must implement from:
   the survey: accept Reown + gateway + projectId and lazy-load; pin
   2.21.0 and accept no further updates; defer until re-baseline; or ship
   Android-first via Kotlin.
+- **Android route, verified by Lane H (2026-11-26, mining pass).**
+  The Kotlin SDK is live on Maven Central:
+  `com.walletconnect:web3wallet`, latest **1.35.2** (verified from
+  loud-stone against `repo1.maven.org/maven2/com/walletconnect/
+  web3wallet/maven-metadata.xml`). Licence Apache-2.0 (LICENSE file in
+  `/home/boxd/workspace/wallet-repos/WalletConnectKotlinV2/`). The
+  wallet-side surface is verified in the clone: `Web3Wallet`
+  delegate `onSessionProposal` and `approveSession(params, onSuccess,
+  onError)` (`product/web3wallet/src/main/kotlin/com/walletconnect/
+  web3/wallet/client/Web3Wallet.kt`) — note `approveSession` is marked
+  for replacement by `WalletKit.approveSession`; use the WalletKit
+  name in new code. The repo ships a BOM; the sample uses
+  `implementation("com.walletconnect:web3wallet")` through it. **Not
+  added to `apps/android/app/build.gradle.kts` by Lane H:** the
+  Android app is watch-only and testnet-only with no signing path
+  (`apps/android/app/build.gradle.kts` header), so WalletConnect is a
+  future feature needing a scope decision first, and there is no
+  Android SDK or JDK on loud-stone to build-verify the dependency.
+  A WalletConnect Cloud projectId is still required (owner step;
+  never invent or hardcode one).
 - Re-check this section against Lane C's committed code.
 
 ## §12. Coinbase Onramp Buy — PENDING Lane D
@@ -629,7 +698,18 @@ survey's verified facts, which Lane F must implement from:
 - **Related dev tool (not shipped):** `sonar` (okxlabs, MIT, Rust CLI)
   for local Solana transaction simulation (LiteSVM), transaction parsing,
   and PDA derivation — a dev tool for verifying Solana behaviour
-  off-device, never shipped in the app.
+  off-device, never shipped in the app. **Lane H note (2026-11-26):**
+  licence re-verified first-hand (LICENSE: "The MIT License (MIT)",
+  Copyright (c) 2022-2026 OKX labs). Concrete use for Bawa: simulate
+  a Solana send construction locally before it is ever signed —
+  `sonar simulate <BASE58_OR_BASE64_TX> --rpc-url
+  https://api.mainnet-beta.solana.com`, or synthesise from instruction
+  specs (`sonar simulate --payer <PUBKEY> --ix 'program=... data=...'`).
+  Simulation is a pre-check, never confirmation (§5), and `sonar send`
+  must never be used on mainnet — broadcast stays disabled (§0.1).
+  **Not build-verified:** there is no cargo/rustc on loud-stone, so
+  the release build (`cargo build --release`) has not been run here;
+  the first build is a follow-up on a machine with a Rust toolchain.
 - Re-check this section against Lane F's committed code.
 
 ## §15. UI contract
@@ -699,6 +779,8 @@ section is marked PENDING with the reason.
 | §5 offline signing | `apps/web/src/wallet/send.ts:2527-2530` (Solana); capability table in `WALLET_BUILDER.md` | Correct; SOL `@solana/web3.js` route added from code | Verified |
 | §6 token verification | `apps/web/src/wallet/token-verification.ts:25-45`, `:101` | Correct in code; `docs/TOKEN-VERIFY-PROGRAMME.md` records the programme | Verified |
 | §6.6 Bitget Agent API | Survey Bitget section; `https://copenapi.bgwapi.io` (live answers NOT verified) | Not in the guide before | PENDING Lane A |
+| §6.6 Bitget Agent API (Lane H) | `token-verification.ts` (Lane A browser leg, read first-hand); `scripts/verify-token-bitget.mjs` + test (9 tests); live USDC/PEPE VERIFIED, fake UNVERIFIED, 2026-11-26 | Browser leg wired but fail-closed at the CORS preflight; no agent-side form existed | Implemented (agent-side) + browser leg recorded |
+| §11 WalletConnect (Lane H) | `repo1.maven.org/.../com/walletconnect/web3wallet/maven-metadata.xml` (1.35.2, live); `Web3Wallet.kt` `approveSession`; Apache-2.0 LICENSE | Android route named but unversioned | Added (Android record only; no Gradle change — no SDK on loud-stone, app has no signing path) |
 | §7 prices + fallbacks | `apps/web/src/wallet/price-fallbacks.ts` header; `dex-prices.ts` trap note | Correct | Verified |
 | §7.1 okx-cex-market skill | `custom-skills/okx-cex-market/okx-cex-market/SKILL.md` (MIT v1.5.2; `okx` CLI binary required) | Not in the guide before | Added (agent skill only) |
 | §8 QR cards | `apps/web/src/screens/qr-card.tsx:336`; `payment-links.ts:700-760`; `docs/DECISIONS.md` §24 | Correct in DECISIONS §24; now a single spec section | Verified |
@@ -708,6 +790,8 @@ section is marked PENDING with the reason.
 | §12 Coinbase Onramp | Survey Coinbase section (`@coinbase/cbpay-js@2.4.0`, 7,473 B minified, Bundlephobia) | Not in the guide before | PENDING Lane D |
 | §13 Shamir | Survey Privy section (Apache-2.0, ~5–8 KB est., not build-measured) | Not in the guide before | PENDING Lane E |
 | §14 ERC-7730 | Survey OKX/okxlabs section (CC0 1.0, fork — prefer upstream) | Not in the guide before | PENDING Lane F |
+| §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
+| §18 Lane H mining | Wallet-repos survey + agent-repos dirs (sandbox, read-only) + FEC skills (MIT) | Not in the guide before | Added |
 | §15 UI contract | `WALLET_BUILDER.md` "UI foundations and contract"; Doc 14 §5.1 | Correct | Verified |
 | §16 verify/report | `AGENTS.md` §5/§6 | Correct | Verified |
 
@@ -719,3 +803,99 @@ of Shamir (estimates, not builds); `cbpay-js` cost inside Bawa's Vite
 bundle (Bundlephobia figure only); WalletConnect cost inside Bawa's
 production bundle (standalone esbuild measurement only). Each is marked
 where it is used above.
+
+**Not verified first-hand in this lane:** the Part A lanes' live
+behaviour (no code committed yet — see the status table); the Bitget
+Agent API's live answers; `okx-cex-market` end-to-end behaviour (needs
+the `okx` CLI binary); exact minified costs of the OKX coin packages and
+of Shamir (estimates, not builds); `cbpay-js` cost inside Bawa's Vite
+bundle (Bundlephobia figure only); WalletConnect cost inside Bawa's
+production bundle (standalone esbuild measurement only). Each is marked
+where it is used above.
+
+## §18. Lane H mining record — "install all usable", 2026-11-26
+
+**Method (Lane H, hands-on, 0 Sol calls).** Base `usable-install`
+`637c139` (Part A Lanes A, C, D, E, F merged). Three sources, in
+order: (1) wallet-repos (`/home/boxd/workspace/wallet-repos/`,
+survey `~/workspace/wallet-repos/SURVEY.md`); (2) agent-repos
+(`~/workspace/agent-repos/` in the sandbox — **not on loud-stone**,
+and its SURVEY.md never appeared while this lane worked, so the
+directories were mined directly, read-only; the installing
+coordinator was not disturbed, nothing was installed twice);
+(3) skills library (`/home/boxd/workspace/custom-skills/`, 1,906
+entries, plus the Front-End-Checklist skill corpus inside
+agent-repos, which loud-stone's custom-skills does NOT carry).
+Licence checked first for every find; no verbatim copying without a
+licence check. Bundle budget in this base is 4,185,000 total JS
+(`CONSTRAINTS.md:40`, CI `ci.yml:193`); the 4,215,000 re-baseline
+lives on token-gaps only and is NOT in this base — Lane H measured
+against 4,185,000 and re-baselined nothing.
+
+### §18.1 Finds applied
+
+| Find | Licence | Useful for | Applied in code | Applied in guide |
+| --- | --- | --- | --- | --- |
+| Bitget Agent API, agent-side deep check (token-info + security audit + dev/rug + holder concentration) | MIT (`bitget-wallet-skill`) | Wallet: the browser leg cannot fire (CORS preflight); the same calls work from Node, so a dev/CI token check is the useful form | `scripts/verify-token-bitget.mjs` + `scripts/verify-token-bitget.test.mjs` (9 tests); live: USDC VERIFIED, PEPE VERIFIED, fake UNVERIFIED | §6.6 |
+| WalletConnect Kotlin SDK, Android route | Apache-2.0 | Wallet (Android): dApp connectivity where the web bundle budget does not apply | Not added to `apps/android/app/build.gradle.kts` — the app is watch-only/testnet-only with no signing path, and no Android SDK/JDK exists on loud-stone to build-verify it | §11 (coordinates `com.walletconnect:web3wallet` 1.35.2, Maven-verified; `approveSession` / WalletKit note; projectId still an owner step) |
+| OKX sonar, Solana tx simulation | MIT | Wallet (dev tooling): simulate a Solana send construction locally before signing; never shipped | None — no cargo on loud-stone, build not run | §14 (commands + `sonar send` never on mainnet) |
+| Front-End-Checklist `touch-targets` | MIT | Wallet: touch-target floor for the web app | Audit only, no code change: class audit finds no interactive element below 24 px (default 40, sm 32, xs 28 — xs unused, icon-sm 32); WCAG 2.2 AA 24 px floor passes. The 44 px AAA gap is the known, owner-saved-layout state — restyling it is an owner decision, not a lane fix | This section |
+| Front-End-Checklist `performance-budget` | MIT | Guide + wallet: budgets enforced in CI | Verified, no code change: the bundle-size gate IS the budget (CI `ci.yml:193`, total + largest chunk). Lighthouse CI and production RUM are not wired — flagged, not added | This section |
+| Front-End-Checklist `code-splitting` | MIT | Wallet: heavy Part A modules behind dynamic import | Verified in the built `dist/`: WalletConnect and Shamir ship as separate lazy chunks, not in the main chunk (see the lane's bundle measurement) | This section |
+| Front-End-Checklist `leaked-secrets` | MIT | Wallet: secret hygiene | Ran `node scripts/secret-scan.mjs` on the worktree: exit 0, no findings. The new script carries no secrets or keys | This section |
+| Front-End-Checklist `token-storage-security` | MIT | Wallet: vault-key storage | Verified in code, no change: the skill's httpOnly-cookie prescription does not apply — Bawa has no server and no session tokens. The mitigation is the auto-lock key-storage invariant (§4): the derived key is stored under `bawa-vault-key` only while auto-lock is OFF, never while it is ON | This section |
+| `planning-with-files` (three-file method) + `ponytail` (lazy senior dev) | MIT, MIT | Guide: agent-workflow method for the AI Wallet Builder | None in the app | Recorded here as the standing method this lane followed: user-owned plan/design files agents never edit, findings + progress in files, smallest complete change, fix in place, one small test for non-trivial logic. Bawa already works this way (lane files, PROGRAMME.md); these two sources name the discipline, they do not change it |
+
+### §18.2 Finds read and rejected (with reason)
+
+| Find | Licence | Reason rejected |
+| --- | --- | --- |
+| `okx-dex-market` (onchainos-skills) as a CoinGecko alternative | MIT | Keyless operation could not be verified — its preflight routes through OKX's installer/account flow. Do not assume it works without an OKX account (same verdict as §7.1). |
+| Multi-AI-Workflow (multi-model orchestration: Claude + Codex + Gemini) | MIT | Conflicts with the standing Astra-only / Sol-only model rule for Bawa. Not adopted. |
+| `yn`, Firecrawl | AGPL-3.0, AGPL-3.0 | Copyleft: no code copied into Bawa. Firecrawl noted only as a possible self-hosted research tool (needs API key / self-host); not adopted. |
+| Wanwu (multi-agent platform), QwenPaw (Qwen desktop agent app) | Apache-2.0, Apache-2.0 | Heavy agent platforms / a different product, not wallet inputs. No Bawa application. |
+| DeepSeek Harness | MIT | Developer preview with stated compatibility-breaking changes. Not pinned for the guide. |
+| ECC (agent harness conventions: coding-style, git-workflow, TDD, patterns) | MIT | Reference only. Bawa already has its own conventions (`AGENTS.md`); nothing imported. |
+| `agent-skills` (90 single-word agents) | MIT | Name-scanned only; no agent read in depth and none applied this lane. A deeper pass may find a review/security agent worth adopting — OPEN, not claimed. |
+| Bitget `bitget-wallet-developer-skill` / `bitget-wallet-partner-skill` | MIT (subdirs only for developer-skill; root has no LICENSE) | Reference only. Developer-skill teaches DApps to connect *to* Bitget Wallet (direction inverted); partner-skill needs a partner key + IP whitelist. Nothing applied. |
+| OKX `go-wallet-sdk` | MIT | Go signing SDK; cannot run in the TS web app. Reference only (Lane B owns the chain-reference work). |
+| Coinbase / Privy / WalletConnect JS beyond Part A | As surveyed | Already covered by Part A (§11–§13) or excluded in the survey (wrong side, custodial, key-gated). Nothing further. |
+
+### §18.3 Skills actually read (Lane H)
+
+From the Front-End-Checklist corpus (MIT, in agent-repos):
+`touch-targets`, `performance-budget`, `code-splitting`,
+`leaked-secrets`, `token-storage-security` (SKILL.md files read in
+full; `color-contrast` NOT re-read — the redesign programme already
+ran contrast first-hand, and re-claiming it would be double-counting).
+From agent-repos: `planning-with-files` AGENTS.md (three-file
+method), `ponytail` AGENTS.md (lazy senior dev). From
+loud-stone custom-skills: the library was name-scanned (1,906
+entries); no additional SKILL.md was read in full beyond the two
+above, which live in agent-repos, not in custom-skills. The
+`cdp-visual-verification` skill (already the standing CDP method)
+was NOT re-read: Lane H changed nothing user-visible, so no CDP
+run was needed.
+
+### §18.4 Known discrepancies for the coordinator's re-check pass
+
+- **QR templates:** §8 says four templates (A–D). The redesign
+  added templates E/F/G on token-gaps; this base's spec still says
+  four. Lane H did not rewrite the count — reconcile after the
+  rebase.
+- **Bundle budget:** §0.2 says 4,185,000, which matches this base
+  (`CONSTRAINTS.md:40`, CI). The owner-ordered re-baseline to
+  4,215,000 lives on token-gaps only. Reconcile after the rebase;
+  Lane H measured against 4,185,000.
+- **CI comment:** `ci.yml` said "dist/assets <= 4,040,000 bytes"
+  while the enforced gate is 4,185,000. Fixed in this lane
+  (comment only, to match the enforced number).
+- **Agent-repos SURVEY.md never appeared** during this lane, and
+  agent-repos is not installed on loud-stone. The mining above is
+  from the sandbox copy, read-only.
+- **Not verified first-hand by Lane H:** `sonar` release build (no
+  cargo on loud-stone); the WalletConnect Kotlin dependency inside
+  a Gradle build (no Android SDK/JDK on loud-stone);
+  `okx-cex-market` end-to-end (needs the `okx` CLI binary);
+  `dev_rug_percent` scale at a non-zero value (normalised like its
+  sibling fields — stated in the script, not hidden).
