@@ -716,7 +716,7 @@ export async function qrSvgToPngFile(
 // instead of clipping. The layout is measured first and drawn
 // second, on the same numbers.
 
-export type QrCardTemplate = 'a' | 'b' | 'c' | 'd';
+export type QrCardTemplate = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g';
 
 export interface QrCardTemplateMeta {
   id: QrCardTemplate;
@@ -727,6 +727,9 @@ export interface QrCardTemplateMeta {
 export const QR_CARD_TEMPLATES: readonly QrCardTemplateMeta[] = [
   { id: 'b', label: 'Paper', hint: 'Bawa drawing style' },
   { id: 'a', label: 'Dark Teal', hint: 'Closest to the Bitget bar' },
+  { id: 'e', label: 'Sun', hint: 'Bright sun field' },
+  { id: 'f', label: 'Ink', hint: 'Dark card, safe code' },
+  { id: 'g', label: 'Ticket', hint: 'Two-tone ticket stub' },
   { id: 'c', label: 'Minimal', hint: 'Plain and quiet' },
   { id: 'd', label: 'Poster', hint: 'Bold, for sharing' },
 ];
@@ -750,6 +753,9 @@ export const QR_CARD_TEMPLATE_QR: Record<
   b: { size: 200, fg: '#2B2B2B', bg: '#FFFDF7', logo: 44 },
   c: { size: 216, fg: '#111111', bg: '#FFFFFF', logo: 32 },
   d: { size: 210, fg: '#2B2B2B', bg: '#FFFFFF', logo: 42 },
+  e: { size: 210, fg: '#2B2B2B', bg: '#FFFFFF', logo: 42 },
+  f: { size: 208, fg: '#2B2B2B', bg: '#FFFFFF', logo: 40 },
+  g: { size: 200, fg: '#2B2B2B', bg: '#FFFDF7', logo: 44 },
 };
 
 /** The footer: Bawa's own words — share the card, keep the keys. */
@@ -1246,6 +1252,71 @@ interface QrCardGeometryC extends QrCardGeometryBase {
   wordmarkY: number;
 }
 
+interface QrCardGeometryE extends QrCardGeometryBase {
+  template: 'e';
+  logoY: number;
+  titleY: number;
+  subtitleY: number;
+  tileX: number;
+  tileY: number;
+  tileSize: number;
+  qrX: number;
+  qrY: number;
+  amountY: number;
+  underlineY: number;
+  stripY: number;
+  stripH: number;
+  addressY: number;
+  copyX: number;
+  copyY: number;
+  brandY: number;
+}
+
+interface QrCardGeometryF extends QrCardGeometryBase {
+  template: 'f';
+  logoY: number;
+  titleY: number;
+  subtitleY: number;
+  tileX: number;
+  tileY: number;
+  tileSize: number;
+  qrX: number;
+  qrY: number;
+  amountY: number;
+  underlineY: number;
+  stripX: number;
+  stripW: number;
+  stripY: number;
+  stripH: number;
+  addressY: number;
+  copyX: number;
+  copyY: number;
+  brandY: number;
+}
+
+interface QrCardGeometryG extends QrCardGeometryBase {
+  template: 'g';
+  cardX: number;
+  cardY: number;
+  cardW: number;
+  cardH: number;
+  logoY: number;
+  titleY: number;
+  subtitleY: number;
+  tileX: number;
+  tileY: number;
+  tileSize: number;
+  qrX: number;
+  qrY: number;
+  tearY: number;
+  amountY: number;
+  addressY: number;
+  copyY: number;
+  copyW: number;
+  ruleY: number;
+  brandY: number;
+}
+
 interface QrCardGeometryD extends QrCardGeometryBase {
   template: 'd';
   titleLines: RichWord[][];
@@ -1270,7 +1341,10 @@ type QrCardGeometry =
   | QrCardGeometryA
   | QrCardGeometryB
   | QrCardGeometryC
-  | QrCardGeometryD;
+  | QrCardGeometryD
+  | QrCardGeometryE
+  | QrCardGeometryF
+  | QrCardGeometryG;
 
 const DISPLAY_FONT = (px: number, weight: number): string =>
   `${weight} ${px}px "Baloo 2", "Inter", system-ui, sans-serif`;
@@ -1284,6 +1358,77 @@ const MONO_FONT = (px: number, weight = 400): string =>
  * the address, and lays out every row. The draw step replays these
  * coordinates — one source of numbers, measured once.
  */
+/**
+ * The centred-card layout shared by E (Sun) and F (Ink): the same
+ * skeleton, a different address width and strip. Returns the shared
+ * rows; the caller adds its own strip/copy rows.
+ */
+function layoutCentredCard(
+  template: 'e' | 'f',
+  details: QrCardPngDetails,
+  ctx: CardContext,
+  s: number,
+  subtitleLines: RichWord[][],
+  addressMaxW: number,
+): {
+  logoY: number;
+  titleY: number;
+  subtitleY: number;
+  tileX: number;
+  tileY: number;
+  tileSize: number;
+  qrX: number;
+  qrY: number;
+  amountY: number;
+  underlineY: number;
+  stripY: number;
+  stripH: number;
+  addressY: number;
+  brandY: number;
+  height: number;
+  addressLines: string[];
+} {
+  const px = (v: number): number => Math.round(v * s);
+  const qrSpec = QR_CARD_TEMPLATE_QR[template];
+  const addressLines = wrapCardText(details.address, px(addressMaxW), (text) => {
+    ctx.font = MONO_FONT(px(13));
+    return ctx.measureText(text).width;
+  });
+  const logoY = px(32);
+  const titleY = px(32 + 96 + 20);
+  const subtitleY = px(32 + 96 + 20 + 38 + 8);
+  const tileSize = px(qrSpec.size + 48);
+  const tileX = Math.round((px(390) - tileSize) / 2);
+  const tileY = subtitleY + px(subtitleLines.length * 22 + 24);
+  const qrX = tileX + px(24);
+  const qrY = tileY + px(24);
+  const amountY = tileY + tileSize + px(24);
+  const underlineY = amountY + px(30 + 8);
+  const stripY = underlineY + px(4 + 24);
+  const stripH = px(16 + addressLines.length * 20 + 16);
+  const addressY = stripY + px(16);
+  const brandY = stripY + stripH + px(24);
+  const height = brandY + px(36 + 24);
+  return {
+    logoY,
+    titleY,
+    subtitleY,
+    tileX,
+    tileY,
+    tileSize,
+    qrX,
+    qrY,
+    amountY,
+    underlineY,
+    stripY,
+    stripH,
+    addressY,
+    brandY,
+    height,
+    addressLines,
+  };
+}
+
 function layoutQrCard(
   template: QrCardTemplate,
   details: QrCardPngDetails,
@@ -1292,9 +1437,16 @@ function layoutQrCard(
   hasLogo: boolean,
 ): QrCardGeometry {
   const px = (v: number): number => Math.round(v * s);
-  const subtitlePx = template === 'a' || template === 'd' ? 15 : 14;
+  const subtitlePx =
+    template === 'a' || template === 'd' || template === 'e' || template === 'f'
+      ? 15
+      : 14;
   const subtitleMaxW =
-    template === 'a' || template === 'c' ? 340 : template === 'd' ? 254 : 320;
+    template === 'a' || template === 'c' || template === 'e' || template === 'f'
+      ? 340
+      : template === 'd'
+        ? 254
+        : 320;
   const subtitleLines = wrapRichWords(
     ctx,
     richWords(subtitleSegments(details.subtitle, details.networkName)),
@@ -1440,6 +1592,84 @@ function layoutQrCard(
     };
   }
 
+  if (template === 'e') {
+    const shared = layoutCentredCard('e', details, ctx, s, subtitleLines, 298);
+    return {
+      template: 'e',
+      subtitleLines,
+      ...shared,
+      copyX: px(390 - 24 - 20),
+      copyY: shared.stripY + Math.round((shared.stripH - px(20)) / 2),
+    };
+  }
+
+  if (template === 'f') {
+    const shared = layoutCentredCard('f', details, ctx, s, subtitleLines, 262);
+    return {
+      template: 'f',
+      subtitleLines,
+      ...shared,
+      stripX: px(24),
+      stripW: px(342),
+      copyX: px(390 - 24 - 16 - 20),
+      copyY: shared.stripY + Math.round((shared.stripH - px(20)) / 2),
+    };
+  }
+
+  if (template === 'g') {
+    const qrSpec = QR_CARD_TEMPLATE_QR.g;
+    const addressLines = wrapCardText(details.address, px(320), (text) => {
+      ctx.font = MONO_FONT(px(12));
+      return ctx.measureText(text).width;
+    });
+    const cardX = px(15);
+    const cardW = px(360);
+    const cardY = px(24);
+    const tileSize = px(qrSpec.size + 16 + 4);
+    const logoY = cardY + px(20);
+    const titleY = cardY + px(20 + 64 + 20);
+    const subtitleY = titleY + px(34 + 8);
+    const tileX = cardX + Math.round((cardW - tileSize) / 2);
+    const tileY = subtitleY + px(subtitleLines.length * 20 + 20);
+    const qrX = tileX + px(8 + 2);
+    const qrY = tileY + px(8 + 2);
+    const tearY = tileY + tileSize + px(24);
+    const amountY = tearY + px(20);
+    const addressY = amountY + px(28 + 12);
+    const copyY = addressY + px(addressLines.length * 18 + 16);
+    ctx.font = BODY_FONT(px(12), 600);
+    const copyW = ctx.measureText('Copy').width;
+    const ruleY = copyY + px(18 + 12);
+    const brandY = ruleY + px(2 + 12);
+    const cardH = brandY + px(24 + 20) - cardY;
+    const height = cardY + cardH + px(24);
+    return {
+      template: 'g',
+      height,
+      subtitleLines,
+      addressLines,
+      cardX,
+      cardY,
+      cardW,
+      cardH,
+      logoY,
+      titleY,
+      subtitleY,
+      tileX,
+      tileY,
+      tileSize,
+      qrX,
+      qrY,
+      tearY,
+      amountY,
+      addressY,
+      copyY,
+      copyW,
+      ruleY,
+      brandY,
+    };
+  }
+
   // Template B (default): Bawa's own paper card, respaced.
   const qrSpec = QR_CARD_TEMPLATE_QR.b;
   const addressLines = wrapCardText(details.address, px(304), (text) => {
@@ -1548,6 +1778,43 @@ function centreMark(
   const discPx = logoPx + px(template === 'b' ? 12 : 8);
   fillCircle(ctx, cx, cy, discPx / 2, '#FFFFFF');
   ctx.drawImage(centre, cx - logoPx / 2, cy - logoPx / 2, logoPx, logoPx);
+}
+
+/**
+ * The centred-card header shared by E and F: white logo disc + chain
+ * badge, title, subtitle. Only the colours differ.
+ */
+function drawCentredHeader(
+  ctx: CardContext,
+  images: QrCardImages,
+  g: {
+    logoY: number;
+    titleY: number;
+    subtitleY: number;
+    subtitleLines: RichWord[][];
+  },
+  details: QrCardPngDetails,
+  width: number,
+  s: number,
+  titleColor: string,
+  subtitleColor: string,
+  boldColor: string,
+): void {
+  const px = (v: number): number => Math.round(v * s);
+  const logoCx = width / 2;
+  const logoCy = g.logoY + px(48);
+  fillCircle(ctx, logoCx, logoCy, px(48), '#FFFFFF');
+  if (images.token !== null) {
+    ctx.drawImage(images.token, logoCx - px(32), logoCy - px(32), px(64), px(64));
+  }
+  if (images.chain !== null) {
+    const badgeCx = logoCx + px(34);
+    const badgeCy = logoCy + px(34);
+    fillCircle(ctx, badgeCx, badgeCy, px(14), '#FFFFFF');
+    ctx.drawImage(images.chain, badgeCx - px(10), badgeCy - px(10), px(20), px(20));
+  }
+  drawText(ctx, details.title, width / 2, g.titleY, BODY_FONT(px(30), 800), titleColor);
+  drawSubtitleBlock(ctx, g.subtitleLines, width / 2, g.subtitleY, px(22), px(15), subtitleColor, boldColor);
 }
 
 function drawQrCard(
@@ -1686,6 +1953,143 @@ function drawQrCard(
     fillRoundRect(ctx, px(24), g.brandY, px(36), px(36), px(8), QR_CARD_INK);
     drawText(ctx, 'B', px(24 + 18), g.brandY + px(18) - px(10), DISPLAY_FONT(px(20), 800), '#FFFFFF');
     drawText(ctx, QR_CARD_BRAND, px(24 + 36 + 12), g.brandY + px(18) - px(11), DISPLAY_FONT(px(22), 800), '#FFFFFF', 'left');
+    return;
+  }
+
+  if (template === 'e') {
+    const g = geometry as QrCardGeometryE;
+    ctx.fillStyle = QR_CARD_SUN;
+    ctx.fillRect(0, 0, width, g.height);
+    drawCentredHeader(ctx, images, g, details, width, s, QR_CARD_INK, QR_CARD_INK, QR_CARD_INK);
+    // White QR tile: hard offset shadow, ink frame, QR inside.
+    ctx.fillStyle = QR_CARD_INK;
+    ctx.fillRect(g.tileX + px(4), g.tileY + px(4), g.tileSize, g.tileSize);
+    fillRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), '#FFFFFF');
+    strokeRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), QR_CARD_INK, px(2));
+    ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
+    centreMark(ctx, deps, images, 'e', g.qrX + px(qrSpec.size) / 2, g.qrY + px(qrSpec.size) / 2, s);
+    drawText(ctx, details.amountText, width / 2, g.amountY, DISPLAY_FONT(px(22), 700), QR_CARD_INK);
+    ctx.fillStyle = QR_CARD_CORAL;
+    ctx.fillRect(width / 2 - px(24), g.underlineY, px(48), px(4));
+    // Address strip: full-bleed ink, copy mark at the right.
+    ctx.fillStyle = QR_CARD_INK;
+    ctx.fillRect(0, g.stripY, width, g.stripH);
+    drawAddressLines(ctx, g.addressLines, px(24), g.addressY, px(20), MONO_FONT(px(13)), '#FFFFFF', 'left');
+    drawCopyGlyph(ctx, g.copyX, g.copyY, px(20), '#FFFFFF');
+    // Brand row, left-aligned.
+    fillRoundRect(ctx, px(24), g.brandY, px(36), px(36), px(8), QR_CARD_INK);
+    drawText(ctx, 'B', px(24 + 18), g.brandY + px(18) - px(10), DISPLAY_FONT(px(20), 800), '#FFFFFF');
+    drawText(ctx, QR_CARD_BRAND, px(24 + 36 + 12), g.brandY + px(18) - px(11), DISPLAY_FONT(px(22), 800), QR_CARD_INK, 'left');
+    return;
+  }
+
+  if (template === 'f') {
+    const g = geometry as QrCardGeometryF;
+    ctx.fillStyle = QR_CARD_INK;
+    ctx.fillRect(0, 0, width, g.height);
+    drawCentredHeader(ctx, images, g, details, width, s, '#FFFFFF', '#9CA3AF', '#FFFFFF');
+    // White QR tile — no border: white on ink is the edge.
+    fillRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), '#FFFFFF');
+    ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
+    centreMark(ctx, deps, images, 'f', g.qrX + px(qrSpec.size) / 2, g.qrY + px(qrSpec.size) / 2, s);
+    drawText(ctx, details.amountText, width / 2, g.amountY, DISPLAY_FONT(px(20), 700), '#FFFFFF');
+    ctx.fillStyle = QR_CARD_SUN;
+    ctx.fillRect(width / 2 - px(24), g.underlineY, px(48), px(4));
+    // Address strip: paper, rounded, copy mark at the right.
+    fillRoundRect(ctx, g.stripX, g.stripY, g.stripW, g.stripH, px(12), QR_PAPER_COLOR);
+    drawAddressLines(ctx, g.addressLines, g.stripX + px(16), g.addressY, px(20), MONO_FONT(px(13)), QR_CARD_INK, 'left');
+    drawCopyGlyph(ctx, g.copyX, g.copyY, px(20), QR_CARD_INK);
+    // Brand row: sun mark with an ink B, white wordmark.
+    fillRoundRect(ctx, px(24), g.brandY, px(36), px(36), px(8), QR_CARD_SUN);
+    drawText(ctx, 'B', px(24 + 18), g.brandY + px(18) - px(10), DISPLAY_FONT(px(20), 800), QR_CARD_INK);
+    drawText(ctx, QR_CARD_BRAND, px(24 + 36 + 12), g.brandY + px(18) - px(11), DISPLAY_FONT(px(22), 800), '#FFFFFF', 'left');
+    return;
+  }
+
+  if (template === 'g') {
+    const g = geometry as QrCardGeometryG;
+    ctx.fillStyle = QR_PAPER_COLOR;
+    ctx.fillRect(0, 0, width, g.height);
+    // Faint dot grid — the paper the card sits on, not a flat fill (as B).
+    ctx.fillStyle = 'rgba(43,43,43,0.05)';
+    const dotStep = px(24);
+    for (let x = dotStep; x < width; x += dotStep) {
+      for (let y = dotStep; y < g.height; y += dotStep) {
+        ctx.fillRect(x, y, px(2), px(2));
+      }
+    }
+    // The card: paper, ink border, hand-drawn radius approximated.
+    ctx.fillStyle = QR_PAPER_COLOR;
+    roundRectPath(ctx, g.cardX, g.cardY, g.cardW, g.cardH, px(15));
+    ctx.fill();
+    // The sun zone: clipped to the card path so its square top corners
+    // never poke past the card's rounded corners (as A's bands).
+    ctx.save();
+    roundRectPath(ctx, g.cardX, g.cardY, g.cardW, g.cardH, px(15));
+    ctx.clip();
+    ctx.fillStyle = QR_CARD_SUN;
+    ctx.fillRect(g.cardX, g.tearY, g.cardW, g.cardY + g.cardH - g.tearY);
+    ctx.restore();
+    strokeRoundRect(ctx, g.cardX, g.cardY, g.cardW, g.cardH, px(15), QR_CARD_INK, px(2));
+    // Header: logo circle + chain badge.
+    const logoCx = width / 2;
+    const logoCy = g.logoY + px(32);
+    fillCircle(ctx, logoCx, logoCy, px(32), QR_PAPER_COLOR);
+    strokeCircle(ctx, logoCx, logoCy, px(32), QR_CARD_INK, px(2));
+    if (images.token !== null) {
+      ctx.drawImage(images.token, logoCx - px(26), logoCy - px(26), px(52), px(52));
+    }
+    if (images.chain !== null) {
+      const badgeCx = logoCx + px(23);
+      const badgeCy = logoCy + px(23);
+      fillCircle(ctx, badgeCx, badgeCy, px(12), QR_PAPER_COLOR);
+      ctx.drawImage(images.chain, badgeCx - px(10), badgeCy - px(10), px(20), px(20));
+    }
+    drawText(ctx, details.title, width / 2, g.titleY, DISPLAY_FONT(px(28), 700), QR_CARD_INK);
+    drawSubtitleBlock(ctx, g.subtitleLines, width / 2, g.subtitleY, px(20), px(14), QR_CARD_INK, QR_CARD_INK);
+    // The tile: hard offset shadow, ink frame, QR inside (as B).
+    ctx.fillStyle = QR_CARD_INK;
+    ctx.fillRect(g.tileX + px(4), g.tileY + px(4), g.tileSize, g.tileSize);
+    ctx.fillStyle = QR_PAPER_COLOR;
+    ctx.fillRect(g.tileX, g.tileY, g.tileSize, g.tileSize);
+    ctx.fillStyle = QR_CARD_INK;
+    const border = px(2);
+    ctx.fillRect(g.tileX, g.tileY, g.tileSize, border);
+    ctx.fillRect(g.tileX, g.tileY + g.tileSize - border, g.tileSize, border);
+    ctx.fillRect(g.tileX, g.tileY, border, g.tileSize);
+    ctx.fillRect(g.tileX + g.tileSize - border, g.tileY, border, g.tileSize);
+    ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
+    centreMark(ctx, deps, images, 'g', g.qrX + px(qrSpec.size) / 2, g.qrY + px(qrSpec.size) / 2, s);
+    // Tear line: dashed ink rule with punched notches on the card edges.
+    // Dashes are drawn rects (the card context has no setLineDash).
+    ctx.fillStyle = QR_CARD_INK;
+    for (let x = g.cardX + px(12); x < g.cardX + g.cardW - px(12); x += px(14)) {
+      ctx.fillRect(x, g.tearY, px(8), px(2));
+    }
+    fillCircle(ctx, g.cardX, g.tearY + px(1), px(8), QR_PAPER_COLOR);
+    strokeCircle(ctx, g.cardX, g.tearY + px(1), px(8), QR_CARD_INK, px(2));
+    fillCircle(ctx, g.cardX + g.cardW, g.tearY + px(1), px(8), QR_PAPER_COLOR);
+    strokeCircle(ctx, g.cardX + g.cardW, g.tearY + px(1), px(8), QR_CARD_INK, px(2));
+    drawText(ctx, details.amountText, width / 2, g.amountY, DISPLAY_FONT(px(22), 700), QR_CARD_INK);
+    drawAddressLines(ctx, g.addressLines, width / 2, g.addressY, px(18), MONO_FONT(px(12)), QR_CARD_INK);
+    // Copy pill: ink outline, centred.
+    const pillW = g.copyW + px(24);
+    const pillH = px(24);
+    const pillX = width / 2 - pillW / 2;
+    strokeRoundRect(ctx, pillX, g.copyY - px(4), pillW, pillH, px(6), QR_CARD_INK, px(2));
+    drawText(ctx, 'Copy', width / 2, g.copyY - px(4) + pillH / 2 - px(6), BODY_FONT(px(12), 600), QR_CARD_INK);
+    // Brand strip: ink rule, coral B mark, wordmark.
+    ctx.fillStyle = QR_CARD_INK;
+    ctx.fillRect(g.cardX + px(20), g.ruleY, g.cardW - px(40), px(2));
+    const brandFont = DISPLAY_FONT(px(16), 700);
+    ctx.font = brandFont;
+    const brandW = ctx.measureText(QR_CARD_BRAND).width;
+    const markPx = px(24);
+    const groupW = markPx + px(8) + brandW;
+    const groupX = (width - groupW) / 2;
+    fillRoundRect(ctx, groupX, g.brandY, markPx, markPx, px(6), QR_CARD_CORAL);
+    drawText(ctx, 'B', groupX + markPx / 2, g.brandY + markPx / 2 - px(8), DISPLAY_FONT(px(16), 700), '#FFFFFF');
+    drawText(ctx, QR_CARD_BRAND, groupX + markPx + px(8), g.brandY + markPx / 2 - px(8), brandFont, QR_CARD_INK, 'left');
     return;
   }
 
