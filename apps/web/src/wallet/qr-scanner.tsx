@@ -226,11 +226,15 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
 
   return (
     <div className="space-y-4">
+      {/* Redesign Lane 3 (Send): the preview is 16:9 and cropped, not
+          full-width at the camera's own aspect — unconstrained it ran
+          to ~500 px tall on a phone and pushed the status line and the
+          Cancel / Upload buttons below the fold. */}
       <video
         ref={videoRef}
         playsInline
         muted
-        className="w-full rounded-bawa-sm bg-ink"
+        className="aspect-video w-full rounded-bawa-sm bg-ink object-cover"
         aria-label="Camera preview"
       />
       <canvas ref={canvasRef} className="hidden" aria-hidden="true" />

@@ -11,7 +11,7 @@
 // TEMPORARY devnet mode (owner order 2026-11-22) is the one exception:
 // when devnet is on, the signed transaction broadcasts to the test
 // network via broadcastSignedDevnet. Mainnet still never broadcasts.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Button } from '../ui/components/button';
 import { ScanIcon } from '../ui/components/icons';
@@ -30,8 +30,16 @@ import {
   DEVNET_CHAINS,
   devnetChainConfigOrUndefined,
 } from '../wallet/devnet-endpoints';
-import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
-import { formatFeePreview } from '../wallet/money';
+import { CHAIN_DECIMALS, decimalToBaseUnits, formatNativeWithSymbol } from '../wallet/chain-amount-format';
+import { fiatMinorUnits, formatFeePreview, formatFiatUSD } from '../wallet/money';
+import {
+  isFreshQuote,
+  usdPriceToMinorUnitsPerWhole,
+  usePrices,
+  type PriceEntry,
+} from '../wallet/prices';
+import { useTokenPrices } from '../wallet/token-prices';
+import { usePriceFeedAutoRefresh } from './use-live-prices';
 import {
   clearPendingSendLink,
   parseBawaSendLink,
@@ -45,7 +53,6 @@ import {
   isDefaultToken,
   isVerifiedToken,
   orderAssetsByBalance,
-  shortContract,
   tokenKey,
   tokenKeyOf,
   tokenStandardFor,
@@ -85,6 +92,7 @@ import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
+import { ChainSearchSelect, SEND_RECENT_CHAINS_KEY } from './chain-search-select';
 import { ChainLogo, TokenLogo } from './token-logo';
 import { TokenPickerRow } from './token-picker-row';
 import type { SendApprovalStage } from './send-approval';
@@ -261,6 +269,141 @@ export function SendScreen() {
           ? 'Loading balance…'
           : 'Balance unavailable';
 
+  // Redesign Lane 3 (Send): the chain picker, the error summary, the
+  // paste fallback note and the recipient re-check sequence. The
+  // summary/paste notes clear whenever the step changes (see the effect
+  // below) so a note from one step never lingers on the next.
+  const [noWalletNote, setNoWalletNote] = useState<string | null>(null);
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [pasteNote, setPasteNote] = useState<string | null>(null);
+  const errorSummaryRef = useRef<HTMLDivElement | null>(null);
+
+  // Live prices for the fiat equivalent under the amount (DESIGN-SYSTEM
+  // §6 Send: "fiat equivalent under the amount"). Same hooks as
+  // asset-detail; the price modules already live in the shared index
+  // chunk, so importing them here costs ~0 extra bundle. Token prices
+  // cover only the selected token — the native feed covers the native
+  // coin. Both auto-fetch on mount and refresh about every 60 s while
+  // this screen is mounted, like the dashboard.
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  usePriceFeedAutoRefresh(pricesState.status, refreshPrices);
+  const priceTokenList = useMemo(
+    () => (selectedToken === null ? [] : [selectedToken]),
+    [selectedToken],
+  );
+  const { state: tokenPricesState, refresh: refreshTokenPrices } =
+    useTokenPrices(priceTokenList);
+  usePriceFeedAutoRefresh(tokenPricesState.status, refreshTokenPrices);
+  // The token feed's auto-refresh only fires while idle: switching
+  // tokens leaves it 'ready' with no entry for the new token, so
+  // refresh explicitly when the selected token has no entry yet.
+  useEffect(() => {
+    if (selectedToken === null) return;
+    if (tokenPricesState.entries[tokenKeyOf(selectedToken)] !== undefined) return;
+    refreshTokenPrices();
+  }, [selectedToken, tokenPricesState.entries, refreshTokenPrices]);
+
+  // Step-scoped notes clear on every step change, so a note from one
+  // step (a no-wallet pick, a paste failure, a shown error summary)
+  // never lingers on the next.
+  useEffect(() => {
+    setNoWalletNote(null);
+    setSummaryVisible(false);
+    setPasteNote(null);
+  }, [step]);
+
+  // The price entry for the asset being sent (native or token).
+  const priceEntry: PriceEntry | undefined =
+    selectedToken !== null
+      ? tokenPricesState.entries[tokenKeyOf(selectedToken)]
+      : pricesState.entries[chain];
+
+  // Fiat equivalent of a base-units amount, from the live feed.
+  // Mainnet only: devnet test tokens have no value. Null when there is
+  // no fresh quote or the amount does not convert — never an invented
+  // dollar figure.
+  function fiatTextForBaseUnits(
+    amountBaseUnits: string,
+    decimals: number,
+    entry: PriceEntry | undefined,
+  ): string | null {
+    if (devnetEnabled) return null;
+    if (entry === undefined || entry.status !== 'fresh') return null;
+    if (!isFreshQuote(entry.quote, Date.now())) return null;
+    try {
+      const minorUnits = fiatMinorUnits(
+        amountBaseUnits,
+        decimals,
+        usdPriceToMinorUnitsPerWhole(entry.quote.usdPrice),
+      );
+      return `≈ ${formatFiatUSD(minorUnits)}`;
+    } catch {
+      return null;
+    }
+  }
+
+  // The typed amount, parsed to base units (null while empty or
+  // unparseable — the preview reports those on Review).
+  // decimalToBaseUnits trims and returns null for those itself.
+  const amountBaseUnits = decimalToBaseUnits(
+    amount,
+    selectedToken?.decimals ?? CHAIN_DECIMALS[chain],
+  );
+  // Fiat equivalent of the typed amount.
+  const amountFiatText =
+    amountBaseUnits === null
+      ? null
+      : fiatTextForBaseUnits(
+          amountBaseUnits,
+          selectedToken?.decimals ?? CHAIN_DECIMALS[chain],
+          priceEntry,
+        );
+  const priceUnavailable =
+    !devnetEnabled &&
+    priceEntry !== undefined &&
+    priceEntry.status === 'error';
+
+  // Inline insufficient-balance check (Bitget transfer-form pattern):
+  // as soon as the typed amount parses and the balance is loaded, say
+  // so under the field — the user should not have to press Review to
+  // learn the wallet cannot cover it.
+  const amountBalanceBaseUnits =
+    selectedToken !== null
+      ? tokenBalance !== undefined &&
+        (tokenBalance.status === 'available' || tokenBalance.status === 'zero')
+        ? (tokenBalance.value ?? null)
+        : null
+      : balance.status === 'available' || balance.status === 'zero'
+        ? (balance.value ?? null)
+        : null;
+  const amountError =
+    amountBaseUnits !== null &&
+    amountBalanceBaseUnits !== null &&
+    BigInt(amountBaseUnits) > BigInt(amountBalanceBaseUnits)
+      ? 'Amount exceeds available balance.'
+      : null;
+
+  // Per-row balance for the token picker: the balance is the decision
+  // input at pick time, so each row shows its own (the old rows showed
+  // no balance at all).
+  function rowBalanceText(token: TokenRecord | null): string {
+    if (token === null) return balanceText;
+    const entry = (tokenBalances ?? {})[tokenKey(token.chain, token.contract)];
+    if (
+      entry === undefined ||
+      entry.status === 'unavailable' ||
+      entry.status === 'error'
+    ) {
+      return 'Balance unavailable';
+    }
+    if (entry.status === 'loading') return 'Loading balance…';
+    return formatNativeWithSymbol(
+      entry.value ?? '0',
+      token.decimals,
+      token.symbol,
+    );
+  }
+
   function selectChain(next: ChainId): void {
     setChain(next);
     setSelectedToken(null);
@@ -300,6 +443,22 @@ export function SendScreen() {
       clearPendingSendLink();
       navigate('/send', { replace: true });
     }
+  }
+
+  // Redesign Lane 3: the chain picker offers every chain (the list is
+  // searchable now, so the long list is usable), but only a chain with
+  // a wallet can be picked. A chain without one stays on this step
+  // with the honest reason — never a dead control, never a silent
+  // no-op, and never an advance into a token step with nothing to
+  // send from.
+  function handleChainPick(next: ChainId): void {
+    if ((vaultAddresses[next] ?? []).length === 0) {
+      setNoWalletNote(
+        `No ${chainConfig(next).displayName} wallet here yet. Create or import one first.`,
+      );
+      return;
+    }
+    selectChain(next);
   }
 
   // Prefill a payment from a Bawa web link (/send?chain=&to=&amount=
@@ -466,14 +625,93 @@ export function SendScreen() {
   // single Continue: validate the recipient, then preview the amount.
   // A bad recipient stops here with its error; a chain without offline
   // signing reports honestly instead of previewing.
+  // Redesign Lane 3: a failed Review shows the error summary (and moves
+  // focus to it — see the effect below), so the failure is visible
+  // where the user is looking instead of below the action row.
   async function handleDetailsNext(): Promise<void> {
+    // The recipient is trimmed on blur and on paste, and focusing the
+    // Review button blurs the field first — by the time this runs the
+    // value is trimmed. validateRecipient trims internally too.
     const recipientResult = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
     if (!recipientResult.ok) {
       setRecipientError(recipientResult.reason);
+      setSummaryVisible(true);
       return;
     }
     setRecipientError(null);
+    // Inline insufficient-balance: no preview call — the amount cannot
+    // be covered, and the preview would only repeat the same failure
+    // below the fold.
+    if (amountError !== null) {
+      setPreview({ ok: false, code: 'insufficient-funds', reason: amountError });
+      setSummaryVisible(true);
+      return;
+    }
     await handleAmountNext();
+  }
+
+  // Redesign Lane 3: validate on blur, once the user has entered
+  // something (ui-ux-pro-max inline-validation; no premature flag on
+  // an untouched or empty field — empty is reported on submit).
+  // Whitespace is trimmed on blur (forgiving-formats): a pasted
+  // address with a trailing newline is still the same address.
+  async function handleRecipientBlur(): Promise<void> {
+    const trimmed = recipient.trim();
+    if (trimmed !== recipient) setRecipient(trimmed);
+    if (trimmed === '') return;
+    const result = await validateRecipient(chain, trimmed, { devnet: devnetEnabled });
+    setRecipientError(result.ok ? null : result.reason);
+  }
+
+  // Once a field shows an error, re-check it on input (error-clears-
+  // on-fix): the error must disappear the moment the value is valid
+  // again, not only on the next Review press.
+  function handleRecipientChange(next: string): void {
+    setRecipient(next);
+    if (recipientError === null) return;
+    void validateRecipient(chain, next, { devnet: devnetEnabled }).then((result) => {
+      setRecipientError(result.ok ? null : result.reason);
+    });
+  }
+
+  // Redesign Lane 3: paste beside the field (DESIGN-SYSTEM §6 wants
+  // paste + scan beside the recipient input — paste used to rely on
+  // the OS long-press menu). A pasted value is complete, so it is
+  // validated at once; a denied clipboard says so instead of failing
+  // silently.
+  async function handlePaste(): Promise<void> {
+    setPasteNote(null);
+    try {
+      if (!navigator.clipboard?.readText) {
+        setPasteNote('Clipboard paste is not available in this browser — paste the address yourself.');
+        return;
+      }
+      const text = await navigator.clipboard.readText();
+      if (text.trim() === '') {
+        setPasteNote('The clipboard is empty.');
+        return;
+      }
+      const pasted = text.trim();
+      setRecipient(pasted);
+      const result = await validateRecipient(chain, pasted, { devnet: devnetEnabled });
+      setRecipientError(result.ok ? null : result.reason);
+    } catch {
+      setPasteNote('Could not read the clipboard — allow clipboard access, or paste the address yourself.');
+    }
+  }
+
+  // The error summary, when shown, takes focus so keyboard and screen
+  // reader users land on the failure instead of hunting for it.
+  const showSummary =
+    summaryVisible &&
+    (recipientError !== null || (preview !== null && !preview.ok));
+  useEffect(() => {
+    if (showSummary) errorSummaryRef.current?.focus();
+  }, [showSummary]);
+
+  // A summary link moves focus to its field.
+  function focusField(id: string): void {
+    document.getElementById(id)?.focus();
   }
 
   async function handleScan(value: string): Promise<void> {
@@ -543,6 +781,7 @@ export function SendScreen() {
           await (devnetEnabled ? ensureDevnetAdapters() : ensureAdapters());
         } catch {
           setPreview({ ok: false, code: 'adapter-unavailable', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+          setSummaryVisible(true);
           return;
         }
         const token = selectedToken;
@@ -560,6 +799,7 @@ export function SendScreen() {
         );
         setPreview(result);
         if (result.ok) setStep('review');
+        else setSummaryVisible(true);
       } finally {
         setPreviewBusy(false);
       }
@@ -571,6 +811,7 @@ export function SendScreen() {
         code: 'adapter-unavailable',
         reason: `Sending on ${config.displayName} isn't available yet. This wallet signs native transfers offline for BTC, TRX, TON, SOL and EVM chains only.`,
       });
+      setSummaryVisible(true);
       return;
     }
     setPreviewBusy(true);
@@ -579,11 +820,13 @@ export function SendScreen() {
         await (devnetEnabled ? ensureDevnetAdapters() : ensureAdapters());
       } catch {
         setPreview({ ok: false, code: 'adapter-unavailable', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+        setSummaryVisible(true);
         return;
       }
       const result = await previewSendAmount(chain, from, recipient, amount, { devnet: devnetEnabled });
       setPreview(result);
       if (result.ok) setStep('review');
+      else setSummaryVisible(true);
     } finally {
       setPreviewBusy(false);
     }
@@ -1034,6 +1277,16 @@ export function SendScreen() {
           ? formatNativeWithSymbol(preview.totalBaseUnits, CHAIN_DECIMALS[chain], config.symbol)
           : `${reviewAmountText} + ${formatNativeWithSymbol(reviewNativeCostBaseUnits ?? preview.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}`
       : '';
+  // Fiat equivalent of the reviewed amount, same feed and rules as the
+  // details step (mainnet only, fresh quote only, never invented).
+  const reviewFiatAmount =
+    preview !== null && preview.ok
+      ? fiatTextForBaseUnits(
+          preview.amountBaseUnits,
+          selectedToken?.decimals ?? CHAIN_DECIMALS[chain],
+          priceEntry,
+        )
+      : null;
 
   if (chainsWithWallet.length === 0 || !from) {
     // Locked vault, no addresses in state (UI/UX round 2, deep-link
@@ -1157,11 +1410,13 @@ export function SendScreen() {
     <div className="space-y-3">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
-        {/* Round 2, item 8: the banner sets expectations at flow entry
-            (chain) and where the user acts (details onwards). The token
-            step is a pure picker — the banner hides there so all eight
-            token rows fit without scrolling. */}
-        {step !== 'token' && (
+        {/* Redesign Lane 3: the full banner sets expectations once, at
+            flow entry (chain). Later steps do not repeat it — the
+            review carries its own warning box, and repeating the same
+            three lines on every step cost ~100 px of form space. In
+            devnet the details step keeps a one-line test-network note
+            (the banner was its only devnet indicator there). */}
+        {step === 'chain' && (
         <p
           role="note"
           className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
@@ -1172,6 +1427,13 @@ export function SendScreen() {
               : `Devnet test mode. ${config.displayName} has no test network — pick a chain with one.`
             : 'Sending funds is switched off until it is separately approved. This flow signs offline only. Nothing here sends cryptocurrency anywhere.'}
         </p>
+        )}
+        {step === 'details' && devnetEnabled && (
+          <p className="text-sm text-muted-foreground">
+            {devnetName
+              ? `Devnet test mode — broadcasts to the ${devnetName} test network only.`
+              : `Devnet test mode — ${config.displayName} has no test network.`}
+          </p>
         )}
       </header>
 
@@ -1234,9 +1496,6 @@ export function SendScreen() {
           <h2 id="send-chain-heading" className="text-lg font-semibold">
             Choose a network
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Sending is switched off on mainnet. This flow signs offline only — nothing here sends cryptocurrency anywhere.
-          </p>
       {/* Scan first (UI/UX Round 2, item 1): a payment QR fills in
           the network, token, amount and address by itself, so the
           scanner lives here too — not only on the recipient step,
@@ -1270,33 +1529,27 @@ export function SendScreen() {
           onCancel={() => setShowScanner(false)}
         />
       )}
-          <div
-            role="group"
-            aria-label="Chain"
-            className="flex flex-wrap gap-2"
-          >
-            {offeredChains.map((candidate) => {
-              const hasWallet = (vaultAddresses[candidate] ?? []).length > 0;
-              return (
-                <Button
-                  key={candidate}
-                  type="button"
-                  variant={candidate === chain ? 'default' : 'outline'}
-                  disabled={!hasWallet}
-                  aria-pressed={candidate === chain}
-                  size="compact"
-                  title={
-                    hasWallet
-                      ? undefined
-                      : `No ${chainConfig(candidate).displayName} wallet`
-                  }
-                  onClick={() => selectChain(candidate)}
-                >
-                  {chainConfig(candidate).displayName}
-                </Button>
-              );
-            })}
-          </div>
+      {/* Redesign Lane 3: the chain picker is a search picker, not an
+          84-chip wall. Measured before: the chip group alone was
+          1,180 px tall at 390 px — the step never fit, and finding a
+          chain meant scanning all 84. The search picker is the same
+          component the watch-only screen uses (search + Recent row +
+          listbox); Send keeps its own Recent list so the two never
+          mix. Deviation from DESIGN-SYSTEM §6 "chain step is chips
+          only", recorded: chips-only cannot fit 84 chains without
+          scrolling, and the system's own §1 convenience test plus the
+          Receive picker pattern (§6 Receive) call for search. */}
+      <ChainSearchSelect
+        chains={offeredChains}
+        value={chain}
+        onChange={(next) => handleChainPick(next)}
+        recentKey={SEND_RECENT_CHAINS_KEY}
+      />
+      {noWalletNote && (
+        <p role="note" className="text-sm text-ink">
+          {noWalletNote}
+        </p>
+      )}
         </section>
       )}
 
@@ -1336,17 +1589,18 @@ export function SendScreen() {
                   key={token === null ? `native:${chain}` : `${token.chain}:${token.contract.toLowerCase()}`}
                   selected={selected}
                   onSelect={() => selectToken(token)}
+                  balanceText={rowBalanceText(token)}
                   logo={
                     <>
                       {/* Lane G: the real chain/token mark — the
                           hand-drawn blob with the ticker text inside
                           rendered as a crossed-out logo. */}
                       {token === null ? (
-                        <ChainLogo chain={chain} size={24} />
+                        <ChainLogo chain={chain} size={32} />
                       ) : (
                         <TokenLogo
                           symbol={token.symbol}
-                          size={24}
+                          size={32}
                           iconUrl={token.iconUrl ?? null}
                           allowSymbolLogo={isDefaultToken(token)}
                         />
@@ -1363,11 +1617,6 @@ export function SendScreen() {
                     ) : (
                       <span className="ml-2" aria-label="Unverified token">Unverified</span>
                     ))}
-                  {token !== null && (
-                    <span className="font-normal text-ink">
-                      {` · ${config.displayName} · ${shortContract(token.contract)}`}
-                    </span>
-                  )}
                   {token === null && (
                     <span className="font-normal text-ink"> · Native coin</span>
                   )}
@@ -1388,7 +1637,11 @@ export function SendScreen() {
         </section>
       )}
 
-      {step !== 'chain' && (
+      {/* Redesign Lane 3: the summary bar is the back path on the token
+          and details steps only. On review the Back button covers it,
+          and on result the screen speaks for itself — the bar would
+          eat ~60 px on both. */}
+      {(step === 'token' || step === 'details') && (
         <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
           <span>
             <span className="font-semibold">
@@ -1419,60 +1672,127 @@ export function SendScreen() {
           <h2 id="send-details-heading" className="sr-only">
             {`Address & amount · ${config.displayName}`}
           </h2>
-          <dl className="space-y-1 text-sm">
+          {/* Redesign Lane 3: the error summary sits at the top of the
+              step, where the user is looking, and takes focus — the
+              old preview error rendered below the action row, where a
+              failed Review looked like nothing had happened. */}
+          {showSummary && (
+            <div
+              ref={errorSummaryRef}
+              role="alert"
+              tabIndex={-1}
+              className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-3 outline-none"
+            >
+              <p className="font-semibold">Check before you review</p>
+              <ul className="list-inside list-disc space-y-1 text-sm">
+                {recipientError !== null && (
+                  <li>
+                    <a
+                      href="#send-recipient"
+                      className="underline underline-offset-4"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        focusField('send-recipient');
+                      }}
+                    >
+                      {recipientError}
+                    </a>
+                  </li>
+                )}
+                {preview !== null && !preview.ok && (
+                  <li>
+                    <a
+                      href="#send-amount"
+                      className="underline underline-offset-4"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        focusField('send-amount');
+                      }}
+                    >
+                      {preview.reason}
+                    </a>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          {/* Redesign Lane 3: the From/To/Balance list duplicated the
+              recipient field ("To" mirrored the input, "—" when empty).
+              The summary card keeps only what the form does not already
+              say — where it is sent from, and what is available. The
+              address wraps in full: truncating it would need a copy
+              button to stay useful, and the copy lives on the
+              Receive/account screens already. */}
+          <div className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm">
             <div className="flex justify-between gap-3">
-              <dt className="shrink-0 text-ink">From</dt>
-              <dd className="min-w-0 truncate font-mono" title={from}>{from}</dd>
+              <span className="shrink-0 text-ink">From</span>
+              <span className="min-w-0 break-all font-mono">{from}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="shrink-0 text-ink">To</dt>
-              <dd className="min-w-0 truncate font-mono" title={recipient}>{recipient === '' ? '—' : recipient}</dd>
+              <span className="shrink-0 text-ink">Balance</span>
+              <span>{balanceText}</span>
             </div>
-            <div className="flex justify-between gap-3">
-              <dt className="shrink-0 text-ink">Balance</dt>
-              <dd>{balanceText}</dd>
-            </div>
-          </dl>
+          </div>
           <p className="text-sm text-muted-foreground">
             Check the address — sent funds cannot be reversed.
           </p>
           <div className="space-y-2">
-            <div className="flex items-end justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <Label htmlFor="send-recipient">Recipient address</Label>
-              {/* Scan icon from the owner's reference (UI/UX Round 2,
-                  item 9): a black circle with white corner brackets.
-                  Same toggle as the chain-step scan card, with the
-                  item-9 label and expanded state. */}
-              <button
-                type="button"
-                aria-label="Scan QR code"
-                aria-expanded={showScanner}
-                title="Scan QR code"
-                onClick={() => {
-                  setShowScanner((current) => !current);
-                }}
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
-              >
-                <ScanIcon className="h-11 w-11 text-ink" />
-              </button>
+              {/* Redesign Lane 3: Paste and Scan are visible text/icon
+                  controls beside the field now, not a hidden long-press
+                  menu and an unexplained icon (DESIGN-SYSTEM §6). The
+                  scan button keeps its aria-label, so the existing
+                  scan tests still find it. */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="tall"
+                  onClick={() => void handlePaste()}
+                >
+                  Paste
+                </Button>
+                <button
+                  type="button"
+                  aria-label="Scan QR code"
+                  aria-expanded={showScanner}
+                  title="Scan QR code"
+                  onClick={() => {
+                    setShowScanner((current) => !current);
+                  }}
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+                >
+                  <ScanIcon className="h-11 w-11 text-ink" />
+                </button>
+              </div>
             </div>
             <Input
               id="send-recipient"
               type="text"
               value={recipient}
-              onChange={(event) => setRecipient(event.target.value)}
+              onChange={(event) => handleRecipientChange(event.target.value)}
+              onBlur={() => void handleRecipientBlur()}
               placeholder={`Enter ${/^[AEIOU]/.test(config.displayName) ? 'an' : 'a'} ${config.displayName} address`}
               autoComplete="off"
+              aria-invalid={recipientError !== null}
+              aria-describedby={recipientError !== null ? 'send-recipient-error' : undefined}
             />
             {recipientError && (
-              <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+              <p id="send-recipient-error" role="alert" className="text-sm text-ink bawa-squiggle-underline">
                 {recipientError}
               </p>
             )}
-            {prefillNote && (
+            {pasteNote !== null ? (
               <p role="note" className="text-sm text-ink">
-                {prefillNote}
+                {pasteNote}
               </p>
+            ) : (
+              prefillNote !== null && (
+                <p role="note" className="text-sm text-ink">
+                  {prefillNote}
+                </p>
+              )
             )}
           </div>
           {showScanner && (
@@ -1482,11 +1802,32 @@ export function SendScreen() {
             />
           )}
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="send-amount">{`Amount (${assetSymbol})`}</Label>
+            <Label htmlFor="send-amount">{`Amount (${assetSymbol})`}</Label>
+            {/* Redesign Lane 3: the amount is the decision input, so it
+                reads like one — a large h-14 group with Max inside
+                (DESIGN-SYSTEM §6: "amount large with balance + Max
+                beside it"). A plain input inside the bordered group:
+                the shared Input carries its own border, and cn() is a
+                plain join, so nesting it would double the border. The
+                input mirrors Input's own focus language (wavy coral
+                underline) and invalid state. */}
+            <div className="flex h-14 items-center gap-2 rounded-bawa border-2 border-ink bg-paper pl-4 pr-2">
+              <input
+                id="send-amount"
+                type="text"
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="0.0"
+                autoComplete="off"
+                aria-invalid={amountError !== null}
+                aria-describedby={amountError !== null ? 'send-amount-error' : undefined}
+                className="min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none placeholder:font-normal placeholder:text-ink selection:bg-sun selection:text-ink focus-visible:underline focus-visible:decoration-wavy focus-visible:decoration-coral focus-visible:underline-offset-8 aria-invalid:underline aria-invalid:decoration-wavy aria-invalid:decoration-coral aria-invalid:underline-offset-8"
+              />
               <Button
                 type="button"
                 variant="outline"
+                size="tall"
                 disabled={!maxInfo.enabled}
                 title={maxInfo.enabled ? 'Use the full balance minus the estimated fee' : maxInfo.reason}
                 onClick={handleMax}
@@ -1494,15 +1835,25 @@ export function SendScreen() {
                 Max
               </Button>
             </div>
-            <Input
-              id="send-amount"
-              type="text"
-              inputMode="decimal"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="0.0"
-              autoComplete="off"
-            />
+            {amountError && (
+              <p id="send-amount-error" role="alert" className="text-sm text-ink bawa-squiggle-underline">
+                {amountError}
+              </p>
+            )}
+            {/* Redesign Lane 3: the fiat equivalent under the amount
+                (DESIGN-SYSTEM §6). The per-unit price shows while no
+                amount is typed; the converted amount replaces it once
+                typed. Mainnet only, fresh quote only — devnet test
+                tokens have no value, and a stale or missing feed shows
+                nothing rather than an invented dollar figure. */}
+            {amountFiatText !== null && (
+              <p className="text-sm text-muted-foreground">{amountFiatText}</p>
+            )}
+            {priceUnavailable && (
+              <p className="text-sm text-muted-foreground">
+                Price unavailable — the amount shows without a dollar value.
+              </p>
+            )}
             {feeEstimate?.ok && chain === 'eth' && (
               <p className="text-sm text-muted-foreground">
                 Estimated fee:{' '}
@@ -1519,29 +1870,28 @@ export function SendScreen() {
                 {`Fee estimate unavailable: ${feeEstimate.reason}`}
               </p>
             )}
+            {/* Redesign Lane 3: the Max-disabled reason and the fee
+                notes sit above the action row now — measured before,
+                they rendered below it and were invisible in the
+                viewport, so Max looked broken and a failed Review
+                looked like nothing had happened. */}
+            {!maxInfo.enabled && (
+              <p className="text-sm text-muted-foreground">{maxInfo.reason}</p>
+            )}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="outline" onClick={() => setStep('token')}>
+            <Button type="button" variant="outline" size="lg" onClick={() => setStep('token')}>
               Back
             </Button>
             <Button
               type="button"
+              size="lg"
               disabled={previewBusy}
               onClick={() => void handleDetailsNext()}
             >
               {previewBusy ? 'Checking…' : 'Review'}
             </Button>
           </div>
-          {/* The Max and preview notes sit below the action row so the
-              Review button stays in view without scrolling. */}
-          {!maxInfo.enabled && (
-            <p className="text-sm text-muted-foreground">{maxInfo.reason}</p>
-          )}
-          {preview && !preview.ok && (
-            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
-              {preview.reason}
-            </p>
-          )}
         </section>
       )}
 
@@ -1553,6 +1903,7 @@ export function SendScreen() {
             from={from}
             recipient={recipient}
             amount={reviewAmountText}
+            fiatAmount={reviewFiatAmount ?? undefined}
             fee={
               preview.feeUnknown
                 ? 'Unknown. Charged by the network at broadcast.'
@@ -1677,14 +2028,19 @@ export function SendScreen() {
         </section>
       )}
 
-      {/* The bottom nav is hidden on /send, so this is the in-flow way
-          across to Receive — kept, and the chain chips shrink instead. */}
-      <Link
-        to="/receive"
-        className="inline-block text-sm font-medium underline underline-offset-4"
-      >
-        Receive
-      </Link>
+      {/* Redesign Lane 3: the bottom nav is hidden on /send, so this is
+          the in-flow way across to Receive — kept only where it is a
+          natural next action: flow entry (chain) and after a signed
+          send (result). On token/details/review it competes with the
+          flow it sits under. */}
+      {(step === 'chain' || step === 'result') && (
+        <Link
+          to="/receive"
+          className="inline-block text-sm font-medium underline underline-offset-4"
+        >
+          Receive
+        </Link>
+      )}
     </div>
   );
 }

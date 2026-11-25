@@ -128,6 +128,24 @@ vi.mock('../wallet/qr-scanner', () => ({
   ),
 }));
 
+// Redesign Lane 3: the screen reads the price feeds for the fiat
+// equivalent now — stub them idle (real hooks would fire network
+// calls from the test) the same way send.test.tsx does.
+vi.mock('../wallet/prices', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../wallet/prices')>()),
+  usePrices: vi.fn(() => ({
+    state: { status: 'idle', entries: {}, lastFetchedAtMs: null },
+    refresh: vi.fn(),
+  })),
+}));
+
+vi.mock('../wallet/token-prices', () => ({
+  useTokenPrices: () => ({
+    state: { status: 'idle', entries: {} },
+    refresh: vi.fn(),
+  }),
+}));
+
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
@@ -268,7 +286,10 @@ describe('send screen — scanning a QR from the chain step (Round 2, item 1)', 
       expect(mounted.div.textContent).toContain('Address & amount · Base');
       expect(mounted.div.textContent).toContain('USD Coin · USDC');
       expect(amount.value).toBe('25');
-      expect(mounted.div.textContent).toContain(RECIPIENT);
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe(RECIPIENT);
       expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
     } finally {
       await mounted.cleanup();
@@ -288,7 +309,10 @@ describe('send screen — scanning a QR from the chain step (Round 2, item 1)', 
       await clickText(mounted.div, 'Simulate bare-address scan');
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
-      expect(mounted.div.textContent).toContain(RECIPIENT);
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe(RECIPIENT);
       expect(amount.value).toBe('');
     } finally {
       await mounted.cleanup();

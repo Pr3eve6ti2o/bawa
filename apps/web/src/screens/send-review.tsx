@@ -21,6 +21,11 @@ export type SendReviewProps = {
   fee: string;
   total: string;
   feeNote: string;
+  /** Fiat equivalent of the amount, when the price feed has one
+      ("≈ $1,000.00"). Omitted in devnet (test tokens have no value)
+      and when the feed has no fresh quote — the coin amounts are the
+      source of truth, never an invented dollar figure. */
+  fiatAmount?: string;
   /** Token contract / mint / master, when the send is a token transfer. Shown as its own row so the signer can check it. */
   tokenContract?: string;
   disabledReason: string;
@@ -70,6 +75,7 @@ export function SendReview({
   fee,
   total,
   feeNote,
+  fiatAmount,
   tokenContract,
   disabledReason,
   stage,
@@ -82,21 +88,33 @@ export function SendReview({
   return (
     <section
       aria-labelledby="send-review-heading"
-      className="mx-auto w-full max-w-lg space-y-6 p-6"
+      className="mx-auto w-full max-w-lg space-y-4 p-6"
     >
       <header className="space-y-2">
         <h1 id="send-review-heading" className="text-2xl font-semibold">
           {heading}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Check each row carefully before signing.
-        </p>
+        {/* Redesign Lane 3: one helper line, not two — the old static
+            "Check each row carefully" line repeated the stage helper
+            underneath it. */}
         <p className="text-sm text-muted-foreground">{helper}</p>
       </header>
 
+      {/* Redesign Lane 3: the amount is the hero — the eye lands on
+          the number first, then checks the rows. It is the same amount
+          string as the Amount row below, not a second figure. */}
+      <p className="text-center font-display text-3xl font-semibold tabular-nums">
+        {amount}
+      </p>
+      {fiatAmount && (
+        <p className="text-center text-sm text-muted-foreground tabular-nums">
+          {fiatAmount}
+        </p>
+      )}
+
       <div className="rounded-xl border border-border p-4">
         <dl className="divide-y divide-border">
-          <div className="flex items-start justify-between gap-4 pb-4">
+          <div className="flex items-start justify-between gap-4 pb-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Network</dt>
             <dd className="min-w-0 break-words text-right text-sm">
               {chainName} · {symbol}
@@ -104,7 +122,7 @@ export function SendReview({
           </div>
 
           {from && (
-            <div className="flex items-start justify-between gap-4 py-4">
+            <div className="flex items-start justify-between gap-4 py-3">
               <dt className="shrink-0 text-sm text-muted-foreground">From</dt>
               <dd className="min-w-0 break-all text-right font-mono text-sm">
                 {from}
@@ -112,14 +130,14 @@ export function SendReview({
             </div>
           )}
 
-          <div className="flex items-start justify-between gap-4 py-4">
+          <div className="flex items-start justify-between gap-4 py-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Recipient</dt>
             <dd className="min-w-0 break-all text-right text-sm">
               {recipient}
             </dd>
           </div>
 
-          <div className="flex items-start justify-between gap-4 py-4">
+          <div className="flex items-start justify-between gap-4 py-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Amount</dt>
             <dd className="min-w-0 break-words text-right text-sm tabular-nums">
               {amount}
@@ -127,7 +145,7 @@ export function SendReview({
           </div>
 
           {tokenContract && (
-            <div className="flex items-start justify-between gap-4 py-4">
+            <div className="flex items-start justify-between gap-4 py-3">
               <dt className="shrink-0 text-sm text-muted-foreground">Token contract</dt>
               <dd className="min-w-0 break-all text-right font-mono text-sm">
                 {tokenContract}
@@ -135,14 +153,14 @@ export function SendReview({
             </div>
           )}
 
-          <div className="flex items-start justify-between gap-4 py-4">
+          <div className="flex items-start justify-between gap-4 py-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Estimated fee</dt>
             <dd className="min-w-0 break-words text-right text-sm tabular-nums">
               {fee}
             </dd>
           </div>
 
-          <div className="flex items-start justify-between gap-4 pt-4 font-semibold">
+          <div className="flex items-start justify-between gap-4 pt-3 font-semibold">
             <dt className="shrink-0">Total</dt>
             <dd className="min-w-0 break-words text-right tabular-nums">
               {total}
@@ -155,7 +173,7 @@ export function SendReview({
 
       <div
         role="alert"
-        className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-4 text-warning-text"
+        className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-3 text-warning-text"
       >
         {devnetNetworkName ? (
           <>
@@ -172,18 +190,29 @@ export function SendReview({
         )}
       </div>
 
-      <div className="flex flex-wrap justify-between gap-3">
-        <Button type="button" onClick={onBack} className="min-h-11">
-          Back
-        </Button>
-        <Button
-          type="button"
-          onClick={onSign}
-          disabled={stage !== 'review'}
-          className="min-h-11"
-        >
-          Sign offline
-        </Button>
+      {/* Redesign Lane 3: the action row sticks to the bottom of the
+          viewport while the review scrolls (DESIGN-SYSTEM §1: one
+          primary action, at thumb height, sticky when the content is
+          taller than the screen). At 390 px the review runs ~100 px
+          past the fold even after tightening — without this, Sign
+          offline sits below the fold on the step where trust is
+          decided. When the content fits, the row simply sits in flow.
+          It is the last thing in the section, so nothing slides under
+          it. */}
+      <div className="sticky bottom-0 -mx-6 -mb-6 border-t-2 border-ink bg-paper px-6 py-3">
+        <div className="flex flex-wrap justify-between gap-3">
+          <Button type="button" variant="outline" size="lg" onClick={onBack}>
+            Back
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            onClick={onSign}
+            disabled={stage !== 'review'}
+          >
+            Sign offline
+          </Button>
+        </div>
       </div>
     </section>
   );

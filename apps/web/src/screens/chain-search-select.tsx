@@ -22,6 +22,11 @@ import { Label } from '../ui/components/label';
 
 /** localStorage key for the recently picked watch-only chains. */
 export const RECENT_CHAINS_KEY = 'bawa:watch-only-recent-chains';
+/** localStorage key for the recently picked Send chains. Kept apart
+    from the watch-only recents: the chains a user sends on are not
+    the chains they watch, and mixing the two lists would surface
+    watch-only chains on the Send step (and vice versa). */
+export const SEND_RECENT_CHAINS_KEY = 'bawa:send-recent-chains';
 /** How many picked chains the Recent row keeps. */
 export const MAX_RECENT_CHAINS = 5;
 
@@ -42,9 +47,9 @@ export function filterChains(chains: readonly ChainId[], query: string): ChainId
 }
 
 /** The stored recents, newest first, with stale ids dropped. */
-export function readRecentChains(): ChainId[] {
+export function readRecentChains(key: string = RECENT_CHAINS_KEY): ChainId[] {
   try {
-    const raw = globalThis.localStorage?.getItem(RECENT_CHAINS_KEY);
+    const raw = globalThis.localStorage?.getItem(key);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -57,9 +62,9 @@ export function readRecentChains(): ChainId[] {
   }
 }
 
-function storeRecentChains(recent: ChainId[]): void {
+function storeRecentChains(recent: ChainId[], key: string = RECENT_CHAINS_KEY): void {
   try {
-    globalThis.localStorage?.setItem(RECENT_CHAINS_KEY, JSON.stringify(recent));
+    globalThis.localStorage?.setItem(key, JSON.stringify(recent));
   } catch {
     // Recent picks are a convenience, never load-bearing: a full or
     // unavailable store must not break the picker.
@@ -72,6 +77,7 @@ export function ChainSearchSelect({
   onChange,
   id = 'chain-search',
   disabled = false,
+  recentKey = RECENT_CHAINS_KEY,
 }: {
   /** Every chain the picker may offer, in display order. */
   chains: readonly ChainId[];
@@ -80,11 +86,15 @@ export function ChainSearchSelect({
   onChange: (chain: ChainId) => void;
   id?: string;
   disabled?: boolean;
+  /** localStorage key for this picker's Recent row. The watch-only
+      default stays for the watch-only caller; Send passes
+      SEND_RECENT_CHAINS_KEY so the two lists never mix. */
+  recentKey?: string;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<ChainId | null>(null);
-  const [recent, setRecent] = useState<ChainId[]>(() => readRecentChains());
+  const [recent, setRecent] = useState<ChainId[]>(() => readRecentChains(recentKey));
 
   const listboxId = `${id}-listbox`;
   const filtered = useMemo(() => filterChains(chains, query), [chains, query]);
@@ -103,7 +113,7 @@ export function ChainSearchSelect({
       MAX_RECENT_CHAINS,
     );
     setRecent(next);
-    storeRecentChains(next);
+    storeRecentChains(next, recentKey);
     setQuery('');
     setOpen(false);
     setActiveId(null);
@@ -293,7 +303,7 @@ export function ChainSearchSelect({
                 type="button"
                 disabled={disabled}
                 onClick={() => select(chain)}
-                className="h-8 rounded-full border border-border bg-card px-3 text-xs font-semibold text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-11 rounded-full border border-border bg-card px-3 text-xs font-semibold text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {chainConfig(chain).displayName}
               </button>
