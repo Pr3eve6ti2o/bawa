@@ -76,7 +76,7 @@ type RevealStage = 'idle' | 'password' | 'quiz' | 'revealed';
 // bawa-evm-bip44-v1, so they collapse to one "Ethereum" row; Solana,
 // Litecoin and Dogecoin have their own profiles and get their own
 // rows. The old four-chain list understated what the phrase
-// recovers: a vault stores twenty-four profiles, not four.
+// recovers: a vault stores twenty-seven profiles, not four.
 const BACKUP_PROFILES: readonly string[] = [
   ...new Set(SUPPORTED_CHAINS.map((chain) => profileFor(chain))),
 ];

@@ -109,6 +109,8 @@ void function boundaryTypeContracts(
   // registry, so the pin is 22 chains.
   // Lane 80-APP (2026-11-24): sixty-two more chains join the registry,
   // so the pin is 84 chains.
+  // Lane B (2026-11-25): Cardano, Kaspa and Starknet join the registry,
+  // so the pin is 87 chains.
   expectTypeOf<ChainId>().toEqualTypeOf<
     | 'btc'
     | 'eth'
@@ -194,6 +196,9 @@ void function boundaryTypeContracts(
     | 'axelar'
     | 'noble'
     | 'juno'
+    | 'cardano'
+    | 'kaspa'
+    | 'starknet'
   >();
   expectTypeOf<ChainId>().toEqualTypeOf<import('@bawa/contracts').ChainId>();
 

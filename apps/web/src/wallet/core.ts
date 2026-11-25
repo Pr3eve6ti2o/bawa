@@ -122,6 +122,9 @@ const DEFAULT_PATHS: Readonly<Record<ChainId, string>> = Object.freeze({
   axelar: "m/44'/118'/0'/0/0",
   noble: "m/44'/118'/0'/0/0",
   juno: "m/44'/118'/0'/0/0",
+  cardano: "m/1852'/1815'/0'/0/0",
+  kaspa: "m/44'/111111'/0'/0/0",
+  starknet: "m/44'/9004'/0'/0/0",
 });
 
 function coinForChain(core: WalletCore, chain: ChainId): WalletCoin {
@@ -281,18 +284,18 @@ export async function restoreWallet(
  */
 /**
  * All registry chains' addresses from one address function (Lane
- * 80-APP: iterates SUPPORTED_CHAINS — 84 after the expansion —
+ * 80-APP: iterates SUPPORTED_CHAINS — 87 after the Lane B addition —
  * instead of a hardcoded 22-chain literal, so a new chain can never
  * be registered without being derived). The deriveAddresses /
  * deriveAddressesAt pair differ only in how a single address is
  * derived, not in the chain map.
  */
-function allChainAddresses(
-  addressFor: (chain: ChainId) => string,
-): WalletAddresses {
+async function allChainAddresses(
+  addressFor: (chain: ChainId) => Promise<string>,
+): Promise<WalletAddresses> {
   const out = {} as WalletAddresses;
   for (const chain of SUPPORTED_CHAINS) {
-    out[chain] = addressFor(chain);
+    out[chain] = await addressFor(chain);
   }
   return out;
 }
@@ -310,14 +313,13 @@ export async function deriveAddresses(
   }
 
   try {
-    const addressFor = (chain: ChainId): string =>
-      checkedAddress(
-        core,
-        chain,
-        wallet.getAddressForCoin(coinForChain(core, chain)),
-      );
-
-    return allChainAddresses(addressFor);
+    // Lane B: derivation goes through deriveOneAddress for every chain
+    // (single path) — Cardano via Wallet Core, Kaspa/Starknet via the
+    // lazy in-app modules. At account 0 index 0 this equals the old
+    // getAddressForCoin path exactly (pinned by the wiring test).
+    return await allChainAddresses((chain) =>
+      deriveOneAddress(core, wallet, chain, 0, 0),
+    );
   } finally {
     wallet.delete();
   }
@@ -335,7 +337,7 @@ export async function deriveAddresses(
  * secp256k1Extended form that Tron/Address.cpp and Ethereum/Address.cpp
  * require (a 33-byte key throws across the WASM boundary uncaught and
  * aborts the instance) — while BTC-family chains use the compressed form
- * as extracted. Ed25519 keys (ED25519_CHAINS: TON, SOL and the seven
+ * as extracted. Ed25519 keys (ED25519_CHAINS: TON, SOL and the eight
  * expanded Ed25519 chains) are used as-is. Lane 80-APP
  * (probe 3, 2026-11-24): the eight Cosmos-family chains plus XRP and
  * Injective are the exception — their addresses only agree with
@@ -370,7 +372,9 @@ const COMPRESSED_PUBKEY_CHAINS: ReadonlySet<ChainId> = new Set([
 // and aborts the instance (exception catching is disabled in the WASM
 // build), poisoning every later core call in the same test file. Every
 // Ed25519-gated site in this file must use this set, not a ton/sol
-// special case.
+// special case. Lane B (2026-11-25) adds Cardano (CIP-1852 Ed25519):
+// its pubkey must come from getPublicKeyEd25519Cardano — the plain
+// Ed25519 getter aborts the WASM instance for Cardano (probe 2026-11-25).
 const ED25519_CHAINS: ReadonlySet<ChainId> = new Set([
   'ton',
   'sol',
@@ -381,14 +385,68 @@ const ED25519_CHAINS: ReadonlySet<ChainId> = new Set([
   'tezos',
   'algorand',
   'hedera',
+  'cardano',
 ]);
-function deriveOneAddress(
+async function deriveOneAddress(
   core: WalletCore,
   wallet: ReturnType<WalletCore['HDWallet']['createWithMnemonic']>,
   chain: ChainId,
   account: number,
   index: number,
-): string {
+): Promise<string> {
+  if (chain === 'kaspa') {
+    // Lane B: Kaspa has no Wallet Core coin — the secp256k1 key at the
+    // 111111 path (ethereum coin as curve carrier) is CashAddr-encoded
+    // in-app. Lazy import keeps the encoder out of the first paint.
+    const { isValidKaspaAddress, kaspaAddressFromCompressedPubkey } =
+      await import('./kaspa-address');
+    const path = pathFor(chain, account, index);
+    const key = wallet.getKey(core.CoinType.ethereum, path);
+    try {
+      const pubkey = key.getPublicKeySecp256k1(true);
+      try {
+        const bytes = pubkey.data();
+        try {
+          const address = kaspaAddressFromCompressedPubkey(bytes);
+          if (!isValidKaspaAddress(address)) {
+            throw new Error('Wallet returned an invalid Kaspa address.');
+          }
+          return address;
+        } finally {
+          bytes.fill(0);
+        }
+      } finally {
+        pubkey.delete();
+      }
+    } finally {
+      key.delete();
+    }
+  }
+  if (chain === 'starknet') {
+    // Lane B: Starknet has no Wallet Core coin — the ETH key at
+    // m/44'/60'/{account}'/0/0 seeds the 9004 double-derivation, then
+    // grindKey + the Argent proxy address (see starknet-derive.ts).
+    const { isValidStarknetAddress, starknetAddressFromEthKey } =
+      await import('./starknet-derive');
+    const ethKey = wallet.getKey(
+      core.CoinType.ethereum,
+      pathFor('eth', account, 0),
+    );
+    try {
+      const bytes = ethKey.data();
+      try {
+        const address = starknetAddressFromEthKey(bytes, account, index);
+        if (!isValidStarknetAddress(address)) {
+          throw new Error('Wallet returned an invalid Starknet address.');
+        }
+        return address;
+      } finally {
+        bytes.fill(0);
+      }
+    } finally {
+      ethKey.delete();
+    }
+  }
   const coin = coinForChain(core, chain);
   const path = pathFor(chain, account, index);
   const key = wallet.getKey(coin, path);
@@ -407,9 +465,15 @@ function deriveOneAddress(
     // BTC-family keys are already compressed as extracted, so no
     // .compressed() call is made for them (it would return *this and
     // a delete would double-free the shared object).
-    const rawPubkey = ED25519_CHAINS.has(chain)
-      ? key.getPublicKeyEd25519()
-      : key.getPublicKeySecp256k1(true);
+    // Lane B: Cardano's pubkey must come from getPublicKeyEd25519Cardano
+    // — the plain Ed25519 getter aborts the WASM instance for Cardano
+    // (probe 2026-11-25). The other Ed25519 chains use the plain getter.
+    const rawPubkey =
+      chain === 'cardano'
+        ? key.getPublicKeyEd25519Cardano()
+        : ED25519_CHAINS.has(chain)
+          ? key.getPublicKeyEd25519()
+          : key.getPublicKeySecp256k1(true);
 
     try {
       const isSecp256k1 = !ED25519_CHAINS.has(chain);
@@ -469,10 +533,9 @@ export async function deriveAddressesAt(
   const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
 
   try {
-    const addressFor = (chain: ChainId): string =>
-      deriveOneAddress(core, wallet, chain, account, index);
-
-    return allChainAddresses(addressFor);
+    return await allChainAddresses((chain) =>
+      deriveOneAddress(core, wallet, chain, account, index),
+    );
   } finally {
     wallet.delete();
   }
@@ -497,7 +560,7 @@ export async function deriveAddressAt(
   const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
 
   try {
-    return deriveOneAddress(core, wallet, chain, account, index);
+    return await deriveOneAddress(core, wallet, chain, account, index);
   } finally {
     wallet.delete();
   }
@@ -581,7 +644,8 @@ async function deriveDevnetBtcAddress(
 // Lane 80-APP (probe 4, 2026-11-24): the seven expanded Ed25519 chains
 // have no extended public key — Wallet Core exports a key for them, but
 // getPublicKeyFromExtended aborts the WASM instance on it. Like TON and
-// SOL, they throw here instead of issuing or consuming one.
+// SOL, they throw here instead of issuing or consuming one. Lane B
+// (2026-11-25) adds Cardano (the eighth Ed25519 chain).
 const ED25519_NO_XPUB_CHAINS: ReadonlySet<ChainId> = new Set([
   'stellar',
   'polkadot',
@@ -590,7 +654,20 @@ const ED25519_NO_XPUB_CHAINS: ReadonlySet<ChainId> = new Set([
   'tezos',
   'algorand',
   'hedera',
+  'cardano',
 ]);
+
+// Lane B (2026-11-25): Kaspa and Starknet have no extended public key
+// either, for different reasons — Kaspa has no Wallet Core coin to
+// export one with, and Starknet keys are ground from a private key, so
+// no address can be derived from a public key. They throw with their
+// own honest message, not the Ed25519 one.
+const NO_XPUB_CHAINS: Readonly<Record<'kaspa' | 'starknet', string>> = {
+  kaspa:
+    'KASPA has no Wallet Core coin, so no extended public key can be exported for it.',
+  starknet:
+    'STARKNET addresses are derived from a private key (grindKey) and cannot be derived from an extended public key.',
+};
 export async function getAccountExtendedPublicKey(
   mnemonic: string,
   passphrase: string,
@@ -609,6 +686,11 @@ export async function getAccountExtendedPublicKey(
     throw new Error(
       `${chain.toUpperCase()} uses fully hardened Ed25519 derivation and cannot derive children from an xpub.`,
     );
+  }
+  if (chain === 'kaspa' || chain === 'starknet') {
+    // Lane B: no extended public key for a different reason each —
+    // see NO_XPUB_CHAINS above.
+    throw new Error(NO_XPUB_CHAINS[chain]);
   }
   assertAccountIndex(account, 0);
 
@@ -665,6 +747,11 @@ export async function deriveFromXpub(
     throw new Error(
       `${chain.toUpperCase()} uses fully hardened Ed25519 derivation and cannot derive children from an xpub.`,
     );
+  }
+  if (chain === 'kaspa' || chain === 'starknet') {
+    // Lane B: no extended public key for a different reason each —
+    // see NO_XPUB_CHAINS above.
+    throw new Error(NO_XPUB_CHAINS[chain]);
   }
 
   if (

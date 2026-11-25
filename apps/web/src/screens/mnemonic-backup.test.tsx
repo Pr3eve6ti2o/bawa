@@ -66,6 +66,9 @@ const ALL_PROFILES = [
   'bawa-axelar-bip44-v1',
   'bawa-noble-bip44-v1',
   'bawa-juno-bip44-v1',
+  'bawa-cardano-cip1852-v1',
+  'bawa-kaspa-bip44-v1',
+  'bawa-starknet-bip44-v1',
 ];
 
 async function mountBackupScreen() {
@@ -253,13 +256,13 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       expect(text).toContain('bawa-ltc-bip84-v1');
       expect(text).toContain('bawa-doge-bip44-v1');
       const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
-      expect(profiles?.querySelectorAll('li').length).toBe(24);
+      expect(profiles?.querySelectorAll('li').length).toBe(27);
     } finally {
       await cleanup();
     }
   });
 
-  it('marks all twenty-four profiles stored for a vault created with them', async () => {
+  it('marks all twenty-seven profiles stored for a vault created with them', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, ALL_PROFILES);
     const { div, cleanup } = await mountBackupScreen();
     try {
@@ -269,7 +272,7 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       }
       expect(text).not.toContain('Not stored with this vault');
       const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
-      expect(profiles?.querySelectorAll('li').length).toBe(24);
+      expect(profiles?.querySelectorAll('li').length).toBe(27);
     } finally {
       await cleanup();
     }

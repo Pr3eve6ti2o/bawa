@@ -6,7 +6,7 @@ offline signing with broadcast disabled, and read-only balances and transaction 
 via chain adapters. Prices come from CoinGecko, with DexScreener and TonAPI as fallback for tokens CoinGecko does not list, so there is a portfolio fiat total.
 Secrets never leave the browser.
 
-It ships with 84 chains (22 enabled by default); the list is `SUPPORTED_CHAINS` in `src/wallet/chains.ts`. The guide covers the full Trust Wallet Core registry of 168 chains, and this wallet supports 84 of them.
+It ships with 87 chains (22 enabled by default); the list is `SUPPORTED_CHAINS` in `src/wallet/chains.ts`. The guide covers the full Trust Wallet Core registry of 168 chains, and this wallet supports 87 of them.
 
 ## Install, develop, build and test
 
@@ -151,7 +151,7 @@ rendered to PNG). Each was viewed by eye before bundling; the
 per-chain source is recorded in `chains-expanded.ts` (iconPath /
 iconUrl). Same convention as the rest: original PNG plus 96 px WebP at
 quality 85 (28 logos, 56 files, 1,146,342 bytes PNG, 50,208 bytes
-WebP). All 84 registry chains now have a real logo. The Flare source
+WebP). All 87 registry chains now have a real logo. The Flare source
 had a checkerboard baked into its corners; the bundled PNG has those
 corners made transparent instead. The fallback for a logo that fails
 to load is no longer the faded empty ring: it is a paper disc with an
@@ -229,7 +229,7 @@ pure-PDA math as the ATA derivation, `deriveMetaplexMetadataAddress`
 in `src/wallet/adapters/token-balances.ts`, verified against the
 live chain for BONK). The CoinGecko platform map
 (`COINGECKO_PLATFORM_FOR_CHAIN` in `src/wallet/tokens.ts`) covers
-all 84 chains — 60 EVM platforms + Solana + TRON + TON; Bob has no
+all 87 chains — 60 EVM platforms + Solana + TRON + TON; Bob has no
 CoinGecko platform — and corrects the old Metis slug
 (`metis-andromeda`, not `metis`).
 

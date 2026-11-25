@@ -248,10 +248,10 @@ describe('welcome screen — introduction (Lane C, item 9)', () => {
       expect(text).toContain(
         'Bawa is a self-custodial wallet that runs in your browser',
       );
-      expect(text).toContain('84 chains');
+      expect(text).toContain('87 chains');
       expect(text).toContain('Bawa is also a guide for humans and AI agents');
       expect(text).toContain('What this wallet does');
-      expect(text).toContain('Receive on 84 chains');
+      expect(text).toContain('Receive on 87 chains');
       expect(text).toContain('Real balances and prices');
       expect(text).toContain('Watch any wallet');
       expect(text).toContain('Add tokens');

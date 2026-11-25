@@ -85,6 +85,9 @@ export const CHAIN_DECIMALS: Record<ChainId, number> = {
   axelar: 6,
   noble: 6,
   juno: 6,
+  cardano: 6,
+  kaspa: 8,
+  starknet: 18,
 };
 
 /**

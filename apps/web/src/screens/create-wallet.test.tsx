@@ -202,7 +202,7 @@ describe('create wallet screen', () => {
     }
   });
 
-  it('creates the vault with all twenty-four profileIds and clears the words', async () => {
+  it('creates the vault with all twenty-seven profileIds and clears the words', async () => {
     const mounted = await mountScreen();
     try {
       await generate(mounted.div);
@@ -250,6 +250,9 @@ describe('create wallet screen', () => {
         'bawa-axelar-bip44-v1',
         'bawa-noble-bip44-v1',
         'bawa-juno-bip44-v1',
+        'bawa-cardano-cip1852-v1',
+        'bawa-kaspa-bip44-v1',
+        'bawa-starknet-bip44-v1',
       ], '');
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
       // The mnemonic is cleared: no recovery word is shown any more.
@@ -473,6 +476,9 @@ describe('create wallet screen', () => {
         'bawa-axelar-bip44-v1',
         'bawa-noble-bip44-v1',
         'bawa-juno-bip44-v1',
+        'bawa-cardano-cip1852-v1',
+        'bawa-kaspa-bip44-v1',
+        'bawa-starknet-bip44-v1',
       ], 'TREZOR');
       expect(isPassphraseUsed()).toBe(true);
       expect(mounted.div.textContent).toContain('Your wallet is ready');

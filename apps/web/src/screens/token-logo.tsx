@@ -55,6 +55,9 @@ import seiLogo from '../assets/chains/sei.webp';
 import axelarLogo from '../assets/chains/axelar.webp';
 import nobleLogo from '../assets/chains/noble.webp';
 import junoLogo from '../assets/chains/juno.webp';
+import cardanoLogo from '../assets/chains/cardano.webp';
+import kaspaLogo from '../assets/chains/kaspa.webp';
+import starknetLogo from '../assets/chains/starknet.webp';
 import zoraLogo from '../assets/chains/zora.webp';
 import modeLogo from '../assets/chains/mode.webp';
 import fraxtalLogo from '../assets/chains/fraxtal.webp';
@@ -233,6 +236,9 @@ export const CHAIN_LOGOS: Record<string, string> = {
   axelar: axelarLogo,
   noble: nobleLogo,
   juno: junoLogo,
+  cardano: cardanoLogo,
+  kaspa: kaspaLogo,
+  starknet: starknetLogo,
   zora: zoraLogo,
   mode: modeLogo,
   fraxtal: fraxtalLogo,

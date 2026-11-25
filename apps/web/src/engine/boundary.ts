@@ -16,7 +16,7 @@ import {
 import { crc16Xmodem } from './address-codecs';
 import { COIN_TYPE_KEY_FOR_CHAIN } from './coin-type-keys';
 
-export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom' | 'zksync' | 'cronos' | 'kava' | 'filecoin' | 'zora' | 'mode' | 'fraxtal' | 'berachain' | 'sei' | 'arbnova' | 'worldchain' | 'manta' | 'unichain' | 'ink' | 'abstract' | 'soneium' | 'apechain' | 'sonic' | 'hyperevm' | 'monad' | 'ronin' | 'immutable' | 'fuse' | 'velas' | 'syscoin' | 'theta' | 'iotex' | 'xlayer' | 'boba' | 'taiko' | 'astar' | 'telos' | 'conflux' | 'core' | 'songbird' | 'rootstock' | 'pulsechain' | 'xdc' | 'chiliz' | 'etc' | 'flare' | 'zetachain' | 'hemi' | 'bob' | 'flowevm' | 'cosmos' | 'osmosis' | 'xrp' | 'stellar' | 'polkadot' | 'near' | 'aptos' | 'tezos' | 'algorand' | 'hedera' | 'injective' | 'celestia' | 'dydx' | 'seicosmos' | 'axelar' | 'noble' | 'juno';
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom' | 'zksync' | 'cronos' | 'kava' | 'filecoin' | 'zora' | 'mode' | 'fraxtal' | 'berachain' | 'sei' | 'arbnova' | 'worldchain' | 'manta' | 'unichain' | 'ink' | 'abstract' | 'soneium' | 'apechain' | 'sonic' | 'hyperevm' | 'monad' | 'ronin' | 'immutable' | 'fuse' | 'velas' | 'syscoin' | 'theta' | 'iotex' | 'xlayer' | 'boba' | 'taiko' | 'astar' | 'telos' | 'conflux' | 'core' | 'songbird' | 'rootstock' | 'pulsechain' | 'xdc' | 'chiliz' | 'etc' | 'flare' | 'zetachain' | 'hemi' | 'bob' | 'flowevm' | 'cosmos' | 'osmosis' | 'xrp' | 'stellar' | 'polkadot' | 'near' | 'aptos' | 'tezos' | 'algorand' | 'hedera' | 'injective' | 'celestia' | 'dydx' | 'seicosmos' | 'axelar' | 'noble' | 'juno' | 'cardano' | 'kaspa' | 'starknet';
 
 const BASE58_ALPHABET =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -146,6 +146,12 @@ const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   axelar: ['0488b21e'],
   noble: ['0488b21e'],
   juno: ['0488b21e'],
+  // Lane B (2026-11-25): no xpub for any of the three — Cardano is
+  // Ed25519 (fully hardened), Kaspa has no Wallet Core coin to export
+  // one with, and Starknet keys are ground from a private key.
+  cardano: [],
+  kaspa: [],
+  starknet: [],
 };
 
 const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, string>> = {
@@ -170,7 +176,7 @@ const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, stri
   eth: "m/44'/60'/0'/0",
   trx: "m/44'/195'/0'/0",
   // Lane 80-APP: the account-level prefix (derivation path minus the
-  // index segment). The 7 Ed25519 prefixes are unreachable — those
+  // index segment). The 8 Ed25519 prefixes (Lane B adds Cardano) are unreachable — those
   // chains allow no xpub version — but the Record type requires them.
   zksync: "m/44'/60'/0'/0",
   cronos: "m/44'/60'/0'/0",
@@ -234,6 +240,12 @@ const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, stri
   axelar: "m/44'/118'/0'/0",
   noble: "m/44'/118'/0'/0",
   juno: "m/44'/118'/0'/0",
+  // Lane B (2026-11-25): Cardano is CIP-1852; Kaspa (111111) and
+  // Starknet (9004) are BIP-44. These are account-level prefixes
+  // (derivation path minus the index); deriveAddress appends /{index}.
+  cardano: "m/1852'/1815'/0'/0",
+  kaspa: "m/44'/111111'/0'/0",
+  starknet: "m/44'/9004'/0'/0",
 };
 
 export type WalletCore = Awaited<ReturnType<typeof initWasm>>;
@@ -726,6 +738,34 @@ async function validateWatchOnlyAddress(
           message: 'Invalid Ethereum address.',
         };
   }
+  if (chain === 'kaspa') {
+    // Lane B: Kaspa has no Wallet Core coin — validate the CashAddr
+    // checksum in-app (lazy import keeps it out of the first paint).
+    const { isValidKaspaAddress } = await import(
+      '../wallet/kaspa-address'
+    );
+    return isValidKaspaAddress(value)
+      ? { ok: true }
+      : {
+          ok: false,
+          reason: 'invalid-address',
+          message: 'Invalid KASPA address.',
+        };
+  }
+  if (chain === 'starknet') {
+    // Lane B: Starknet has no Wallet Core coin — validate the felt
+    // shape the SDK's validAddress uses (0x + hex, longer than 50).
+    const { isValidStarknetAddress } = await import(
+      '../wallet/starknet-derive'
+    );
+    return isValidStarknetAddress(value)
+      ? { ok: true }
+      : {
+          ok: false,
+          reason: 'invalid-address',
+          message: 'Invalid STARKNET address.',
+        };
+  }
   const core = await loadCore();
   const coin = coinTypeForChain(core, chain);
   return core.CoinTypeExt.validate(coin, value)
@@ -840,6 +880,26 @@ export async function deriveAddress(
         throw new Error('Invalid Ethereum address.');
       }
       return getAddress(key);
+    }
+    if (chain === 'kaspa') {
+      // Lane B: no Wallet Core coin — re-validate the CashAddr checksum.
+      const { isValidKaspaAddress } = await import(
+        '../wallet/kaspa-address'
+      );
+      if (!isValidKaspaAddress(key)) {
+        throw new Error('Invalid KASPA address.');
+      }
+      return key;
+    }
+    if (chain === 'starknet') {
+      // Lane B: no Wallet Core coin — re-validate the felt shape.
+      const { isValidStarknetAddress } = await import(
+        '../wallet/starknet-derive'
+      );
+      if (!isValidStarknetAddress(key)) {
+        throw new Error('Invalid STARKNET address.');
+      }
+      return key;
     }
     const addressCore = await loadCore();
     const addressCoin = coinTypeForChain(addressCore, chain);

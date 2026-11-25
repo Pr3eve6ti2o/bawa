@@ -28,8 +28,9 @@ describe('priceFallbackSourcesFor (Lane F, FIX-ALL)', () => {
   });
 
   it('every chain except the seven named CoinGecko-only chains has a verified second source', () => {
-    // Lane 80-APP (2026-11-24): 77 of 84 chains have a verified
-    // native-price fallback. The seven below have none — no CoinLore
+    // Lane 80-APP (2026-11-24): 77 of 84 chains had a verified
+    // native-price fallback; Lane B (2026-11-25) adds Cardano, Kaspa
+    // and Starknet, so 80 of 87 do. The seven below have none — no CoinLore
     // id, no Coinbase product and no verified wrapped-native contract
     // for a DexScreener leg — so CoinGecko is their only price source.
     // Telos and PulseChain have DexScreener chain slugs for token

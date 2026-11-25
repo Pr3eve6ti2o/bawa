@@ -206,7 +206,7 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
       await cleanup();
     }
   });
-  it('offers all 84 chains in the watch-only search, including SOL', async () => {
+  it('offers all 87 chains in the watch-only search, including SOL', async () => {
     // Token gaps, item 6 + item 8: the watch-only picker offered only
     // BTC/ETH/TRX/TON even though validation, derivation and the label
     // map already cover all 84 registry chains — a SOL address could not
@@ -229,7 +229,7 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
         }
       });
       const options = [...div.querySelectorAll('[role="option"]')];
-      expect(options).toHaveLength(84);
+      expect(options).toHaveLength(87);
       for (const name of [
         'Bitcoin',
         'Ethereum',

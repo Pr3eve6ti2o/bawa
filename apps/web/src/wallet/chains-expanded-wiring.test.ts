@@ -89,6 +89,9 @@ const EXPECTED: Record<string, string> = {
     axelar: 'axelar19rl4cm2hmr8afy4kldpxz3fka4jguq0acwm455',
     noble: 'noble19rl4cm2hmr8afy4kldpxz3fka4jguq0a5rc48m',
     juno: 'juno19rl4cm2hmr8afy4kldpxz3fka4jguq0a2jwxcf',
+    cardano: 'addr1qy8ac7qqy0vtulyl7wntmsxc6wex80gvcyjy33qffrhm7sh927ysx5sftuw0dlft05dz3c7revpf7jx0xnlcjz3g69mq4afdhv',
+    kaspa: 'kaspa:qqd6e65yefepe9wk0m9vuxdufxd80sphy67gwwd0vdaumzdt4tc9s3qt0lqeh',
+    starknet: '0x036d5a79899430e71529a201899de2ba628fa576e7c56de933d9fda68dacfdb4',
 };
 
 // Index-1 addresses (xpub-derived, probe 4): the deriveAddressesAt
@@ -102,6 +105,9 @@ const EXPECTED_INDEX_1: Record<string, string> = {
   ronin: 'ronin:6Fac4D18c912343BF86fa7049364Dd4E424Ab9C0',
   injective: 'inj1d7ky6xxfzg6rh7r05uzfxexafepy4wwqp4z8h8',
   celestia: 'celestia1jrkmdcwgq94uaamx6zax2luewlhf7u4kdjhpv0',
+  cardano: 'addr1qyz85693g4fr8c55mfyxhae8j2u04pydxrgqr73vmwpx3a8927ysx5sftuw0dlft05dz3c7revpf7jx0xnlcjz3g69mqu2c0f9',
+  kaspa: 'kaspa:qp6r0d88yj4fazlj057wc35245jfgs87n9jn6nahfg223996dfukvgpgq6pcp',
+  starknet: '0x006bdb8b02bdb47c866bfff6462ffd3d73bab079f7d0c12fe7e5f967bf89be73',
 };
 
 // Full test-vector xpubs (probe 5, 2026-11-24).
@@ -116,12 +122,20 @@ const FILECOIN_XPUB =
 const STELLAR_XPUB =
   'xpub6CzpMbupTF2cqWtmnPt2ZYfvyvQWwwU2PJimxZh9vWr9UcvjG3rbxGfz5eYxckWdTHjDq5yCDJtcQgzfVFSMMceBNRdwBu3PtmAtVHqR2ZM';
 
-const ED25519_NO_XPUB = ['stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera'] as const;
+const ED25519_NO_XPUB = ['stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera', 'cardano'] as const;
+
+// Lane B: Kaspa and Starknet refuse xpubs for their own reasons, not
+// Ed25519 — Kaspa has no Wallet Core coin to export one with, Starknet
+// keys are ground from a private key.
+const NO_XPUB_REASON: Record<string, RegExp> = {
+  kaspa: /no Wallet Core coin/,
+  starknet: /private key/,
+};
 
 describe('chains-expanded wiring (Lane 80-APP)', () => {
-  it('covers all 84 chains: the 22 existing plus the 62 expanded', () => {
-    expect(EXPANDED_CHAINS).toHaveLength(62);
-    expect(SUPPORTED_CHAINS).toHaveLength(84);
+  it('covers all 87 chains: the 22 existing plus the 65 expanded', () => {
+    expect(EXPANDED_CHAINS).toHaveLength(65);
+    expect(SUPPORTED_CHAINS).toHaveLength(87);
     for (const c of EXPANDED_CHAINS) {
       expect(SUPPORTED_CHAINS).toContain(c.key);
       expect(chainConfig(c.key as ChainId).displayName).toBe(c.displayName);
@@ -133,7 +147,7 @@ describe('chains-expanded wiring (Lane 80-APP)', () => {
     }
   });
 
-  it('derives the probe test-vector addresses on all 62 new chains', async () => {
+  it('derives the probe test-vector addresses on all 65 new chains', async () => {
     const addresses = await deriveAddresses(TEST_VECTOR_MNEMONIC);
     for (const [key, expected] of Object.entries(EXPECTED)) {
       expect(addresses[key as keyof typeof addresses], key).toBe(expected);
@@ -157,7 +171,7 @@ describe('chains-expanded wiring (Lane 80-APP)', () => {
     }
   });
 
-  it('round-trips the xpub for the 55 secp256k1 chains and refuses it for the 7 Ed25519 chains', async () => {
+  it('round-trips the xpub for the 55 secp256k1 chains and refuses it for the 8 Ed25519 chains and the 2 no-coin chains', async () => {
     for (const c of EXPANDED_CHAINS) {
       if ((ED25519_NO_XPUB as readonly string[]).includes(c.key)) {
         await expect(
@@ -165,6 +179,16 @@ describe('chains-expanded wiring (Lane 80-APP)', () => {
         ).rejects.toThrow(/Ed25519/);
         await expect(deriveFromXpub(c.key as ChainId, STELLAR_XPUB, 0)).rejects.toThrow(
           /Ed25519/,
+        );
+        continue;
+      }
+      const noXpubReason = NO_XPUB_REASON[c.key];
+      if (noXpubReason !== undefined) {
+        await expect(
+          getAccountExtendedPublicKey(TEST_VECTOR_MNEMONIC, '', c.key as ChainId, 0),
+        ).rejects.toThrow(noXpubReason);
+        await expect(deriveFromXpub(c.key as ChainId, STELLAR_XPUB, 0)).rejects.toThrow(
+          noXpubReason,
         );
         continue;
       }
@@ -206,6 +230,33 @@ describe('chains-expanded wiring (Lane 80-APP)', () => {
     // …but never on an Ed25519 chain, even though Wallet Core exports one.
     const stellar = await validateWatchOnlyImport('stellar', STELLAR_XPUB);
     expect(stellar.ok).toBe(false);
+    // Lane B: Cardano validates through Wallet Core, Kaspa and Starknet
+    // through their in-app validators — all three accept a plain address
+    // and refuse an xpub.
+    expect(await validateWatchOnlyImport('cardano', EXPECTED.cardano!)).toEqual({
+      ok: true,
+      kind: 'address',
+    });
+    expect(await validateWatchOnlyImport('kaspa', EXPECTED.kaspa!)).toEqual({
+      ok: true,
+      kind: 'address',
+    });
+    expect(await validateWatchOnlyImport('starknet', EXPECTED.starknet!)).toEqual({
+      ok: true,
+      kind: 'address',
+    });
+    expect((await validateWatchOnlyImport('kaspa', ZKSYNC_XPUB)).ok).toBe(false);
+    expect((await validateWatchOnlyImport('starknet', ZKSYNC_XPUB)).ok).toBe(false);
+    expect(await validateWatchOnlyImport('kaspa', 'kaspa:invalid')).toEqual({
+      ok: false,
+      reason: 'invalid-address',
+      message: 'Invalid KASPA address.',
+    });
+    expect(await validateWatchOnlyImport('starknet', '0x1234')).toEqual({
+      ok: false,
+      reason: 'invalid-address',
+      message: 'Invalid STARKNET address.',
+    });
   });
 
   it('keeps the 0x EVM family at 59 chains and the EVM-transaction set at 60', () => {
@@ -233,7 +284,7 @@ describe('chains-expanded wiring (Lane 80-APP)', () => {
     expect(registered).not.toContain('cosmos');
   });
 
-  it('covers all 84 chains in the price maps, with a fallback for 77', () => {
+  it('covers all 87 chains in the price maps, with a fallback for 80', () => {
     expect(Object.keys(PRICE_IDS).sort()).toEqual([...SUPPORTED_CHAINS].sort());
     expect(Object.keys(PRICE_ASSET_IDS).sort()).toEqual([...SUPPORTED_CHAINS].sort());
     for (const chain of SUPPORTED_CHAINS) {
@@ -242,32 +293,32 @@ describe('chains-expanded wiring (Lane 80-APP)', () => {
     const withFallback = SUPPORTED_CHAINS.filter(
       (chain) => priceFallbackSourcesFor(chain).length > 1,
     );
-    expect(withFallback).toHaveLength(77);
+    expect(withFallback).toHaveLength(80);
     // The seven CoinGecko-only chains, named honestly.
     for (const chain of ['fraxtal', 'velas', 'telos', 'songbird', 'rootstock', 'pulsechain', 'xdc'] as const) {
       expect(priceFallbackSourcesFor(chain)).toEqual(['CoinGecko']);
     }
   });
 
-  it('covers all 84 chains in CHAIN_DECIMALS', () => {
+  it('covers all 87 chains in CHAIN_DECIMALS', () => {
     expect(Object.keys(CHAIN_DECIMALS).sort()).toEqual([...SUPPORTED_CHAINS].sort());
     // Spot-check the non-18-decimal chains (Trust Wallet Core registry).
     const non18: Record<string, number> = {
       cosmos: 6, osmosis: 6, xrp: 6, tezos: 6, algorand: 6, celestia: 6,
       seicosmos: 6, axelar: 6, noble: 6, juno: 6, stellar: 7, polkadot: 10,
-      near: 24, aptos: 8, hedera: 8,
+      near: 24, aptos: 8, hedera: 8, cardano: 6, kaspa: 8,
     };
     for (const [key, decimals] of Object.entries(non18)) {
       expect(CHAIN_DECIMALS[key as keyof typeof CHAIN_DECIMALS], key).toBe(decimals);
     }
   });
 
-  it('has a real logo for all 62 expanded chains', () => {
+  it('has a real logo for all 65 expanded chains', () => {
     // Lane E (2026-11-24): the 28 chains without a Trust Wallet Assets
     // directory now have a bundled real mark (DefiLlama / CoinGecko /
     // Tatum), so every expanded chain resolves to a logo.
     const withIcon = EXPANDED_CHAINS.filter((c) => c.iconUrl !== null).map((c) => c.key);
-    expect(withIcon).toHaveLength(62);
+    expect(withIcon).toHaveLength(65);
     for (const key of withIcon) {
       expect(chainLogoFor(key), key).toBeDefined();
     }

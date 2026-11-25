@@ -76,7 +76,7 @@
  *   Binance US / CoinPaprika FTM ($0.48 frozen), Kraken (no FTM
  *   pair, no CORS) and Coinbase MNT/XDAI/FTM (404) stay rejected.
  *
- * Coverage after this module: 77 of 84 chains have at least one
+ * Coverage after this module: 80 of 87 chains have at least one
  * fallback (7 are CoinGecko-only). Fantom — the flagged "Price expired" case — is
  * covered twice: CoinLore Sonic (S) first, then the DexScreener
  * implied price. CoinGecko's `fantom` id was ~8h stale live
@@ -219,6 +219,9 @@ export const COINLORE_NATIVE_IDS: Partial<Record<ChainId, string>> = {
   axelar: '99333',
   noble: '33285',
   juno: '56297',
+  cardano: '257',
+  kaspa: '70485',
+  starknet: '136109',
 };
 
 /**
@@ -343,15 +346,17 @@ const COINBASE_PRODUCT_IDS: Partial<Record<ChainId, string>> = {
   celestia: 'TIA-USD',
   seicosmos: 'SEI-USD',
   axelar: 'AXL-USD',
+  cardano: 'ADA-USD',
+  starknet: 'STRK-USD',
 };
 
 /**
  * The price sources the wallet tries, in order, for one chain
  * (Lane F, FIX-ALL, 2026-11-24). CoinGecko is always first; CoinLore
- * second where it has the chain (72 chains); DexScreener third where a
+ * second where it has the chain (75 chains); DexScreener third where a
  * wrapped contract is verified (13 chains); TonAPI for TON, Coinbase
- * where it has the chain (45 chains), and DexScreener for Polygon —
- * the chains CoinLore cannot cover. 77 of 84 chains have a verified
+ * where it has the chain (47 chains), and DexScreener for Polygon —
+ * the chains CoinLore cannot cover. 80 of 87 chains have a verified
  * second source (FIX-ALL Lane B added CoinLore for Gnosis, Mantle
  * and Fantom; Lane 80-APP, 2026-11-24, added the expanded chains).
  * Seven are CoinGecko-alone — Fraxtal, Velas, Telos, Songbird,

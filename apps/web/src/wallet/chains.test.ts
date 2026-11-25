@@ -29,7 +29,7 @@ import {
 import { DEVNET_NETWORK_IDS } from './devnet-endpoints';
 
 describe('chains registry', () => {
-  it('supports exactly eighty-four mainnet chains', () => {
+  it('supports exactly eighty-seven mainnet chains', () => {
     expect([...SUPPORTED_CHAINS].sort()).toEqual([
       'abstract',
       'algorand',
@@ -47,6 +47,7 @@ describe('chains registry', () => {
       'boba',
       'bsc',
       'btc',
+      'cardano',
       'celestia',
       'celo',
       'chiliz',
@@ -73,6 +74,7 @@ describe('chains registry', () => {
       'ink',
       'iotex',
       'juno',
+      'kaspa',
       'kava',
       'linea',
       'ltc',
@@ -98,6 +100,7 @@ describe('chains registry', () => {
       'soneium',
       'songbird',
       'sonic',
+      'starknet',
       'stellar',
       'syscoin',
       'taiko',
@@ -133,6 +136,7 @@ describe('chains registry', () => {
       'boba',
       'bsc',
       'btc',
+      'cardano',
       'celestia',
       'celo',
       'chiliz',
@@ -159,6 +163,7 @@ describe('chains registry', () => {
       'ink',
       'iotex',
       'juno',
+      'kaspa',
       'kava',
       'linea',
       'ltc',
@@ -184,6 +189,7 @@ describe('chains registry', () => {
       'soneium',
       'songbird',
       'sonic',
+      'starknet',
       'stellar',
       'syscoin',
       'taiko',
@@ -309,8 +315,8 @@ describe('chains registry', () => {
     expect(pathFor('sol', 1, 2)).toBe("m/44'/501'/1'/0'/2'");
   });
 
-  it('lists all eighty-four chains for derive, restore and receive', () => {
-    // Lane 80-APP (2026-11-24): derivation is probe-verified for all 62
+  it('lists all eighty-seven chains for derive, restore and receive', () => {
+    // Lane 80-APP (2026-11-24): derivation is probe-verified for all 65
     // expanded chains (chains-expanded-wiring.test.ts); this test pins
     // the set equals the registry.
     expect(availableFor('derive')).toEqual([...SUPPORTED_CHAINS]);
@@ -1036,7 +1042,7 @@ describe('capabilities.json registry shape and identity', () => {
   ] as const;
 
   // Explicit allowlists, independent of the forbidden-words check. The
-  // merged tree lists eighty-four mainnet chains; only the four
+  // merged tree lists eighty-seven mainnet chains; only the four
   // engine-supported chains have supported registry coins.
   const mainnetNetworkIds = [
     'bip122:000000000019d6689c085ae165831e93',
@@ -1062,6 +1068,10 @@ describe('capabilities.json registry shape and identity', () => {
     'eip155:1313161554',
     'eip155:250',
     // Lane 80-APP (2026-11-24): the 62 expanded-chain network IDs.
+    // Lane B (2026-11-25): Cardano, Kaspa and Starknet join them.
+    'cardano:mainnet',
+    'kaspa:mainnet',
+    'starknet:SN_MAIN',
     'algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=',
     'aptos:1',
     'cosmos:axelar-dojo-1',
@@ -1353,7 +1363,7 @@ describe('capabilities.json registry shape and identity', () => {
     },
   );
 
-  it('allows only the eighty-four explicitly listed mainnet network IDs', async () => {
+  it('allows only the eighty-seven explicitly listed mainnet network IDs', async () => {
     expect.assertions(2);
     const coins = await readRegistryCoins();
 
@@ -1390,7 +1400,7 @@ describe('capabilities.json registry shape and identity', () => {
     },
   );
 
-  it('has unique network IDs across the eighty-four listed chains', async () => {
+  it('has unique network IDs across the eighty-seven listed chains', async () => {
     expect.assertions(2);
     const coins = await readRegistryCoins();
     const liveIds = Object.values(CHAINS).map((chain) => chain.networkId);
@@ -1398,7 +1408,7 @@ describe('capabilities.json registry shape and identity', () => {
       (coin) => coin.networkId,
     );
 
-    expect(new Set(liveIds).size).toBe(84);
+    expect(new Set(liveIds).size).toBe(87);
     expect(new Set(registryIds).size).toBe(4);
   });
 
@@ -1410,8 +1420,9 @@ describe('capabilities.json registry shape and identity', () => {
     // included) share m/44'/60'/0'/0/0 at account 0 index 0 BY DESIGN —
     // same coin type, same path — so path uniqueness can only hold
     // across the four engine chains.
-    // Verified first-hand on the merged tree: 21 unique live paths
-    // across 84 chains (probe-paths 2026-11-24).
+    // Verified first-hand on the merged tree: 24 unique live paths
+    // across 87 chains (probe-paths 2026-11-24; Lane B adds the three
+    // new paths — CIP-1852, 111111 and 9004).
     const livePaths = implementedCoins.map(([, coin]) =>
       pathFor(coin.bawaChainId, 0, 0),
     );

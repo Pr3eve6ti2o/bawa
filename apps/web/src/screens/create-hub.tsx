@@ -73,9 +73,9 @@ export function CreateScreen() {
             </CardTitle>
           </div>
           <CardDescription className="text-sm text-ink">
-            One recovery phrase, one wallet — 84 chains. Creating a wallet
+            One recovery phrase, one wallet — 87 chains. Creating a wallet
             makes one 24-word recovery phrase on this device. That one
-            phrase is your whole wallet: every address on all 84 chains
+            phrase is your whole wallet: every address on all 87 chains
             comes from it.
           </CardDescription>
         </CardHeader>

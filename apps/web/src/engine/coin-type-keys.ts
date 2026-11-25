@@ -1,8 +1,8 @@
 import type { ChainId, WalletCore } from './boundary';
 
 /**
- * WASM CoinType key per chain (all chains except TON, which has no
- * Wallet Core coin mapping in the engine). Shared by coinTypeForChain
+ * WASM CoinType key per chain (all chains except TON, Kaspa and
+ * Starknet, which have no Wallet Core coin mapping in the engine). Shared by coinTypeForChain
  * in boundary.ts and coinForChain in wallet/core.ts (which adds the
  * TON case). The table holds key NAMES only — the CoinType values
  * themselves stay inside boundary.ts, per the facade contract there;
@@ -19,9 +19,8 @@ import type { ChainId, WalletCore } from './boundary';
  * 2.9 MB engine chunk into the first-paint modulepreload graph.
  * boundary.ts re-exports it, so existing import paths keep working.
  */
-export const COIN_TYPE_KEY_FOR_CHAIN: Record<
-  Exclude<ChainId, 'ton'>,
-  keyof WalletCore['CoinType']
+export const COIN_TYPE_KEY_FOR_CHAIN: Partial<
+  Record<Exclude<ChainId, 'ton'>, keyof WalletCore['CoinType']>
 > = {
   btc: 'bitcoin',
   eth: 'ethereum',
@@ -106,4 +105,13 @@ export const COIN_TYPE_KEY_FOR_CHAIN: Record<
   axelar: 'axelar',
   noble: 'noble',
   juno: 'juno',
+  // Lane B (2026-11-25): Cardano is the only one of the three new
+  // chains with a Wallet Core 4.9.3 coin. Kaspa and Starknet have no
+  // coin, so they have no entry here — the table is Partial and both
+  // coinTypeForChain (boundary.ts) and coinForChain (wallet/core.ts)
+  // throw for them; their derivation lives in wallet/kaspa-address.ts
+  // and wallet/starknet-derive.ts, and core.ts special-cases them
+  // before coinForChain. Do NOT map them to 'ethereum': that would
+  // make validation and derivation return ETH addresses for them.
+  cardano: 'cardano',
 };

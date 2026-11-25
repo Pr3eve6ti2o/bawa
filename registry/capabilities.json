@@ -1448,6 +1448,57 @@
         "local-sign": "NOT_SUPPORTED",
         "verify-signature": "NOT_SUPPORTED"
       }
+    },
+    "cardano": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "kaspa": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "starknet": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
     }
   },
   "coins": {

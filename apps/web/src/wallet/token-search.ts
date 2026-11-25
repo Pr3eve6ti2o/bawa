@@ -4,7 +4,7 @@
 // /search for candidate coins, then /coins/{id} for each hit's
 // contract addresses per platform (detail_platforms, which carries
 // decimal_place). Only platforms this wallet supports are kept — the
-// canonical map in wallet/tokens.ts (all 84 chains: 60 EVM platforms
+// canonical map in wallet/tokens.ts (all 87 chains: 60 EVM platforms
 // + Solana + TRON + TON; Bob has no CoinGecko platform); a
 // platform without known decimals is skipped rather than invented.
 // A query that resolves to nothing returns not-found honestly.

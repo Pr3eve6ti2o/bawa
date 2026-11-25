@@ -268,13 +268,13 @@ describe('text spacing', () => {
       // intro line: words must not run together. (Marketing-fix Lane 3:
       // the intro and list now lead with the wallet.)
       expect(mounted.div.textContent).toContain(
-        'Bawa is a self-custodial wallet that runs in your browser. One recovery phrase covers 84 chains — Bitcoin, Ethereum, Solana, TRON, TON and more. Your keys are made on this device and encrypted with your vault password. They never leave it.',
+        'Bawa is a self-custodial wallet that runs in your browser. One recovery phrase covers 87 chains — Bitcoin, Ethereum, Solana, TRON, TON and more. Your keys are made on this device and encrypted with your vault password. They never leave it.',
       );
       expect(mounted.div.textContent).not.toContain('Bawais a self-custodial');
       expect(mounted.div.textContent).toContain(
-        'Receive on 84 chains. One wallet, one address per chain, with a QR code for each.',
+        'Receive on 87 chains. One wallet, one address per chain, with a QR code for each.',
       );
-      expect(mounted.div.textContent).not.toContain('Receiveon 84 chains');
+      expect(mounted.div.textContent).not.toContain('Receiveon 87 chains');
       expect(mounted.div.textContent).toContain(
         'Real balances and prices. Balances from public blockchains, prices from CoinGecko — no made-up numbers.',
       );

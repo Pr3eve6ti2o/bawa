@@ -28,13 +28,20 @@ import {
  *   (an independent check — the seed never comes from Bawa).
  * - entropy round-trip: mnemonic -> entropy -> mnemonic (the trezor /
  *   @scure/bip39 pattern: one vector, every API surface).
- * - 84-chain addresses: Bawa's deriveAddresses with the "TREZOR"
- *   passphrase. The original 22 were cross-checked against
+ * - 87-chain addresses: Bawa's deriveAddresses with the "TREZOR"
+ *   passphrase. Cardano's address is the same as the empty-passphrase
+ *   address for the same mnemonic: Wallet Core 4.9.3 derives the
+ *   Cardano key from the mnemonic entropy (Icarus-style), so the
+ *   BIP-39 passphrase does not change it (probe 2026-11-25:
+ *   identical private-key bytes for '' and 'TREZOR'). Kaspa and
+ *   Starknet do change with the passphrase. The original 22 were
+ *   cross-checked against
  *   independent implementations (@scure/bip32 + viem + @noble/curves,
  *   plus hand-rolled bech32/base58check validated against the
  *   already-pinned vector-0 empty-passphrase values in core.test.ts)
  *   for ETH/EVM, BTC, LTC, DOGE, TRX and SOL. The 62 expanded-chain
- *   values (Lane 80-APP, 2026-11-24) are regression goldens from Bawa's
+ *   values (Lane 80-APP, 2026-11-24, plus the 3 Lane B chains,
+ *   2026-11-25) are regression goldens from Bawa's
  *   own derivation — probe-verified via getAddressForCoin plus
  *   CoinTypeExt.validate on the test-vector mnemonic, and reproduced
  *   here by the same deriveAddresses call the test exercises; they were
@@ -144,6 +151,9 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar12fdxecq3dp28aaswp2n3yk35p782g3w9fv8zsm',
       noble: 'noble12fdxecq3dp28aaswp2n3yk35p782g3w99pyzr5',
       juno: 'juno12fdxecq3dp28aaswp2n3yk35p782g3w9msj3ux',
+      cardano: 'addr1qy8ac7qqy0vtulyl7wntmsxc6wex80gvcyjy33qffrhm7sh927ysx5sftuw0dlft05dz3c7revpf7jx0xnlcjz3g69mq4afdhv',
+      kaspa: 'kaspa:qzmzhr957he0n3tsjs2sev9pa3kcshc9jg2zvslvv82mv559wg2quxs9qrlys',
+      starknet: '0x0407c764ed1d049cb5703e426bf239bed7e6bfb50aa68b74ad5d3768cab57883',
     },
   },
   {
@@ -236,6 +246,9 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar1rhwu8jzk0fsccnqtg3prpw7mk32k624hm20n2k',
       noble: 'noble1rhwu8jzk0fsccnqtg3prpw7mk32k624hh8vnee',
       juno: 'juno1rhwu8jzk0fsccnqtg3prpw7mk32k624hfk6qxt',
+      cardano: 'addr1qxttdu6d96klw8xvme7ctwuv0jg7xns0vm35ksv4l722aupyayzk39uascqj78hynwh3ax5w8ch5n9062k0vpnj3dlps3a8a9a',
+      kaspa: 'kaspa:qpn8qx6tv2ld95tupyp9qzm4sax5tutg79m0hq9ccxujkv5cg8mjz37ppexve',
+      starknet: '0x023b7fa0c5e915b273016127944f6fc383940bfde8d950e5e14e8b3ff1e29ec7',
     },
   },
   {
@@ -328,6 +341,9 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar1c6d0475p8j399z4y42njj28em6s7lv9ykqvgzs',
       noble: 'noble1c6d0475p8j399z4y42njj28em6s7lv9y6d0g3l',
       juno: 'juno1c6d0475p8j399z4y42njj28em6s7lv9yyuemwd',
+      cardano: 'addr1q9mudxv36hnwejmdepu8a4mprs42d3gzzhzsl73uvv73ak334wvcuhjakcyejwx2j69ctqc4g5qaqt5x9ta8gzm4yaaqtmg29y',
+      kaspa: 'kaspa:qrrfrd8fqed7g2mq3lewadluq02cpync6zmjgwuyzsunl30eyrptspqwx0czf',
+      starknet: '0x031f2a369d33280e609109ce8b50d0bd7623b2af071ba7745e5ea6cd36ac1973',
     },
   },
   {
@@ -420,6 +436,9 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar1nz0vx5natkl2s08euwf4nzf5hruz27f5al968d',
       noble: 'noble1nz0vx5natkl2s08euwf4nzf5hruz27f53jx65z',
       juno: 'juno1nz0vx5natkl2s08euwf4nzf5hruz27f50rsfts',
+      cardano: 'addr1qxpjv933p0lj92032x0usxgkk0rt3w5nxfyp0uj9gju0dng2s5d4tgt67ke6epav5xnx77csfwgdpwemyacfp8s7vqasdkjkn4',
+      kaspa: 'kaspa:qp6d97y4q2xgccmurv3rgf02lghkn4nle5fh92n6z03y2lqv6nnggllk05qnp',
+      starknet: '0x03a1a5593ffac1be30e409b4e3ec42266b03605009edc053f5a5e9c645af0557',
     },
   },
   {
@@ -512,6 +531,9 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar1fj7mckvsrxhmaung670n53ex4zrhswkmdfah8s',
       noble: 'noble1fj7mckvsrxhmaung670n53ex4zrhswkmpy7h5l',
       juno: 'juno1fj7mckvsrxhmaung670n53ex4zrhswkml4gytd',
+      cardano: 'addr1qyqt0pru382hy9vjlsxv3ye02z50sfvt8xunscg5pgden77z73dpdfng2ctw2ekqplqgrljelz7h4dneac27nn3qx3rqrhqvwd',
+      kaspa: 'kaspa:qqysrxpeg96xs6za4u5u4jgacpysyh3mfmajlaa0fl92vffvg5alsxlxdhvzh',
+      starknet: '0x054c4b404a7997c19ca6d64618e5717fca08f2d4e1c237b8f3e359ccf52205b4',
     },
   },
   {
@@ -604,6 +626,9 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar19fmll7chtfp6qslua469aqesa9fyg42utyrep6',
       noble: 'noble19fmll7chtfp6qslua469aqesa9fyg42u8fqej4',
       juno: 'juno19fmll7chtfp6qslua469aqesa9fyg42ueck2d8',
+      cardano: 'addr1qylrq4h2xvj7x49shr65uxrsgkfmpq65la8lpvmxn06gprl6td4s5g30erqzfhnrx8faqtuxl8ruc4a75rxx99twr7fs8l7684',
+      kaspa: 'kaspa:qqzdcpj5ft86ets9fd5fd32wjfzrjuvwkhmy4k3vqhv2ug4c6qcs256qacycn',
+      starknet: '0x01f446704c4b9f63645db08fbe186463c842fcee1dcbe9088c25e97acd41e24a',
     },
   },
   {
@@ -696,6 +721,9 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar1sstx386rum30msd3er57n4q3fk37ug435ekuu6',
       noble: 'noble1sstx386rum30msd3er57n4q3fk37ug43c54u04',
       juno: 'juno1sstx386rum30msd3er57n4q3fk37ug43x9r0s8',
+      cardano: 'addr1qy0c63uqp2smj9estggzw23y5dr535hukr8cq6yedex73mycd83phrgkgaqaz7qxwslzq96mrrhsyq465aht75uavlrs86vdj9',
+      kaspa: 'kaspa:qqkcv9aayhj2styc7w3g8d0rgltf0mj3wc84qc4kfryf46cu0txky5zdvcmje',
+      starknet: '0x01a32f8b02cf5181e0e20ea31e5af07bede2e0e6100431d8320c2024d39af876',
     },
   },
   {
@@ -788,13 +816,16 @@ const VECTORS: TrezorVector[] = [
       axelar: 'axelar19w8crjksgdf75wy7rnfjke5srz743ankdkdlz4',
       noble: 'noble19w8crjksgdf75wy7rnfjke5srz743ankpmwl36',
       juno: 'juno19w8crjksgdf75wy7rnfjke5srz743ankl2cvwg',
+      cardano: 'addr1q9e8yrc2l4mm6pmuz9q9gf5dsxhljwj5lyvjrwq2g85q67g3z8wqqx5xpha4j08zzpf7vp4mwddzq890cv9jkwr5yrpqmw0009',
+      kaspa: 'kaspa:qpc3t8a0uynknaratj2nqgmwu05lw6p3502upu3lkuhp4kkntez9j0233h2nf',
+      starknet: '0x058c798cbbf093d1c60be4acd55cfba3e375797a0bf57e3946c4628661169931',
     },
   },
 ];
 
 describe('trezor BIP-39 vectors (data-driven)', () => {
   for (const vector of VECTORS) {
-    it(`vector ${vector.index} (${vector.mnemonic.split(' ').length} words): seed, entropy round-trip and 84-chain addresses`, async () => {
+    it(`vector ${vector.index} (${vector.mnemonic.split(' ').length} words): seed, entropy round-trip and 87-chain addresses`, async () => {
       // Seed hex: the published vector seed, passphrase "TREZOR".
       const seed = mnemonicToSeedSync(vector.mnemonic, 'TREZOR');
       expect(Buffer.from(seed).toString('hex')).toBe(vector.seedHex);
@@ -810,7 +841,7 @@ describe('trezor BIP-39 vectors (data-driven)', () => {
         ),
       ).toBe(vector.mnemonic);
 
-      // 84-chain addresses from the same seed Bawa derives from.
+      // 87-chain addresses from the same seed Bawa derives from.
       const addresses = await deriveAddresses(vector.mnemonic, 'TREZOR');
       expect(addresses).toEqual(vector.addresses);
     });

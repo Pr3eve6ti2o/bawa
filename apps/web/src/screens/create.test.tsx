@@ -73,10 +73,10 @@ describe('CreateScreen', () => {
 
   it('says on the button card what creating gets you', () => {
     // The message on the single button card: one recovery phrase, one
-    // wallet, 84 chains.
+    // wallet, 87 chains.
     expect(container.textContent).toContain('Create a wallet');
     expect(container.textContent).toContain('One recovery phrase');
-    expect(container.textContent).toContain('84 chains');
+    expect(container.textContent).toContain('87 chains');
     expect(container.textContent).toContain('24-word recovery phrase');
   });
 

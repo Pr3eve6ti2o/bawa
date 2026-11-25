@@ -62,7 +62,7 @@ export { ensureAdapters, ensureDevnetAdapters };
 // for any other chain (e.g. SOL) was persisted but dropped on every
 // reload — the Wallets screen showed "No wallets imported" and the
 // Assets row stayed "Balance unavailable" until the wallet was
-// re-added. Hydration now covers all 84 registry chains
+// re-added. Hydration now covers all 87 registry chains
 // (ALL_CHAIN_IDS), like the initial-state checks above it.
 // Maximum wallet-label length enforced at the storage boundary (T43
 // r2b Fix (b)). The shortest 12-word English BIP-39 mnemonic is 47
@@ -81,7 +81,7 @@ type PerChain<T> = Record<ChainId, T>;
 // SUPPORTED_CHAINS here breaks those suites at load time. Must stay in
 // step with SUPPORTED_CHAINS (chains.test.ts pins that list).
 const ALL_CHAIN_IDS = [
-  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom', 'zksync', 'cronos', 'kava', 'filecoin', 'zora', 'mode', 'fraxtal', 'berachain', 'sei', 'arbnova', 'worldchain', 'manta', 'unichain', 'ink', 'abstract', 'soneium', 'apechain', 'sonic', 'hyperevm', 'monad', 'ronin', 'immutable', 'fuse', 'velas', 'syscoin', 'theta', 'iotex', 'xlayer', 'boba', 'taiko', 'astar', 'telos', 'conflux', 'core', 'songbird', 'rootstock', 'pulsechain', 'xdc', 'chiliz', 'etc', 'flare', 'zetachain', 'hemi', 'bob', 'flowevm', 'cosmos', 'osmosis', 'xrp', 'stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera', 'injective', 'celestia', 'dydx', 'seicosmos', 'axelar', 'noble', 'juno',
+  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom', 'zksync', 'cronos', 'kava', 'filecoin', 'zora', 'mode', 'fraxtal', 'berachain', 'sei', 'arbnova', 'worldchain', 'manta', 'unichain', 'ink', 'abstract', 'soneium', 'apechain', 'sonic', 'hyperevm', 'monad', 'ronin', 'immutable', 'fuse', 'velas', 'syscoin', 'theta', 'iotex', 'xlayer', 'boba', 'taiko', 'astar', 'telos', 'conflux', 'core', 'songbird', 'rootstock', 'pulsechain', 'xdc', 'chiliz', 'etc', 'flare', 'zetachain', 'hemi', 'bob', 'flowevm', 'cosmos', 'osmosis', 'xrp', 'stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera', 'injective', 'celestia', 'dydx', 'seicosmos', 'axelar', 'noble', 'juno', 'cardano', 'kaspa', 'starknet',
 ] as const;
 
 // Built from ALL_CHAIN_IDS (not SUPPORTED_CHAINS — see the note above):

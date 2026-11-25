@@ -44,7 +44,7 @@ export interface ChainConfig {
   displayName: string;
   symbol: string;
   /** Wallet Core CoinType property name. */
-  coinTypeName: 'bitcoin' | 'ethereum' | 'tron' | 'ton' | 'solana' | 'smartChain' | 'polygon' | 'arbitrum' | 'optimism' | 'base' | 'avalancheCChain' | 'litecoin' | 'dogecoin' | 'xdai' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opBNB' | 'metis' | 'aurora' | 'fantom' | 'zksync' | 'cronosChain' | 'kavaEvm' | 'filecoin' | 'seiEVM' | 'arbitrumNova' | 'mantaPacific' | 'sonic' | 'hyperEVM' | 'monad' | 'ronin' | 'thetaFuel' | 'ioTeXEVM' | 'boba' | 'confluxeSpace' | 'rootstock' | 'ethereumClassic' | 'zetaEVM' | 'cosmos' | 'osmosis' | 'xrp' | 'stellar' | 'polkadot' | 'near' | 'aptos' | 'tezos' | 'algorand' | 'hedera' | 'nativeInjective' | 'tia' | 'dydx' | 'sei' | 'axelar' | 'noble' | 'juno';
+  coinTypeName: 'bitcoin' | 'ethereum' | 'tron' | 'ton' | 'solana' | 'smartChain' | 'polygon' | 'arbitrum' | 'optimism' | 'base' | 'avalancheCChain' | 'litecoin' | 'dogecoin' | 'xdai' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opBNB' | 'metis' | 'aurora' | 'fantom' | 'zksync' | 'cronosChain' | 'kavaEvm' | 'filecoin' | 'seiEVM' | 'arbitrumNova' | 'mantaPacific' | 'sonic' | 'hyperEVM' | 'monad' | 'ronin' | 'thetaFuel' | 'ioTeXEVM' | 'boba' | 'confluxeSpace' | 'rootstock' | 'ethereumClassic' | 'zetaEVM' | 'cosmos' | 'osmosis' | 'xrp' | 'stellar' | 'polkadot' | 'near' | 'aptos' | 'tezos' | 'algorand' | 'hedera' | 'nativeInjective' | 'tia' | 'dydx' | 'sei' | 'axelar' | 'noble' | 'juno' | 'cardano' | 'kaspa' | 'starknet';
   /** CAIP-2 network identifier (mainnet only). */
   networkId: string;
   /** CAIP-19 native asset identifier (slip44 namespace). */
@@ -347,13 +347,16 @@ const BALANCE_EVIDENCE_2026_11_24 =
 function capabilitiesForExpandedChain(
   chain: ChainId,
   xpubRoundTrip: boolean,
+  deriveEvidence?: string,
 ): Capabilities {
   const evidence =
-    'Verified by Wallet Core 4.9.3 derivation probe 2026-11-24 (BIP-39 test-vector mnemonic; getAddressForCoin and explicit-key path agree; CoinTypeExt.validate true'
-    + (xpubRoundTrip
-      ? '; xpub round-trip agrees'
-      : '; no xpub round-trip — Ed25519 chains have no extended public key')
-    + ') + apps/web/src/wallet/core.test.ts expanded-chain checks for ';
+    (deriveEvidence ??
+      'Verified by Wallet Core 4.9.3 derivation probe 2026-11-24 (BIP-39 test-vector mnemonic; getAddressForCoin and explicit-key path agree; CoinTypeExt.validate true'
+        + (xpubRoundTrip
+          ? '; xpub round-trip agrees'
+          : '; no xpub round-trip — Ed25519 chains have no extended public key')
+        + ')')
+    + ' + apps/web/src/wallet/core.test.ts expanded-chain checks for ';
   const verified = (capability: CapabilityName): CapabilityEntry => ({
     status: 'verified',
     evidenceLevel: 'probe-only',
@@ -367,6 +370,18 @@ function capabilitiesForExpandedChain(
     receive: verified('receive'),
   };
 }
+
+// Lane B (2026-11-25): the three OKX chains derive differently from
+// the Wallet Core 4.9.3 probe the other expanded chains use, so their
+// derive evidence names the real path. All three are derive-only:
+// balance / history / fee-quote / send stay blocked (see
+// capabilitiesForExtendedChain), never faked.
+const CARDANO_DERIVE_EVIDENCE =
+  'Verified by Wallet Core 4.9.3 derivation probe 2026-11-25 (BIP-39 test-vector mnemonic; getAddressForCoin and the Ed25519-Cardano explicit-key path agree; CoinTypeExt.validate true; no xpub round-trip — Ed25519 chains have no extended public key)';
+const KASPA_DERIVE_EVIDENCE =
+  "Verified by Wallet Core 4.9.3 + in-app CashAddr probe 2026-11-25 (BIP-39 test-vector mnemonic; secp256k1 key at m/44'/111111'/0'/0/0 agrees with the OKX js-wallet-sdk test vector; no xpub round-trip — Kaspa has no Wallet Core coin, so no extended public key can be exported for it)";
+const STARKNET_DERIVE_EVIDENCE =
+  "Verified by in-app Stark-curve probe 2026-11-25 (BIP-39 test-vector mnemonic; double-derivation + grindKey + Argent proxy address agree with the OKX js-wallet-sdk test vectors; no xpub round-trip — Starknet keys are ground from a private key, so no address can be derived from an extended public key)";
 
 /**
  * Lane 80-APP: the 44 expanded EVM chains with a live balance adapter.
@@ -1621,9 +1636,48 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     evmChainId: null,
     capabilities: capabilitiesForExpandedChain('juno', true),
   },
+  cardano: {
+    id: 'cardano',
+    displayName: 'Cardano',
+    symbol: 'ADA',
+    coinTypeName: 'cardano',
+    networkId: 'cardano:mainnet',
+    assetId: 'cardano:mainnet/slip44:1815',
+    profileId: 'bawa-cardano-cip1852-v1',
+    pathFor: expandedPathFor("m/1852'/1815'/{account}'/0/{index}"),
+    rpcEndpoints: ['https://api.koios.rest/api/v1/tip', 'https://api.koios.rest/api/v1/blocks'],
+    evmChainId: null,
+    capabilities: capabilitiesForExpandedChain('cardano', false, CARDANO_DERIVE_EVIDENCE),
+  },
+  kaspa: {
+    id: 'kaspa',
+    displayName: 'Kaspa',
+    symbol: 'KAS',
+    coinTypeName: 'kaspa',
+    networkId: 'kaspa:mainnet',
+    assetId: 'kaspa:mainnet/slip44:111111',
+    profileId: 'bawa-kaspa-bip44-v1',
+    pathFor: expandedPathFor("m/44'/111111'/{account}'/0/{index}"),
+    rpcEndpoints: ['https://api.kaspa.org/info/blockdag', 'https://api.kaspa.org/info/network'],
+    evmChainId: null,
+    capabilities: capabilitiesForExpandedChain('kaspa', false, KASPA_DERIVE_EVIDENCE),
+  },
+  starknet: {
+    id: 'starknet',
+    displayName: 'Starknet',
+    symbol: 'STRK',
+    coinTypeName: 'starknet',
+    networkId: 'starknet:SN_MAIN',
+    assetId: 'starknet:SN_MAIN/slip44:9004',
+    profileId: 'bawa-starknet-bip44-v1',
+    pathFor: expandedPathFor("m/44'/9004'/{account}'/0/{index}"),
+    rpcEndpoints: ['https://starknet-mainnet.drpc.org', 'https://starknet.drpc.org'],
+    evmChainId: null,
+    capabilities: capabilitiesForExpandedChain('starknet', false, STARKNET_DERIVE_EVIDENCE),
+  },
 };
 
-export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom', 'zksync', 'cronos', 'kava', 'filecoin', 'zora', 'mode', 'fraxtal', 'berachain', 'sei', 'arbnova', 'worldchain', 'manta', 'unichain', 'ink', 'abstract', 'soneium', 'apechain', 'sonic', 'hyperevm', 'monad', 'ronin', 'immutable', 'fuse', 'velas', 'syscoin', 'theta', 'iotex', 'xlayer', 'boba', 'taiko', 'astar', 'telos', 'conflux', 'core', 'songbird', 'rootstock', 'pulsechain', 'xdc', 'chiliz', 'etc', 'flare', 'zetachain', 'hemi', 'bob', 'flowevm', 'cosmos', 'osmosis', 'xrp', 'stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera', 'injective', 'celestia', 'dydx', 'seicosmos', 'axelar', 'noble', 'juno'];
+export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom', 'zksync', 'cronos', 'kava', 'filecoin', 'zora', 'mode', 'fraxtal', 'berachain', 'sei', 'arbnova', 'worldchain', 'manta', 'unichain', 'ink', 'abstract', 'soneium', 'apechain', 'sonic', 'hyperevm', 'monad', 'ronin', 'immutable', 'fuse', 'velas', 'syscoin', 'theta', 'iotex', 'xlayer', 'boba', 'taiko', 'astar', 'telos', 'conflux', 'core', 'songbird', 'rootstock', 'pulsechain', 'xdc', 'chiliz', 'etc', 'flare', 'zetachain', 'hemi', 'bob', 'flowevm', 'cosmos', 'osmosis', 'xrp', 'stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera', 'injective', 'celestia', 'dydx', 'seicosmos', 'axelar', 'noble', 'juno', 'cardano', 'kaspa', 'starknet'];
 
 // The Wallet Core default Solana profile is now supported as bawa-sol-bip44-v1; only the Phantom bip44Change profile stays unsupported.
 export interface UnsupportedProfile {

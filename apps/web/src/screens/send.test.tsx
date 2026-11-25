@@ -877,16 +877,16 @@ describe('send screen', () => {
     }
   });
 
-  it('shows all eighty-four chains on step 1, and the selected chain’s tokens on step 2', async () => {
+  it('shows all eighty-seven chains on step 1, and the selected chain’s tokens on step 2', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
       // Step 1 is chains only (Round 2, item 8). Redesign Lane 3: the
       // 84 chains live in the search picker's listbox now, not a chip
-      // wall — open it and all 84 are there, with no token list yet.
+      // wall — open it and all 87 are there, with no token list yet.
       await openChainPicker(mounted.div);
       const names = chainOptionNames(mounted.div);
-      expect(names).toHaveLength(84);
+      expect(names).toHaveLength(87);
       for (const name of ['Bitcoin', 'Ethereum', 'TRON', 'TON', 'Solana', 'BNB Smart Chain', 'Polygon', 'Arbitrum One', 'OP Mainnet', 'Base', 'Avalanche C-Chain', 'Litecoin', 'Dogecoin', 'ZKsync Era', 'Cronos', 'Cosmos Hub', 'Stellar', 'Ronin', 'Filecoin']) {
         expect(names).toContain(name);
       }

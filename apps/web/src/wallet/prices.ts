@@ -29,7 +29,10 @@
  * fills the gap from CoinLore (batched, first), DexScreener wrapped
  * natives (base-side, or the exact priceUsd/priceNative implied
  * price for quote-side pairs), TonAPI for TON, Coinbase for LTC.
- * 77 of 84 chains have a fallback (Lane 80-APP, 2026-11-24: the
+ * 80 of 87 chains have a fallback (Lane B, 2026-11-25: Cardano,
+ * Kaspa and Starknet add CoinLore for all three and Coinbase for
+ * Cardano and Starknet; the seven CoinGecko-only chains are
+ * unchanged. Lane 80-APP, 2026-11-24: the
  * 62 expanded chains add CoinLore for 53 and Coinbase for 44; the
  * seven CoinGecko-only chains are Fraxtal, Velas, Telos, Songbird,
  * Rootstock, PulseChain and XDC — no second source answers for them,
@@ -149,12 +152,15 @@ export const PRICE_IDS: Record<ChainId, string> = {
   axelar: 'axelar',
   noble: 'usd-coin',
   juno: 'juno-network',
+  cardano: 'cardano',
+  kaspa: 'kaspa',
+  starknet: 'starknet',
 };
 
 // CAIP-19 native-asset ids. The slip44 is the NATIVE coin's (BNB 714,
 // POL 966, AVAX 9000, CELO 527) — not ETH's 60, which the EVM chains
 // that settle in ETH share. Must match chainConfig(chain).assetId;
-// the wiring test pins the equality for all 84 chains.
+// the wiring test pins the equality for all 87 chains.
 export const PRICE_ASSET_IDS: Record<ChainId, string> = {
   btc: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
   eth: 'eip155:1/slip44:60',
@@ -240,6 +246,9 @@ export const PRICE_ASSET_IDS: Record<ChainId, string> = {
   axelar: 'cosmos:axelar-dojo-1/slip44:118',
   noble: 'cosmos:noble-1/slip44:118',
   juno: 'cosmos:juno-1/slip44:118',
+  cardano: 'cardano:mainnet/slip44:1815',
+  kaspa: 'kaspa:mainnet/slip44:111111',
+  starknet: 'starknet:SN_MAIN/slip44:9004',
 };
 
 export const MAX_QUOTE_AGE_MS = 10 * 60 * 1000;
@@ -724,7 +733,7 @@ export function parsePriceResponse(
     }, nowMs);
   };
 
-  // Built from PRICE_IDS (the 84-chain id map) so a new chain can never
+  // Built from PRICE_IDS (the 87-chain id map) so a new chain can never
   // silently miss its parsed entry.
   return Object.fromEntries(
     (Object.keys(PRICE_IDS) as ChainId[]).map((chain) => [

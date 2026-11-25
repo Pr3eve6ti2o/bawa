@@ -119,13 +119,13 @@ export function detectWatchOnlyChain(value: string): ChainId | null {
 }
 
 // Merge lane (2026-11-24): the picker used to hardcode the original 22
-// chains while validation, derivation and labels already covered all 84
+// chains while validation, derivation and labels already covered all 87
 // registry chains — the picker is now the full SUPPORTED_CHAINS list.
 const chains: ChainId[] = [...SUPPORTED_CHAINS];
 // Token gaps, item 6 + item 8: the picker used to list only the first
 // four chains even though validation (validateWatchOnlyImport), address
 // derivation (deriveAddresses, incl. the single-address SOL/TON path)
-// and the input labels below already cover all 84 registry chains. A
+// and the input labels below already cover all 87 registry chains. A
 // Solana or Dogecoin address could not be watched at all.
 
 type ImportInputConfig = {
@@ -229,6 +229,12 @@ const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   axelar: { label: 'Axelar address (axelar1…) or account public key (xpub)', placeholder: 'axelar1… or xpub…' },
   noble: { label: 'Noble address (noble1…) or account public key (xpub)', placeholder: 'noble1… or xpub…' },
   juno: { label: 'Juno address (juno1…) or account public key (xpub)', placeholder: 'juno1… or xpub…' },
+  // Lane B: no xpub for any of the three — Cardano is Ed25519, Kaspa
+  // has no Wallet Core coin, Starknet keys are ground from a private
+  // key — so the input is a plain public address only.
+  cardano: { label: 'Cardano address (addr1…)', placeholder: 'addr1…' },
+  kaspa: { label: 'Kaspa address (kaspa:…)', placeholder: 'kaspa:…' },
+  starknet: { label: 'Starknet address (0x…)', placeholder: '0x…' },
 };
 
 const MIN_PASSWORD_LENGTH = 8;

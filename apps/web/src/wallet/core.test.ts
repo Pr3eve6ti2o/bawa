@@ -122,7 +122,7 @@ describe('wallet/core', () => {
     expect(addresses.eth).toBe(ETH_VECTOR_ADDRESS);
   });
 
-  it('derives the Wallet Core probe test-vector addresses on all twenty-two chains', async () => {
+  it('derives the Wallet Core probe test-vector addresses on the original chains plus Cardano, Kaspa and Starknet', async () => {
     const addresses = await deriveAddresses(TEST_VECTOR_MNEMONIC);
     expect(addresses.btc).toBe('bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu');
     expect(addresses.eth).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
@@ -146,6 +146,11 @@ describe('wallet/core', () => {
     expect(addresses.fantom).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
     expect(addresses.ltc).toBe('ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh');
     expect(addresses.doge).toBe('DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC');
+    // Lane B: Cardano via Wallet Core, Kaspa/Starknet via the in-app
+    // modules (same test-vector mnemonic as the wiring test).
+    expect(addresses.cardano).toBe('addr1qy8ac7qqy0vtulyl7wntmsxc6wex80gvcyjy33qffrhm7sh927ysx5sftuw0dlft05dz3c7revpf7jx0xnlcjz3g69mq4afdhv');
+    expect(addresses.kaspa).toBe('kaspa:qqd6e65yefepe9wk0m9vuxdufxd80sphy67gwwd0vdaumzdt4tc9s3qt0lqeh');
+    expect(addresses.starknet).toBe('0x036d5a79899430e71529a201899de2ba628fa576e7c56de933d9fda68dacfdb4');
   });
 
   it('deriveAddressesAt(0, 0) equals deriveAddresses() exactly', async () => {
@@ -165,6 +170,22 @@ describe('wallet/core', () => {
     expect(withPassphrase.eth).toBe(ETH_VECTOR_ADDRESS);
     const without = await deriveAddressesAt(ETH_VECTOR_MNEMONIC, '', 0, 0);
     expect(without.eth).not.toBe(ETH_VECTOR_ADDRESS);
+  });
+
+  it('Cardano ignores the BIP-39 passphrase (Icarus root key from entropy)', async () => {
+    // Lane B: Wallet Core 4.9.3 derives the Cardano key from the
+    // mnemonic entropy (Icarus-style), not the BIP-39 seed — so the
+    // passphrase does not change the Cardano address (probe 2026-11-25:
+    // identical private-key bytes for '' and 'TREZOR'). Kaspa and
+    // Starknet do change. This is the bundled core's behaviour, pinned
+    // here so a future core upgrade that changes it fails loudly
+    // instead of silently moving Cardano funds — and so the passphrase
+    // is never presented as protecting the Cardano address.
+    const empty = await deriveAddresses(TEST_VECTOR_MNEMONIC, '');
+    const trezor = await deriveAddresses(TEST_VECTOR_MNEMONIC, 'TREZOR');
+    expect(trezor.cardano).toBe(empty.cardano);
+    expect(trezor.kaspa).not.toBe(empty.kaspa);
+    expect(trezor.starknet).not.toBe(empty.starknet);
   });
 
   it('deriveAddressesAt changes btc/eth/trx/ltc/doge at index 1 but not TON or SOL', async () => {

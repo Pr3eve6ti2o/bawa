@@ -170,6 +170,9 @@ const CHAIN_NAMES: Record<ChainId, string> = {
   axelar: 'Axelar',
   noble: 'Noble',
   juno: 'Juno',
+  cardano: 'Cardano',
+  kaspa: 'Kaspa',
+  starknet: 'Starknet',
 };
 
 /**
@@ -224,7 +227,7 @@ export async function validateRecipient(
   try {
     const core = await loadCore();
     // Lane 80-APP: the coin for the chain comes from the shared WASM
-    // key table (all 84 chains), not a hardcoded 22-chain map — TON
+    // key table (all 87 chains), not a hardcoded 22-chain map — TON
     // has no entry there, so it keeps its direct lookup.
     const coin =
       chain === 'ton'

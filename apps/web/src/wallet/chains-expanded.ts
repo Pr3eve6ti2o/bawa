@@ -5,8 +5,9 @@
  * price, adapter or UI code was touched. A later lane wires these facts into
  * the wallet (derivation, RPC failover, explorers, price sources, icons).
  *
- * Coverage: 62 NEW chains (45 EVM + 10 non-EVM + 7 Cosmos-ecosystem),
- * taking the wallet from 22 chains to 84. Every chain was cross-checked against
+ * Coverage: 65 NEW chains (45 EVM + 10 non-EVM + 7 Cosmos-ecosystem
+ * + 3 OKX lanes — Cardano, Starknet, Kaspa), taking the wallet from
+ * 22 chains to 87. Every chain was cross-checked against
  * at least two sources (Trust Wallet Core registry, Chainlist, official chain
  * docs/RPCs, CoinGecko /coins/list). Every RPC endpoint below was called live
  * on 2026-11-24 and returned a fresh tip (EVM: eth_chainId + eth_blockNumber +
@@ -21,15 +22,16 @@
  * Price sources match the wallet's existing stack (prices.ts /
  * price-fallbacks.ts): CoinGecko first, then CoinLore, DexScreener (wrapped
  * natives) and Coinbase Exchange products. CoinGecko ids were confirmed live
- * (batch /simple/price returned USD prices for all 62 on 2026-11-24).
- * CoinLore covers 53/62 (top-2000 tickers only); Coinbase
- * 44/62; DexScreener 13/62 (search API
+ * (batch /simple/price returned USD prices for all 62 on 2026-11-24;
+ * the 3 Lane B ids returned USD prices live on 2026-11-25).
+ * CoinLore covers 56/65 (top-2000 tickers only); Coinbase
+ * 46/65; DexScreener 15/65 (search API
  * returns 30 pairs max, so an unconfirmed DexScreener entry means "not seen",
  * not "unsupported"). No balances or prices are stored here — identifiers only.
  *
  * Icons: Trust Wallet Assets, pinned at commit e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e (verified 2026-11-24:
  * commit exists, 2026-11-20 "Mark FAKE Anthropic as FAKE (#38836)", bitcoin
- * logo HEAD 200 at the pin). 34/62 chains have a logo at the pin. The
+ * logo HEAD 200 at the pin). 35/65 chains have a logo at the pin. The
  * other 28 have no Assets directory at the pin — or at HEAD (checked
  * 2026-11-24: the blockchains/ listing at master has none of the 28;
  * okx / okxchain are the old OKC chain, not X Layer). Lane E
@@ -37,7 +39,11 @@
  * from outside Trust Wallet: DefiLlama chain icons (22), CoinGecko coin
  * images (5: astar, songbird, velas, worldchain via the Worldcoin mark,
  * celestia via the TIA mark) and the Tatum chain-logo CDN (1: flowevm,
- * SVG). Each was viewed by eye before bundling. The bundled files live
+ * SVG). Lane B (2026-11-25) adds 3 more chains: Cardano has a logo at
+ * the pin; Kaspa and Starknet have none at the pin or at HEAD and no
+ * DefiLlama chain icon, so their marks are CoinGecko coin images
+ * (kaspa-icon-exchanges.png, starknet.png), viewed before bundling.
+ * Each was viewed by eye before bundling. The bundled files live
  * in apps/web/src/assets/chains/ (PNG canonical + 96px WebP q85) and are
  * wired through CHAIN_LOGOS in apps/web/src/screens/token-logo.tsx, so
  * no registry chain falls back to the empty ring any more. (The header's
@@ -54,6 +60,29 @@
  * (method unsupported / transient error); the other RPC on each chain was
  * fresh. xdc's rpc.xdcrpc.com was rate-limited (429) at freshness time, so
  * the shipped pair is rpc.xdc.network + 50.rpc.thirdweb.com, both fresh.
+ *
+ * Lane B (OKX js-wallet-sdk, 2026-11-25): Cardano, Starknet and Kaspa
+ * are the genuinely new chains the SDK covers — XRP, Stellar and NEAR
+ * were already in this file and were NOT duplicated. Derivation paths
+ * and address formats come from the SDK source (coin-cardano /
+ * coin-kaspa / coin-starknet + crypto-lib): Cardano CIP-1852
+ * m/1852'/1815'/{account}'/0/{index} via the Wallet Core 4.9.3 cardano
+ * coin; Kaspa m/44'/111111'/{account}'/0/{index} (secp256k1 key via the
+ * ethereum coin as curve carrier, CashAddr-encoded in-app); Starknet
+ * m/44'/9004'/{account}'/0/{index} (double-derivation: the ETH key at
+ * m/44'/60'/{account}'/0/0 as BIP32 seed, then grindKey, then the
+ * counterfactual Argent proxy address). Each vector was verified
+ * against the SDK's own test vectors (see kaspa-address.test.ts and
+ * starknet-derive.test.ts). RPCs were called live 2026-11-25: Koios
+ * tip + blocks, api.kaspa.org blockdag + network, dRPC Starknet
+ * chainId SN_MAIN on two hosts. CAIP-2: cardano:mainnet (x402 /
+ * Cardano Foundation; CIP-34 alias cip34:1-764824073),
+ * kaspa:mainnet and starknet:SN_MAIN (ChainAgnostic namespaces).
+ * All three are derive-only — balance / history / fee-quote / send
+ * stay blocked, never faked — and Starknet is receive-only on top:
+ * funds sent to its counterfactual Argent address are recoverable
+ * only by deploying that exact Argent account, which the wallet
+ * cannot do yet.
  */
 
 /** Trust Wallet Assets commit pin — verified 2026-11-24 (see header). */
@@ -1787,9 +1816,91 @@ export const EXPANDED_CHAINS: ExpandedChainFacts[] = [
     iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e/blockchains/juno/info/logo.png",
     sources: ["trustwallet-core", "official-rpc"],
     notes: "Tx pattern as Cosmos.",
-  },];
+  },
+  {
+    key: "cardano",
+    displayName: "Cardano",
+    symbol: "ADA",
+    coinTypeName: "cardano",
+    coinType: 1815,
+    derivationPath: "m/1852'/1815'/0'/0/0",
+    derivationTemplate: "m/1852'/1815'/{account}'/0/{index}",
+    networkId: "cardano:mainnet",
+    assetId: "cardano:mainnet/slip44:1815",
+    evmChainId: null,
+    rpcEndpoints: ["https://api.koios.rest/api/v1/tip", "https://api.koios.rest/api/v1/blocks"],
+    rpcEvidence: ["tip 200, block 14247434, epoch 669, Conway — probe 2026-11-25", "blocks 200, block 14247440 — probe 2026-11-25"],
+    explorerBaseUrl: "https://cardanoscan.io",
+    explorerTxUrlPattern: "https://cardanoscan.io/transaction/{hash}",
+    explorerTxLive: false,
+    priceSources: {
+      coingeckoId: "cardano",
+      coinloreId: "257",
+      coinbaseProduct: "ADA-USD",
+      dexScreenerChainId: "cardano",
+    },
+    iconPath: "blockchains/cardano/info/logo.png",
+    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e/blockchains/cardano/info/logo.png",
+    sources: ["trustwallet-core", "official-rpc"],
+    notes: "networkId cardano:mainnet (CAIP-2, x402/Cardano Foundation; CIP-34 alias cip34:1-764824073). CIP-1852 derivation via the Wallet Core 4.9.3 cardano coin; the pubkey must come from getPublicKeyEd25519Cardano — the plain Ed25519 route aborts the WASM instance. Derive-only: no balance/history/send adapter in this lane. Cardanoscan tx pattern not live-clicked (bot-gated 403 from this egress).",
+  },
+  {
+    key: "kaspa",
+    displayName: "Kaspa",
+    symbol: "KAS",
+    coinTypeName: "kaspa",
+    coinType: 111111,
+    derivationPath: "m/44'/111111'/0'/0/0",
+    derivationTemplate: "m/44'/111111'/{account}'/0/{index}",
+    networkId: "kaspa:mainnet",
+    assetId: "kaspa:mainnet/slip44:111111",
+    evmChainId: null,
+    rpcEndpoints: ["https://api.kaspa.org/info/blockdag", "https://api.kaspa.org/info/network"],
+    rpcEvidence: ["blockdag 200, blockCount 1204726 — probe 2026-11-25", "network 200, blockCount 1205601 — probe 2026-11-25"],
+    explorerBaseUrl: "https://explorer.kaspa.org",
+    explorerTxUrlPattern: "https://explorer.kaspa.org/txs/{hash}",
+    explorerTxLive: false,
+    priceSources: {
+      coingeckoId: "kaspa",
+      coinloreId: "70485",
+      coinbaseProduct: null,
+      dexScreenerChainId: null,
+    },
+    iconPath: "coingecko/coins/images/25751/large/kaspa-icon-exchanges.png",
+    iconUrl: "https://coin-images.coingecko.com/coins/images/25751/large/kaspa-icon-exchanges.png?1696524837",
+    sources: ["okx-sdk", "official-rpc"],
+    notes: "networkId kaspa:mainnet (CAIP-2, ChainAgnostic CASA profile). BIP-44 coin type 111111; secp256k1 key via the Wallet Core ethereum coin as curve carrier, CashAddr-encoded in-app (OKX SDK vector). No Wallet Core coin: no xpub export. Derive-only: no balance/history/send adapter in this lane. Explorer tx pattern not live-clicked (bot-gated 403 from this egress).",
+  },
+  {
+    key: "starknet",
+    displayName: "Starknet",
+    symbol: "STRK",
+    coinTypeName: "starknet",
+    coinType: 9004,
+    derivationPath: "m/44'/9004'/0'/0/0",
+    derivationTemplate: "m/44'/9004'/{account}'/0/{index}",
+    networkId: "starknet:SN_MAIN",
+    assetId: "starknet:SN_MAIN/slip44:9004",
+    evmChainId: null,
+    rpcEndpoints: ["https://starknet-mainnet.drpc.org", "https://starknet.drpc.org"],
+    rpcEvidence: ["starknet_chainId SN_MAIN, http 200 — probe 2026-11-25", "starknet_chainId SN_MAIN, http 200 — probe 2026-11-25"],
+    explorerBaseUrl: "https://starkscan.co",
+    explorerTxUrlPattern: "https://starkscan.co/tx/{hash}",
+    explorerTxLive: true,
+    priceSources: {
+      coingeckoId: "starknet",
+      coinloreId: "136109",
+      coinbaseProduct: "STRK-USD",
+      dexScreenerChainId: "starknet",
+    },
+    iconPath: "coingecko/coins/images/26433/large/starknet.png",
+    iconUrl: "https://coin-images.coingecko.com/coins/images/26433/large/starknet.png",
+    sources: ["okx-sdk", "official-rpc"],
+    notes: "networkId starknet:SN_MAIN (CAIP-2, ChainAgnostic profile; chainId confirmed live on both dRPC hosts — the only keyless public endpoints found; Blast/Lava dead, Ankr/Cartridge/Chainstack key-gated). Double-derivation: ETH key at m/44'/60'/{account}'/0/0 as BIP32 seed, then m/44'/9004'/{account}'/0/{index}, grindKey into the Stark curve order; address is the counterfactual Argent proxy (funds recoverable only by deploying that exact Argent account, which the wallet cannot do yet). Receive-only; send stays blocked. No xpub: grindKey needs the private key. Derive-only: no balance/history adapter in this lane.",
+  },
+];
 
-export const EXPANDED_CHAIN_COUNT = 62;
+export const EXPANDED_CHAIN_COUNT = 65;
 
 export const expandedChainByKey: Record<string, ExpandedChainFacts> =
   Object.fromEntries(EXPANDED_CHAINS.map((c) => [c.key, c]));
@@ -1856,4 +1967,7 @@ export type ExpandedChainKey =
   | "seicosmos"
   | "axelar"
   | "noble"
-  | "juno";
+  | "juno"
+  | "cardano"
+  | "kaspa"
+  | "starknet";

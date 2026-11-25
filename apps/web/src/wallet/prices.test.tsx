@@ -96,6 +96,12 @@ function freshPayload(ageMs = 30_000): Record<string, { usd: number; last_update
     'axelar': { usd: 0.2, last_updated_at: secondsBefore(ageMs) },
     'usd-coin': { usd: 1, last_updated_at: secondsBefore(ageMs) },
     'juno-network': { usd: 0.05, last_updated_at: secondsBefore(ageMs) },
+    // Lane B (OKX chains, 2026-11-25): live CoinGecko prices probed
+    // 2026-11-25 (cardano $0.142504, kaspa $0.02642454,
+    // starknet $0.03029977).
+    cardano: { usd: 0.142504, last_updated_at: secondsBefore(ageMs) },
+    kaspa: { usd: 0.02642454, last_updated_at: secondsBefore(ageMs) },
+    starknet: { usd: 0.03029977, last_updated_at: secondsBefore(ageMs) },
   };
 }
 
@@ -570,7 +576,7 @@ describe('fetchPrices', () => {
     vi.unstubAllGlobals();
   });
 
-  it('fetches all eighty-four fresh prices in one batch without a demo key', async () => {
+  it('fetches all eighty-seven fresh prices in one batch without a demo key', async () => {
     vi.stubEnv('VITE_COINGECKO_DEMO_KEY', '');
     try {
       const calls: Array<{ url: string; init: unknown }> = [];
@@ -588,14 +594,14 @@ describe('fetchPrices', () => {
       expect(calls).toHaveLength(1);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       expect(calls[0]!.url).toBe(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin,xdai,celo,mantle,metis-token,fantom,crypto-com-chain,kava,filecoin,frax-ether,berachain-bera,sei-network,apecoin,sonic-3,hyperliquid,monad,ronin,immutable-x,fuse-network-token,velas,syscoin,theta-fuel,iotex,okb,astar,telos,conflux-token,coredaoorg,songbird,pulsechain,xdce-crowd-sale,chiliz,ethereum-classic,flare-networks,zetachain,flow,cosmos,osmosis,ripple,stellar,polkadot,near,aptos,tezos,algorand,hedera-hashgraph,injective-protocol,celestia,dydx-chain,axelar,usd-coin,juno-network&vs_currencies=usd&include_last_updated_at=true',
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin,xdai,celo,mantle,metis-token,fantom,crypto-com-chain,kava,filecoin,frax-ether,berachain-bera,sei-network,apecoin,sonic-3,hyperliquid,monad,ronin,immutable-x,fuse-network-token,velas,syscoin,theta-fuel,iotex,okb,astar,telos,conflux-token,coredaoorg,songbird,pulsechain,xdce-crowd-sale,chiliz,ethereum-classic,flare-networks,zetachain,flow,cosmos,osmosis,ripple,stellar,polkadot,near,aptos,tezos,algorand,hedera-hashgraph,injective-protocol,celestia,dydx-chain,axelar,usd-coin,juno-network,cardano,kaspa,starknet&vs_currencies=usd&include_last_updated_at=true',
       );
       const headers = (
         calls[0]!.init as { headers: Record<string, string> }
       ).headers;
       expect(headers['Accept']).toBe('application/json');
       expect(headers).not.toHaveProperty('x-cg-demo-api-key');
-      expect(Object.values(prices)).toHaveLength(84);
+      expect(Object.values(prices)).toHaveLength(87);
       for (const price of Object.values(prices)) {
         expect(price).toMatchObject({ status: 'fresh' });
       }
@@ -631,7 +637,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(84);
+    expect(Object.values(prices)).toHaveLength(87);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -650,7 +656,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(84);
+    expect(Object.values(prices)).toHaveLength(87);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -669,7 +675,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(84);
+    expect(Object.values(prices)).toHaveLength(87);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -685,7 +691,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(84);
+    expect(Object.values(prices)).toHaveLength(87);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -701,7 +707,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(84);
+    expect(Object.values(prices)).toHaveLength(87);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -722,7 +728,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(84);
+    expect(Object.values(prices)).toHaveLength(87);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -855,7 +861,7 @@ describe('portfolioTotal', () => {
   const fresh = parsePriceResponse(freshPayload(), NOW_MS);
   const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
   const zero = { status: 'zero' } as const;
-  // All 84 chains at zero: portfolioTotal takes Record<ChainId, BalanceState>.
+  // All 87 chains at zero: portfolioTotal takes Record<ChainId, BalanceState>.
   const zeros = Object.fromEntries(
     SUPPORTED_CHAINS.map((chain) => [chain, zero]),
   ) as Record<ChainId, BalanceState>;
@@ -1133,7 +1139,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(84);
+      expect(entries).toHaveLength(87);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'fresh' });
       expect(Number.isFinite(latest!.state.lastFetchedAtMs)).toBe(true);
     } finally {
@@ -1156,7 +1162,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(84);
+      expect(entries).toHaveLength(87);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
       // Three CoinGecko attempts. The fallback calls throw too (the
       // same dead network) and are not CoinGecko attempts.
@@ -1191,7 +1197,7 @@ describe('usePrices', () => {
       await act(async () => { latest?.refresh(); });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(84);
+      expect(entries).toHaveLength(87);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
     } finally {
       await cleanup();
@@ -1341,7 +1347,7 @@ describe('usePrices', () => {
       });
 
       expect(latest!.state.status).toBe('ready');
-      expect(Object.values(latest!.state.entries)).toHaveLength(84);
+      expect(Object.values(latest!.state.entries)).toHaveLength(87);
       for (const entry of Object.values(latest!.state.entries)) {
         expect(entry).toMatchObject({
           status: 'error',
@@ -1435,7 +1441,7 @@ describe('usePrices', () => {
       const mixed = parsePriceResponse(payload, NOW_MS);
       expect(
         Object.values(mixed).filter((entry) => entry.status === 'fresh'),
-      ).toHaveLength(82);
+      ).toHaveLength(85);
       expect(
         Object.values(mixed).filter(
           (entry) => entry.status === 'unavailable',

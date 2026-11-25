@@ -6,13 +6,14 @@ import {
 } from './chains-expanded';
 
 /** Chains with no Trust Wallet Assets directory at the verified pin —
- * Lane E sourced their icons from DefiLlama / CoinGecko / Tatum. */
-const NO_ICON_KEYS = ["zora", "mode", "fraxtal", "berachain", "arbnova", "worldchain", "unichain", "ink", "abstract", "soneium", "apechain", "immutable", "fuse", "velas", "xlayer", "taiko", "astar", "telos", "core", "songbird", "pulsechain", "chiliz", "flare", "hemi", "bob", "flowevm", "celestia", "dydx"] as const;
+ * Lane E sourced their icons from DefiLlama / CoinGecko / Tatum; Lane B
+ * adds Kaspa and Starknet (CoinGecko coin images). */
+const NO_ICON_KEYS = ["zora", "mode", "fraxtal", "berachain", "arbnova", "worldchain", "unichain", "ink", "abstract", "soneium", "apechain", "immutable", "fuse", "velas", "xlayer", "taiko", "astar", "telos", "core", "songbird", "pulsechain", "chiliz", "flare", "hemi", "bob", "flowevm", "celestia", "dydx", "kaspa", "starknet"] as const;
 
 describe('chains-expanded (Lane 80-DATA)', () => {
-  it('has 62 verified new chains', () => {
-    expect(EXPANDED_CHAIN_COUNT).toBe(62);
-    expect(EXPANDED_CHAINS).toHaveLength(62);
+  it('has 65 verified new chains', () => {
+    expect(EXPANDED_CHAIN_COUNT).toBe(65);
+    expect(EXPANDED_CHAINS).toHaveLength(65);
   });
 
   it('has unique keys', () => {
@@ -33,8 +34,9 @@ describe('chains-expanded (Lane 80-DATA)', () => {
     }
   });
 
-  it('uses hardened BIP-44 derivation paths', () => {
-    const re = /^m\/44'\/\d+'\/\d+'(\/\d+'?){0,2}$/;
+  it('uses hardened BIP-44 derivation paths (CIP-1852 for Cardano)', () => {
+    // Lane B: Cardano is CIP-1852 (purpose 1852), the rest BIP-44.
+    const re = /^m\/(44|1852)'\/\d+'\/\d+'(\/\d+'?){0,2}$/;
     for (const c of EXPANDED_CHAINS) {
       expect(c.derivationPath, c.key).toMatch(re);
       expect(c.derivationTemplate, c.key).toContain('{account}');
@@ -50,7 +52,8 @@ describe('chains-expanded (Lane 80-DATA)', () => {
   it('has a real icon for every chain, Trust Wallet or Lane E source', () => {
     // Lane E (2026-11-24): the 28 chains with no Trust Wallet Assets
     // directory now have a real mark from DefiLlama, CoinGecko or
-    // Tatum. No chain has a null icon any more.
+    // Tatum; Lane B adds Kaspa and Starknet the same way (CoinGecko).
+    // No chain has a null icon any more.
     const nullIcon = EXPANDED_CHAINS.filter((c) => c.iconUrl === null).map((c) => c.key);
     expect(nullIcon).toEqual([]);
     for (const c of EXPANDED_CHAINS) {
