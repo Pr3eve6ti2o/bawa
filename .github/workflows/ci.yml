@@ -176,8 +176,9 @@ jobs:
         run: npm run build
 
       - name: Bundle-size gate
-        # Budgets from PERF.md (measured 2026-11-20 + ~5%): total JS in
-        # dist/assets <= 4,185,000 bytes; largest single JS chunk
+        # Budgets from PERF.md (measured 2026-11-26, re-baselined by owner
+        # order at 7a170f4): total JS in
+        # dist/assets <= 4,650,000 bytes; largest single JS chunk
         # <= 3,050,000 bytes. The boundary chunk is the WASM engine and
         # dominates by design; Vite's 500 kB chunk warning is expected
         # for it and is not a failure.

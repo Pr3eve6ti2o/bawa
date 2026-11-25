@@ -1,6 +1,6 @@
 # Constraints
 
-Last reviewed: 2026-11-20 by Lane P5 (repo-study Phase 3, item 25).
+Last reviewed: 2026-11-26 by the guide-update pass (Lane D, hands-on, 0 Sol calls).
 Base: `panel-rebuild/repo-study` at `0fd3a2e`.
 
 This is Bawa's written quality contract. It outlives any single session:
@@ -47,12 +47,12 @@ pass.** Tightening the bar is silent; loosening it is loud (see
 
 ## Measured, not yet enforced
 
-| Metric | Today (2026-11-20, this tree) | Direction |
+| Metric | Today (2026-11-26, this tree) | Direction |
 | --- | --- | --- |
-| Web vitest | 40 files, 460 tests, 0 failed, 0 skipped | must not fall |
-| Web bundle JS | 3,978,773 bytes total (measured 2026-11-22 on adopt-proper 67c48e2, two independent builds, byte-identical); largest chunk (boundary) 2,901,695 bytes | must not grow (ratchet: budgets above are today + ~5%) |
-| Web test duration | ~27 s (`vitest run`) | must not grow without a reason |
-| Root smoke checks | 217 checks pass, 0 fail | must not fall |
+| Web vitest | 110 files, 2,945 tests passed + 5 skipped (verified 2026-11-26 on the merged tree, Node 22) | must not fall |
+| Web bundle JS | 4,648,952 bytes total (measured 2026-11-26 on token-gaps `7a170f4`, fresh build, Node 22); largest chunk (boundary) 2,906,541 bytes; passes the 4,650,000 budget by 1,048 bytes | must not grow (ratchet: budgets above are the owner-ordered 4,650,000) |
+| Web test duration | ~91 s (`vitest run`, 2026-11-26) | must not grow without a reason |
+| Root smoke checks | 440 checks pass, 0 fail (412 smoke + 28 register-links, verified 2026-11-26) | must not fall |
 
 When a number improves, update it here. When it drops, that is the
 finding — not a reason to edit this file.
@@ -84,7 +84,7 @@ grep -rn "DEFER(" -- apps/web/src scripts tools | grep -v node_modules
 | --- | --- | --- |
 | D1 | Single-attempt `fetchJson` (ADR-0009). No retry in the transport; retries live in callers under a budget. | Ceiling: retries stay caller-side, bounded, reads-only. Trigger: a caller retries a broadcast, or an unbounded retry appears. |
 | D2 | Broadcast disabled (standing owner order). Send is built, signing is local, broadcast throws. | Ceiling: no broadcast path is enabled. Trigger: a separate owner authorisation to enable broadcast. Trigger MET for devnet only (owner order 2026-11-22, exception E1, expires 2027-02-20): a devnet-only broadcast path exists (`broadcastSignedDevnet`); mainnet broadcast remains disabled and every mainnet `broadcast()` still throws. |
-| D3 | Price-feed absence on this checkout. No CoinGecko client, no `prices.ts`; balances are native amounts only. | Ceiling: no fiat value is ever invented. Trigger: the multichain-create tracker/price merge (Prerequisite 0). |
+| D3 | Price-feed absence on this checkout — CLOSED 2026-11-26 (guide-update pass). The CoinGecko client exists (`apps/web/src/wallet/prices.ts`, `PRICE_IDS` covers all 87 chains) with CoinLore / Coinbase / DexScreener / TonAPI fallbacks (`price-fallbacks.ts`); balances carry fiat values from real sources, never invented. See ADR-0007 and `docs/CREATE-THIS-SPEC.md` §7. | Closed: feed implemented; the ceiling (no fiat value ever invented) still stands as §0.4 of the spec. |
 | D4 | `toBalanceProvider` legacy shim (`adapters/types.ts`) — REMOVED 2026-11-22 (P5 C1, merge 85ba72a). `balance-providers.ts` deleted; zero references to `toBalanceProvider`, `getBalanceProvider`, or `balance-providers` remain in the tree. Trigger met: last consumer removed. | Closed: shim and file deleted; new code uses `getAdapter`. |
 | D5 | ecdsa 0.19.2 accepted residual risk (PYSEC-2026-1325 / CVE-2024-23342). No owner acceptance order is on record. | Ceiling: the acceptance is a lane verdict, not an owner decision. Trigger: owner acceptance, a new signing path, `coincurve` dropped, or `ecdsa` bumped. See `SECURITY-FINDINGS.md`. |
 

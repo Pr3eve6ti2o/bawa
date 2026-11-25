@@ -24,7 +24,7 @@ is en-GB.
 
 The six Part A implementation lanes have all landed in
 `panel-rebuild/token-gaps` through the `usable-install` programme
-branch (rebased onto the redesign tip `4a12409`, then merged).
+branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
@@ -45,27 +45,49 @@ see §17).
 | F | ERC-7730 clear signing | §14 | IMPLEMENTED |
 | H | Mining pass (wallet-repos, agent-repos, skills) | §18 | IMPLEMENTED |
 
-**Bundle note:** the merged tree is over budget — total JS
-4,648,952 vs the 4,215,000 budget (§0.2), over by 433,952;
-largest chunk 2,906,541 (under the 3,050,000 cap). The overage is
-reported, not re-baselined: re-baselining is the owner's call
-(§0.2).
+**Bundle note:** the merged tree passes the budget — total JS
+4,648,952 vs the 4,650,000 budget (§0.2), passing by 1,048 bytes;
+largest chunk 2,906,541 (under the 3,050,000 cap). The budget was
+re-baselined to 4,650,000 by owner order at `7a170f4` (2026-11-25);
+see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
 1. **Broadcast is disabled on mainnet until separately authorised.**
    `apps/web/src/wallet/send.ts:65-66` — "no module broadcasts on mainnet:
    broadcast stays DISABLED until separately authorised". `broadcastSigned`
-   throws unconditionally on mainnet. No send has ever run on any network.
+   throws unconditionally on mainnet. No MAINNET send has ever run. Devnet
+   test sends have run (TON testnet, app sends 1–3 with transaction hashes;
+   `docs/DEVNET-ISSUES.md:50-66`) — that is the only send history, and it
+   is testnet-only.
    The only exception is the temporary devnet-only broadcast path, §10.
    Never build, enable, or work around a mainnet broadcast path.
-2. **Bundle budget: total JS in `dist/assets` ≤ 4,215,000 bytes; largest
+2. **Bundle budget: total JS in `dist/assets` ≤ 4,650,000 bytes; largest
    single JS chunk ≤ 3,050,000 bytes** (`CONSTRAINTS.md:40`; CI bundle-size
    step sums `dist/assets/*.js` after `npm run build`; budgets in `PERF.md`).
    The budget is the binding constraint on every new npm dependency (§17
    table). Do not re-baseline it without an owner order recorded in
    `docs/DECISIONS.md`.
-3. **Four-colour cap.** The app uses at most four colours. The single
+
+   **Why 4,650,000 — the re-baseline history (do not re-baseline again
+   without reading this).** The budget was re-baselined twice by owner
+   order. First 4,185,000 → 4,215,000 (redesign growth; the trim hunt
+   found no legitimate trim ≥ 25,808 bytes). Then 4,215,000 → 4,650,000
+   (`7a170f4`, 2026-11-25, owner order; `docs/DECISIONS.md` §27). Most
+   of the growth is on-demand lazy code the gate counts anyway:
+   WalletConnect 348,194 B, jsQR 129,986 B, Shamir library 4,785 B
+   (route chunk 10,085 B) — none of it on the cold-load path (home cold
+   load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
+   The merged tree measures 4,648,952 total JS and passes by **1,048
+   bytes (0.02% margin)** — treat any addition over ~1 KB as a budget
+   decision, not a free change. Whether the gate should exclude lazy
+   chunks is an open owner question, not a lane decision.
+3. **Four-colour cap.** The app uses at most four colours, named by the
+   design tokens in `docs/DESIGN-SYSTEM.md` §2.1
+   (`apps/web/src/ui/styles/globals.css:60-63`): `--bawa-paper #FFFDF7`
+   (every surface), `--bawa-ink #2B2B2B` (the only text colour, every
+   border), `--bawa-coral #FF6B4A` (primary action only, never body text),
+   `--bawa-sun #FFD93B` (selected / highlight / hover). The single
    confined exception is the QR card: exactly ten named `--qr-*` tokens
    (`--qr-teal`, `--qr-teal-deep`, `--qr-teal-band`, `--qr-teal-copy`,
    `--qr-bar`, `--qr-muted`, `--qr-grey`, `--qr-faint`, `--qr-nearblack`,
@@ -632,15 +654,16 @@ The survey's verified facts, which Lane C implemented from:
   minimal `import { SignClient }`, esbuild bundle + minify: **2.21.0 =
   396,013 B minified / 121,377 B gzip** (~75× the headroom); 2.26.0 =
   455,831 B / 137,742 B gzip. It cannot go in the main bundle under the
-  4,215,000-byte budget (§0.2). Load it by dynamic import, only when the
+  4,650,000-byte budget (§0.2). Load it by dynamic import, only when the
   user opens the WalletConnect flow.
 - **Measured cost in Bawa's build (Lane C tree):** total JS 4,577,447
   (+397,262 over its 4,180,185 base); lazy `walletconnect-client`
   chunk 348,194 B; main-bundle delta +49,068 B; 0 occurrences of the
   relay URL in the main chunk. In the merged rebased tree the total is
-  4,648,952 (over the 4,215,000 budget by 433,952) — the CI bundle gate
-  (sums all of `dist/assets/*.js`) fails as written; the gate scope is
-  the owner's call (§0.2). Do not re-baseline without an owner order.
+  4,648,952 — inside the 4,650,000 budget by 1,048 bytes, so the CI
+  bundle gate (sums all of `dist/assets/*.js`) passes as written. The
+  budget was re-baselined to 4,650,000 by owner order at `7a170f4`
+  (§0.2); do not re-baseline again without a new owner order.
 - **A WalletConnect Cloud projectId is required** for sign-client. Bawa
   has none. Obtaining one is an owner step; never invent or hardcode
   one. The projectId comes from the owner's setting or
@@ -890,14 +913,14 @@ same lane (see the commit). Where a Part A lane had not committed, the
 section is marked PENDING with the reason. **Re-check pass
 (2026-11-26, coordinator, hands-on, 0 Sol calls):** every PENDING row
 was re-traced against the merged rebased tree (`usable-install` on
-token-gaps `4a12409`) and updated to Implemented where the code
+token-gaps `7a170f4`) and updated to Implemented where the code
 landed; the budget, chain count, QR template count and test counts
 were re-measured from that tree (see the rows below).
 
 | Spec section | Traced to (file:line or survey) | Older guide state | Verdict |
 | --- | --- | --- | --- |
 | §0.1 broadcast disabled | `apps/web/src/wallet/send.ts:65-66`, `:987` | Correct in `AGENTS.md` §4/§8, `WALLET_BUILDER.md` | Verified |
-| §0.2 bundle 4,215,000 | `CONSTRAINTS.md:40` (re-baselined by owner order 2026-11-26, commit `4a12409`); CI `ci.yml:193` | Was 4,185,000 at Lane G writing; re-baselined with the redesign | Fixed in place (re-check pass) |
+| §0.2 bundle 4,650,000 | `CONSTRAINTS.md:40` (re-baselined by owner order 2026-11-25, commit `7a170f4`); CI `ci.yml:193` | Was 4,185,000 at Lane G writing; re-baselined with the redesign to 4,215,000, then to 4,650,000 by owner order at `7a170f4` | Fixed in place (guide-update pass, 2026-11-26) |
 | §0.3 4-colour cap + `--qr-*` | `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Correct in DECISIONS §24; now stated in this spec | Verified |
 | §0.4 no fake data | `apps/web/src/wallet/price-fallbacks.ts` header; `chains.ts` `availableFor` | Correct | Verified |
 | §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 87-chain app — noted as OPEN, not silently widened | Fixed (note updated 84 → 87) |
@@ -958,8 +981,13 @@ licence check. Bundle budget in Lane H's base was 4,185,000 total JS
 (`CONSTRAINTS.md:40`, CI `ci.yml:193`); the 4,215,000 re-baseline
 lived on token-gaps only and was NOT in that base — Lane H measured
 against 4,185,000 and re-baselined nothing. After the rebase the
-merged tree enforces 4,215,000 (§0.2) and measures 4,648,952 total
-JS (over by 433,952 — reported, not re-baselined).
+merged tree enforced 4,215,000 (§0.2) and measured 4,648,952 total
+JS (over by 433,952 — reported, not re-baselined). **Current state
+(2026-11-26, guide-update pass): the owner has since ordered a
+second re-baseline to 4,650,000 (`7a170f4`); the merged tree measures
+4,648,952 and passes by 1,048 bytes (§0.2, `docs/DECISIONS.md` §27).
+Lane H's 4,185,000 / 4,215,000 figures above are its base's history,
+not the current budget.**
 
 ### §18.1 Finds applied
 
@@ -1014,14 +1042,17 @@ run was needed.
   templates, with the E/F/G sizes and logo caps from
   `QR_CARD_TEMPLATE_QR` (`payment-links.ts:748`).
 - **Bundle budget:** §0.2 said 4,185,000, which matched Lane H's
-  base. **Resolved:** §0.2 now says 4,215,000 (the owner-ordered
-  re-baseline, commit `4a12409`), and the merged tree measures
-  4,648,952 — over by 433,952, reported in §0.2's status block,
-  not re-baselined.
+  base. **Resolved:** §0.2 now says 4,650,000 — the owner-ordered
+  re-baselines, first to 4,215,000 (commit `4a12409`), then to
+  4,650,000 (commit `7a170f4`, 2026-11-25; `docs/DECISIONS.md` §27) —
+  and the merged tree measures 4,648,952, passing by 1,048 bytes,
+  not re-baselined further.
 - **CI comment:** `ci.yml` said "dist/assets <= 4,040,000 bytes"
   while the enforced gate is 4,185,000. Fixed in this lane
   (comment only, to match the enforced number). The rebase carried
-  the fix; the gate now enforces 4,215,000 (`ci.yml:193`).
+  the fix; the gate now enforces 4,650,000 (`ci.yml:193`) — the
+  comment is corrected to 4,650,000 in the guide-update pass
+  (2026-11-26).
 - **Agent-repos SURVEY.md never appeared** during this lane, and
   agent-repos is not installed on loud-stone. The mining above is
   from the sandbox copy, read-only. Still true at merge time — the
