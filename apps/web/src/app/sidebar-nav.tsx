@@ -18,6 +18,10 @@ export type SidebarNavProps = {
 };
 
 export const MORE_LINKS: NavItem[] = [
+  // Lane 6 (UX-major programme): Swap first in the More sheet — a
+  // money action like Send/Receive — and the desktop sidebar spreads
+  // MORE_LINKS after Send, so it sits there too. Quotes only.
+  { to: "/swap", label: "Swap", icon: "swap" },
   { to: "/wallets", label: "Wallets", icon: "wallet" },
   { to: "/address-book", label: "Address book", icon: "copy" },
   { to: "/transactions", label: "Transactions", icon: "activity" },

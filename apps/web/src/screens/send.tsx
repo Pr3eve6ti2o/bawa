@@ -33,6 +33,7 @@ import {
 } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { fiatMinorUnits, formatFeePreview, formatFiatUSD } from '../wallet/money';
+import { describeFeeEstimate } from '../wallet/fee-display';
 import {
   isFreshQuote,
   usdPriceToMinorUnitsPerWhole,
@@ -1190,7 +1191,18 @@ export function SendScreen() {
   }
 
   const [feeEstimate, setFeeEstimate] = useState<
-    | { ok: true; feeBaseUnits: string; note: string }
+    | {
+        ok: true;
+        feeBaseUnits: string;
+        note: string;
+        // The adapter's unit: 'wei' (EVM), 'lamports' (SOL), 'sun'
+        // (TRON token sends), 'sat/vB' (BTC/LTC/DOGE rate), 'SUN per
+        // unit of energy' (TRON native rate). The fee display sorts
+        // amounts from rates on it (see wallet/fee-display.ts) — a
+        // rate must never be formatted as an amount.
+        unit: string;
+        feeUnknown?: boolean;
+      }
     | { ok: false; reason: string }
     | null
   >(null);
@@ -1214,7 +1226,21 @@ export function SendScreen() {
         if (cancelled) return;
         setFeeEstimate(
           result.ok
-            ? { ok: true, feeBaseUnits: result.feeBaseUnits, note: result.feeNote }
+            ? {
+                ok: true,
+                feeBaseUnits: result.feeBaseUnits,
+                note: result.feeNote,
+                // Token fees are native amounts in the chain's unit
+                // (EVM wei, SOL lamports, TRON SUN); TON reports an
+                // unknown fee, so the unit never renders as an amount.
+                unit:
+                  chain === 'sol'
+                    ? 'lamports'
+                    : chain === 'trx'
+                      ? 'sun'
+                      : 'wei',
+                feeUnknown: result.feeUnknown ?? false,
+              }
             : { ok: false, reason: humanReasonMessage(result.reason, 'general') },
         );
       })();
@@ -1230,7 +1256,12 @@ export function SendScreen() {
       if (cancelled) return;
       setFeeEstimate(
         result.status === 'ok'
-          ? { ok: true, feeBaseUnits: result.data.feeBaseUnits, note: result.data.note }
+          ? {
+              ok: true,
+              feeBaseUnits: result.data.feeBaseUnits,
+              note: result.data.note,
+              unit: result.data.unit,
+            }
           // Lane D: the adapter reason is a machine code (a TRON
           // getchainparameters 429 surfaced here as a bare 'HTTP 429').
           // No screen renders a raw reason (wallet-context rule) —
@@ -1320,6 +1351,35 @@ export function SendScreen() {
           preview.amountBaseUnits,
           selectedToken?.decimals ?? CHAIN_DECIMALS[chain],
           priceEntry,
+        )
+      : null;
+
+  // Lane 6 (UX-major programme): the fee's own display shape and fiat
+  // value. The fee is always paid in the native coin — even for token
+  // sends — so the fiat comes from the NATIVE feed entry, not the
+  // token one. Null when there is no fresh quote, when the fee is a
+  // rate (BTC sat/vB, TRON native energy), or when it is unknown
+  // (TON): never an invented dollar figure. The review fee includes
+  // the SOL rent where the preview reports it (reviewNativeCost).
+  const nativePriceEntry: PriceEntry | undefined = pricesState.entries[chain];
+  const feeDisplay =
+    feeEstimate !== null && feeEstimate.ok
+      ? describeFeeEstimate(feeEstimate)
+      : null;
+  const feeFiatText =
+    feeDisplay !== null && feeDisplay.kind === 'amount' && feeEstimate?.ok
+      ? fiatTextForBaseUnits(
+          feeEstimate.feeBaseUnits,
+          CHAIN_DECIMALS[chain],
+          nativePriceEntry,
+        )
+      : null;
+  const reviewFeeFiatText =
+    preview !== null && preview.ok && !preview.feeUnknown
+      ? fiatTextForBaseUnits(
+          reviewNativeCostBaseUnits ?? preview.feeBaseUnits,
+          CHAIN_DECIMALS[chain],
+          nativePriceEntry,
         )
       : null;
 
@@ -1979,15 +2039,41 @@ export function SendScreen() {
                 Price unavailable — the amount shows without a dollar value.
               </p>
             )}
-            {feeEstimate?.ok && chain === 'eth' && (
+            {/* Lane 6 (UX-major programme): the fee line shows on
+                every chain that quotes one. Before, only ETH got a
+                formatted fee, other chains got only the note, and TON
+                token sends got nothing at all. Rates (BTC sat/vB,
+                TRON native energy) render as rates, never as amounts
+                (wallet/fee-display.ts); the fiat value is the live
+                native feed. The fee line sits before the primary
+                button (DESIGN-SYSTEM §6). */}
+            {feeEstimate === null && (
+              <p aria-live="polite" className="text-sm text-muted-foreground">
+                Checking the network fee…
+              </p>
+            )}
+            {feeDisplay?.kind === 'amount' && feeEstimate?.ok && (
               <p className="text-sm text-muted-foreground">
                 Estimated fee:{' '}
                 {/* Estimated fee is a preview: Decimal rounds display to 6 places; the review screen keeps the exact fee. */}
                 {formatFeePreview(feeEstimate.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}
+                {feeFiatText !== null && ` (${feeFiatText})`}
                 {' — it may change before signing.'}
               </p>
             )}
-            {feeEstimate?.ok && chain !== 'eth' && chain !== 'ton' && (
+            {feeDisplay?.kind === 'amount' && feeEstimate?.ok && (
+              <p className="text-sm text-muted-foreground">{feeEstimate.note}</p>
+            )}
+            {feeDisplay?.kind === 'rate' && feeEstimate?.ok && (
+              <p className="text-sm text-muted-foreground">
+                Network fee rate: {feeDisplay.rateText} — the final fee
+                depends on the transaction.
+              </p>
+            )}
+            {feeDisplay?.kind === 'rate' && feeEstimate?.ok && (
+              <p className="text-sm text-muted-foreground">{feeEstimate.note}</p>
+            )}
+            {feeDisplay?.kind === 'unknown' && feeEstimate?.ok && (
               <p className="text-sm text-muted-foreground">{feeEstimate.note}</p>
             )}
             {feeEstimate && !feeEstimate.ok && (
@@ -1995,6 +2081,26 @@ export function SendScreen() {
                 {`Fee estimate unavailable: ${feeEstimate.reason}`}
               </p>
             )}
+            {/* Lane 6: what the fee does NOT offer, stated once in a
+                disclosure instead of cluttering the line. Slow /
+                standard / fast speeds do not exist here: the adapters
+                quote one live gas price per network, and a speed menu
+                would need invented multipliers. Fee-token payment is
+                not supported on any network here either — the fee is
+                always paid in the native coin. */}
+            <details className="text-sm text-muted-foreground">
+              <summary className="cursor-pointer py-2 font-medium text-ink">
+                About this fee
+              </summary>
+              <p className="leading-relaxed">
+                The wallet quotes one live gas price per network — there
+                is no slow/standard/fast choice yet. The fee is paid in{' '}
+                {config.symbol}; paying it in another token is not
+                supported on any network here. TON has no fee estimate
+                in advance: the network charges the fee when the
+                transaction is broadcast.
+              </p>
+            </details>
             {/* Redesign Lane 3: the Max-disabled reason and the fee
                 notes sit above the action row now — measured before,
                 they rendered below it and were invisible in the
@@ -2036,7 +2142,8 @@ export function SendScreen() {
                     reviewNativeCostBaseUnits ?? preview.feeBaseUnits,
                     CHAIN_DECIMALS[chain],
                     config.symbol,
-                  )
+                  ) +
+                  (reviewFeeFiatText !== null ? ` (${reviewFeeFiatText})` : '')
             }
             total={reviewTotalText}
             feeNote={preview.feeNote}
