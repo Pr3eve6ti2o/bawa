@@ -1170,3 +1170,29 @@ run was needed.
   `dev_rug_percent` scale at a non-zero value (normalised like its
   sibling fields — stated in the script, not hidden). All still
   open; carried to §17's not-verified list.
+
+### §18.5 Second survey (REVERIFY, 2026-11-26) — 47 skills the first survey missed + `mcp-interviewer`
+
+The guided-repo re-verification survey (`~/workspace/
+bawa-guided-repo-survey/REVERIFY.md` §2.1) read 47 further SKILL.md
+files in full that the first survey never read. None of the 47 is
+named anywhere in this spec (checked by grep); the rows below record
+them in three groups so a later lane can apply them without
+re-surveying. **Licence caveat (applies to all three groups): most
+state no licence — read and apply them; do not copy their text
+verbatim into Bawa without a licence check.** The REVERIFY lane read
+the SKILL.md files in full; the guide-update lane did not re-read
+them — the "new to the guide" verdict rests on REVERIFY §2.1 plus
+spec greps. Two per-rule siblings were read in full but are NOT
+counted among the 47: `viewport-zoom` (never `user-scalable=no`;
+16 px inputs) and `accessibility-testing` (axe-core in CI).
+
+| Group | Skills | Licence | What it adds |
+| --- | --- | --- | --- |
+| Method — guide truth + verification (15) | `attest`, `constraint-driven-development`, `spec-driven-development`, `chisel`, `zero-hallucination-coder`, `docs-grounding-verifier`, `docs-corpus-audit`, `docs-sync`, `harness-audit`, `parallel-execution-optimizer`, `order-traceability-checklist`, `repo-hygiene-scan`, `test-collaboration`, `production-audit`, `sentinel` | `harness-audit` MIT; `parallel-execution-optimizer` MIT; rest none stated | The working methods for the guide's own standing requirements: `attest` (spec-compliance verdicts CERTIFIED/CONDITIONAL/REJECTED, evidence ladder E0–E6; a value read off the implementation is PARTIAL, never PASS); `chisel` (Numeric Licensing Cascade — never invent a number); the docs-truth family (`docs-grounding-verifier` per-claim, `docs-sync` per-PR, `docs-corpus-audit` per-corpus — the method behind §17's "checked section-by-section" claim; the APM substrate caveat applies — the method transfers, the tooling needs Bawa equivalents); `constraint-driven-development` (CONSTRAINTS.md as a contract that does not get weakened to pass); `spec-driven-development` (spec-before-code); `zero-hallucination-coder` (no invented APIs); `sentinel` (secret-scan + MASVS); `harness-audit` (agent-harness audit; maps onto `scripts/quality-gates.mjs`); `parallel-execution-optimizer` (lane programmes); `order-traceability-checklist` (owner-order reconstruction); `repo-hygiene-scan` (dead code, import cycles); `test-collaboration` (TEST-ID evidence); `production-audit` (pre-launch audit) |
+| Android — wallet/crypto (11) | `evm-token-decimals`, `nodejs-keccak256`, `crypt`, `port`, `native`, `compose-multiplatform-patterns`, `kotlin-coroutines-flows`, `senior-mobile`, `hexagonal-architecture`, `llm-trading-agent-security`, `security-review` | `senior-mobile` MIT + Commons Clause; `security-review` MIT; rest none stated | `port` (web→Android porting method — the single most relevant find for the §2.6 gap; data-layer porting localStorage → Room/DataStore/Tink-encrypted DataStore); `native` (Kotlin/Compose/Room/DataStore — baselines newer than Bawa's stack, do not apply blindly); `crypt` (Android Keystore + StrongBox, Tink-encrypted DataStore); `kotlin-coroutines-flows` (Flow data layer); `compose-multiplatform-patterns` (Compose patterns; KMP parts do not apply); `hexagonal-architecture` (per-chain adapters as outbound ports); `evm-token-decimals`; `nodejs-keccak256` (Node `sha3-256` ≠ Ethereum Keccak-256); `senior-mobile` (API 36 target); `llm-trading-agent-security` and `security-review` are partial/marginal (trading-agent and generic-web scoped) |
+| Preview — build, verification, CI (21) | `vite-patterns`, `browser-qa`, `browser-use`, `browser-screenshot-diff`, `e2e-testing`, `voyager`, `playwright-uitest`, `webapp-testing`, `playwright-trace`, `fix`, `generate`, `pw-init`, `skill-visual-feedback`, `break-ui`, `mobile-native`, `ui-ux-pro-max`, `impeccable`, `performance-optimization`, `gear`, `devops-workflow-engineer`, `ci-cd-and-automation` | `e2e-testing` MIT; `impeccable` Apache 2.0; `devops-workflow-engineer` MIT + Commons Clause; `webapp-testing` LICENSE.txt present; `playwright-uitest` AgenticX, no licence stated; `browser-use` no licence stated; rest none stated | Preview-loop method: `vite-patterns` (Vite 8+; `vite build` does not type-check — confirms the separate tsc gate); `e2e-testing` + `voyager` + `playwright-trace`/`fix`/`generate`/`pw-init`/`playwright-uitest`/`webapp-testing` (E2E authoring, debugging, flake budgets); `browser-qa` + `skill-visual-feedback` + `break-ui` + `mobile-native` (the owner's phone-screenshot correction workflow; worst-case data; 16 px inputs; safe areas); `browser-use` (CDP driver alternative — needs its CLI/daemon); `browser-screenshot-diff` (needs ruvector, not installed); `ui-ux-pro-max` + `impeccable` (design review); `performance-optimization` + `gear` + `devops-workflow-engineer` + `ci-cd-and-automation` (perf targets, CI, bundle gate) |
+
+| Find | Licence | Useful for |
+| --- | --- | --- |
+| `mcp-interviewer` (Python CLI) | MIT | Verification tooling: constraint + functional testing of MCP servers. Bawa's agent tooling depends on MCP servers; RAMPART covers safety testing and SkillSpector covers skill scanning, but neither tests the MCP servers themselves. Small, single-purpose, agent-side QA for the guide's own execution tooling. |
