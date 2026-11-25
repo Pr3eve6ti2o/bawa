@@ -39,11 +39,12 @@
 //     check that IS local — recipient equals the selected token's own
 //     contract — is in describeRecipientDetection.
 //
-// Layering: detectWatchOnlyChain still lives in
-// screens/import-wallet.tsx (Lane 5's file) with its own copy of the
-// format table — this module does NOT import from a screen, and the
-// screen was not touched. Merge follow-up: re-point import-wallet at
-// detectAddressFormat so the table exists once.
+// Layering: detectWatchOnlyChain lives in screens/import-wallet.tsx
+// and is a thin translation of detectAddressFormat (UX-major Lane 7
+// merge, 2026-11-26) — the format table exists once, here. This
+// module does NOT import from a screen. The translation preserves the
+// legacy watch-only readings exactly (0x -> eth, bare base58 -> null,
+// 0x + 64 hex -> aptos); see the differential test.
 import type { ChainId } from '../engine/boundary';
 import type { TokenRecord } from './tokens';
 

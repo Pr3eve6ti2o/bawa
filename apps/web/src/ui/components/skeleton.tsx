@@ -1,8 +1,11 @@
 import type { ComponentProps } from "react";
 
-import { BawaLoading } from "./loading";
 
-/** @deprecated New code should use BawaLoading. */
+/** @deprecated New code should use BawaLoading.
+    Renders a compact pulsing bar (UX-major Lane 7 merge, 2026-11-26):
+    the full BawaLoading spinner (~99 px) overflowed every fixed-height
+    box this component is placed in, so the spinner lives in BawaLoading
+    only — never inside a Skeleton. */
 export function Skeleton({
   className,
   ...props
@@ -48,7 +51,21 @@ export function Skeleton({
         />
       </svg>
 
-      <BawaLoading />
+      <div
+        role="status"
+        aria-label="Loading…"
+        style={{
+          width: "60%",
+          height: "12px",
+          borderRadius: "999px",
+          backgroundColor: "var(--bawa-ink)",
+          opacity: 0.18,
+          animation: "bawa-skeleton-pulse 1.4s ease-in-out infinite",
+        }}
+      >
+        <span className="sr-only">Loading…</span>
+      </div>
+      <style>{`@keyframes bawa-skeleton-pulse { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.28; } }`}</style>
     </div>
   );
 }

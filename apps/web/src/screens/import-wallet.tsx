@@ -9,6 +9,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { WatchOnlyWallet } from '@bawa/contracts';
 import { validateWatchOnlyImport, type ChainId } from '../engine/boundary';
+import { detectAddressFormat } from '../wallet/address-detection';
 import { useWallet } from '../state/wallet-context';
 import {
   deriveAddresses,
@@ -58,64 +59,32 @@ export function expandUniquePrefix(value: string): string {
     : value;
 }
 
-// Lane 5 (redesign): chain auto-detection for the watch-only form
-// (DESIGN-SYSTEM §6: address input → "Detected: Ethereum" → confirm).
-// The form used to demand the chain BEFORE the address, so pasting a
-// valid Ethereum address while Bitcoin was selected failed with
-// "invalid base58 character in extended key" and cleared the input.
-// Only UNAMBIGUOUS patterns detect: a 0x address, bech32/legacy
-// prefixes that belong to one chain, bech32 human-readable parts
-// (cosmos1, osmo1, …), and fixed-length forms (Stellar G…, Tezos
-// tz1…, Hedera 0.0.…). Solana-style base58 (32–44 chars) and raw
-// 64-hex are deliberately NOT detected — too many chains share those
-// shapes — so the picker stays where the user put it for them.
-// Extended keys (xpub/zpub/Ltub/dpub/…) never match: they carry no
+// Watch-only chain auto-detection (UX-major Lane 7 merge, 2026-11-26):
+// the format table lives once now, in wallet/address-detection.ts
+// (Lane 3), and this function is a thin translation of its result
+// into the single chain the watch-only picker needs. Behaviour is
+// preserved exactly — the differential test in
+// wallet/address-detection-differential.test.ts pins it:
+//   - a 0x address is the same address on all 59 EVM chains, so the
+//     picker keeps its legacy reading of 'eth';
+//   - bare base58 (32-44 chars) is deliberately NOT detected as
+//     Solana here: too many chains share the shape, so the picker
+//     stays where the user put it for those;
+//   - 0x + 64 hex keeps its legacy reading of 'aptos' (in the Send
+//     recipient field the same shape is warned about as a possible
+//     private key — context-dependent, both readings asserted).
+// Extended keys (xpub/zpub/Ltub/dpub/...) never match: they carry no
 // address prefix to detect from.
-// Conservative patterns only — a match must be unambiguous. No Solana
-// base58 (any base58 string would match), no raw 64-hex (could be
-// anything), no xpub (a key, not an address). Order matters only where
-// patterns overlap: Bitcoin P2PKH `1…` (25–34 chars) is checked before
-// Polkadot SS58 `1…` (48 chars) — the lengths are disjoint, but the
-// table keeps the documented order.
-const WATCH_ONLY_PATTERNS: ReadonlyArray<readonly [RegExp, ChainId]> = [
-  [/^0x[0-9a-fA-F]{40}$/, 'eth'],
-  [/^0x[0-9a-fA-F]{64}$/, 'aptos'],
-  [/^bc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{11,}$/, 'btc'],
-  [/^1[1-9A-HJ-NP-Za-km-z]{25,34}$/, 'btc'],
-  [/^ltc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{11,}$/, 'ltc'],
-  [/^L[1-9A-HJ-NP-Za-km-z]{25,34}$/, 'ltc'],
-  [/^D[1-9A-HJ-NP-Za-km-z]{25,34}$/, 'doge'],
-  [/^T[1-9A-HJ-NP-Za-km-z]{33}$/, 'trx'],
-  [/^(UQ|EQ)[0-9A-Za-z_-]{46}$/, 'ton'],
-  [/^0:[0-9a-fA-F]{64}$/, 'ton'],
-  [/^cosmos1[0-9a-z]{38}$/, 'cosmos'],
-  [/^osmo1[0-9a-z]{38}$/, 'osmosis'],
-  [/^inj1[0-9a-z]{38}$/, 'injective'],
-  [/^celestia1[0-9a-z]{38}$/, 'celestia'],
-  [/^dydx1[0-9a-z]{38}$/, 'dydx'],
-  [/^sei1[0-9a-z]{38}$/, 'seicosmos'],
-  [/^axelar1[0-9a-z]{38}$/, 'axelar'],
-  [/^noble1[0-9a-z]{38}$/, 'noble'],
-  [/^juno1[0-9a-z]{38}$/, 'juno'],
-  [/^r[0-9A-HJ-NP-Za-km-z]{24,34}$/, 'xrp'],
-  [/^f1[1-9a-z]{37}$/, 'filecoin'],
-  [/^ronin:[0-9a-fA-F]{40}$/, 'ronin'],
-  [/^G[A-Z0-9]{55}$/, 'stellar'],
-  [/^tz1[1-9A-HJ-NP-Za-km-z]{33}$/, 'tezos'],
-  [/^0\.0\.\d+$/, 'hedera'],
-  // Polkadot SS58 addresses start with '1' like Bitcoin P2PKH, but
-  // are 48 characters — Bitcoin P2PKH tops out at 35. Length is the
-  // disambiguator.
-  [/^1[1-9A-HJ-NP-Za-km-z]{47}$/, 'polkadot'],
-];
-
 export function detectWatchOnlyChain(value: string): ChainId | null {
   const input = value.trim();
   if (input === '') return null;
-  for (const [pattern, chain] of WATCH_ONLY_PATTERNS) {
-    if (pattern.test(input)) return chain;
-  }
-  return null;
+  if (/^0x[0-9a-fA-F]{64}$/.test(input)) return 'aptos';
+  const format = detectAddressFormat(input);
+  if (format === null) return null;
+  if (format.kind === 'evm') return 'eth';
+  if (format.kind === 'secret') return null;
+  if (format.chain === 'sol') return null;
+  return format.chain;
 }
 
 // Merge lane (2026-11-24): the picker used to hardcode the original 22
