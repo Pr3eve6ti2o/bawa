@@ -73,6 +73,16 @@ export function AssetListScreen() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+        {/* Lane 4 (UX-major, data): while searching, name what the
+            search matches — name, symbol, chain or the whole contract
+            address — so an empty result reads as "not here", not as a
+            broken search. The verified mark stays on the token rows
+            themselves; this line only states the scope. */}
+        {query.trim() !== '' ? (
+          <p className="w-full px-2 text-xs leading-[18px] text-ink">
+            Searching name, symbol, chain or contract address.
+          </p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"

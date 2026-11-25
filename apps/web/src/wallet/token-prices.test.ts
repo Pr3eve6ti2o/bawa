@@ -160,7 +160,7 @@ describe('fetchTokenPrices', () => {
     );
     expect(calls).toHaveLength(1);
     expect(calls[0]).toBe(
-      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,tether,dai,chainlink,uniswap,wrapped-bitcoin,weth,usdt0,bridged-usdt,l2-standard-bridged-usdt-base,binance-bridged-usdt-bnb-smart-chain&vs_currencies=usd&include_last_updated_at=true',
+      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,tether,dai,chainlink,uniswap,wrapped-bitcoin,weth,usdt0,bridged-usdt,l2-standard-bridged-usdt-base,binance-bridged-usdt-bnb-smart-chain&vs_currencies=usd&include_last_updated_at=true&include_24hr_change=true',
     );
     for (const key of TOKEN_KEYS) {
       expect(entries[key]?.status).toBe('fresh');

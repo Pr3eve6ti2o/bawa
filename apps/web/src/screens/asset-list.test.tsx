@@ -776,4 +776,46 @@ describe('asset list screen', () => {
       await mounted.cleanup();
     }
   });
+
+  // TEST-DATA-007 (rule: search covers name, symbol, chain id and the
+  // whole contract address across chains and tokens, with a real match
+  // count; a pasted contract finds its token even while its row is
+  // still loading).
+  it('finds a token by full contract address and a chain by id, with a match count', async () => {
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      const search = mounted.div.querySelector(
+        'input[aria-label="Search assets"]',
+      ) as HTMLInputElement | null;
+      expect(search).not.toBeNull();
+      const type = async (value: string) => {
+        await act(async () => {
+          const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            'value',
+          )?.set;
+          setter?.call(search, value);
+          search?.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      };
+      await type('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
+      expect(mounted.div.textContent).toContain('USD Coin');
+      expect(mounted.div.textContent).not.toContain('Bitcoin');
+      expect(mounted.div.textContent).toMatch(/1 of \d+ assets match/);
+      expect(mounted.div.textContent).toContain(
+        'Searching name, symbol, chain or contract address.',
+      );
+      await type('trx');
+      expect(mounted.div.textContent).toContain('TRON');
+      expect(mounted.div.textContent).not.toContain('Bitcoin');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
