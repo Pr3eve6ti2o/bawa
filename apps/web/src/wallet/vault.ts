@@ -390,6 +390,90 @@ async function decryptEnvelopeText(
 }
 
 /**
+ * Trial-decrypts an envelope with an already-imported key. Returns the
+ * plaintext. Throws VAULT_WRONG_PASSWORD when the key does not match —
+ * a wrong key and tampered ciphertext are indistinguishable by design.
+ * Used by backup-share verification: the reconstructed key is proven
+ * against the real envelope, because Shamir's combine() does not verify
+ * reconstruction integrity itself.
+ */
+async function decryptEnvelopeWithKey(
+  envelope: VaultEnvelope,
+  key: CryptoKey,
+): Promise<string> {
+  let iv: Uint8Array;
+  let ciphertext: Uint8Array;
+  try {
+    iv = fromBase64(envelope.ivB64);
+    ciphertext = fromBase64(envelope.ciphertextB64);
+  } catch {
+    throw createWalletError(WalletErrorCodes.VAULT_CORRUPTED);
+  }
+  let plaintext: ArrayBuffer;
+  try {
+    plaintext = await globalThis.crypto.subtle.decrypt(
+      { name: VAULT_CIPHER, iv: iv as BufferSource },
+      key,
+      ciphertext as BufferSource,
+    );
+  } catch {
+    throw createWalletError(WalletErrorCodes.VAULT_WRONG_PASSWORD);
+  }
+  return new TextDecoder().decode(plaintext);
+}
+
+/**
+ * Exports the raw bytes of the open vault's key (32 bytes), or null when
+ * the vault is locked or there is no vault. Only the backup-shares flow
+ * calls this, while the vault is unlocked and only after the user asks
+ * to create shares. The bytes are held in screen state only until the
+ * shares are made, then dropped; they are never written to storage or
+ * logs. (Export works because every key this module holds is extractable:
+ * deriveKey() creates extractable keys and autoUnlock() imports its key
+ * extractable — see below. Page JavaScript can already read the mnemonic
+ * while the vault is unlocked, so extractability grants no new power.)
+ */
+export async function exportUnlockedKeyBytes(): Promise<Uint8Array | null> {
+  if (unlockedKey === null) {
+    return null;
+  }
+  try {
+    const raw = await globalThis.crypto.subtle.exportKey('raw', unlockedKey);
+    return new Uint8Array(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Trial-decrypts the stored vault envelope with candidate key bytes —
+ * the integrity check Shamir reconstruction needs. Returns true only
+ * when the bytes are the vault's key; false for wrong bytes, a corrupt
+ * envelope, or no vault. Never throws for a bad key.
+ */
+export async function verifyReconstructedKey(
+  keyBytes: Uint8Array,
+): Promise<boolean> {
+  try {
+    const envelope = readEnvelope();
+    if (envelope === null) {
+      return false;
+    }
+    const key = await globalThis.crypto.subtle.importKey(
+      'raw',
+      keyBytes as BufferSource,
+      { name: VAULT_CIPHER, length: VAULT_KEY_BITS },
+      false,
+      ['decrypt'],
+    );
+    await decryptEnvelopeWithKey(envelope, key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Creates a vault. Throws if a vault already exists or the mnemonic is empty.
  * The derived key is stored only when auto-lock is off (see the module doc
  * comment), so the vault auto-unlocks on later boots; with auto-lock on no
@@ -534,11 +618,16 @@ export async function autoUnlock(): Promise<boolean> {
   }
   let key: CryptoKey;
   try {
+    // Extractable: backup shares need to export the open vault's key
+    // (exportUnlockedKeyBytes), and a vault opened by auto-unlock must
+    // offer shares exactly like one opened by unlock(). No new privilege:
+    // page JavaScript can already read the mnemonic while unlocked, and
+    // with auto-lock off the raw key is already in localStorage.
     key = await globalThis.crypto.subtle.importKey(
       'raw',
       keyBytes as BufferSource,
       { name: VAULT_CIPHER, length: VAULT_KEY_BITS },
-      false,
+      true,
       ['decrypt'],
     );
   } catch {

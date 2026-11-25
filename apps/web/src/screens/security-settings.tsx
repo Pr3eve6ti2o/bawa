@@ -78,6 +78,25 @@ export function SecuritySettingsScreen() {
 
       <Card radius="xl" className="lg:col-span-2">
         <CardHeader>
+          <CardTitle><span className="bawa-marker">Backup</span> shares</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="max-w-[75ch] text-sm text-ink">
+            Split the vault key into shares and store each one in a
+            separate place. Any 2 of 3 shares restore this vault — no
+            single share can.
+          </p>
+          <Link
+            to="/backup-shares"
+            className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
+          >
+            Create or check backup shares
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card radius="xl" className="lg:col-span-2">
+        <CardHeader>
           <CardTitle>Connections</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">

@@ -25,6 +25,11 @@ const loadMnemonicBackup = () =>
     default: m.MnemonicBackupScreen,
   }));
 const MnemonicBackupScreen = lazy(loadMnemonicBackup);
+const loadBackupShares = () =>
+  import('../screens/backup-shares').then((m) => ({
+    default: m.BackupSharesScreen,
+  }));
+const BackupSharesScreen = lazy(loadBackupShares);
 const loadAssetList = () =>
   import('../screens/asset-list').then((m) => ({ default: m.AssetListScreen }));
 const AssetListScreen = lazy(loadAssetList);
@@ -72,6 +77,7 @@ const LockScreen = lazy(loadLock);
 const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/import-wallet': loadImportWallet,
   '/mnemonic-backup': loadMnemonicBackup,
+  '/backup-shares': loadBackupShares,
   '/assets': loadAssetList,
   '/receive': loadReceive,
   '/send': loadSend,
@@ -235,7 +241,7 @@ function AppLayout() {
   // only: at desktop: they go full content width so the screens can
   // lay out in two columns (create-wallet, security).
   const isNarrow =
-    ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
+    ['/send', '/receive', '/import-wallet', '/mnemonic-backup', '/backup-shares'].includes(
       pathname,
     ) || pathname.startsWith('/assets/');
   const isWideAtDesktop = ['/create-wallet', '/security', '/lock'].includes(pathname);
@@ -468,6 +474,7 @@ export function App() {
             <Route path="create" element={<CreateScreen />} />
             <Route path="import-wallet" element={<ImportWalletScreen />} />
             <Route path="mnemonic-backup" element={<MnemonicBackupScreen />} />
+            <Route path="backup-shares" element={<BackupSharesScreen />} />
             <Route path="assets" element={<AssetListScreen />} />
             <Route path="assets/:chain" element={<AssetDetailScreen />} />
             <Route path="assets/:chain/:token" element={<AssetDetailScreen />} />
