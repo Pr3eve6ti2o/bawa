@@ -7,6 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card"
 import { deleteVault } from "../wallet/vault";
 import { AutoLockSetting } from "./auto-lock-setting";
 
+// Keep in sync with apps/web/package.json ("version"). There is a test
+// that reads the package version and expects this screen to show it, so
+// a bump that forgets this line fails loudly instead of going stale.
+const APP_VERSION = "0.1.0";
+
 export function SecuritySettingsScreen() {
   const { vaultState, refreshVaultAccounts, resetReceiveRotation = () => {} } = useWallet();
   const [deleteArmed, setDeleteArmed] = useState(false);
@@ -15,11 +20,13 @@ export function SecuritySettingsScreen() {
     setDeleteArmed(false);
   }, [vaultState]);
 
-  // Desktop layout (Bawa Balanced, following Sol's reviewed arrangement):
-  // the heading and the reading panels span both columns, while the
-  // backup section gets its own distinct section below. Below lg the
-  // page stays a single 480px column (the shell's isWideAtDesktop cap),
-  // unchanged.
+  // Lane 6 redesign (DESIGN-SYSTEM.md §6 Settings): sections in order —
+  // vault lock, mnemonic backup, connected wallets, connections
+  // (networks / devnet / prices), about, then what the wallet does.
+  // Before, the reading panel came first and buried the one control
+  // (auto-lock) under it; the controls now come first and the reading
+  // stays, in full, below them. Desktop two-column grid, mobile single
+  // 480px column (the shell's isWideAtDesktop cap), unchanged.
   return (
     <section
       className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0"
@@ -29,33 +36,22 @@ export function SecuritySettingsScreen() {
         Security &amp; backup
       </h1>
 
-      <div className="rounded-bawa border-2 border-ink bg-paper p-6 lg:col-span-2">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-ink"><BawaIcon name="shield" className="size-6" /> What this wallet does</h2>
-        <ul className="mt-3 max-w-[75ch] list-disc space-y-2 pl-5 text-sm text-ink">
-          <li>Your recovery phrase is created in this browser and kept encrypted in the vault on this device.</li>
-          <li>Your private keys stay in memory on this device while the wallet is open. They are never saved unencrypted, written to logs or sent online.</li>
-          <li>Signing happens offline on this device.</li>
-          <li>Sending funds is switched off until it is separately approved. Signing alone never moves your funds.</li>
-        </ul>
-      </div>
-
       <AutoLockSetting />
 
-      <Card radius="xl" className="lg:col-span-2">
+      <Card radius="xl">
         <CardHeader>
-          <CardTitle>Connections</CardTitle>
+          <CardTitle>Connected wallets</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="max-w-[75ch] text-sm text-ink">
-            Which network the wallet talks to, which backup it uses, and
-            where prices come from live on the Networks screen — they are
-            connection settings, not vault settings.
+            Your vault accounts and any watch-only wallets live on the
+            Wallets screen.
           </p>
           <Link
-            to="/networks"
+            to="/wallets"
             className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
           >
-            Open Networks
+            Open Wallets
           </Link>
         </CardContent>
       </Card>
@@ -79,6 +75,47 @@ export function SecuritySettingsScreen() {
           </Link>
         </CardContent>
       </Card>
+
+      <Card radius="xl" className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Connections</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="max-w-[75ch] text-sm text-ink">
+            Which network the wallet talks to, devnet test mode, which
+            backup it uses, and where prices come from live on the
+            Networks screen — they are connection settings, not vault
+            settings.
+          </p>
+          <Link
+            to="/networks"
+            className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
+          >
+            Open Networks
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card radius="xl" className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>About</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="max-w-[75ch] text-sm text-ink">
+            Bawa Web Wallet · Version {APP_VERSION}
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="rounded-bawa border-2 border-ink bg-paper p-6 lg:col-span-2">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-ink"><BawaIcon name="shield" className="size-6" /> What this wallet does</h2>
+        <ul className="mt-3 max-w-[75ch] list-disc space-y-2 pl-5 text-sm text-ink">
+          <li>Your recovery phrase is created in this browser and kept encrypted in the vault on this device.</li>
+          <li>Your private keys stay in memory on this device while the wallet is open. They are never saved unencrypted, written to logs or sent online.</li>
+          <li>Signing happens offline on this device.</li>
+          <li>Sending funds is switched off until it is separately approved. Signing alone never moves your funds.</li>
+        </ul>
+      </div>
 
       {vaultState !== 'no-vault' && (
         <Card radius="xl" borderTone="destructive">

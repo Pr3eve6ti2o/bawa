@@ -8,6 +8,7 @@ import {
 } from "../wallet/chain-amount-format";
 import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
 import { ChainLogo } from "./token-logo";
+import { filterChains } from "./chain-search-select";
 import { Badge } from "../ui/components/badge";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
@@ -168,6 +169,18 @@ export function WalletManagementScreen() {
   // They are public data, but they reveal every address, balance and
   // transaction — so they are never rendered unprompted and never stored.
   const [shownKeys, setShownKeys] = useState<Record<string, string>>({});
+  // Lane 6 redesign: the export list below covers all 84 chains, so it
+  // gets the same name/symbol/id search the Networks list uses.
+  const [exportQuery, setExportQuery] = useState("");
+  const exportNeedle = exportQuery.trim();
+  const exportVisible = (
+    exportNeedle === ""
+      ? exportChains.map(({ id }) => id)
+      : filterChains(
+          exportChains.map(({ id }) => id),
+          exportNeedle,
+        )
+  ).map((id) => ({ id, name: chainConfig(id).displayName }));
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [copiedChain, setCopiedChain] = useState<string | null>(null);
@@ -292,26 +305,34 @@ export function WalletManagementScreen() {
           <CardTitle>Your accounts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Your recovery phrase holds all your accounts. Each account is
-            one wallet made from the same phrase, and each has its own
-            addresses on every chain.
-            That is the multichain wallet: one address per chain, all
-            chains, for the account you are using. The HD wallet is
-            different: for a payment you can ask for a fresh receiving
-            address, derived from the next unused number, on the Receive
-            screen. Creating another account never deletes or changes the
-            ones you already have, and your phrase never leaves this
-            device. A different recovery phrase is a different wallet — to
-            use one, delete this vault first in{" "}
-            <Link
-              to="/security"
-              className="font-medium text-primary underline underline-offset-4"
-            >
-              security settings
-            </Link>
-            .
-          </p>
+          {/* Lane 6 redesign: this explainer sat above the Create
+              controls (~150 words). The words are unchanged, behind one
+              tap, so the controls come first. */}
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold">
+              How accounts work
+            </summary>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Your recovery phrase holds all your accounts. Each account is
+              one wallet made from the same phrase, and each has its own
+              addresses on every chain.
+              That is the multichain wallet: one address per chain, all
+              chains, for the account you are using. The HD wallet is
+              different: for a payment you can ask for a fresh receiving
+              address, derived from the next unused number, on the Receive
+              screen. Creating another account never deletes or changes the
+              ones you already have, and your phrase never leaves this
+              device. A different recovery phrase is a different wallet — to
+              use one, delete this vault first in{" "}
+              <Link
+                to="/security"
+                className="font-medium text-primary underline underline-offset-4"
+              >
+                security settings
+              </Link>
+              .
+            </p>
+          </details>
 
           {vaultPassphraseNeeded && hasVault && (
             <p className="text-sm text-muted-foreground">
@@ -498,8 +519,30 @@ export function WalletManagementScreen() {
                   no extended public key — their paths are fully hardened
                   — so use the address itself.
                 </p>
+                <div className="space-y-2">
+                  <Label htmlFor="export-chain-search">
+                    Search chains
+                  </Label>
+                  <Input
+                    id="export-chain-search"
+                    type="search"
+                    placeholder="Search by name, symbol or chain ID"
+                    value={exportQuery}
+                    onChange={(event) => setExportQuery(event.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {exportVisible.length} of {exportChains.length} chains.
+                </p>
+                {exportVisible.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No chains match &ldquo;{exportNeedle}&rdquo;. Try a name,
+                    symbol or chain ID.
+                  </p>
+                ) : (
                 <ul className="space-y-2">
-                  {exportChains.map(({ id, name }) => {
+                  {exportVisible.map(({ id, name }) => {
                     const isSingleAddress = id === "ton" || id === "sol";
                     const shown = shownKeys[id];
                     return (
@@ -558,6 +601,7 @@ export function WalletManagementScreen() {
                     );
                   })}
                 </ul>
+                )}
                 {exportError && (
                   <p role="alert" className="text-sm text-destructive">
                     {exportError}
@@ -613,7 +657,13 @@ export function WalletManagementScreen() {
                     <div className="flex min-w-0 items-center gap-3">
                       <ChainLogo chain={id} />
                       <div className="min-w-0 space-y-1">
-                        <CardTitle>{name}</CardTitle>
+                        <span className="flex items-center gap-2">
+                          <CardTitle>{name}</CardTitle>
+                          {/* Lane 6 redesign: the row itself says
+                              Watch-only — the section heading above was
+                              the only label, and it scrolls away. */}
+                          <Badge>Watch-only</Badge>
+                        </span>
                         <p className="break-words text-sm text-muted-foreground">
                           {wallet.label || "Unlabelled wallet"}
                         </p>

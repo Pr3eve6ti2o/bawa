@@ -14,6 +14,7 @@ import {
 import { Button } from '../ui/components/button';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
+import { ChainSearchSelect } from './chain-search-select';
 import { Card, CardContent } from '../ui/components/card';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { BawaLoading } from '../ui/components/loading';
@@ -84,7 +85,7 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
       <div className="mt-5 grid gap-6 md:grid-cols-2">
         <ol className="space-y-3">
           <li>
-            <StepCard icon={<BawaIcon name="network" className="size-5" />} label="Pick a chain above." state="pending" />
+            <StepCard icon={<BawaIcon name="network" className="size-5" />} label="Search for the chain." state="pending" />
           </li>
           <li>
             <StepCard icon={<BawaIcon name="search" className="size-5" />} label="Paste the transaction hash." state="pending" />
@@ -163,7 +164,10 @@ function TransactionDetails({ data, chain, checkedAt }: {
           {rows.map(([label, value]) => (
             <div key={label} className='grid grid-cols-[5rem_minmax(0,1fr)] gap-4'>
               <dt className='text-muted-foreground'>{label}</dt>
-              <dd className='min-w-0 truncate break-all' title={value}>{value}</dd>
+              {/* No truncate: on a phone there is no hover to reveal a
+                  cut-off address, so From/To wrap in full (break-all)
+                  instead of showing only their start. */}
+              <dd className='min-w-0 break-all' title={value}>{value}</dd>
             </div>
           ))}
         </dl>
@@ -267,19 +271,19 @@ export function TrackTransactionScreen() {
       </header>
 
       <div className='space-y-6'>
-        <div role='group' aria-label='Chain' className='flex flex-wrap gap-2'>
-          {SUPPORTED_CHAINS.map((id) => (
-            <Button
-              key={id}
-              type='button'
-              variant={chain === id ? 'default' : 'outline'}
-              aria-pressed={chain === id}
-              onClick={() => changeChain(id)}
-            >
-              {chainConfig(id).displayName}
-            </Button>
-          ))}
-        </div>
+        {/* Lane 6 redesign: the chain choice was an 84-button wall
+            (the hash input sat ~2,100 px down at 390 px). It is now
+            the same search picker Receive and Import already use —
+            search by name, symbol or id, with the chains actually
+            used kept in a Recent row. Same selection, same clearing
+            of the results on change; nothing else about the lookup
+            changes. */}
+        <ChainSearchSelect
+          chains={SUPPORTED_CHAINS}
+          value={chain}
+          onChange={changeChain}
+          id='track-chain'
+        />
 
         <form
           className='space-y-4'
@@ -360,6 +364,11 @@ export function TrackTransactionScreen() {
         <h2 id='recent-activity-heading' className='text-xl font-semibold'>
           Recent activity for an address
         </h2>
+        {/* The activity lookup reuses the chain picked above; name it
+            here, because the picker is a screen away once scrolled. */}
+        <p className='text-sm text-muted-foreground'>
+          On {chainConfig(chain).displayName} — change the chain above to look at another network.
+        </p>
         <form
           className='space-y-3'
           onSubmit={(event) => {

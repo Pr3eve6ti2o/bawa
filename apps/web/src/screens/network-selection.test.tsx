@@ -70,6 +70,27 @@ async function mountScreen() {
   };
 }
 
+// Lane 6 redesign: the RPC manager shows one chain at a time, picked
+// through the search picker. Open it and click the option by name.
+async function selectRpcChain(
+  mounted: { div: HTMLDivElement },
+  name: string,
+): Promise<void> {
+  const input = mounted.div.querySelector<HTMLInputElement>('#rpc-chain');
+  if (!input) throw new Error('RPC chain picker not found');
+  await act(async () => {
+    input.focus();
+    input.click();
+  });
+  const option = [...mounted.div.querySelectorAll('[role="option"]')].find(
+    (o) => o.textContent?.includes(name),
+  ) as HTMLElement | undefined;
+  if (!option) throw new Error(`RPC chain option not found: ${name}`);
+  await act(async () => {
+    option.click();
+  });
+}
+
 describe('NetworkSelectionScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -146,7 +167,7 @@ describe('NetworkSelectionScreen', () => {
       // screen. The copy must say mainnet is the default, not the
       // only mode.
       expect(mounted.div.textContent).toContain(
-        'Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. A temporary devnet test mode is available below.',
+        'Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. Devnet test mode is at the top of this screen.',
       );
       expect(mounted.div.textContent).not.toContain(
         'Mainnet only. This wallet never connects to a test network.',
@@ -213,6 +234,7 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       expect(eth.textContent).toContain('eth.drpc.org');
       expect(eth.textContent).toContain('Primary');
       expect(eth.textContent).toContain('Backup');
+      await selectRpcChain(mounted, 'Bitcoin');
       const btc = rowFor(mounted, 'Bitcoin');
       expect(btc.textContent).toContain('mempool.space');
       expect(btc.textContent).toContain('blockstream.info');
@@ -252,18 +274,15 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
     setWallet([...SUPPORTED_CHAINS]);
     const mounted = await mountScreen();
     try {
-      const select = mounted.div.querySelector('select');
       const input = mounted.div.querySelector(
         'input[placeholder^="https://"]',
       ) as HTMLInputElement | null;
       const add = [...mounted.div.querySelectorAll('button')].find(
         (b) => b.textContent === 'Add RPC',
       );
-      expect(select).not.toBeNull();
       expect(input).not.toBeNull();
       expect(add).toBeDefined();
       await act(async () => {
-        if (select) select.value = 'eth';
         if (input) {
           const setter = Object.getOwnPropertyDescriptor(
             window.HTMLInputElement.prototype,
@@ -351,12 +370,17 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
     setWallet([...SUPPORTED_CHAINS]);
     const mounted = await mountScreen();
     try {
-      const select = mounted.div.querySelector('select');
-      const options = [...(select?.querySelectorAll('option') ?? [])].map(
+      const input = mounted.div.querySelector<HTMLInputElement>('#rpc-chain');
+      expect(input).not.toBeNull();
+      await act(async () => {
+        input!.focus();
+        input!.click();
+      });
+      const options = [...mounted.div.querySelectorAll('[role="option"]')].map(
         (o) => o.textContent,
       );
-      expect(options).toContain('Ethereum');
-      expect(options).not.toContain('Dogecoin');
+      expect(options.join(' ')).toContain('Ethereum');
+      expect(options.join(' ')).not.toContain('Dogecoin');
       expect(options).toHaveLength(83);
     } finally {
       await mounted.cleanup();
@@ -375,12 +399,14 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       expect(rowFor(mounted, 'Ethereum').textContent).toContain(
         'eth.drpc.org',
       );
+      await selectRpcChain(mounted, 'Bitcoin');
       expect(rowFor(mounted, 'Bitcoin').textContent).toContain('blockstream.info');
       const resetAll = [...mounted.div.querySelectorAll('button')].find(
         (b) => b.textContent === 'Reset all to defaults',
       );
       expect(resetAll).toBeDefined();
       await clickButton(resetAll!);
+      await selectRpcChain(mounted, 'Ethereum');
       const eth = rowFor(mounted, 'Ethereum');
       expect(eth.textContent).toContain('ethereum-rpc.publicnode.com');
     } finally {
@@ -533,6 +559,7 @@ describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
       expect(eth.textContent).toContain('Last balance from 1rpc.io');
       expect(eth.textContent).toContain('History: eth.blockscout.com');
       expect(eth.textContent).toContain('working');
+      await selectRpcChain(mounted, 'Gnosis');
       const gnosis = rpcRow(mounted, 'Gnosis');
       expect(gnosis.textContent).toContain(
         'History: no working source — history unavailable for this chain.',

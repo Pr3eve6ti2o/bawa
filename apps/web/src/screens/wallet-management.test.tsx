@@ -501,3 +501,57 @@ describe('wallet management — watch-only balances (Lane B)', () => {
     }
   });
 });
+
+describe('wallet management — export list search (Lane 6)', () => {
+  it('filters the 84-chain export list by name and shows the count', async () => {
+    setWallet(vi.fn(async () => {}));
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('84 of 84 chains');
+      const input =
+        mounted.div.querySelector<HTMLInputElement>('#export-chain-search');
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input!, 'gnosis');
+      });
+      expect(mounted.div.textContent).toContain('1 of 84 chains');
+      expect(mounted.div.textContent).toContain('Gnosis');
+      // Zora is export-list-only, so it must be gone after filtering.
+      expect(mounted.div.textContent).not.toContain('Zora');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('labels each watch-only card Watch-only', async () => {
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: {
+        btc: null,
+        eth: null,
+        trx: null,
+        ton: null,
+        sol: {
+          chain: 'sol',
+          xpub: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+          label: '',
+          derivedCount: 1,
+        },
+      },
+      removeXpub: vi.fn(),
+      vaultAccount: { account: 0, index: 0 },
+      setVaultAccount: vi.fn(async () => {}),
+      vaultAddresses: TEST_ADDRESSES,
+      vaultAccounts: [0],
+      vaultPassphraseNeeded: false,
+      createVaultAccounts: vi.fn(async () => []),
+      selectVaultAccount: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Solana');
+      expect(mounted.div.textContent).toContain('Watch-only');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
