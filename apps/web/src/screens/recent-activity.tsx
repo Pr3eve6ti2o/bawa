@@ -1,9 +1,9 @@
 import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
-import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
+import { TxRow } from './tx-row';
 
 /**
  * Recent activity — the real per-chain transaction history, extracted
@@ -107,59 +107,33 @@ export function RecentActivity() {
           <>
             {rows.length > 0 ? (
               <ul className="divide-y divide-panel-border overflow-hidden rounded-xl border border-panel-border bg-panel-surface">
-                {rows.map(({ chain, tx }) => {
-                  const config = chainConfig(chain);
-                  const time = timestampMs(tx.timestamp);
-                  const direction =
-                    tx.direction === 'in'
-                      ? 'Received'
-                      : tx.direction === 'out'
-                        ? 'Sent'
-                        : 'Self transfer';
-
-                  return (
-                    <li key={`${chain}:${tx.hash}`}>
-                      <Link
-                        to={`/transactions/${tx.hash}`}
-                        className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-panel-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-panel-accent"
-                      >
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-panel-text">
-                            {direction}
-                            <span className="font-normal text-panel-text-soft">
-                              {' · '}{config.symbol}
-                            </span>
-                          </span>
-                          <span className="mt-1 block text-xs text-panel-text-muted">
-                            {time == null
-                              ? 'Pending'
-                              : new Date(time).toLocaleDateString('en-GB', {
-                                  dateStyle: 'short',
-                                })}
-                            {tx.status === 'failed'
-                              ? ' · Failed'
-                              : tx.status === 'pending'
-                                ? ' · Pending'
-                                : ''}
-                          </span>
-                        </span>
-                        {' '}
-                        <span className="shrink-0 text-right text-sm font-semibold text-panel-text">
-                          {formatNativeWithSymbol(
-                            tx.amountBaseUnits,
-                            CHAIN_DECIMALS[chain],
-                            config.symbol,
-                          )}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                {/*
+                  Lane 2: the rows are the shared TxRow (direction tile,
+                  counterparty, amount, date + status) — the old inline
+                  row showed direction · symbol / amount / date with no
+                  counterparty and no status word. The row's outer shape
+                  is the list's own (padding, no border): the card +
+                  dividers provide the container.
+                */}
+                {rows.map(({ chain, tx }) => (
+                  <TxRow
+                    key={`${chain}:${tx.hash}`}
+                    tx={tx}
+                    chain={chain}
+                    showChainSymbol
+                    className="px-4 py-3"
+                  />
+                ))}
               </ul>
             ) : loading ? (
               <Skeleton className="h-20 w-full rounded-xl" />
             ) : anyLoaded ? (
-              <p className="rounded-xl border border-panel-border bg-panel-surface p-4 text-sm text-panel-text-soft">No activity yet</p>
+              <div className="rounded-xl border border-panel-border bg-panel-surface p-4">
+                <p className="text-sm font-semibold text-panel-text">No activity yet</p>
+                <p className="mt-1 text-sm text-panel-text-soft">
+                  Your history will appear here after your first transaction.
+                </p>
+              </div>
             ) : null}
 
             {showUnavailable && unavailableChains.map((chain) => (

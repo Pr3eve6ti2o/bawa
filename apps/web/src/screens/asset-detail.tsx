@@ -6,8 +6,8 @@ import { chainConfig } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { TxRow } from './tx-row';
-import { unitPriceForChain, usePrices } from '../wallet/prices';
-import { useTokenPrices } from '../wallet/token-prices';
+import { fiatValueForBalance, unitPriceForChain, usePrices } from '../wallet/prices';
+import { fiatValueForTokenBalance, useTokenPrices } from '../wallet/token-prices';
 import {
   DEFAULT_TOKENS,
   iconSourceLabel,
@@ -23,6 +23,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
+import { CopyButton } from '../ui/components/copy-button';
 import { BawaLoading } from '../ui/components/loading';
 import { usePriceFeedAutoRefresh } from './use-live-prices';
 import { ChainLogo, TokenLogo } from './token-logo';
@@ -303,6 +304,46 @@ export function AssetDetailScreen() {
       ? ' (stale)'
       : '';
 
+  // Lane 2: the hero shows what the holding is worth, from the same
+  // live price feed as the rows (the same helpers, so the number can
+  // never disagree with the list). Zero shows $0.00; a funded devnet
+  // balance shows the per-unit price instead — test tokens are
+  // valueless, as on the rows; a stale feed shows no fiat line at all,
+  // and Details carries the state. The old hero showed the native
+  // amount only, so the dollar value took a scroll to find.
+  const heroFiatText: string | undefined = (() => {
+    if (effectiveBalance.status === 'zero') return '$0.00';
+    if (effectiveBalance.status !== 'available') return undefined;
+    if (devnetEnabled) {
+      return unitPrice.kind === 'fresh'
+        ? `${unitPrice.text} per ${displaySymbol}`
+        : undefined;
+    }
+    if (priceEntryForSource === undefined) return undefined;
+    const fiat =
+      tokenRecord !== undefined
+        ? fiatValueForTokenBalance(
+            effectiveBalance,
+            tokenRecord.decimals,
+            priceEntryForSource,
+            Date.now(),
+          )
+        : fiatValueForBalance(
+            chainId,
+            effectiveBalance,
+            priceEntryForSource,
+            Date.now(),
+          );
+    return fiat.kind === 'fiat' ? fiat.text : undefined;
+  })();
+
+  // Lane 2: the first address for this chain — vault first, then the
+  // watch-only derived address — for the Details card's Address row,
+  // so copying it does not need a scroll past history. The full
+  // derived-address list stays below, unchanged.
+  const firstAddress =
+    firstVaultAddress ?? addresses[chainId]?.[0]?.address;
+
   async function copyAddress(address: string) {
     setCopyStatus('');
     try {
@@ -374,16 +415,26 @@ export function AssetDetailScreen() {
             <p className="text-[32px] font-semibold leading-10 text-ink">
               {`0 ${displaySymbol}`}
             </p>
+            <p className="text-lg font-semibold text-ink">
+              {heroFiatText}
+            </p>
             <p className="text-sm text-ink">Zero balance</p>
           </>
         ) : effectiveBalance.status === 'available' ? (
-          <p className="text-[32px] font-semibold leading-10 text-panel-text">
-            {formatNativeWithSymbol(
-              effectiveBalance.value ?? '0',
-              displayDecimals,
-              displaySymbol,
-            )}
-          </p>
+          <>
+            <p className="text-[32px] font-semibold leading-10 text-panel-text">
+              {formatNativeWithSymbol(
+                effectiveBalance.value ?? '0',
+                displayDecimals,
+                displaySymbol,
+              )}
+            </p>
+            {heroFiatText !== undefined ? (
+              <p className="text-lg font-semibold text-panel-text">
+                {heroFiatText}
+              </p>
+            ) : null}
+          </>
         ) : (
           <>
             <p className="text-lg font-semibold text-panel-text">Balance unavailable</p>
@@ -468,6 +519,21 @@ export function AssetDetailScreen() {
                 <dd className="font-semibold">
                   {detailsBalance}
                   {detailsBalanceStale}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Address</dt>
+                <dd className="flex min-w-0 items-center justify-end gap-2">
+                  {firstAddress !== undefined ? (
+                    <>
+                      <code className="min-w-0 truncate font-mono text-xs font-semibold">
+                        {`${firstAddress.slice(0, 10)}…${firstAddress.slice(-8)}`}
+                      </code>
+                      <CopyButton value={firstAddress} label="Copy address" />
+                    </>
+                  ) : (
+                    <span className="font-semibold">Not imported</span>
+                  )}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -559,6 +625,12 @@ export function AssetDetailScreen() {
                 <TxRow key={tx.hash} tx={tx} chain={chainId} />
               ))}
             </ul>
+            <Link
+              to="/transactions"
+              className="inline-block text-sm text-panel-accent underline underline-offset-4"
+            >
+              View all transactions
+            </Link>
           </>
         ) : chainHistory.status === 'empty' ||
           (vaultState !== 'locked' && recentTxs.length === 0) ? (

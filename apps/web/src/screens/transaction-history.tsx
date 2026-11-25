@@ -24,7 +24,7 @@ function formatLastOk(lastOkAt: number): string {
 }
 
 export function TransactionHistoryScreen() {
-  const { history, refreshHistory } = useWallet();
+  const { history, refreshHistory, vaultState } = useWallet();
   const [filter, setFilter] = useState<Filter>('all');
   const chains = availableFor('history');
   const shownChains: ChainId[] = filter === 'all' ? chains : [filter];
@@ -73,40 +73,48 @@ export function TransactionHistoryScreen() {
             Receive to share an address.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
-            <Link
-              to="/receive"
-              className="inline-block rounded-full bg-primary-solid px-4 py-2 text-sm font-semibold text-primary-foreground"
-            >
-              Receive
-            </Link>
-            <Link
-              to="/import-wallet"
-              className="inline-block rounded-full border border-panel-border bg-panel-icon-tile px-4 py-2 text-sm font-semibold text-panel-text"
-            >
-              Import wallet
-            </Link>
+            <Button type="button" size="pill" asChild>
+              <Link to="/receive">Receive</Link>
+            </Button>
+            <Button type="button" size="pill" variant="outline" asChild>
+              <Link to="/import-wallet">Import wallet</Link>
+            </Button>
           </div>
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by chain">
-            <Button
-              type="button"
-              variant={filter === 'all' ? 'default' : 'outline'}
-              onClick={() => setFilter('all')}
+          {/*
+            Lane 2: one chain picker, not a wall of chips. The old
+            filter was 17 symbol-only buttons — five of them labelled
+            "ETH" (Ethereum, Arbitrum One, OP Mainnet, Base, Linea,
+            Scroll, Aurora…), with no way to tell which was which, and
+            it ate ~40% of the phone viewport before any content. A
+            labelled select shows the chain's display name (unique per
+            chain) and takes one row at every width. Same filter state,
+            same "All" default — the control changed, the function did
+            not.
+          */}
+          <div className="flex items-center gap-3">
+            <label
+              htmlFor="history-chain-filter"
+              className="shrink-0 text-sm font-medium"
             >
-              All
-            </Button>
-            {chains.map((chain) => (
-              <Button
-                key={chain}
-                type="button"
-                variant={filter === chain ? 'default' : 'outline'}
-                onClick={() => setFilter(chain)}
-              >
-                {chainConfig(chain).symbol}
-              </Button>
-            ))}
+              Chain
+            </label>
+            <select
+              id="history-chain-filter"
+              aria-label="Filter by chain"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as Filter)}
+              className="h-11 min-w-0 flex-1 rounded-bawa-sm border-2 border-ink bg-paper px-3 text-sm font-medium sm:max-w-64"
+            >
+              <option value="all">All chains</option>
+              {chains.map((chain) => (
+                <option key={chain} value={chain}>
+                  {chainConfig(chain).displayName}
+                </option>
+              ))}
+            </select>
           </div>
 
           {anyLoading && rows.length === 0 ? (
@@ -115,11 +123,42 @@ export function TransactionHistoryScreen() {
               <span className="sr-only">Loading transactions…</span>
             </div>
           ) : rows.length === 0 ? (
-            anyLoaded ? (
-              <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                No transactions yet
-                {filter === 'all' ? '.' : ` for ${chainConfig(filter).displayName}.`}
-              </p>
+            vaultState === 'no-vault' ? (
+              // Lane 2: no vault, no addresses, no history can exist —
+              // the old screen rendered nothing at all below the
+              // filter here (a blank void at every viewport). Say so,
+              // with the way out.
+              <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
+                <h2 className="text-lg font-bold text-panel-text">No wallet yet</h2>
+                <p className="text-sm leading-relaxed text-panel-text-muted">
+                  There is no wallet on this device, so there is no
+                  transaction history to show. Create a wallet or
+                  import one to see its transactions.
+                </p>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <Button type="button" size="pill" asChild>
+                    <Link to="/create-wallet">Create a wallet</Link>
+                  </Button>
+                  <Button type="button" size="pill" variant="outline" asChild>
+                    <Link to="/import-wallet">Import wallet</Link>
+                  </Button>
+                </div>
+              </div>
+            ) : anyLoaded ? (
+              // Lane 2: the settled empty state — a title, the honest
+              // line, and the Receive action (DESIGN-SYSTEM §6). The
+              // old screen showed the bare line alone.
+              <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
+                <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
+                <p className="text-sm leading-relaxed text-panel-text-muted">
+                  {`Your history will appear here after your first transaction${filter === 'all' ? '' : ` on ${chainConfig(filter).displayName}`}.`}
+                </p>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <Button type="button" size="pill" asChild>
+                    <Link to="/receive">Receive</Link>
+                  </Button>
+                </div>
+              </div>
             ) : null
           ) : (
             <ul className="space-y-3">

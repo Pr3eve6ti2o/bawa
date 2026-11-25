@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
+import { Input } from '../ui/components/input';
 import { useWallet } from '../state/wallet-context';
 import { Card } from '../ui/components/card';
 import { BawaIcon } from '../ui/components/icons';
@@ -19,6 +20,9 @@ import { useLivePrices } from './use-live-prices';
 export function AssetListScreen() {
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
+  // Lane 2: the filter bar's search — 43 rows are not scannable by
+  // scrolling alone. Client-side only, matches name, symbol or chain.
+  const [query, setQuery] = useState('');
   const { vaultState, refreshBalances, refreshTokenBalances } = useWallet();
   // Lane J: the rows carry no per-row Retry (see asset-rows.tsx), so
   // this is the screen's one retry path — the same "Refresh balances"
@@ -43,8 +47,32 @@ export function AssetListScreen() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-panel-text">Assets</h1>
+      <h1 className="text-2xl font-semibold text-panel-text">Assets</h1>
+
+      {/*
+        Lane 2: the filter bar — the visible Filters panel is a
+        feature, kept and restyled, never removed. Search first (the
+        list is 43 rows; finding "USDC on Base" by scrolling is the
+        slow path), then the three controls the screen already had:
+        Refresh balances, Add token, Hide zero balances. All three
+        keep their behaviour and labels; the bar wraps on mobile
+        (search full-width, controls below) and fits one row on
+        desktop.
+      */}
+      <div
+        className="flex flex-wrap items-center gap-2 rounded-bawa border-2 border-ink bg-paper p-2 shadow-bawa"
+        role="search"
+        aria-label="Filter assets"
+      >
+        <div className="min-w-44 flex-1">
+          <Input
+            type="search"
+            aria-label="Search assets"
+            placeholder="Search name, symbol or chain"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -98,7 +126,7 @@ export function AssetListScreen() {
       )}
 
       <Card>
-        <AssetRows variant="table" hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />
+        <AssetRows variant="table" hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} query={query} onClearQuery={() => setQuery('')} />
       </Card>
       <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
     </div>
