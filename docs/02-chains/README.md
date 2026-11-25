@@ -8,7 +8,7 @@ The common pattern is: secure a secret, then derive deterministic key material f
 
 ## 2. Bawa scope: support is more than a coin type
 
-Bawa supports watch-only address derivation for BTC, ETH, and TRX, and single-address generation plus a public-key-only watch-only route via derive-ton.js for TON (32-byte Ed25519 public key; one V4 R2 address; no index; not xpub-based derivation). Solana (SOL) is a wired chain in the 84-chain set (22 curated + 62 expansion; see docs/CREATE-THIS-SPEC.md §2) — the earlier "reference-only" label for SOL is stale and corrected here. Cardano (ADA) is NOT in the app: zero mentions in `apps/web/src/wallet/chains.ts` or `chains-expanded.ts` as of 2026-11-25; adding it is PENDING Lane B of the usable-install programme. Listing a chain in the comparison table does not mean Bawa implements it.
+Bawa supports watch-only address derivation for BTC, ETH, and TRX, and single-address generation plus a public-key-only watch-only route via derive-ton.js for TON (32-byte Ed25519 public key; one V4 R2 address; no index; not xpub-based derivation). Solana (SOL) is a wired chain in the 87-chain set (22 curated + 62 expansion + 3 OKX-reference; see docs/CREATE-THIS-SPEC.md §2) — the earlier "reference-only" label for SOL is stale and corrected here. Cardano (ADA) is in the app as a derive-only chain since Lane B of the usable-install programme (2026-11-26): CIP-1852 derivation via Wallet Core 4.9.3, receive works, balance/history/send have no adapter. Kaspa and Starknet are likewise derive-only (see docs/CREATE-THIS-SPEC.md §2.5). Listing a chain in the comparison table does not mean Bawa implements it.
 
 Reference comparison table:
 
@@ -18,8 +18,8 @@ Reference comparison table:
 | EVM (Ethereum) | Supported, watch-only | 60 | `m/44'/60'/0'/0/x` |
 | TRON | Supported, watch-only | 195 | `m/44'/195'/0'/0/x` |
 | TON | Single-address generation plus a public-key-only watch-only route via derive-ton.js (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. | 607 | `ton_path` from `CoinTypeExt.derivationPath(CoinType.ton)` |
-| Solana | Supported — wired in the 84-chain set | 501 | Wallet Core 4.9.3: legacy `m/44'/501'/0'`; indexed `m/44'/501'/<account>'/0'` and `m/44'/501'/<account>'/0'/<index>'` (`apps/web/src/wallet/chains.ts`). SOL signs offline via `@solana/web3.js`; broadcast stays disabled. |
-| Cardano | Not in the app (PENDING Lane B) | 1815 | CIP-1852 payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` — reference path only. No Cardano code exists in the app as of 2026-11-25. |
+| Solana | Supported — wired in the 87-chain set | 501 | Wallet Core 4.9.3: legacy `m/44'/501'/0'`; indexed `m/44'/501'/<account>'/0'` and `m/44'/501'/<account>'/0'/<index>'` (`apps/web/src/wallet/chains.ts`). SOL signs offline via `@solana/web3.js`; broadcast stays disabled. |
+| Cardano | Derive-only (Lane B, 2026-11-26): address derivation via Wallet Core 4.9.3 (`getPublicKeyEd25519Cardano`); receive works; no balance/history/send adapter | 1815 | CIP-1852 payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` |
 
 Curves and models: BTC secp256k1, UTXO; ETH/EVM secp256k1, account; TRX secp256k1, account; SOL Ed25519, account; ADA Ed25519, extended-UTXO (CIP-1852); TON Ed25519, smart-contract wallet accounts — one mnemonic can map to more than one account by contract plus wallet ID. A path string alone does not establish the curve, encoder, address format, wallet compatibility, or cross-chain compatibility.
 

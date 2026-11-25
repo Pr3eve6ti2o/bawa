@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="770" viewBox="0 0 900 770" role="img" aria-labelledby="archTitle archDesc">
   <title id="archTitle">Bawa architecture — HD core, vault, providers, outputs, send</title>
-  <desc id="archDesc">Bawa is an HD-wallet reference and AI Wallet Builder: one 24-word phrase, one account, 84 chains. The guide and registry build the example web wallet through scripts/build-wallet.mjs. The wallet runs on Trust Wallet Core 4.9.3 (WASM). One 24-word phrase derives addresses on 84 chains; the phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from 9 public adapter modules and prices from CoinGecko with fallbacks (77 of 84 chains; a chain with no source shows unavailable, never an invented price). Send builds an intent and signs offline; mainnet broadcast is always disabled, and only the devnet path can submit. Android and further wallets are planned, not built. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
+  <desc id="archDesc">Bawa is an HD-wallet reference and AI Wallet Builder: one 24-word phrase, one account, 87 chains. The guide and registry build the example web wallet through scripts/build-wallet.mjs. The wallet runs on Trust Wallet Core 4.9.3 (WASM). One 24-word phrase derives addresses on 87 chains; the phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from 9 public adapter modules and prices from CoinGecko with fallbacks (80 of 87 chains; a chain with no source shows unavailable, never an invented price). Send builds an intent and signs offline; mainnet broadcast is always disabled, and only the devnet path can submit. Android and further wallets are planned, not built. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
   <style>
     .t { font-family: "Baloo 2", "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
     .b { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
@@ -92,7 +92,7 @@
   <text class="t" x="504" y="333" font-size="15.5" font-weight="700">Prices — CoinGecko + fallbacks</text>
   <text class="b" x="486" y="349" font-size="11">api.coingecko.com/api/v3 · 10-minute cache</text>
   <text class="b" x="486" y="362" font-size="11">CoinLore · Coinbase (LTC) · DexScreener · TonAPI</text>
-  <text class="b" x="486" y="375" font-size="11">77 of 84 chains have a fallback — 7 are CoinGecko-only</text>
+  <text class="b" x="486" y="375" font-size="11">80 of 87 chains have a fallback — 7 are CoinGecko-only</text>
   <text class="b" x="486" y="388" font-size="11">fraxtal · velas · telos · songbird · rootstock · pulsechain · xdc</text>
 
   <!-- Outputs row -->

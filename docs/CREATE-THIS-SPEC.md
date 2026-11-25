@@ -20,39 +20,36 @@ is en-GB.
 `DOCUMENTED_NOT_TESTED`, `PROPOSED`, `OPEN`, `EXTERNALLY_DEPENDENT`,
 `UNVERIFIED`.
 
-## Part A status at writing time (2026-11-25, verified first-hand)
+## Part A status — all six lanes landed, re-checked 2026-11-26
 
-The six Part A implementation lanes run in parallel with this guide lane.
-When this spec was written, **none of the six had committed any code**:
-every Part A worktree (`bawa-usable-lane-a-bitget-worktree`,
-`bawa-usable-lane-b-okx-chains-worktree`,
-`bawa-usable-lane-c-walletconnect-worktree`,
-`bawa-usable-lane-d-coinbase-worktree`,
-`bawa-usable-lane-e-shamir-worktree`,
-`bawa-usable-lane-f-clear-signing-worktree`) was at base `7fea3e4` with a
-clean tree. Their sections below are therefore written from the wallet-org
-survey (`/home/boxd/workspace/wallet-repos/SURVEY.md`, 2026-11-25, hands-on,
-0 Sol calls) plus each lane's stated plan, and are marked **PENDING** with
-the exact thing to re-check. The guide must be re-checked against each
-lane's committed code when it lands; where implementation differs from the
-survey, the guide must match the implementation.
+The six Part A implementation lanes have all landed in
+`panel-rebuild/token-gaps` through the `usable-install` programme
+branch (rebased onto the redesign tip `4a12409`, then merged).
+Each section below was re-checked against the merged code by the
+coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
+where implementation differs from the survey, the section matches
+the implementation. Lane H's mining record is §18. Merged-tree
+gates (loud-stone, Node 22): typecheck 0, build 0, vitest 110 files
+/ 2,945 passed + 5 skipped, eslint 0, link check 0,
+`check-wallet-cycles` 0 (the one pre-existing type-only cycle was
+a checker false positive — fixed in the checker, not the source;
+see §17).
 
 | Lane | Work | Section | Status |
 | --- | --- | --- | --- |
-| A | Bitget Agent API as an extra token verifier | §6.6 | PENDING — no code committed |
-| B | Cardano, Starknet, Kaspa from OKX js-wallet-sdk | §2.5 | PENDING — no code committed |
-| C | WalletConnect 2.21.0, lazy-loaded | §11 | PENDING — no code committed |
-| D | Coinbase Onramp Buy, lazy-loaded | §12 | PENDING — no code committed |
-| E | Shamir backup shares | §13 | PENDING — no code committed |
-| F | ERC-7730 clear signing | §14 | PENDING — no code committed |
+| A | Bitget Agent API as an extra token verifier | §6.6 | IMPLEMENTED (browser leg + agent-side script) |
+| B | Cardano, Starknet, Kaspa from OKX js-wallet-sdk | §2.5 | IMPLEMENTED (derive-only) |
+| C | WalletConnect 2.21.0, lazy-loaded | §11 | IMPLEMENTED |
+| D | Coinbase Onramp Buy, lazy-loaded | §12 | IMPLEMENTED |
+| E | Shamir backup shares | §13 | IMPLEMENTED |
+| F | ERC-7730 clear signing | §14 | IMPLEMENTED |
+| H | Mining pass (wallet-repos, agent-repos, skills) | §18 | IMPLEMENTED |
 
-Lane H (2026-11-26, "install all usable" mining pass) re-checked
-§6.6, §11 and §14 against the merged Part A code in the
-`usable-lane-h-mining` worktree (base `637c139`, which has Lanes A,
-C, D, E, F merged) and updated those sections in place; the rest of
-this table is still the at-writing-time record above, and the
-coordinator's re-check pass reconciles the remaining PENDING rows
-after the rebase. Lane H's own record is §18.
+**Bundle note:** the merged tree is over budget — total JS
+4,648,952 vs the 4,215,000 budget (§0.2), over by 433,952;
+largest chunk 2,906,541 (under the 3,050,000 cap). The overage is
+reported, not re-baselined: re-baselining is the owner's call
+(§0.2).
 
 ## §0. Hard constraints — these are not negotiable
 
@@ -62,7 +59,7 @@ after the rebase. Lane H's own record is §18.
    throws unconditionally on mainnet. No send has ever run on any network.
    The only exception is the temporary devnet-only broadcast path, §10.
    Never build, enable, or work around a mainnet broadcast path.
-2. **Bundle budget: total JS in `dist/assets` ≤ 4,185,000 bytes; largest
+2. **Bundle budget: total JS in `dist/assets` ≤ 4,215,000 bytes; largest
    single JS chunk ≤ 3,050,000 bytes** (`CONSTRAINTS.md:40`; CI bundle-size
    step sums `dist/assets/*.js` after `npm run build`; budgets in `PERF.md`).
    The budget is the binding constraint on every new npm dependency (§17
@@ -113,7 +110,7 @@ ninth profile. Profile selection is routing, not a capability claim.
 | `bitcoin-wallet` | Bitcoin-focused; transaction support must not be assumed |
 | `evm-wallet` | ETH/EVM-oriented; support beyond the specified ETH policy is OPEN |
 | `multichain-wallet` | Combined BTC, ETH, TRX, TON; TON remains generation-only, single-address |
-| `multichain-extended-wallet` | As registered, combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge). The web wallet now wires 84 chains (§2); the registry has NOT been re-validated for the 84-chain set, so the wider set is OPEN for this profile until the registry is updated |
+| `multichain-extended-wallet` | As registered, combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge). The web wallet now wires 87 chains (§2); the registry has NOT been re-validated for the 87-chain set, so the wider set is OPEN for this profile until the registry is updated |
 | `web-wallet` | Browser wallet; starter scope only, not a complete wallet |
 | `android-wallet` | Android wallet; approved starter is UI layer only |
 | `watch-only-wallet` | Public-data-only observation; no secret intake, no signing |
@@ -123,19 +120,23 @@ profile → engine → chains → template → inspect → scaffold → implemen
 verify → audit claims → report. Inspection precedes scaffolding. A blocked
 step stops the work; it is never silently skipped or faked.
 
-## §2. Chains — 84, not 13, not 22
+## §2. Chains — 87, not 13, not 22, not 84
 
-**The count is 84: 22 curated chains in `apps/web/src/wallet/chains.ts`
+**The count is 87: 22 curated chains in `apps/web/src/wallet/chains.ts`
 plus 62 expansion chains in `apps/web/src/wallet/chains-expanded.ts`
-(`EXPANDED_CHAINS`, line 116; `EXPANDED_CHAIN_COUNT = 62`, line 1792).**
-The expansion programme wired all 84 into the app (adapters, prices,
-icons, explorers; `docs/EXPANSION-PROGRAMME.md`). The 22-row capability
+(`EXPANDED_CHAINS`, line 116; `EXPANDED_CHAIN_COUNT = 62`, line 1792)
+plus 3 OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) —
+registered in `chains.ts` (`SUPPORTED_CHAINS` ends with them) with
+full fact records in `chains-expanded.ts`.**
+The expansion programme wired 84 into the app (adapters, prices,
+icons, explorers; `docs/EXPANSION-PROGRAMME.md`); Lane B added the
+three, so the app now wires 87. The 22-row capability
 table in `WALLET_BUILDER.md` covers only the curated `chains.ts` set; the
 62 expanded chains have their facts in `chains-expanded.ts`, each
 cross-checked against at least two sources and each RPC called live on
 2026-11-24. `docs/02-chains/README.md` §2 previously said Solana was
 reference-only — that is stale and fixed: Solana is a wired chain in the
-84-chain set.
+87-chain set.
 
 **Rule for every chain.** A chain supports an operation only if
 `availableFor(capability)` in `chains.ts` returns it. Verified today for
@@ -185,7 +186,7 @@ pubkey covers all chains.
   evidence meeting the same bar (two sources + live RPC tip).
 - Icons: `apps/web/src/assets/chains/` (PNG canonical + 96 px WebP q85),
   wired through `CHAIN_LOGOS` in `apps/web/src/screens/token-logo.tsx`.
-  All 84 chains have a real icon; load failure shows only the deliberate
+  All 87 chains have a real icon; load failure shows only the deliberate
   paper-and-ink link mark, never a yellow ticker square.
 
 ### §2.3 RPCs and explorers
@@ -201,29 +202,59 @@ means the tx page was NOT live-clicked — do not claim it was.
 
 The coordinator's first-hand registry check (2026-11-25) found XRP,
 Stellar and NEAR already present as derive entries in
-`chains-expanded.ts`. They are part of the 84; the OKX SDK adds nothing
+`chains-expanded.ts`. They are part of the 87; the OKX SDK adds nothing
 for them beyond reference material.
 
-### §2.5 Cardano, Starknet, Kaspa — PENDING Lane B
+### §2.5 Cardano, Starknet, Kaspa — IMPLEMENTED (Lane B)
 
-**Status: PENDING.** These three have zero mentions in `chains.ts` or
-`chains-expanded.ts` (verified first-hand 2026-11-25) and are NOT in the
-app. The OKX `js-wallet-sdk` (MIT, 20 TS packages, in
-`/home/boxd/workspace/wallet-repos/js-wallet-sdk/`) covers address
-generation and offline signing for Cardano, Starknet and Kaspa, among
-others. The SDK **cannot be bundled as-is**: every coin package pulls
-`@okxweb3/crypto-lib` (623 KB unpacked, ~150–250 KB minified est.) plus
-`coin-base`, and `coin-cardano` pulls the whole `@cardano-sdk/*` stack.
-Lane B must therefore implement these three chains by reference (signing
-and address logic studied from the SDK, written into Bawa's own code
-under Bawa's own bundle budget), or record that the budget must be
-re-baselined by owner order first. **Do not invent derivation paths for
-Starknet or Kaspa.** Cardano's reference path is already recorded in
-`docs/02-chains/README.md` §2 (CIP-1852 payment `m/1852'/1815'/0'/0/0`,
-staking `m/1852'/1815'/0'/2/0`); Starknet and Kaspa paths must come from
-the SDK reference or the chain's own standard, cited in the lane's
-commit, never guessed. Re-check this section against Lane B's committed
-code before claiming any of the three is done.
+**Status: IMPLEMENTED.** All three are in the app as derive-only
+chains (87 total). Registration: `SUPPORTED_CHAINS` in
+`apps/web/src/wallet/chains.ts` ends with `cardano`, `kaspa`,
+`starknet`; full fact records in `apps/web/src/wallet/
+chains-expanded.ts` (cardano `:1821`, kaspa `:1848`, starknet
+`:1875`). Derive-only means receive works (an address is derived
+and shown); balance, history and send have no adapter and are
+honestly unavailable, never faked (`availableFor` returns them for
+derive/receive only).
+
+- **Cardano (CIP-1852).** Path `m/1852'/1815'/{account}'/0/{index}`
+  (payment; staking `m/1852'/1815'/0'/2/0`), via Wallet Core 4.9.3's
+  cardano coin — the pubkey MUST come from
+  `getPublicKeyEd25519Cardano` (`apps/web/src/wallet/core.ts:468`);
+  the plain Ed25519 route aborts the WASM instance. CAIP-2
+  `cardano:mainnet`. Icon from Trust Wallet Assets (same pin).
+  **Passphrase caveat (proven, pinned by test):** Wallet Core
+  derives the Cardano key from the mnemonic ENTROPY, not the BIP-39
+  seed — a BIP-39 passphrase does NOT change the Cardano address or
+  key. A user who sets a passphrase gets no passphrase protection
+  on Cardano (Kaspa and Starknet DO change with the passphrase).
+  Pinned by a test so a future core upgrade fails loudly; recorded
+  in `docs/DECISIONS.md`.
+- **Kaspa.** Address via the in-app CashAddr encoder (lazy-loaded
+  `apps/web/src/wallet/kaspa-address.ts`); derivation verified
+  against the SDK's test vectors. Coin type 111111
+  (`m/44'/111111'/0'`). CAIP-2 `kaspa:mainnet`. Icon from CoinGecko.
+- **Starknet.** Address via hand-rolled Stark-curve Pedersen +
+  hand-rolled BIP32 (lazy-loaded
+  `apps/web/src/wallet/starknet-derive.ts`); derivation verified
+  against the SDK's test vectors. Coin type 9004
+  (`m/44'/9004'/0'`). CAIP-2 `starknet:SN_MAIN`. Receive-only
+  (counterfactual Argent proxy account). Icon from CoinGecko.
+- **Reference, not bundle:** no `@okxweb3/crypto-lib` is bundled;
+  `@noble/hashes` 1.8.0 is the only new direct dependency. The
+  derivation/address logic was studied from the OKX `js-wallet-sdk`
+  (MIT, `coin-cardano` / `coin-kaspa` / `coin-starknet` +
+  `crypto-lib`, in `/home/boxd/workspace/wallet-repos/
+  js-wallet-sdk/`) and written into Bawa's own code; the SDK's test
+  vectors were used as the oracle. RPCs called live 2026-11-25:
+  Koios tip + blocks, api.kaspa.org blockdag + network, dRPC
+  Starknet chainId SN_MAIN on two hosts. Cardanoscan tx pattern NOT
+  live-clicked (bot-gated 403 from this egress) — recorded in the
+  chain record, do not claim it was.
+- **Prices:** all three have a CoinGecko id (`cardano`, `kaspa`,
+  `starknet`, `prices.ts`) and a CoinLore fallback
+  (`price-fallbacks.ts:222-224`), so the price-fallback count is
+  80 of 87 (§7).
 
 ## §3. HD wallet and engine — fixed pins
 
@@ -236,16 +267,19 @@ code before claiming any of the three is done.
   dependency-version check (`scripts/check-pinned-dependencies.js`)
   guards the pin.
 - Adopted `apps/web` libraries (ADR-0005): `@scure/bip39` **2.4.0**,
-  `decimal.js` **10.6.0**, `dinero.js` **2.0.2**, `mnemonic-words`
-  **2.0.0**; `bip39` **3.1.2** as a devDependency used only as a test oracle.
+  `decimal.js` **10.6.0** (kept as the differential-test oracle for the
+  BigInt `decimal.ts`, which replaced both `decimal.js` and `dinero.js`
+  at runtime — `dinero.js` is NOT a dependency any more; 0 hits in
+  `package-lock.json`), `mnemonic-words` **2.0.0**; `bip39` **3.1.2** as
+  a devDependency used only as a test oracle.
 - Python tools: Python **>=3.11**, `cryptography` **50.0.2**,
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
   (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest —
-  99 files, 2,799 passed + 5 skipped, verified 2026-11-24,
-  `docs/index.md`). Engine smoke suite: 440 checks pass
-  (`docs/engine-reproducibility.md`).
+  110 files, 2,945 passed + 5 skipped, verified 2026-11-26 on the
+  merged usable-install tree, `docs/index.md`). Engine smoke suite:
+  440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
   `/walletsolidity/*`; TON 1 masterchain seqno after inclusion plus an
@@ -473,23 +507,26 @@ such and never bundle it.**
   keyless operation could not be verified without running OKX's
   installer — do not assume it works without an OKX account.
 
-## §8. QR cards — four templates, PNG parity
+## §8. QR cards — seven templates, PNG parity
 
 Implementation: `apps/web/src/screens/qr-card.tsx`,
 `apps/web/src/wallet/payment-links.ts` (from line 700),
 `apps/web/src/screens/receive.tsx`. Design record: `docs/DECISIONS.md`
 §24 (line 1987).
 
-- **Four templates, original Bawa designs** informed by Bitget/OKX
+- **Seven templates, original Bawa designs** informed by Bitget/OKX
   patterns only — no competitor logo, colour-as-brand, cyan arrow, or
   "Deposit from Bitget Exchange" link is copied; the brand bar is Bawa's
-  own wordmark. `QR_CARD_TEMPLATES` (`payment-links.ts:719-735`):
+  own wordmark. `QR_CARD_TEMPLATES` (`payment-links.ts:727-737`):
   A "Dark Teal" (showcase variant, closest to the Bitget bar), B "Paper"
   (default — Bawa's own drawing system, respaced), C "Minimal" (plain
-  and quiet, the fallback), D "Poster" (bold, for sharing).
+  and quiet, the fallback), D "Poster" (bold, for sharing),
+  E "Sun" (bright sun field), F "Ink" (dark card, safe code),
+  G "Ticket" (two-tone ticket stub). The redesign programme added
+  E/F/G (2026-11-25); the QR-cards programme built A–D.
   Default: `DEFAULT_QR_CARD_TEMPLATE = 'b'`.
 - **Template picker:** Receive screen, "Card style — tap to switch",
-  all four templates, `aria-pressed`, active `bg-sun`, driving both the
+  all seven templates, `aria-pressed`, active `bg-sun`, driving both the
   in-app card and the PNG.
 - **PNG parity (the rule):** the shared/downloaded PNG must be the same
   card in the picked template. Geometry: every template is laid out in
@@ -498,9 +535,10 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   reflowed one. Layout is measured first, then drawn, on the same
   numbers. Heights are computed from the wrapped subtitle and address,
   so a long non-EVM address grows the card instead of clipping.
-  QR code per template (`QR_CARD_TEMPLATE_QR`): A 218 px white on
-  `#011F29`, B 200 px, C 216 px, D 210 px; centre-logo caps A 13%,
-  B 22%, C 15%, D 20% of the code. Footer on every card:
+  QR code per template (`QR_CARD_TEMPLATE_QR`, `payment-links.ts:748`):
+  A 218 px white on `#011F29`, B 200 px, C 216 px, D 210 px, E 210 px,
+  F 208 px, G 200 px; centre-logo caps A 13%, B 22%, C 15%, D 20%,
+  E 20%, F 19%, G 22% of the code. Footer on every card:
   "Share the card, keep the keys." Template C adds
   "Scan or share this QR code to receive crypto."
 - **Template A centre mark:** the logo is redrawn as a white silhouette
@@ -524,7 +562,7 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   390/820/1440/1919) and `e2e/png-decode.ts`.
 - **No QR/share-card code exists in the Bitget or OKX orgs** (survey):
   the only QR file found is a deprecated WalletConnect v1 QR modal in a
-  demo. The four templates are Bawa-original; there is nothing to import.
+  demo. The seven templates are Bawa-original; there is nothing to import.
 
 ## §9. Watch-only — mainnet-only
 
@@ -564,10 +602,22 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   E1: the DoD line states the mainnet rule; E1 is the recorded, expiring
   devnet-only exception. Do not edit the DoD line to weaken it.
 
-## §11. WalletConnect — PENDING Lane C
+## §11. WalletConnect — IMPLEMENTED (Lane C)
 
-**Status: PENDING.** No WalletConnect code exists in Bawa today. The
-survey's verified facts, which Lane C must implement from:
+**Status: IMPLEMENTED.** The `/walletconnect` screen pairs with a
+dApp by `wc:` URI, shows the session proposal for approve/reject,
+and answers signing requests — message signing ONLY
+(`personal_sign`, `eth_signTypedData`, `eth_signTypedData_v4`,
+`eth_chainId`, `eth_accounts`) for Ethereum chains. Transaction
+signing (`eth_sendTransaction`, `eth_signTransaction`) is never
+approved — sending stays switched off, so no session can move
+funds. Implementation: `apps/web/src/wallet/walletconnect.ts` +
+`apps/web/src/screens/walletconnect.tsx`, lazy-loaded from
+`apps/web/src/app/app.tsx` (`loadWalletConnect`, route
+`/walletconnect`); sidebar "More" on desktop, "More" menu on
+mobile. Decision record: `docs/DECISIONS.md` §26.
+
+The survey's verified facts, which Lane C implemented from:
 
 - **Pin 2.21.0 — the last Apache-2.0 release.** The WalletConnect JS
   SDK is no longer Apache-2.0: 2.22.0+ switched to Reown Inc.'s custom
@@ -582,10 +632,21 @@ survey's verified facts, which Lane C must implement from:
   minimal `import { SignClient }`, esbuild bundle + minify: **2.21.0 =
   396,013 B minified / 121,377 B gzip** (~75× the headroom); 2.26.0 =
   455,831 B / 137,742 B gzip. It cannot go in the main bundle under the
-  4,185,000-byte budget (§0.2). Load it by dynamic import, only when the
+  4,215,000-byte budget (§0.2). Load it by dynamic import, only when the
   user opens the WalletConnect flow.
+- **Measured cost in Bawa's build (Lane C tree):** total JS 4,577,447
+  (+397,262 over its 4,180,185 base); lazy `walletconnect-client`
+  chunk 348,194 B; main-bundle delta +49,068 B; 0 occurrences of the
+  relay URL in the main chunk. In the merged rebased tree the total is
+  4,648,952 (over the 4,215,000 budget by 433,952) — the CI bundle gate
+  (sums all of `dist/assets/*.js`) fails as written; the gate scope is
+  the owner's call (§0.2). Do not re-baseline without an owner order.
 - **A WalletConnect Cloud projectId is required** for sign-client. Bawa
-  has none. Obtaining one is an owner step; never invent or hardcode one.
+  has none. Obtaining one is an owner step; never invent or hardcode
+  one. The projectId comes from the owner's setting or
+  `VITE_WALLETCONNECT_PROJECT_ID`; without one the screen says so
+  plainly. **No live dApp connection has been verified** — it needs the
+  owner's projectId.
 - **Wallet-side API only.** The verified wallet-side surface is
   `approve` / `reject` / `respond` and session authenticate
   (in `walletconnect-monorepo`, `/home/boxd/workspace/wallet-repos/
@@ -620,12 +681,26 @@ survey's verified facts, which Lane C must implement from:
   Android SDK or JDK on loud-stone to build-verify the dependency.
   A WalletConnect Cloud projectId is still required (owner step;
   never invent or hardcode one).
-- Re-check this section against Lane C's committed code.
+- Re-checked against Lane C's committed code by the coordinator's
+  re-check pass (2026-11-26): the screen, the message-only signing
+  set, the 2.21.0 pin and the lazy chunk are all in the merged tree.
 
-## §12. Coinbase Onramp Buy — PENDING Lane D
+## §12. Coinbase Onramp Buy — IMPLEMENTED (Lane D)
 
-**Status: PENDING.** No onramp code exists in Bawa today. The survey's
-verified facts, which Lane D must implement from:
+**Status: IMPLEMENTED.** Dashboard Buy tile → `/receive?buy=1` Buy
+panel → the Coinbase Onramp pop-up. Implementation:
+`apps/web/src/wallet/onramp.ts` + the Buy panel in
+`apps/web/src/screens/receive.tsx` (the `?buy=1` branch). The widget
+opens for the wallet's addresses on the ten Coinbase destination
+networks (Bitcoin, Ethereum, Solana, Base, Optimism, Arbitrum,
+Polygon, Avalanche, BNB Chain, TRON); Coinbase sets the price, fees,
+payment methods and regional availability. The panel shows the first
+deliverable address the purchase lands on by default — the widget
+itself is the network picker. There is deliberately no in-app
+success/exit feedback: the purchase completes inside the pop-up and
+the delivery shows up as a normal incoming transaction.
+
+The survey's verified facts, which Lane D implemented from:
 
 - **SDK:** `@coinbase/cbpay-js` **2.4.0**, MIT, zero dependencies, from
   `cbpay-js` (`/home/boxd/workspace/wallet-repos/cbpay-js/`). It lets
@@ -637,20 +712,47 @@ verified facts, which Lane D must implement from:
   import on the Buy screen only, or re-baseline the budget by owner
   order first. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
-- **Requires Coinbase Onramp onboarding + API keys.** Bawa has no
-  Coinbase account. Onboarding and keys are owner steps; never invent
-  credentials. This is a new "Buy" feature, not a core need.
+- **The SDK is NOT bundled.** `@coinbase/cbpay-js` 2.4.0 (MIT) is not
+  a dependency: its whole 7,282 B survives the build (no
+  `sideEffects: false`; a treeshake rule and a `resolveId` plugin both
+  failed across three builds). The URL builder in `onramp.ts` is a
+  faithful port of the SDK's `generateOnRampURL`, with parity tests
+  mirroring the SDK's own URL vectors. Measured cost in Bawa's build:
+  +4,447 B. A separate `/buy` route was cut for the same budget
+  reason — the Buy UI lives in Receive, reusing its components.
+- **Requires Coinbase Onramp onboarding + the public project ID** as
+  `VITE_COINBASE_ONRAMP_APP_ID` at build time. Bawa has no Coinbase
+  account. Onboarding and keys are owner steps; never invent
+  credentials. Without the project ID the Buy panel says so plainly
+  and offers no purchase. **A live purchase has not been verified**
+  (no onboarding/keys exist yet). This is a new "Buy" feature, not a
+  core need.
 - **Wrong-side exclusion:** `coinbase-wallet-sdk` and
   `wallet-mobile-sdk` let dApps connect *to* Coinbase Wallet — Bawa *is*
   a wallet, so they do not apply. `onchainkit` is deprecated ("do not use
   them for new projects"). Nothing in the Coinbase org is a self-custodial
   HD-wallet library, BIP-39/32 code, or a QR/share component.
-- Re-check this section against Lane D's committed code.
+- Re-checked against Lane D's committed code by the coordinator's
+  re-check pass (2026-11-26): the Buy tile, the `?buy=1` panel, the
+  `onramp.ts` URL builder and the absence of `cbpay-js` from
+  `package.json` are all in the merged tree.
 
-## §13. Shamir backup shares — PENDING Lane E
+## §13. Shamir backup shares — IMPLEMENTED (Lane E)
 
-**Status: PENDING.** No Shamir code exists in Bawa today. The survey's
-verified facts, which Lane E must implement from:
+**Status: IMPLEMENTED.** The vault's raw 256-bit AES-GCM key — never
+the recovery phrase — is split into N-of-M shares (2-of-3 / 2-of-5 /
+3-of-5) via `shamir-secret-sharing` 0.0.4 (Privy org, Apache-2.0),
+lazy-loaded. Implementation: `apps/web/src/wallet/backup-shares.ts`
++ `apps/web/src/screens/backup-shares.tsx`, lazy-loaded from
+`apps/web/src/app/app.tsx` (`loadBackupShares`, route
+`/backup-shares`); the screen is linked from Security. Shares are
+`bawa-share-v1:` base64 + QR. Restore is proven by trial-decrypting
+the real vault envelope after combining (`combine` does NOT verify
+reconstruction integrity, so a bad reconstruction errors clearly
+instead of being silently accepted). No restore-from-shares UI exists
+yet — check-only by design.
+
+The survey's verified facts, which Lane E implemented from:
 
 - **Library:** `shamir-secret-sharing` (Privy org), Apache-2.0
   (verified three ways: API, LICENSE file, npm), zero-dependency
@@ -666,23 +768,43 @@ verified facts, which Lane E must implement from:
 - **Shares are raw bytes, not words.** This is NOT SLIP-39 (shares are
   raw bytes, incompatible with SLIP-39 word-shares). Bawa must add
   user-facing encoding (base64 and/or QR) for the shares.
-- **Lazy-load only, or re-baseline.** Cost is an **estimate only,
-  ~5–8 KB minified (~2–3 KB gzip), not build-measured** — even this small
-  library would likely exceed the headroom if bundled eagerly. Load it by
-  dynamic import on the backup screen only, or re-baseline by owner
-  order. Lane E must measure the real cost in Bawa's build.
+- **Measured cost in Bawa's build:** lazy chunk 4,785 B; main-bundle
+  delta +923 B. The library is loaded by dynamic import on the backup
+  screen only.
+- **Vault change (flagged for review):** `autoUnlock()` now imports the
+  stored key extractable so an auto-unlocked vault can create shares.
+  The lane's claim is that this adds no new privilege (page JS can
+  already read the mnemonic while the vault is unlocked) — that claim
+  needs a second look at review time. The extractable-key rationale is
+  recorded in `apps/web/src/wallet/vault.ts:431-433` so it is not
+  missed.
 - **Custody boundary:** Privy's model is the opposite of Bawa's
   self-custody — Privy embedded wallets route key material through
   Privy's infrastructure (TEE/HSM) with a Privy App ID/secret. Adopting
   any Privy SDK would be a redesign, not an integration. Only the
   standalone Shamir library is in scope; no Privy service, App ID, or
   dashboard account is used.
-- Re-check this section against Lane E's committed code.
+- Re-checked against Lane E's committed code by the coordinator's
+  re-check pass (2026-11-26): the share creation, the `bawa-share-v1:`
+  encoding, the trial-decrypt restore check and the lazy chunk are
+  all in the merged tree.
 
-## §14. ERC-7730 clear signing — PENDING Lane F
+## §14. ERC-7730 clear signing — IMPLEMENTED (Lane F)
 
-**Status: PENDING.** Bawa has no clear-signing feature today. The
-survey's verified facts, which Lane F must implement from:
+**Status: IMPLEMENTED.** The Send review screen shows an ERC-20 token
+send as human-readable rows (Send, To, Amount) from a curated
+ERC-7730 snapshot (`apps/web/src/wallet/clear-signing-snapshot.json`,
+1,523 bytes; generic ERC-20 transfer/approve + 1inch `unoswapTo`).
+Unknown calls fall back honestly to raw data. Implementation:
+`apps/web/src/wallet/clear-signing.ts` +
+`apps/web/src/screens/send-review.tsx` (with
+`send-review-clear-signing.test.tsx`); the snapshot is generated by
+`apps/web/scripts/generate-clear-signing-snapshot.mjs`. CAIP-2/CAIP-10
+helpers in `apps/web/src/wallet/caip.ts` are implemented from the
+public specs — no code taken from WalletConnect (the CAIP module lives
+in the WalletConnect monorepo under the Reown licence).
+
+The survey's verified facts, which Lane F implemented from:
 
 - **Data:** `clear-signing-erc7730-registry` (okxlabs), **CC0 1.0**,
   ERC-7730 clear-signing metadata (JSON) for human-readable EVM
@@ -710,7 +832,13 @@ survey's verified facts, which Lane F must implement from:
   **Not build-verified:** there is no cargo/rustc on loud-stone, so
   the release build (`cargo build --release`) has not been run here;
   the first build is a follow-up on a machine with a Rust toolchain.
-- Re-check this section against Lane F's committed code.
+- **Measured cost in Bawa's build:** +4,404 B. EIP-712 is not wired
+  (no signing surface); Safe `execTransaction` and 1inch `unoswap`
+  were cut for bundle.
+- Re-checked against Lane F's committed code by the coordinator's
+  re-check pass (2026-11-26): the review-screen rows, the snapshot,
+  the raw-data fallback and the CAIP helpers are all in the merged
+  tree.
 
 ## §15. UI contract
 
@@ -725,8 +853,8 @@ survey's verified facts, which Lane F must implement from:
   is confined to the QR card and its PNG exporter.
 - Dead controls in a state where they cannot act are defects: show zero
   where there is no wallet and no amount — never a Retry button with
-  nothing to retry. Keep the shop's filter rail in a restyle; restructure
-  around it.
+  nothing to retry. Keep the Assets screen's search filter bar in a
+  restyle; restructure around it (it is the wallet's filter rail).
 - Owner-approved foundations are not proof of integration — the adoption
   evidence is the starter builds, tests, and preview checks.
 - A first preview must use the REAL site's assets with only the
@@ -759,59 +887,58 @@ claim was traced to the file:line in the `usable-lane-g-guide` worktree
 (base `7fea3e4`) or to the wallet-org survey, and the older guide text was
 compared. Where the older guide was wrong, it was fixed in place in the
 same lane (see the commit). Where a Part A lane had not committed, the
-section is marked PENDING with the reason.
+section is marked PENDING with the reason. **Re-check pass
+(2026-11-26, coordinator, hands-on, 0 Sol calls):** every PENDING row
+was re-traced against the merged rebased tree (`usable-install` on
+token-gaps `4a12409`) and updated to Implemented where the code
+landed; the budget, chain count, QR template count and test counts
+were re-measured from that tree (see the rows below).
 
 | Spec section | Traced to (file:line or survey) | Older guide state | Verdict |
 | --- | --- | --- | --- |
 | §0.1 broadcast disabled | `apps/web/src/wallet/send.ts:65-66`, `:987` | Correct in `AGENTS.md` §4/§8, `WALLET_BUILDER.md` | Verified |
-| §0.2 bundle 4,185,000 | `CONSTRAINTS.md:40` | Correct; `WALLET_BUILDER.md` §"Fixed engine" already cites it | Verified |
+| §0.2 bundle 4,215,000 | `CONSTRAINTS.md:40` (re-baselined by owner order 2026-11-26, commit `4a12409`); CI `ci.yml:193` | Was 4,185,000 at Lane G writing; re-baselined with the redesign | Fixed in place (re-check pass) |
 | §0.3 4-colour cap + `--qr-*` | `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Correct in DECISIONS §24; now stated in this spec | Verified |
 | §0.4 no fake data | `apps/web/src/wallet/price-fallbacks.ts` header; `chains.ts` `availableFor` | Correct | Verified |
-| §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 84-chain app — noted as OPEN, not silently widened | Fixed (note added) |
-| §2 84 chains | `apps/web/src/wallet/chains.ts`; `chains-expanded.ts:116`, `:1792` (`EXPANDED_CHAIN_COUNT = 62`); `docs/EXPANSION-PROGRAMME.md` | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place |
+| §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 87-chain app — noted as OPEN, not silently widened | Fixed (note updated 84 → 87) |
+| §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:116`, `:1792` (`EXPANDED_CHAIN_COUNT = 62`); §2.5 (3 OKX-reference chains) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87) |
 | §2.1 derivation paths | `chains.ts:403-455` (EVM_PATH, SOL/TON); `WALLET_BUILDER.md` policy table | Correct; SOL indexed form added from code | Verified |
 | §2.2 icons / assets pin | `chains-expanded.ts` header; `TRUST_WALLET_ASSETS_PIN` | Correct | Verified |
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |
 | §2.4 XRP/Stellar/NEAR | Coordinator first-hand registry check, 2026-11-25 (survey) | Not previously recorded in the guide | Added |
-| §2.5 Cardano/Starknet/Kaspa | Zero mentions in `chains.ts` / `chains-expanded.ts` (grep, 2026-11-25); survey OKX section | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three are absent from the app | PENDING Lane B |
-| §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale | Fixed in place (99 files / 2,799 + 5 skipped, 2026-11-24; smoke 440) |
+| §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1821` (cardano), `:1848` (kaspa), `:1875` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
+| §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files / 2,945 + 5 skipped, 2026-11-26; smoke 440; dinero.js dropped) |
 | §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:2`, `:82`; `auto-lock.ts:21-26` | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |
 | §5 offline signing | `apps/web/src/wallet/send.ts:2527-2530` (Solana); capability table in `WALLET_BUILDER.md` | Correct; SOL `@solana/web3.js` route added from code | Verified |
 | §6 token verification | `apps/web/src/wallet/token-verification.ts:25-45`, `:101` | Correct in code; `docs/TOKEN-VERIFY-PROGRAMME.md` records the programme | Verified |
-| §6.6 Bitget Agent API | Survey Bitget section; `https://copenapi.bgwapi.io` (live answers NOT verified) | Not in the guide before | PENDING Lane A |
+| §6.6 Bitget Agent API | `token-verification.ts` (Lane A browser leg, read first-hand); live answers verified by Lane H (USDC/PEPE VERIFIED, fake UNVERIFIED, 2026-11-26) | Not in the guide before | Implemented (Lane A browser leg + Lane H agent-side) |
 | §6.6 Bitget Agent API (Lane H) | `token-verification.ts` (Lane A browser leg, read first-hand); `scripts/verify-token-bitget.mjs` + test (9 tests); live USDC/PEPE VERIFIED, fake UNVERIFIED, 2026-11-26 | Browser leg wired but fail-closed at the CORS preflight; no agent-side form existed | Implemented (agent-side) + browser leg recorded |
 | §11 WalletConnect (Lane H) | `repo1.maven.org/.../com/walletconnect/web3wallet/maven-metadata.xml` (1.35.2, live); `Web3Wallet.kt` `approveSession`; Apache-2.0 LICENSE | Android route named but unversioned | Added (Android record only; no Gradle change — no SDK on loud-stone, app has no signing path) |
 | §7 prices + fallbacks | `apps/web/src/wallet/price-fallbacks.ts` header; `dex-prices.ts` trap note | Correct | Verified |
 | §7.1 okx-cex-market skill | `custom-skills/okx-cex-market/okx-cex-market/SKILL.md` (MIT v1.5.2; `okx` CLI binary required) | Not in the guide before | Added (agent skill only) |
-| §8 QR cards | `apps/web/src/screens/qr-card.tsx:336`; `payment-links.ts:700-760`; `docs/DECISIONS.md` §24 | Correct in DECISIONS §24; now a single spec section | Verified |
-| §9 watch-only mainnet-only | Owner decision 2026-11-23 (standing record); `apps/web/src/wallet/watch-only-families.ts`; `state/wallet-context.tsx` `ALL_CHAIN_IDS` hydration fix | `docs/05-watch-only/README.md` predates the 84-chain hydration fix | Verified; §9 states the fix |
+| §8 QR cards | `apps/web/src/screens/qr-card.tsx`; `payment-links.ts:727-760` (`QR_CARD_TEMPLATES`, 7 entries; `QR_CARD_TEMPLATE_QR`); `docs/DECISIONS.md` §24 + §25 (redesign E/F/G) | Said four templates (A–D); the redesign added E/F/G on token-gaps | Fixed in place (four → seven) |
+| §9 watch-only mainnet-only | Owner decision 2026-11-23 (standing record); `apps/web/src/wallet/watch-only-families.ts`; `state/wallet-context.tsx` `ALL_CHAIN_IDS` hydration fix | `docs/05-watch-only/README.md` predates the 87-chain hydration fix | Verified; §9 states the fix |
 | §10 devnet / E1 | `apps/web/src/wallet/devnet.ts:30`; `docs/DECISIONS.md:399-410`; `CONSTRAINTS.md` E1 | Correct; E1 expiry 2027-02-20 stated | Verified |
-| §11 WalletConnect | Survey WalletConnect section (2.21.0 = 396,013 B minified, measured) | Not in the guide before | PENDING Lane C |
-| §12 Coinbase Onramp | Survey Coinbase section (`@coinbase/cbpay-js@2.4.0`, 7,473 B minified, Bundlephobia) | Not in the guide before | PENDING Lane D |
-| §13 Shamir | Survey Privy section (Apache-2.0, ~5–8 KB est., not build-measured) | Not in the guide before | PENDING Lane E |
-| §14 ERC-7730 | Survey OKX/okxlabs section (CC0 1.0, fork — prefer upstream) | Not in the guide before | PENDING Lane F |
+| §11 WalletConnect | `apps/web/src/wallet/walletconnect.ts`; `apps/web/src/screens/walletconnect.tsx`; `app.tsx` lazy route `/walletconnect`; `package.json` `@walletconnect/sign-client` 2.21.0; `docs/DECISIONS.md` §26 | Not in the guide before | Implemented (Lane C; live dApp connection NOT verified — needs the owner's projectId) |
+| §12 Coinbase Onramp | `apps/web/src/wallet/onramp.ts` (URL builder, no SDK); `receive.tsx` `?buy=1` panel; `package.json` has NO `cbpay-js` | Not in the guide before | Implemented (Lane D; live purchase NOT verified — needs onboarding/keys) |
+| §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup-shares.tsx`; `app.tsx` lazy route `/backup-shares`; `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only) |
+| §14 ERC-7730 | `apps/web/src/wallet/clear-signing.ts`; `clear-signing-snapshot.json` (1,523 B); `apps/web/src/wallet/caip.ts`; `send-review.tsx` | Not in the guide before | Implemented (Lane F) |
 | §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
 | §18 Lane H mining | Wallet-repos survey + agent-repos dirs (sandbox, read-only) + FEC skills (MIT) | Not in the guide before | Added |
 | §15 UI contract | `WALLET_BUILDER.md` "UI foundations and contract"; Doc 14 §5.1 | Correct | Verified |
 | §16 verify/report | `AGENTS.md` §5/§6 | Correct | Verified |
 
-**Not verified first-hand in this lane:** the Part A lanes' live
-behaviour (no code committed yet — see the status table); the Bitget
-Agent API's live answers; `okx-cex-market` end-to-end behaviour (needs
-the `okx` CLI binary); exact minified costs of the OKX coin packages and
-of Shamir (estimates, not builds); `cbpay-js` cost inside Bawa's Vite
-bundle (Bundlephobia figure only); WalletConnect cost inside Bawa's
-production bundle (standalone esbuild measurement only). Each is marked
-where it is used above.
-
-**Not verified first-hand in this lane:** the Part A lanes' live
-behaviour (no code committed yet — see the status table); the Bitget
-Agent API's live answers; `okx-cex-market` end-to-end behaviour (needs
-the `okx` CLI binary); exact minified costs of the OKX coin packages and
-of Shamir (estimates, not builds); `cbpay-js` cost inside Bawa's Vite
-bundle (Bundlephobia figure only); WalletConnect cost inside Bawa's
-production bundle (standalone esbuild measurement only). Each is marked
-where it is used above.
+**Not verified first-hand (re-check pass, 2026-11-26):** a live
+WalletConnect dApp connection (needs the owner's projectId); a live
+Coinbase Onramp purchase (needs onboarding + keys); the Bitget Agent
+API leg from a browser (fail-closed at the CORS preflight — the
+agent-side script is the live path); `okx-cex-market` end-to-end
+behaviour (needs the `okx` CLI binary); the Cardano passphrase
+caveat's user-facing wording (flagged, no owner decision yet);
+phone-camera QR decode (needs the owner's phone); Send review/sign
+in the browser (needs a funded wallet). Each is marked where it is
+used above. The duplicated copy of this paragraph that Lane G left
+in the spec has been removed.
 
 ## §18. Lane H mining record — "install all usable", 2026-11-26
 
@@ -827,10 +954,12 @@ coordinator was not disturbed, nothing was installed twice);
 entries, plus the Front-End-Checklist skill corpus inside
 agent-repos, which loud-stone's custom-skills does NOT carry).
 Licence checked first for every find; no verbatim copying without a
-licence check. Bundle budget in this base is 4,185,000 total JS
+licence check. Bundle budget in Lane H's base was 4,185,000 total JS
 (`CONSTRAINTS.md:40`, CI `ci.yml:193`); the 4,215,000 re-baseline
-lives on token-gaps only and is NOT in this base — Lane H measured
-against 4,185,000 and re-baselined nothing.
+lived on token-gaps only and was NOT in that base — Lane H measured
+against 4,185,000 and re-baselined nothing. After the rebase the
+merged tree enforces 4,215,000 (§0.2) and measures 4,648,952 total
+JS (over by 433,952 — reported, not re-baselined).
 
 ### §18.1 Finds applied
 
@@ -877,25 +1006,31 @@ above, which live in agent-repos, not in custom-skills. The
 was NOT re-read: Lane H changed nothing user-visible, so no CDP
 run was needed.
 
-### §18.4 Known discrepancies for the coordinator's re-check pass
+### §18.4 Known discrepancies for the coordinator's re-check pass — RESOLVED
 
-- **QR templates:** §8 says four templates (A–D). The redesign
-  added templates E/F/G on token-gaps; this base's spec still says
-  four. Lane H did not rewrite the count — reconcile after the
-  rebase.
-- **Bundle budget:** §0.2 says 4,185,000, which matches this base
-  (`CONSTRAINTS.md:40`, CI). The owner-ordered re-baseline to
-  4,215,000 lives on token-gaps only. Reconcile after the rebase;
-  Lane H measured against 4,185,000.
+- **QR templates:** §8 said four templates (A–D). The redesign
+  added templates E/F/G on token-gaps. **Resolved by the
+  coordinator's re-check pass (2026-11-26):** §8 now says seven
+  templates, with the E/F/G sizes and logo caps from
+  `QR_CARD_TEMPLATE_QR` (`payment-links.ts:748`).
+- **Bundle budget:** §0.2 said 4,185,000, which matched Lane H's
+  base. **Resolved:** §0.2 now says 4,215,000 (the owner-ordered
+  re-baseline, commit `4a12409`), and the merged tree measures
+  4,648,952 — over by 433,952, reported in §0.2's status block,
+  not re-baselined.
 - **CI comment:** `ci.yml` said "dist/assets <= 4,040,000 bytes"
   while the enforced gate is 4,185,000. Fixed in this lane
-  (comment only, to match the enforced number).
+  (comment only, to match the enforced number). The rebase carried
+  the fix; the gate now enforces 4,215,000 (`ci.yml:193`).
 - **Agent-repos SURVEY.md never appeared** during this lane, and
   agent-repos is not installed on loud-stone. The mining above is
-  from the sandbox copy, read-only.
+  from the sandbox copy, read-only. Still true at merge time — the
+  agent-repos install had no SURVEY.md when the programme closed;
+  the merge was not blocked on it (owner order).
 - **Not verified first-hand by Lane H:** `sonar` release build (no
   cargo on loud-stone); the WalletConnect Kotlin dependency inside
   a Gradle build (no Android SDK/JDK on loud-stone);
   `okx-cex-market` end-to-end (needs the `okx` CLI binary);
   `dev_rug_percent` scale at a non-zero value (normalised like its
-  sibling fields — stated in the script, not hidden).
+  sibling fields — stated in the script, not hidden). All still
+  open; carried to §17's not-verified list.

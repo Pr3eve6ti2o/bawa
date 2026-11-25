@@ -13,7 +13,7 @@ The profiles are validated and carry individual statuses: `hd-wallet-cli`, `bitc
 - `bitcoin-wallet` — Bitcoin-focused wallet requests; transaction support must not be assumed.
 - `evm-wallet` — ETH/EVM-oriented requests; support beyond the specified ETH policy is OPEN.
 - `multichain-wallet` — Combined BTC, ETH, TRX and TON requests; TON remains generation-only and single-address.
-- `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only. The web wallet now wires 84 chains (22 curated + 62 expansion — see `docs/CREATE-THIS-SPEC.md` §2); this profile's registry entry has NOT been re-validated for the 84-chain set, so the wider set is OPEN for this profile until the registry is updated.
+- `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only. The web wallet now wires 87 chains (22 curated + 62 expansion + 3 OKX-reference — see `docs/CREATE-THIS-SPEC.md` §2); this profile's registry entry has NOT been re-validated for the 87-chain set, so the wider set is OPEN for this profile until the registry is updated.
 - `web-wallet` — Browser-wallet requests; token-ui foundation inspected in Phase 5 and adopted in Phase 6 (vendored in `apps/web/src/ui/`).
 - `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7).
 - `watch-only-wallet` — Public-data-only observation requests, without secret intake or signing; monitoring support still requires evidence.
@@ -101,7 +101,7 @@ guards the pin.
 ```sh
 npm run typecheck   # tsc --noEmit, 0 errors
 npm run build       # copy-wasm + tsc + vite build, 0 errors
-npm run test        # vitest run — 99 files, 2,799 passed + 5 skipped (verified 2026-11-24, docs/index.md)
+npm run test        # vitest run — 110 files, 2,945 passed + 5 skipped (verified 2026-11-26, docs/index.md)
 ```
 
 **Upstream sources.** The engine is Apache-2.0, upstream
@@ -165,7 +165,7 @@ available for an operation only when `availableFor(capability)` in
 
 <!-- END GENERATED: capabilities from apps/web/src/wallet/chains.ts. -->
 
-**Note on the table above (2026-11-25, Lane G):** the generated table covers only the 22 curated chains in `apps/web/src/wallet/chains.ts`. The 62 expansion chains live in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAINS`, `EXPANDED_CHAIN_COUNT = 62`) — 84 chains in total. Do not read the 22-row table as the chain count. See `docs/CREATE-THIS-SPEC.md` §2 for the full 84-chain specification and the per-operation availability rule (`availableFor`).
+**Note on the table above (2026-11-25, Lane G):** the generated table covers only the 22 curated chains in `apps/web/src/wallet/chains.ts`. The 62 expansion chains live in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAINS`, `EXPANDED_CHAIN_COUNT = 62`), plus 3 OKX-reference chains (Cardano, Starknet, Kaspa — see `docs/CREATE-THIS-SPEC.md` §2.5) — 87 chains in total. Do not read the 22-row table as the chain count. See `docs/CREATE-THIS-SPEC.md` §2 for the full 87-chain specification and the per-operation availability rule (`availableFor`).
 
 If you want to use a wallet to hold funds, see the product-user route
 in [README.md](README.md) ("If you want a wallet to use"). This

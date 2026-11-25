@@ -28,7 +28,7 @@ The **guide** (`docs/`, sixteen sections, plus the machine-readable
 professional wallet from resources that actually exist. The **example
 web wallet** (`apps/web/`) is the working proof of that guide: a fully
 functional example wallet built using it. It creates a real HD wallet in
-the browser, derives addresses on 84 chains, reads real balances and
+the browser, derives addresses on 87 chains, reads real balances and
 prices from public endpoints, and lets you receive, track, and add
 tokens. It never invents a balance or a price, and it cannot send funds
 on mainnet: broadcast stays disabled.
@@ -86,7 +86,7 @@ flowchart TB
     accTitle: Balances, prices and flows
     accDescr: Addresses feed public RPC balances and cached prices; Receive, Track and Add Token read them, and Send stops at a disabled broadcast.
 
-    addrs2["Addresses on 84 chains"] --> balances["Balances — public RPCs, up to 3 per chain"]
+    addrs2["Addresses on 87 chains"] --> balances["Balances — public RPCs, up to 3 per chain"]
     balances --> prices["Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI"]
     balances --> receive["Receive — address + QR"]
     balances --> track["Track — by transaction hash"]
@@ -276,7 +276,7 @@ locally; balances come from public read-only endpoints.
 | 59 EVM chains — one shared address | `apps/web/src/wallet/core.ts:40` (`DEFAULT_PATHS`: all 59 0x EVM chains `m/44'/60'/0'/0/0`) | One address across the 59 0x EVM chains (Ronin shares the key with a `ronin:` prefix) |
 | BTC · TRX · TON · SOL · LTC · DOGE | `apps/web/src/wallet/core.ts:40-63` (`DEFAULT_PATHS`), `apps/web/src/wallet/chains.ts:919-921` (`pathFor` per chain; TON V4 R2, workchain 0) | Per-chain derivation paths |
 | Watch-only — xpubs only, no secret | `apps/web/src/engine/boundary.ts:609` (`validateWatchOnlyImport`), `apps/web/src/state/wallet-context.tsx:76` (`bawa-watch-only-xpubs`) | Public extended keys only; mainnet-only |
-| Addresses on 84 chains | As "84 addresses" above | The addresses every flow starts from |
+| Addresses on 87 chains | As "87 addresses" above | The addresses every flow starts from |
 | Balances — public RPCs, up to 3 per chain | `apps/web/src/wallet/chains.ts:1012` (`MAX_RPC_ENDPOINTS_PER_CHAIN = 3`), `chains.ts:1093` (`resolveRpcEndpoints`), `apps/web/src/wallet/adapters/index.ts:88` (`registerAllAdapters`), `apps/web/src/state/wallet-context.tsx:873` (`refreshBalances`) | Balance refresh across enabled chains; failures show as unavailable |
 | Networks — connections, prices, history | `apps/web/src/screens/network-selection.tsx` (`RpcEndpointManager`, `PriceSourcesCard`), `apps/web/src/wallet/chains.ts` (`makePrimaryEndpoint`, `isCustomRpcOriginUsable`, `SUGGESTED_CUSTOM_RPCS`), `apps/web/src/wallet/rpc-probe.ts` (`probeRpcEndpoint`), `apps/web/src/wallet/price-fallbacks.ts` (`priceFallbackSourcesFor`), `apps/web/src/state/wallet-context.tsx` (`BalanceState.source`) | One screen to see and switch RPCs, check them live, and see price and history sources; every switch refreshes balances at once |
 | Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:52` (CoinGecko base), `prices.ts:104` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:108` (`PriceSource`), `prices.ts:409` (`PRICE_CACHE_KEY`), `prices.ts:648` (`fetchPrices`), `prices.ts:1142` (`usePrices`), `apps/web/src/wallet/price-fallbacks.ts` (`applyPriceFallbacks`, CoinLore + Coinbase native fallbacks), `apps/web/src/wallet/dex-prices.ts:49`, `apps/web/src/wallet/token-prices.ts:167` (fallback order), `token-prices.ts:404` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one |
