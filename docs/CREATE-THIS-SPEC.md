@@ -899,6 +899,17 @@ The survey's verified facts, which Lane F implemented from:
 
 ## §15. UI contract
 
+- The design system is `docs/DESIGN-SYSTEM.md` (moved into the repo
+  2026-11-26 from the redesign programme; this answers the old open
+  question that the core cited "DESIGN-SYSTEM §2.5" with no such file
+  in-tree). It records, not assumes: the four `--bawa-*` tokens (§2.1)
+  and their contrast ratios (§2.1, 13.92/10.28/5.03:1 with two FAIL
+  pairs), the 44 px touch rule and the known `Button` gap (§2.5),
+  breakpoints (980 px shell, 480 px task cap; viewports 390/820/1440/
+  1919) (§4), type scale and floors (§2.3), spacing/stroke/radius/
+  shadow/motion tokens (§2.4), and per-section placement guidance (§6).
+  "Popular chains" was removed from the homepage by owner order and
+  must not be re-added (§6, §7).
 - Follow Doc 14 §5.1's **14-screen contract**. **Review is a Send state;
   Lock is an app state**, not extra screens. Required states: **loading,
   empty, stale, locked, gate-failed, error**.
