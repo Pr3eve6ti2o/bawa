@@ -1,1 +1,0 @@
-import{t as e}from"./sha2-DYRVzKl-.js";import{a as t,l as n,x as r}from"./keccak256-6mAY9XGE.js";var i=e;function a(e,a){let o=a||`hex`,s=i(r(e,{strict:!1})?t(e):e);return o===`bytes`?s:n(s)}export{a as t};
