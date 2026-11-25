@@ -27,6 +27,7 @@ export const BAWA_ICON_NAMES = [
   "alert",
   "arrow-up-right",
   "arrow-down",
+  "swap",
   "copy",
   "clock",
 ] as const;
@@ -144,6 +145,15 @@ const ICON_PATHS: Record<BawaIconName, readonly string[]> = {
   "arrow-down": [
     "M12.1 4 Q11.7 11.4 12 19.8",
     "M6.6 14.1 Q9.4 17.3 12 19.9 Q14.9 17.1 17.4 14.2",
+  ],
+  // Lane 6 (UX-major programme): two opposing arrows — the Swap
+  // direction flip and the Swap nav entry. Same hand-drawn quadratic
+  // strokes as the other glyphs, same 24x24 box.
+  swap: [
+    "M4.5 8 Q10 7.4 19 8",
+    "M15.5 4.8 Q18 6.4 19.2 8.1 Q18 10.4 15.6 11.6",
+    "M19.5 16 Q14 16.6 5 16",
+    "M8.5 12.8 Q6 14.4 4.8 16.1 Q6 18.4 8.4 19.6",
   ],
   copy: [
     "M8.1 7.4 Q7.8 5.4 8.2 3.4 Q14.4 3.1 20.5 3.6 Q20.8 10.2 20.4 16.8 Q18.5 17.1 16.6 16.8",

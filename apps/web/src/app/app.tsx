@@ -74,6 +74,12 @@ const loadWalletConnect = () =>
     default: m.WalletConnectScreen,
   }));
 const WalletConnectScreen = lazy(loadWalletConnect);
+// Lane 6 (UX-major programme): the Swap screen is a lazy route like
+// the others — its own chunk, never in the main bundle. Quotes only;
+// nothing in it signs or broadcasts.
+const loadSwap = () =>
+  import('../screens/swap').then((m) => ({ default: m.SwapScreen }));
+const SwapScreen = lazy(loadSwap);
 
 // Route-chunk preloading (MetaMask's preload pattern): hovering or
 // focusing a nav link starts loading that route's chunk, so the click
@@ -96,6 +102,7 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/networks': loadNetworkSelection,
   '/wallets': loadWalletManagement,
   '/walletconnect': loadWalletConnect,
+  '/swap': loadSwap,
   '/lock': loadLock,
 };
 
@@ -252,7 +259,7 @@ function AppLayout() {
   // only: at desktop: they go full content width so the screens can
   // lay out in two columns (create-wallet, security).
   const isNarrow =
-    ['/send', '/receive', '/import-wallet', '/mnemonic-backup', '/backup-shares'].includes(
+    ['/send', '/receive', '/swap', '/import-wallet', '/mnemonic-backup', '/backup-shares'].includes(
       pathname,
     ) || pathname.startsWith('/assets/');
   const isWideAtDesktop = ['/create-wallet', '/security', '/lock'].includes(pathname);
@@ -491,6 +498,7 @@ export function App() {
             <Route path="assets/:chain/:token" element={<AssetDetailScreen />} />
             <Route path="receive" element={<ReceiveScreen />} />
             <Route path="send" element={<SendScreen />} />
+            <Route path="swap" element={<SwapScreen />} />
             <Route path="transactions" element={<TransactionHistoryScreen />} />
             <Route path="transactions/:id" element={<TransactionDetailScreen />} />
             <Route path="track" element={<TrackTransactionScreen />} />

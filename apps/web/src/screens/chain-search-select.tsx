@@ -30,6 +30,9 @@ export const RECENT_CHAINS_KEY = 'bawa:watch-only-recent-chains';
     the chains they watch, and mixing the two lists would surface
     watch-only chains on the Send step (and vice versa). */
 export const SEND_RECENT_CHAINS_KEY = 'bawa:send-recent-chains';
+/** localStorage key for the recently picked Swap chains. Kept apart
+    from the send/watch-only recents (same reason as above). */
+export const SWAP_RECENT_CHAINS_KEY = 'bawa:swap-recent-chains';
 /** How many picked chains the Recent row keeps. */
 export const MAX_RECENT_CHAINS = 5;
 

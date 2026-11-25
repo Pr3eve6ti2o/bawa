@@ -121,9 +121,10 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
     }
   });
 
-  it('keeps the More menu destinations unchanged (10 links)', () => {
-    expect(MORE_LINKS).toHaveLength(10);
+  it('keeps the More menu destinations unchanged (11 links)', () => {
+    expect(MORE_LINKS).toHaveLength(11);
     expect(MORE_LINKS.map(({ to }) => to)).toEqual([
+      '/swap',
       '/wallets',
       '/transactions',
       '/track',

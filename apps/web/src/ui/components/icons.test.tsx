@@ -33,6 +33,7 @@ const EXPECTED_ICON_NAMES: readonly BawaIconName[] = [
   "alert",
   "arrow-up-right",
   "arrow-down",
+  "swap",
   "copy",
   "clock",
 ];

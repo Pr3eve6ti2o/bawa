@@ -1122,6 +1122,64 @@ describe('send screen', () => {
     }
   });
 
+  it('shows the formatted fee with its fiat value on the ETH details step', async () => {
+    // Lane 6: the fee line shows the real quote (420000000000000 wei
+    // = 0.00042 ETH) with the live-feed fiat value (ETH $2,000, so
+    // ≈ $0.84), plus the note and the About-this-fee disclosure.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      await waitForText(mounted.div, 'Estimated fee: 0.00042 ETH');
+      expect(mounted.div.textContent).toContain('Estimated fee: 0.00042 ETH');
+      expect(mounted.div.textContent).toContain('(≈ $0.84)');
+      expect(mounted.div.textContent).toContain('stub fee');
+      expect(mounted.div.textContent).toContain('About this fee');
+      expect(mounted.div.textContent).toContain('it may change before signing');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a sat/vB fee as a rate, never as an amount', async () => {
+    // Lane 6: a BTC-style adapter quotes a RATE (12 sat/vB). The old
+    // screen would have formatted a rate as an amount on non-ETH
+    // chains; the fee line must show the rate with its note instead.
+    setWallet();
+    const rateAdapter = {
+      ...ethAdapter,
+      estimateFee: async () => ({
+        status: 'ok',
+        data: {
+          chain: 'eth',
+          networkId: 'eip155:1',
+          feeBaseUnits: '12',
+          unit: 'sat/vB',
+          note: 'stub rate',
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+    };
+    vi.mocked(getAdapterForMode).mockReturnValueOnce(
+      rateAdapter as unknown as ChainAdapter,
+    );
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      await waitForText(mounted.div, 'Network fee rate: 12 sat/vB');
+      expect(mounted.div.textContent).toContain('Network fee rate: 12 sat/vB');
+      expect(mounted.div.textContent).toContain('stub rate');
+      expect(mounted.div.textContent).not.toContain('Estimated fee:');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows only the chain step on mount — no token list, recipient, amount or action below it', async () => {
     setWallet();
     const mounted = await mountScreen();
