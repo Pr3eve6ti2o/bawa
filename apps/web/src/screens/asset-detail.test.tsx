@@ -224,11 +224,23 @@ describe('asset detail screen', () => {
     try {
       expect(mounted.div.textContent).toContain('1.5 ETH');
       expect(mounted.div.textContent).toContain('Received');
-      expect(mounted.div.textContent).toContain('0xabc');
+      // Lane 2: the row shows the counterparty, not the hash — the
+      // hash lives one tap away on the detail screen, via this link.
+      expect(
+        mounted.div.querySelector('a[href="/transactions/0xabc"]'),
+      ).not.toBeNull();
       expect(mounted.div.textContent).not.toContain('Demo balance');
       // The live per-unit price renders in the Details block.
       expect(mounted.div.textContent).toContain('$2,000.00');
       expect(mounted.div.textContent).toContain('per ETH');
+      // Lane 2: the hero shows the holding's fiat value (1.5 ETH at
+      // $2,000), not just the native amount — the same live feed as
+      // the rows, so the number cannot disagree with the list.
+      expect(mounted.div.textContent).toContain('$3,000.00');
+      // Lane 2: the Details card carries the receiving address with
+      // a copy button, and the history block links to the full list.
+      expect(mounted.div.querySelector('button[aria-label="Copy address"]')).not.toBeNull();
+      expect(mounted.div.textContent).toContain('View all transactions');
     } finally {
       await mounted.cleanup();
     }
@@ -246,6 +258,8 @@ describe('asset detail screen', () => {
     try {
       expect(mounted.div.textContent).toContain('0 BTC');
       expect(mounted.div.textContent).toContain('Zero balance');
+      // Lane 2: a genuine zero is worth $0.00 in the hero too.
+      expect(mounted.div.textContent).toContain('$0.00');
       expect(mounted.div.textContent).toContain('No transactions yet for this chain.');
     } finally {
       await mounted.cleanup();

@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
+import { CopyButton } from '../ui/components/copy-button';
 import { availableFor, chainConfig } from '../wallet/chains';
 import {
   CHAIN_DECIMALS,
@@ -208,7 +209,10 @@ export function TransactionDetailScreen() {
           </DetailRow>
 
           <DetailRow label="Transaction hash">
-            <span className="break-all font-mono">{found.tx.hash}</span>
+            <span className="flex items-start justify-between gap-3">
+              <span className="min-w-0 break-all font-mono">{found.tx.hash}</span>
+              <CopyButton value={found.tx.hash} label="Copy transaction hash" />
+            </span>
           </DetailRow>
 
           {found.tx.explorerUrl && (

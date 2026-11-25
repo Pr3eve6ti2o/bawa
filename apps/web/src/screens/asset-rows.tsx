@@ -172,70 +172,69 @@ function noWalletBalance(balance: BalanceState): BalanceState {
 
 /**
  * Shared fiat/detail computation for the native and token row models.
- * A funded row shows its fiat value plus the per-unit price line; a
- * zero/unknown row shows the per-unit price instead; a stale feed
- * shows its state. Round 2, item 6: in devnet mode a non-zero test
- * balance must never show a fiat value — test tokens are valueless,
- * so pricing one at the mainnet rate would invent value; the row
- * shows the live per-unit price instead, exactly as a zero-balance
- * row does. The token rows apply the same suppression — their row
- * model passes devnet through (Fix-all Lane H, item 2: they used to
- * hardcode devnet=false here) — so this helper takes it as a
- * parameter rather than deciding it.
+ * Lane 2 (redesign): one meaning per column, everywhere. The VALUE is
+ * always the holding's fiat value — "$0.00" for a genuine zero balance
+ * (0 x any price is $0.00, even with a stale feed), the computed fiat
+ * value for a funded row, nothing when the value is genuinely unknown
+ * (failed balance, stale price on a funded row, valueless devnet
+ * balance). The DETAIL is always the per-unit price line ("$61,706.00
+ * per BTC") when the feed is fresh, or the price state label ("Price
+ * expired" / "Price unavailable" / "Price error") when it is not.
+ * The old shape put the per-unit price in the value slot for zero rows
+ * (so a zero BTC row headlined $59,090.00 on the dashboard while the
+ * asset table headlined $0.00 for the same row) and repeated the
+ * freshness + source ("per BTC · Updated just now · CoinGecko") on
+ * every row; that provenance now lives once above the list (see
+ * priceProvenanceLine), not on 43 rows.
+ * Devnet stays the exception it was: a funded test balance is
+ * valueless, so its value slot shows the live per-unit price instead
+ * (isGenuineZero false + devnet-forced zero), exactly as before.
  */
 function fiatDetail(
   initialDetail: string,
   fiat: FiatValueResult,
   displayUnit: UnitPrice,
-  entry: PriceEntry,
   symbol: string,
-  nowMs: number,
   devnet: boolean,
+  isGenuineZero: boolean,
 ): { fiatText: string | undefined; detail: string } {
-  let fiatText: string | undefined;
-  let detail = initialDetail;
   const effectiveFiat =
     devnet && fiat.kind === 'fiat' ? { kind: 'zero' as const } : fiat;
+  // The per-unit price line, or the price state when the feed is not fresh.
+  const priceLine =
+    displayUnit.kind === 'fresh'
+      ? `${displayUnit.text} per ${symbol}`
+      : displayUnit.kind === 'expired'
+        ? 'Price expired'
+        : displayUnit.kind === 'unavailable'
+          ? 'Price unavailable'
+          : displayUnit.kind === 'error'
+            ? 'Price error'
+            : initialDetail;
   switch (effectiveFiat.kind) {
     case 'fiat':
-      if (entry.status === 'fresh') {
-        fiatText = effectiveFiat.text;
-        // Item 12: a funded row shows the current per-unit price as
-        // well as its fiat value — the same "per X" line the
-        // zero-balance rows already show.
-        detail =
-          displayUnit.kind === 'fresh'
-            ? `${displayUnit.text} per ${symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`
-            : `${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
-      }
-      break;
+      return { fiatText: effectiveFiat.text, detail: priceLine };
     case 'zero':
-    case 'balance-unavailable':
-      // No fiat value exists for a zero or unknown balance, so the row
-      // shows the per-unit price instead — the feed's state stays
-      // visible instead of a silent empty.
-      if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
-        fiatText = displayUnit.text;
-        detail = `per ${symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
-      } else if (displayUnit.kind === 'expired') {
-        detail = 'Price expired';
-      } else if (displayUnit.kind === 'unavailable') {
-        detail = 'Price unavailable';
-      } else if (displayUnit.kind === 'error') {
-        detail = 'Price error';
+      // A genuine zero balance is worth $0.00 whatever the feed says;
+      // a devnet-funded balance forced into this branch keeps the old
+      // shape — the live per-unit price in the value slot.
+      if (isGenuineZero) {
+        return { fiatText: '$0.00', detail: priceLine };
       }
-      break;
+      return {
+        fiatText:
+          displayUnit.kind === 'fresh' ? displayUnit.text : undefined,
+        detail: priceLine,
+      };
+    case 'balance-unavailable':
+      return { fiatText: undefined, detail: priceLine };
     case 'expired':
-      detail = 'Price expired';
-      break;
+      return { fiatText: undefined, detail: 'Price expired' };
     case 'unavailable':
-      detail = 'Price unavailable';
-      break;
+      return { fiatText: undefined, detail: 'Price unavailable' };
     case 'error':
-      detail = 'Price error';
-      break;
+      return { fiatText: undefined, detail: 'Price error' };
   }
-  return { fiatText, detail };
 }
 
 /** Shared loading row for the list and the wide table: same skeleton. */
@@ -324,10 +323,9 @@ function getNativeRowModel(
       detail,
       fiat,
       displayUnit,
-      entry,
       config.symbol,
-      nowMs,
       devnet,
+      balance.status === 'zero',
     ));
   }
 
@@ -360,11 +358,13 @@ function getTokenRowModel(
   const key = tokenKeyOf(token);
   const chainName = chainConfig(token.chain).displayName;
   const link = `/assets/${token.chain}/${tokenSlug(token)}`;
-  // Token gaps, item 2: the short contract sits just below the token
-  // (subtitle), and official tokens carry the VERIFIED tick.
-  // Lane 4: the subtitle keeps the symbol too — the row title is the
-  // full token name (below), so the symbol must stay visible
-  // somewhere on the row.
+  // Token gaps, item 2: official tokens carry the VERIFIED tick.
+  // Lane 2 (redesign): the short contract STAYS in the subtitle
+  // ("USDC · Ethereum · 0xA0b8…eB48") — the verified-tick and Lane 4
+  // tests pin it on the row, and it is the copycat check next to the
+  // tick. The row-height win comes from dropping the per-row
+  // provenance subline instead (see priceProvenanceLine): a token row
+  // is now title + subtitle + value, not four lines.
   const subtitle = `${token.symbol} · ${chainName} · ${shortContract(token.contract)}`;
   const verified = isVerifiedToken(token);
   // Before the first token refresh lands, the entry is missing: show
@@ -440,10 +440,9 @@ function getTokenRowModel(
       detail,
       fiat,
       displayUnit,
-      entry,
       token.symbol,
-      nowMs,
       devnet,
+      balance.status === 'zero',
     ));
   }
 
@@ -609,18 +608,15 @@ function TableRow({ model }: { model: AssetRowModel }) {
     );
   }
 
-  // Merge (Lane C + Lane G): a zero balance shows $0.00 in the Value
-  // column (0 x any price is $0.00 - Lane G), and when the quote is
-  // fresh the per-unit price source detail ("per BTC - Updated just
-  // now - CoinGecko") renders under it (Lane C), exactly as under a
-  // funded row's fiat value. An unknown balance (unavailable / error)
-  // still shows a dash: its value genuinely is not known. The detail
-  // WRAPS instead of truncating: at 1440 the Value column clipped
-  // "CoinLore" to "Coi...", and the long line squeezed the asset names
-  // to one letter at 390. The cell is capped at 11rem below the @md
-  // breakpoint so the left column keeps its width; above it the 1fr
-  // track constrains the wrap instead.
-  const valueText = model.balanceStatus === 'zero' ? undefined : model.valueText;
+  // Lane 2 (redesign): the Value column is just the value. A zero
+  // balance shows $0.00 (0 x any price is $0.00 — Lane G) and a funded
+  // row its fiat value; an unknown balance still shows a dash, its
+  // value genuinely is not known. The per-unit price lives in the
+  // Price column and the freshness + source line lives once above the
+  // list (priceProvenanceLine) — the old shape repeated "per BTC ·
+  // Updated just now · CoinGecko" under the value as well, so the same
+  // "per BTC" appeared in two columns on every row.
+  const valueText = model.valueText;
 
   return (
     <li>
@@ -652,40 +648,61 @@ function TableRow({ model }: { model: AssetRowModel }) {
             </span>
           </span>
           <span className="col-start-1 row-start-2 truncate text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:text-right @md:text-[15px] @md:font-semibold @md:text-foreground">
-            {model.amount}
+            {model.balanceStatus === 'zero' ? (
+              <>
+                <span className="block">{`0 ${model.symbol}`}</span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Zero balance
+                </span>
+              </>
+            ) : (
+              model.amount
+            )}
           </span>
           <span className="col-start-2 row-start-2 text-right @md:col-start-auto @md:row-start-auto">
             <TablePriceCell price={model.price} symbol={model.symbol} />
           </span>
-          <span className="col-start-2 row-start-1 min-w-0 max-w-[11rem] text-right @md:col-start-auto @md:row-start-auto @md:max-w-none">
+          <span className="col-start-2 row-start-1 min-w-0 text-right @md:col-start-auto @md:row-start-auto">
             {valueText === undefined ? (
-              <>
-                {model.balanceStatus === 'zero' ? (
-                  <span className="text-[15px] font-bold text-foreground">$0.00</span>
-                ) : (
-                  <span className="text-[15px] font-semibold text-muted-foreground">—</span>
-                )}
-                {model.price.kind === 'fresh' ? (
-                  <span className="block text-xs text-muted-foreground">
-                    {model.detail}
-                  </span>
-                ) : null}
-              </>
+              <span className="text-[15px] font-semibold text-muted-foreground">—</span>
             ) : (
-              <>
-                <span className="block text-[15px] font-bold text-foreground">
-                  {valueText}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {model.detail}
-                </span>
-              </>
+              <span className="text-[15px] font-bold text-foreground">
+                {valueText}
+              </span>
             )}
           </span>
         </div>
       </Link>
     </li>
   );
+}
+
+/**
+ * Lane 2: the price provenance, stated once per list instead of once
+ * per row. The freshness label comes from the freshest quote across
+ * the native + token feeds; the sources are the distinct sources of
+ * the fresh quotes ("Updated just now · CoinGecko, CoinLore"). Rows
+ * with a stale feed still carry their own state label. No fresh quote
+ * anywhere → no line (the rows say so instead).
+ */
+function priceProvenanceLine(
+  prices: PriceMap | undefined,
+  tokenPrices: TokenPriceMap | undefined,
+  nowMs: number,
+): string | null {
+  const fresh = [
+    ...Object.values(prices ?? {}),
+    ...Object.values(tokenPrices ?? {}),
+  ].filter(
+    (entry): entry is Extract<PriceEntry, { status: 'fresh' }> =>
+      entry?.status === 'fresh',
+  );
+  if (fresh.length === 0) return null;
+  const newest = fresh.reduce((a, b) =>
+    b.quote.fetchedAtMs > a.quote.fetchedAtMs ? b : a,
+  );
+  const sources = [...new Set(fresh.map((entry) => entry.quote.source))];
+  return `${quoteFreshnessLabel(newest.quote, nowMs)} · ${sources.join(', ')}`;
 }
 
 export interface AssetRowsProps {
@@ -699,27 +716,37 @@ export interface AssetRowsProps {
   tokenPricesNowMs?: number;
   tokenPricesLoading?: boolean;
   variant?: 'list' | 'table';
+  /**
+   * Lane 2: client-side search text from the asset list's filter bar
+   * (matches name, symbol or chain, case-insensitive). Undefined on
+   * the dashboard, which has no search — the rows are unfiltered.
+   */
+  query?: string;
+  /** Lane 2: clears the search from the no-match empty state. */
+  onClearQuery?: () => void;
 }
 
 /**
  * Real-balance asset rows, shared by the dashboard and the asset list.
  * A row appears for every enabled chain whose balance capability is
  * verified (availableFor('balance')), plus one row per enabled token
- * (the 7 defaults, then user-added tokens). A non-zero balance shows
- * its fiat value when the caller passes a fresh price — except in
- * devnet mode, where a test balance shows the live per-unit price
- * instead: test tokens are valueless, so no fiat value is ever computed
- * from a devnet balance (Round 2, item 6). Every row also shows the per-unit price ("$61,706.00", labelled "per BTC") whenever
- * a fresh price is available — including zero balances and unavailable
- * balances — so a working feed is visible and a failed one says so
- * ("Price unavailable" / "Price error" / "Price expired"), never a
- * silent empty and never a fabricated number. While the first fetch is
- * still in flight, idle entries read as unavailable, so no price state
- * is shown rather than a premature failure. A failed row never shows
- * a per-row Retry (Lane J, MetaMask pattern): the fetch layer already
- * retries silently with backoff and keeps the last good value, so a row
- * button could only fail again — the Dogecoin row proved it. The retry
- * path is the single list-level Refresh on the hosting screen. The row
+ * (the 7 defaults, then user-added tokens). Lane 2: one meaning per
+ * column — the value is always the holding's fiat value ($0.00 for a
+ * zero balance, the computed fiat value for a funded row), and the
+ * per-unit price ("$61,706.00", labelled "per BTC") sits beside it:
+ * under the value in the list variant, in its own Price column in the
+ * table variant. A zero row never headlines the per-unit price. The
+ * price freshness + source ("Updated just now · CoinGecko") is stated
+ * once above the list, not repeated on 43 rows; a failed feed still
+ * says so per row ("Price unavailable" / "Price error" / "Price
+ * expired"), never a silent empty and never a fabricated number.
+ * While the first fetch is still in flight, idle entries read as
+ * unavailable, so no price state is shown rather than a premature
+ * failure. A failed row never shows a per-row Retry (Lane J, MetaMask
+ * pattern): the fetch layer already retries silently with backoff and
+ * keeps the last good value, so a row button could only fail again —
+ * the Dogecoin row proved it. The retry path is the single list-level
+ * Refresh on the hosting screen. The row
  * model itself is Ivy Wallet's feature/accounts pattern (icon + name +
  * balance + one status line, no Retry — patterns only, GPL-3.0, no code
  * copied), and a failed row is an Aceternity Empty States shape
@@ -749,6 +776,8 @@ export function AssetRows({
   tokenPricesNowMs,
   tokenPricesLoading,
   variant,
+  query,
+  onClearQuery,
 }: AssetRowsProps) {
   const wallet = useWallet();
   // Defensive defaults: the existing screen tests mock useWallet with
@@ -804,9 +833,31 @@ export function AssetRows({
       getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading, devnet),
     ),
   ];
-  const visible = hideZero ? models.filter((model) => !isZeroBalance(model)) : models;
+  // Lane 2: the search query (asset list only) filters the same models
+  // — name, symbol or chain, case-insensitive — after the zero filter,
+  // so the two compose ("hide zero" + "usd" shows funded stablecoins).
+  const normalizedQuery = query?.trim().toLowerCase() ?? '';
+  let visible = hideZero ? models.filter((model) => !isZeroBalance(model)) : models;
+  if (normalizedQuery !== '') {
+    visible = visible.filter((model) =>
+      `${model.title} ${model.subtitle}`.toLowerCase().includes(normalizedQuery),
+    );
+  }
+  const provenance = priceProvenanceLine(prices, tokenPrices, nowMs);
 
   if (visible.length === 0) {
+    if (normalizedQuery !== '') {
+      return (
+        <div className="space-y-2 p-4">
+          <p className="text-sm text-muted-foreground">
+            {`No assets match “${query?.trim()}”`}
+          </p>
+          <Button type="button" variant="outline" onClick={() => onClearQuery?.()}>
+            Show all assets
+          </Button>
+        </div>
+      );
+    }
     if (hideZero) {
       return (
         <div className="space-y-2 p-4">
@@ -850,6 +901,11 @@ export function AssetRows({
       <>
         {lockedNotice}
         <div className="@container">
+        {provenance !== null ? (
+          <p className="px-4 pt-3 pb-1 text-right text-xs text-muted-foreground">
+            {provenance}
+          </p>
+        ) : null}
         <div
           aria-hidden="true"
           className="hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]"
@@ -872,6 +928,11 @@ export function AssetRows({
   return (
     <>
       {lockedNotice}
+      {provenance !== null ? (
+        <p className="px-4 pt-3 pb-1 text-right text-xs text-muted-foreground">
+          {provenance}
+        </p>
+      ) : null}
       <ul className="divide-y divide-border">
         {visible.map((model) => (
           <ListRow key={model.key} model={model} />

@@ -697,4 +697,64 @@ describe('asset list screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('filters the list by search text and offers to clear a no-match search', async () => {
+    // Lane 2: 43 rows are unscannable without a filter — the filter
+    // bar's search narrows by name, symbol or chain, and a search
+    // that matches nothing says so with one way out.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+      }),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      expect(mounted.div.textContent).toContain('Bitcoin');
+      expect(mounted.div.textContent).toContain('Ethereum');
+      const search = mounted.div.querySelector(
+        'input[aria-label="Search assets"]',
+      ) as HTMLInputElement | null;
+      expect(search).not.toBeNull();
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(search, 'bit');
+        search?.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      expect(mounted.div.textContent).toContain('Bitcoin');
+      expect(mounted.div.textContent).not.toContain('Ethereum');
+      // A search that matches nothing is an honest empty state, not
+      // a blank list — with one clear action.
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(search, 'zzz');
+        search?.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      expect(mounted.div.textContent).toContain('No assets match “zzz”');
+      const clear = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Show all assets',
+      ) as HTMLButtonElement | undefined;
+      expect(clear).not.toBeUndefined();
+      await act(async () => {
+        clear?.click();
+      });
+      expect(mounted.div.textContent).toContain('Bitcoin');
+      expect(mounted.div.textContent).toContain('Ethereum');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

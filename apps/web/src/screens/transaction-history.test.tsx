@@ -72,10 +72,11 @@ function tx(
   };
 }
 
-function setWallet(history: Record<ChainKey, HistoryState>): void {
+function setWallet(history: Record<ChainKey, HistoryState>, vaultState?: string): void {
   vi.mocked(useWallet).mockReturnValue({
     history,
     refreshHistory: mockRefreshHistory,
+    ...(vaultState === undefined ? {} : { vaultState }),
   } as unknown as ReturnType<typeof useWallet>);
 }
 
@@ -164,7 +165,7 @@ describe('transaction history screen', () => {
     }
   });
 
-  it('filters by chain when a pill is clicked', async () => {
+  it('filters by chain when the chain picker changes', async () => {
     setWallet({
       ...perChainEmpty(),
       eth: { status: 'loaded', txs: [tx('0xeth1', 'eth', 'in', '1000000000000000000')] },
@@ -172,12 +173,18 @@ describe('transaction history screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      const pill = [...mounted.div.querySelectorAll('button')].find(
-        (button) => button.textContent === 'ETH',
-      );
-      expect(pill).toBeDefined();
+      // Lane 2: the filter is a select of chain display names now —
+      // the old pill wall had five identical "ETH" buttons. Pick
+      // Ethereum by value and the Bitcoin row must go.
+      const select = mounted.div.querySelector('select');
+      expect(select).not.toBeNull();
       await act(async () => {
-        pill?.click();
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLSelectElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(select, 'eth');
+        select?.dispatchEvent(new Event('change', { bubbles: true }));
       });
       expect(mounted.div.textContent).toContain('0xeth1');
       expect(mounted.div.textContent).not.toContain('btctx1');
@@ -191,6 +198,32 @@ describe('transaction history screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('No transactions yet');
+      expect(mounted.div.textContent).toContain('Your history will appear here after your first transaction.');
+      expect(mounted.div.querySelector('a[href="/receive"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the no-wallet empty state when there is no vault', async () => {
+    // Lane 2: with no vault every chain fails with no-address, and the
+    // old screen rendered nothing below the filter — a blank void.
+    // Now it says so, with the way out.
+    setWallet(
+      {
+        ...perChainEmpty(),
+        btc: { status: 'unavailable', reason: 'no-address', txs: [] },
+        eth: { status: 'unavailable', reason: 'no-address', txs: [] },
+        trx: { status: 'unavailable', reason: 'no-address', txs: [] },
+        ton: { status: 'unavailable', reason: 'no-address', txs: [] },
+      },
+      'no-vault',
+    );
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('No wallet yet');
+      expect(mounted.div.textContent).toContain('There is no wallet on this device');
+      expect(mounted.div.querySelector('a[href="/create-wallet"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }
@@ -245,12 +278,15 @@ describe('transaction history screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      const pill = [...mounted.div.querySelectorAll('button')].find(
-        (button) => button.textContent === 'ETH',
-      );
-      expect(pill).toBeDefined();
+      const select = mounted.div.querySelector('select');
+      expect(select).not.toBeNull();
       await act(async () => {
-        pill?.click();
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLSelectElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(select, 'eth');
+        select?.dispatchEvent(new Event('change', { bubbles: true }));
       });
       expect(mounted.div.textContent).not.toContain('No transactions yet');
       expect(mounted.div.textContent).not.toContain('history unavailable');

@@ -167,6 +167,11 @@ describe('transaction detail screen', () => {
       expect(explorerLink?.textContent).toContain('View on explorer');
       expect(mounted.div.textContent).toContain('confirmed as reported by the network');
       expect(mounted.div.textContent).toContain('Checked at');
+      // Lane 2: the full hash carries a copy button — the row that
+      // links here shows only the shortened hash.
+      expect(
+        mounted.div.querySelector('button[aria-label="Copy transaction hash"]'),
+      ).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }
