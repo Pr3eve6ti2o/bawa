@@ -24,7 +24,6 @@ import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
 import { CopyButton } from '../ui/components/copy-button';
-import { BawaLoading } from '../ui/components/loading';
 import { usePriceFeedAutoRefresh } from './use-live-prices';
 import { ChainLogo, TokenLogo } from './token-logo';
 import type { BalanceState } from '../state/wallet-context';
@@ -51,7 +50,7 @@ function DerivedAddressItems({
       {addresses.map(({ index, address }) => (
         <li
           key={`${index}:${address}`}
-          className="flex flex-wrap items-center gap-3 rounded-lg border p-3"
+          className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-3"
         >
           <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
           {' '}
@@ -409,10 +408,28 @@ export function AssetDetailScreen() {
           </div>
         </div>
         {effectiveBalance.status === 'loading' ? (
-          <BawaLoading label="Loading balance…" />
+          // UX-major Lane 2 (DESIGN-SYSTEM §1.7): loading is a skeleton
+          // shaped like the hero number, never a spinner and never
+          // blank. A plain placeholder div, NOT the shared Skeleton —
+          // measured first-hand (probe): Skeleton draws a ~105 px
+          // BawaLoading inside its box, so it overflows at every
+          // height used here (h-10 +59 px, h-20 +19 px, h-24 +3 px;
+          // the "Loading…" label straddles the card edge on screen).
+          // The shared component needs its own fix; until then the
+          // placeholder carries the shape + the announcement itself
+          // (role="status" + aria-label). Static, not pulsing — the
+          // shape and border are the signal, and a static box is what
+          // reduced-motion users see anyway.
+          <div
+            role="status"
+            aria-label="Loading…"
+            className="h-10 w-48 rounded-bawa border-2 border-ink bg-paper"
+          />
         ) : effectiveBalance.status === 'zero' ? (
           <>
-            <p className="text-[32px] font-semibold leading-10 text-ink">
+            {/* break-words (Lane 2): a long native amount wraps inside
+                the 390 px card instead of clipping past its edge. */}
+            <p className="break-words text-[32px] font-semibold leading-10 text-ink">
               {`0 ${displaySymbol}`}
             </p>
             <p className="text-lg font-semibold text-ink">
@@ -422,7 +439,7 @@ export function AssetDetailScreen() {
           </>
         ) : effectiveBalance.status === 'available' ? (
           <>
-            <p className="text-[32px] font-semibold leading-10 text-panel-text">
+            <p className="break-words text-[32px] font-semibold leading-10 text-panel-text">
               {formatNativeWithSymbol(
                 effectiveBalance.value ?? '0',
                 displayDecimals,
@@ -610,11 +627,15 @@ export function AssetDetailScreen() {
         Never a fabricated or empty-state list.
       */}
       {isToken ? (
-        <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+        <p className="rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-muted-foreground">
           Transaction history is not connected for this token yet.
         </p>
       ) : chainHistory.status === 'loading' && recentTxs.length === 0 ? (
-          <BawaLoading label="Loading transactions…" />
+          <div
+            role="status"
+            aria-label="Loading…"
+            className="h-20 w-full rounded-bawa border-2 border-ink bg-paper"
+          />
         ) : showHistoryList ? (
           <>
             {chainHistory.status === 'loading' ? (
@@ -640,11 +661,11 @@ export function AssetDetailScreen() {
           // unavailable" + a dead Retry. Only while locked does the
           // failure surface — with an Unlock prompt, not a Retry — and
           // only a chain with known transactions keeps its Retry.
-          <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+          <p className="rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-muted-foreground">
             No transactions yet for this chain.
           </p>
         ) : (
-          <div className="space-y-2 rounded-lg border p-4">
+          <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
             <p className="text-sm">
               {chainHistory.status === 'error'
                 ? 'Could not load transactions.'
@@ -666,7 +687,7 @@ export function AssetDetailScreen() {
         {hasWallet ? (
           <ul className="space-y-3">
             {vaultList.map((address) => (
-              <li key={`vault:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+              <li key={`vault:${address}`} className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-3">
                 <span className="text-sm text-muted-foreground">Vault</span>
                 {' '}
                 <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
@@ -683,9 +704,13 @@ export function AssetDetailScreen() {
             <DerivedAddressItems addresses={addresses[chainId]} copyAddress={copyAddress} />
           </ul>
         ) : state === 'loading' ? (
-          <BawaLoading label="Loading derived addresses…" />
+          <div
+            role="status"
+            aria-label="Loading…"
+            className="h-20 w-full rounded-bawa border-2 border-ink bg-paper"
+          />
         ) : state === 'empty' ? (
-          <div className="space-y-2 rounded-lg border p-4">
+          <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
             <p>No wallet imported for this chain</p>
             <Link to="/import-wallet" className="font-medium underline underline-offset-4">
               Import wallet

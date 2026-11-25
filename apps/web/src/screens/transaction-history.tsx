@@ -36,9 +36,15 @@ export function TransactionHistoryScreen() {
     .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
 
   const anyLoading = shownChains.some((chain) => history[chain].status === 'loading');
+  // UX-major Lane 2: 'no-address' is not a failure — it is the initial
+  // state before any fetch can run (wallet-context), so it is excluded
+  // here, the same rule recent-activity uses. A chain that never tried
+  // must not be named as failed in either block below.
   const failedChains = shownChains.filter(
     (chain) =>
-      history[chain].status === 'unavailable' || history[chain].status === 'error',
+      (history[chain].status === 'unavailable' ||
+        history[chain].status === 'error') &&
+      history[chain].reason !== 'no-address',
   );
   // Lane C: "No transactions yet" is earned only by a chain that
   // actually loaded (loaded/empty) with zero transactions. A failed
@@ -63,7 +69,7 @@ export function TransactionHistoryScreen() {
       </p>
 
       {chains.length === 0 ? (
-        <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
+        <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
           <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
           <p className="text-sm leading-relaxed text-panel-text-muted">
             Transaction history isn't available for this network yet.
@@ -118,22 +124,18 @@ export function TransactionHistoryScreen() {
           </div>
 
           {anyLoading && rows.length === 0 ? (
-            <div role="status">
-              <Skeleton className="h-24 w-full" />
-              <span className="sr-only">Loading transactions…</span>
-            </div>
+            <Skeleton className="h-24 w-full" />
           ) : rows.length === 0 ? (
             vaultState === 'no-vault' ? (
               // Lane 2: no vault, no addresses, no history can exist —
               // the old screen rendered nothing at all below the
               // filter here (a blank void at every viewport). Say so,
               // with the way out.
-              <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
+              <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
                 <h2 className="text-lg font-bold text-panel-text">No wallet yet</h2>
                 <p className="text-sm leading-relaxed text-panel-text-muted">
-                  There is no wallet on this device, so there is no
-                  transaction history to show. Create a wallet or
-                  import one to see its transactions.
+                  No wallet on this device yet. Create or import one to
+                  see its transactions.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-1">
                   <Button type="button" size="pill" asChild>
@@ -148,16 +150,50 @@ export function TransactionHistoryScreen() {
               // Lane 2: the settled empty state — a title, the honest
               // line, and the Receive action (DESIGN-SYSTEM §6). The
               // old screen showed the bare line alone.
-              <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
+              <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
                 <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
                 <p className="text-sm leading-relaxed text-panel-text-muted">
-                  {`Your history will appear here after your first transaction${filter === 'all' ? '' : ` on ${chainConfig(filter).displayName}`}.`}
+                  Your history will appear here after your first transaction.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-1">
                   <Button type="button" size="pill" asChild>
                     <Link to="/receive">Receive</Link>
                   </Button>
                 </div>
+              </div>
+            ) : failedChains.length > 0 &&
+              chains.some((chain) => history[chain].txs.length > 0) ? (
+              // UX-major Lane 2: the shown chain(s) really failed and
+              // no row is shown — but the wallet HAS activity somewhere
+              // (this is the filtered view: the user filtered to a
+              // failed chain while another chain holds transactions).
+              // The old code rendered nothing here, a blank void below
+              // the filter. Lane C (merged, pinned by test) withholds
+              // this block while the wallet has NO activity at all, so
+              // the activity gate above keeps that rule intact. The
+              // failure is named inline with the one action that can
+              // help: Retry when unlocked, Unlock when locked (a Retry
+              // with no address could only fail again). Chain names are
+              // not repeated — the filter above already shows which
+              // chain is selected.
+              <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
+                <p className="text-sm">History unavailable.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  asChild={vaultState === 'locked'}
+                  onClick={
+                    vaultState === 'locked'
+                      ? undefined
+                      : () => void refreshHistory()
+                  }
+                >
+                  {vaultState === 'locked' ? (
+                    <Link to="/lock">Unlock</Link>
+                  ) : (
+                    'Retry'
+                  )}
+                </Button>
               </div>
             ) : null
           ) : (
@@ -175,7 +211,7 @@ export function TransactionHistoryScreen() {
               again. A failed chain WITH retained transactions keeps its
               block — its rows make rows.length > 0. */}
           {rows.length > 0 && failedChains.length > 0 && (
-            <div className="space-y-2 rounded-lg border p-4">
+            <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
               <p className="text-sm">
                 {`${failedChains
                   .map((chain) => chainConfig(chain).displayName)

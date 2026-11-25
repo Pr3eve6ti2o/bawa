@@ -222,7 +222,7 @@ describe('transaction history screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('No wallet yet');
-      expect(mounted.div.textContent).toContain('There is no wallet on this device');
+      expect(mounted.div.textContent).toContain('No wallet on this device yet');
       expect(mounted.div.querySelector('a[href="/create-wallet"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();

@@ -2,7 +2,6 @@ import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { Button } from '../ui/components/button';
-import { Skeleton } from '../ui/components/skeleton';
 import { TxRow } from './tx-row';
 
 /**
@@ -106,7 +105,7 @@ export function RecentActivity() {
         return (
           <>
             {rows.length > 0 ? (
-              <ul className="divide-y divide-panel-border overflow-hidden rounded-xl border border-panel-border bg-panel-surface">
+              <ul className="divide-y divide-panel-border overflow-hidden rounded-bawa border-2 border-ink bg-paper">
                 {/*
                   Lane 2: the rows are the shared TxRow (direction tile,
                   counterparty, amount, date + status) — the old inline
@@ -126,9 +125,18 @@ export function RecentActivity() {
                 ))}
               </ul>
             ) : loading ? (
-              <Skeleton className="h-20 w-full rounded-xl" />
+              // UX-major Lane 2: same placeholder as asset-detail — the
+              // shared Skeleton overflows here too (its ~105 px spinner
+              // in an h-20 box: +19 px, the "Loading…" label lands fully
+              // below the card — seen at 1440 px). Plain placeholder
+              // div with the announcement, no spinner to spill.
+              <div
+                role="status"
+                aria-label="Loading…"
+                className="h-20 w-full rounded-bawa border-2 border-ink bg-paper"
+              />
             ) : anyLoaded ? (
-              <div className="rounded-xl border border-panel-border bg-panel-surface p-4">
+              <div className="rounded-bawa border-2 border-ink bg-paper p-4">
                 <p className="text-sm font-semibold text-panel-text">No activity yet</p>
                 <p className="mt-1 text-sm text-panel-text-soft">
                   Your history will appear here after your first transaction.
@@ -139,7 +147,7 @@ export function RecentActivity() {
             {showUnavailable && unavailableChains.map((chain) => (
               <div
                 key={`history-unavailable:${chain}`}
-                className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-4 py-3"
               >
                 {/* One text node on purpose: the chain name used to render
                     as an expression followed by a text node, which some text
@@ -160,7 +168,7 @@ export function RecentActivity() {
               </div>
             ))}
             {isLocked && unavailableChains.length > 0 && (
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-4 py-3">
                 <p className="text-sm text-panel-text-soft">Locked. Unlock to see activity.</p>
                 <Button type="button" variant="outline" asChild size="tall">
                   <Link to="/lock">Unlock</Link>
