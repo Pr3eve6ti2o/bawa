@@ -29,6 +29,9 @@ export const MORE_LINKS: NavItem[] = [
   { to: "/create", label: "Create wallet", icon: "wrench" },
   { to: "/security", label: "Security", icon: "shield" },
   { to: "/networks", label: "Networks", icon: "network" },
+  // Lane C (install-all-usable, 2026-11-25): dApp connectivity lives
+  // with the other connection settings, next to Networks.
+  { to: "/walletconnect", label: "WalletConnect", icon: "network" },
   { to: "/mnemonic-backup", label: "Mnemonic backup", icon: "key" },
   { to: "/welcome", label: "Welcome", icon: "door" },
 ];

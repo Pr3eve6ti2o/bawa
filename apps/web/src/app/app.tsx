@@ -64,6 +64,16 @@ const loadWalletManagement = () =>
     default: m.WalletManagementScreen,
   }));
 const WalletManagementScreen = lazy(loadWalletManagement);
+// Lane C (install-all-usable, 2026-11-25): the WalletConnect screen
+// is a lazy route like the others. The SignClient SDK itself is a
+// second, deeper lazy chunk: the screen dynamic-imports
+// walletconnect-client.ts, so the 348 KB SDK chunk is fetched only when
+// the user opens WalletConnect with a projectId configured.
+const loadWalletConnect = () =>
+  import('../screens/walletconnect').then((m) => ({
+    default: m.WalletConnectScreen,
+  }));
+const WalletConnectScreen = lazy(loadWalletConnect);
 
 // Route-chunk preloading (MetaMask's preload pattern): hovering or
 // focusing a nav link starts loading that route's chunk, so the click
@@ -85,6 +95,7 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/track': loadTrackTransaction,
   '/networks': loadNetworkSelection,
   '/wallets': loadWalletManagement,
+  '/walletconnect': loadWalletConnect,
   '/lock': loadLock,
 };
 
@@ -486,6 +497,7 @@ export function App() {
             <Route path="networks" element={<NetworkSelectionScreen />} />
             <Route path="wallets" element={<WalletManagementScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />
+            <Route path="walletconnect" element={<WalletConnectScreen />} />
             <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>

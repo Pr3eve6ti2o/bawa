@@ -2188,3 +2188,111 @@ What was done (branch `redesign/receive-qr`, local-only, not pushed):
    "Download card" wraps to two lines in its half-width button at 390,
    and "Payment request" wraps the same way in the QR-type row. Both
    stay legible and tappable.
+## §26 — WalletConnect (Lane C, "install all usable" programme) — 2026-11-25
+
+Branch `usable-lane-c-walletconnect` (from token-gaps `7fea3e4`),
+hands-on, 0 Sol calls (AgentRouter API stopped by owner order).
+Wires WalletConnect dApp connectivity into the web wallet: a
+`/walletconnect` screen (sidebar "More" section on desktop, "More"
+menu on mobile) that pairs with a dApp by `wc:` URI, shows the
+session proposal for approve/reject, and answers signing requests
+from the dApp.
+
+1. **Licence pin — Apache-2.0 2.21.0, no Reown licence.**
+   `@walletconnect/sign-client` and `@walletconnect/utils` are
+   pinned exact at **2.21.0**, the last Apache-2.0 release. 2.22.0+
+   switched to Reown Inc.'s custom Community Licence (mandatory
+   Reown gateway, commercial licence above 500 MAU/month, Reown
+   owns modifications); accepting it is the owner's call, not this
+   lane's. Verified first-hand from the installed tree: sign-client,
+   core, types and utils all 2.21.0 Apache-2.0 (the 1.x support
+   packages are MIT); no Reown-licenced package in the tree. The
+   npm registry confirms 2.21.0 is Apache-2.0.
+2. **Lazy-load — the SDK never enters the main chunk.** The only
+   runtime import of `@walletconnect/sign-client` is a dynamic
+   `import()` inside `connect()` in `screens/walletconnect.tsx`,
+   via the boundary module `wallet/walletconnect-client.ts`.
+   `relay.walletconnect` occurs in `walletconnect-*.js` (route) and
+   `walletconnect-client-*.js` (lazy) and 0 times in `index-*.js`.
+   Browser-measured (Playwright network log, `vite preview` of
+   `dist/`): home load fetches 21 JS files, 564,002 bytes, none of
+   them WalletConnect; navigating to `/walletconnect` adds only the
+   route chunk and `hashTypedData`; the lazy client chunk loads
+   only when a projectId is configured and `connect()` runs.
+3. **Message-signing only — sending stays off.** Approved methods:
+   `personal_sign`, `eth_signTypedData`, `eth_signTypedData_v4`,
+   `eth_chainId`, `eth_accounts`. `eth_sendTransaction` /
+   `eth_signTransaction` are never approved: signing a transaction
+   would let the dApp broadcast it and move funds, which is sending
+   through the back door. Only the `eip155` namespace is served;
+   SIWE `session_authenticate` is rejected with
+   `WC_METHOD_UNSUPPORTED` (10001) so the dApp does not hang.
+   Signing borrows the mnemonic inside the vault closure
+   (`withMnemonicAsync` + `createPartialSigner`, `wallet/core.ts`)
+   and never lets it leave; Wallet Core returns raw recovery 0/1,
+   so Ethereum message signatures get +27 (v 27/28) in
+   `wallet/walletconnect-signing.ts`.
+4. **projectId — configuration only, never hardcoded, never
+   shown.** The owner enters it on the screen (saved to
+   `localStorage` under `bawa-walletconnect-project-id`) or sets
+   `VITE_WALLETCONNECT_PROJECT_ID` at build time; the saved setting
+   wins. Without one the screen says plainly that a WalletConnect
+   projectId is needed, and no client is loaded. The saved value is
+   never rendered — the screen says only that one is saved.
+   Approve requires the vault to be unlocked. Relay
+   `wss://relay.walletconnect.org`; Verify API
+   `https://verify.walletconnect.org` (fallback
+   `https://verify.walletconnect.com`) — both added to the CSP
+   `connect-src` in `security-headers.ts` with an evidence comment.
+   No other WalletConnect origin is pinned (telemetry/push hosts
+   deliberately not added).
+5. **Audit fix without touching the SDK version.** The install
+   introduced 7 vulnerabilities (baseline `npm audit` was 0), all
+   inside the `@walletconnect` tree and all with a fix pointing at
+   sign-client 2.26.0 (Reown-licenced, forbidden): `decode-uri-
+   component` 0.2.2 (via `query-string` 7.1.3) and `ws` 8.18.0
+   (pinned exactly by the nested `viem` 2.23.2). Fixed by scoped
+   overrides under `@walletconnect/utils` in `apps/web/package.json`:
+   `decode-uri-component` → 0.5.1 (0.6.0 does not exist) and `viem`
+   → `{ ws: 8.21.0, isows: { ws: 8.21.0 } }`. The `ws` override
+   only took after the stale lockfile entry
+   `node_modules/@walletconnect/utils/node_modules/ws` was deleted
+   and `npm install` re-run; `npm ci` from the resulting lockfile
+   reproduces the tree and `npm audit` reports 0 vulnerabilities.
+   The override rationale lives here, not in `package.json`
+   (JSON has no comments — an earlier `//` comment in the file
+   broke `npm install` and was removed).
+6. **Bundle over budget — reported, not re-baselined.**
+   `npm run build` on this lane: total JS **4,577,447** bytes
+   against the 4,185,000 budget (over by 392,447); largest chunk
+   2,905,067 (under the 3,050,000 limit). Base `7fea3e4` was
+   4,180,185, so the lane adds 397,262. The lazy
+   `walletconnect-client` chunk is 348,194; the route chunk is
+   17,372 and its `hashTypedData` split 15,929; `secp256k1`
+   (30,367) is imported only by the lazy chunk. Dist total
+   excluding the lazy chunk is 4,229,253 (still over by 44,253);
+   excluding all four WalletConnect-only chunks it is 4,165,585
+   (under by 19,415 — the non-WalletConnect tree is ~630 bytes
+   bigger than base). Initial-load JS on home, browser-measured,
+   is 564,002 bytes. The CI bundle step sums all of
+   `dist/assets/*.js` as written and will fail; `ci.yml` was NOT
+   edited — weakening the gate is the coordinator/owner's call.
+7. **Live connection NOT verified — needs the owner's projectId.**
+   CDP-verified at 390/820/1440/1919 (entry point visible in the
+   More menu on mobile, in the sidebar on desktop; the honest
+   missing-projectId state; screenshots in the lane report).
+   A run with a bogus projectId shows the client initialises
+   without error — `SignClient.init` does not validate the id;
+   the relay rejects it at pair time, and the pair error is shown
+   then. No real projectId exists in this lane and no live dApp
+   connection was attempted; that step needs the owner's
+   WalletConnect Cloud projectId.
+
+**Gates on the lane tree:** tsc 0, build 0 (palette audit passed),
+vitest 2856 passed / 5 skipped / 103 files (46 new tests, all in
+the four WalletConnect files), eslint 0, `npm audit` 0
+vulnerabilities, secret scan exit 0 (`node
+scripts/secret-scan.mjs`). Viewed by eye: the WalletConnect screen
+at 390/820/1440/1919 (missing-projectId state) and the More menu at
+390.
+

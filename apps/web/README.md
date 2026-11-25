@@ -36,11 +36,11 @@ Keep the repository checkout intact: `@bawa/contracts` is a local `file:` depend
   Derivation uses `HDWallet.getPublicKeyFromExtended` and
   `CoinTypeExt.deriveAddressFromPublicKey`.
 - Display a derived address on the Receive screen with a QR code using `qrcode.react`.
-- Navigate all 14 screens, with mock data and unavailable actions labelled as such.
+- Navigate all 15 screens, with mock data and unavailable actions labelled as such.
 
 The screens are `welcome`, `create-wallet`, `import-wallet`, `mnemonic-backup`, `dashboard`,
 `asset-list`, `asset-detail`, `receive`, `send`, `transaction-history`, `transaction-detail`,
-`network-selection`, `wallet-management` and `security-settings`. A screen's presence does
+`network-selection`, `wallet-management`, `security-settings` and `walletconnect`. A screen's presence does
 not mean its underlying wallet operation is implemented.
 
 Derivation policy, where `i` is the address index:
@@ -61,6 +61,7 @@ Derivation policy, where `i` is the address index:
   No secrets leave the browser; broadcast remains disabled.
 - **TON:** derived at `m/44'/607'/0'` (V4 R2), with balance/history adapters and offline signing; watch-only public-address import remains an option.
   Broadcast remains disabled until separately authorised; no secrets leave the browser.
+- **WalletConnect:** the `/walletconnect` screen pairs with a dApp by `wc:` URI and answers signing requests (`personal_sign`, `eth_signTypedData`, `eth_signTypedData_v4`, `eth_chainId`, `eth_accounts`) for Ethereum chains only. Transaction signing is never approved — sending stays switched off, so no session can move funds. The sign client is `@walletconnect/sign-client` 2.21.0 (Apache-2.0, lazy-loaded) and a WalletConnect Cloud projectId is required, entered by the owner or set as `VITE_WALLETCONNECT_PROJECT_ID`; without one the screen says so plainly. A live dApp connection has not been verified yet — it needs the owner's projectId.
 
 ## Security notes
 
@@ -97,7 +98,7 @@ Paths are relative to `apps/web/` unless marked otherwise.
 - `src/assets/chains/` — native chain logos; see [Chain logos](#chain-logos).
 - `src/engine/` — public-key validation boundary and browser wallet-core WASM address derivation.
 - `src/state/` — wallet context, xpub persistence, in-memory addresses and UI lock state.
-- `src/screens/` — the 14 screens and their available, mock or unavailable states.
+- `src/screens/` — the 15 screens and their available, mock or unavailable states.
 - `src/app/` — application shell and routing.
 - [`packages/contracts/`](../../packages/contracts/) (repository root) — shared types, imported as `@bawa/contracts` via a `file:` dependency.
 
