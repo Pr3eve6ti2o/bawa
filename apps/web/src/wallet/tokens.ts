@@ -58,7 +58,8 @@ export type VerifiedSource =
   | 'jupiter-strict'
   | 'one-inch'
   | 'uniswap-default'
-  | 'pancakeswap';
+  | 'pancakeswap'
+  | 'bitget';
 
 /** Where a token's icon URL came from (token-verify Lane A). */
 export type TokenIconSource = 'trustwallet' | 'coingecko' | 'token-list';
@@ -78,6 +79,8 @@ export function verifiedSourceLabel(source: VerifiedSource): string {
       return 'Uniswap Default';
     case 'pancakeswap':
       return 'PancakeSwap';
+    case 'bitget':
+      return 'Bitget';
   }
 }
 
@@ -412,8 +415,8 @@ export function isDefaultToken(record: TokenRecord): boolean {
  * contract resolved to a real CoinGecko listing at add time
  * (coingeckoId set by the contract endpoint for that exact chain +
  * contract), or when a trusted list verified it at add time
- * (verifiedSource set — Jupiter Strict, 1inch, Uniswap Default or
- * PancakeSwap; see wallet/token-verification.ts). Anything else is
+ * (verifiedSource set — Jupiter Strict, 1inch, Uniswap Default,
+ * PancakeSwap or Bitget; see wallet/token-verification.ts). Anything else is
  * UNVERIFIED and shows "Unverified" — never a tick: a user-added
  * token by raw contract with no listing gets no tick, a copycat
  * contract with the same name/symbol as a listed token gets no tick,
@@ -831,6 +834,7 @@ const VERIFIED_SOURCES: readonly VerifiedSource[] = [
   'one-inch',
   'uniswap-default',
   'pancakeswap',
+  'bitget',
 ];
 
 /** The known icon sources, for record validation. */

@@ -2,9 +2,11 @@
 // Every leg is exercised against a mocked fetch: the real list
 // payloads were read live 2026-11-24 and are reproduced here in
 // miniature (one BONK row, one banned mint, one 1inch entry, one
-// Uniswap entry, one PancakeSwap entry).
+// Uniswap entry, one PancakeSwap entry, one Bitget USDC record and
+// one Bitget stub for a fake contract, read live 2026-11-25).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  BITGET_CHAIN_FOR_CHAIN,
   ONE_INCH_CHAIN_IDS,
   TRUST_WALLET_ASSETS_PIN,
   evmChainIdFor,
@@ -23,6 +25,8 @@ const BANNED_MINT = '3mXx1bNiB5bhgwznk4eeqM9eoy6DU3CeCkm1LPabeoEh';
 const AAMPL = '0x1e6bb68acec8fefbd87d192be09bb274170a0548';
 const PEPE = '0x6982508145454ce325ddbe47a25d4ec3d2311933';
 const UNKNOWN_EVM = '0x00000000000000000000000000000000000000f0';
+const USDC = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+const FAKE_ETH = '0x1111111111111111111111111111111111111111';
 
 // One BONK row, exactly as the live validated-tokens.csv carries it
 // (name, symbol, mint, decimals, logoURI, community-validated).
@@ -75,6 +79,84 @@ const PANCAKESWAP_LIST = {
       symbol: 'CAKE',
       decimals: 18,
       logoURI: 'https://tokens.pancakeswap.finance/images/0x0e09fabb73bd3ade0a17ecc321fd13a19e81c8e82.png',
+    },
+  ],
+};
+
+// Bitget Agent API payloads, miniature but shape-true to the live
+// responses read 2026-11-25 (copenapi.bgwapi.io): a real token
+// carries symbol + name; a fake contract returns a zeroed stub
+// with neither; a fake's audit still answers highRisk false.
+const BITGET_TOKEN_INFO_USDC = {
+  status: 0,
+  data: {
+    list: [
+      {
+        chain: 'eth',
+        contract: USDC,
+        symbol: 'USDC',
+        name: 'USD Coin',
+        decimals: 6,
+        holders: 9270738,
+        price: 1.0011124716533941,
+      },
+    ],
+  },
+};
+
+const BITGET_TOKEN_INFO_STUB = {
+  status: 0,
+  data: {
+    list: [
+      {
+        chain: 'eth',
+        contract: FAKE_ETH,
+        holders: 0,
+        liquidity: 0,
+        price: 0,
+      },
+    ],
+  },
+};
+
+const BITGET_SECURITY_CLEAN = {
+  status: 0,
+  data: [
+    {
+      chain: 'eth',
+      chain_id: 1,
+      contract: USDC,
+      riskCount: 0,
+      warnCount: 0,
+      highRisk: false,
+    },
+  ],
+};
+
+const BITGET_SECURITY_CLEAN_FAKE = {
+  status: 0,
+  data: [
+    {
+      chain: 'eth',
+      chain_id: 1,
+      contract: FAKE_ETH,
+      riskCount: 0,
+      warnCount: 0,
+      highRisk: false,
+    },
+  ],
+};
+
+const BITGET_SECURITY_RISKY = {
+  status: 0,
+  data: [
+    {
+      chain: 'eth',
+      chain_id: 1,
+      contract: USDC,
+      riskCount: 2,
+      warnCount: 0,
+      highRisk: true,
     },
   ],
 };
@@ -271,6 +353,148 @@ describe('resolveTokenListVerification', () => {
     expect(result.source).toBe('pancakeswap');
   });
 
+  it('verifies USDC via Bitget when 1inch/Uniswap do not carry it', async () => {
+    const fetchFn = stubFetch([
+      { match: 'tokens.1inch.io/v1.2/1', status: 200, body: {} },
+      { match: 'tokens.uniswap.org', status: 200, body: { tokens: [] } },
+      { match: 'batchGetBaseInfo', status: 200, body: BITGET_TOKEN_INFO_USDC },
+      { match: 'security/audits', status: 200, body: BITGET_SECURITY_CLEAN },
+    ]);
+    const result = await resolveTokenListVerification({
+      chain: 'eth',
+      contract: USDC,
+      fetchFn,
+    });
+    // Bitget never supplies a logoURI (its icon host is not an
+    // allowed image origin) — the row falls back to other icons.
+    expect(result).toEqual({ verified: true, source: 'bitget', logoUri: null });
+  });
+
+  it('does NOT verify a fake contract whose Bitget record is a stub', async () => {
+    // The fake's token-info is a zeroed stub (no symbol/name) and
+    // its audit is clean — the stub alone must still refuse it.
+    const fetchFn = stubFetch([
+      { match: 'tokens.1inch.io/v1.2/1', status: 200, body: {} },
+      { match: 'tokens.uniswap.org', status: 200, body: { tokens: [] } },
+      { match: 'batchGetBaseInfo', status: 200, body: BITGET_TOKEN_INFO_STUB },
+      { match: 'security/audits', status: 200, body: BITGET_SECURITY_CLEAN_FAKE },
+    ]);
+    const result = await resolveTokenListVerification({
+      chain: 'eth',
+      contract: FAKE_ETH,
+      fetchFn,
+    });
+    expect(result).toEqual({ verified: false, source: null, logoUri: null });
+  });
+
+  it('does NOT verify when the Bitget security audit flags high risk', async () => {
+    const fetchFn = stubFetch([
+      { match: 'tokens.1inch.io/v1.2/1', status: 200, body: {} },
+      { match: 'tokens.uniswap.org', status: 200, body: { tokens: [] } },
+      { match: 'batchGetBaseInfo', status: 200, body: BITGET_TOKEN_INFO_USDC },
+      { match: 'security/audits', status: 200, body: BITGET_SECURITY_RISKY },
+    ]);
+    const result = await resolveTokenListVerification({
+      chain: 'eth',
+      contract: USDC,
+      fetchFn,
+    });
+    expect(result).toEqual({ verified: false, source: null, logoUri: null });
+  });
+
+  it('does NOT verify when the Bitget security call fails', async () => {
+    // Token-info says USDC is real, but the audit is unreachable —
+    // fail closed, never verified on the token-info half alone.
+    const fetchFn = stubFetch([
+      { match: 'tokens.1inch.io/v1.2/1', status: 200, body: {} },
+      { match: 'tokens.uniswap.org', status: 200, body: { tokens: [] } },
+      { match: 'batchGetBaseInfo', status: 200, body: BITGET_TOKEN_INFO_USDC },
+    ]);
+    const result = await resolveTokenListVerification({
+      chain: 'eth',
+      contract: USDC,
+      fetchFn,
+    });
+    expect(result).toEqual({ verified: false, source: null, logoUri: null });
+  });
+
+  it('never fetches Bitget for Solana', async () => {
+    const urls: string[] = [];
+    const fetchFn = (async (url: unknown) => {
+      const href = String(url);
+      urls.push(href);
+      if (href.includes('validated-tokens.csv')) {
+        return {
+          ok: true,
+          status: 200,
+          text: async (): Promise<string> => JUPITER_VALIDATED_CSV,
+        };
+      }
+      return {
+        ok: false,
+        status: 404,
+        json: async (): Promise<Record<string, unknown>> => ({}),
+        text: async (): Promise<string> => '',
+      };
+    }) as unknown as typeof fetch;
+    const result = await resolveTokenListVerification({
+      chain: 'sol',
+      contract: FAKE_BONK_MINT,
+      fetchFn,
+    });
+    expect(result).toEqual({ verified: false, source: null, logoUri: null });
+    expect(urls.some((url) => url.includes('copenapi.bgwapi.io'))).toBe(false);
+  });
+
+  it('signs the Bitget request the way the Agent API script does', async () => {
+    const seen: Array<{ url: string; init: unknown }> = [];
+    const fetchFn = (async (url: unknown, init?: unknown) => {
+      const href = String(url);
+      seen.push({ url: href, init });
+      if (href.includes('batchGetBaseInfo')) {
+        return { ok: true, status: 200, json: async () => BITGET_TOKEN_INFO_USDC };
+      }
+      if (href.includes('security/audits')) {
+        return { ok: true, status: 200, json: async () => BITGET_SECURITY_CLEAN };
+      }
+      return { ok: true, status: 200, json: async () => ({ tokens: [] }) };
+    }) as unknown as typeof fetch;
+    const result = await resolveTokenListVerification({
+      chain: 'eth',
+      contract: USDC,
+      fetchFn,
+    });
+    expect(result.source).toBe('bitget');
+    const infoCall = seen.find((call) => call.url.includes('batchGetBaseInfo'));
+    expect(infoCall).toBeDefined();
+    const headers = (
+      infoCall?.init as { headers?: Record<string, string> } | undefined
+    )?.headers;
+    expect(headers?.['token']).toBe('toc_agent');
+    expect(headers?.['channel']).toBe('toc_agent');
+    expect(headers?.['X-SIGN']).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(headers?.['X-TIMESTAMP']).toMatch(/^\d+$/);
+  });
+
+  it('fetches the Bitget check at most once per token per session', async () => {
+    const fetchFn = vi.fn(async (url: unknown) => {
+      const href = String(url);
+      if (href.includes('batchGetBaseInfo')) {
+        return { ok: true, status: 200, json: async () => BITGET_TOKEN_INFO_USDC };
+      }
+      if (href.includes('security/audits')) {
+        return { ok: true, status: 200, json: async () => BITGET_SECURITY_CLEAN };
+      }
+      return { ok: true, status: 200, json: async () => ({ tokens: [] }) };
+    }) as unknown as typeof fetch;
+    await resolveTokenListVerification({ chain: 'eth', contract: USDC, fetchFn });
+    await resolveTokenListVerification({ chain: 'eth', contract: USDC, fetchFn });
+    const infoCalls = vi
+      .mocked(fetchFn)
+      .mock.calls.filter((call) => String(call[0]).includes('batchGetBaseInfo'));
+    expect(infoCalls).toHaveLength(1);
+  });
+
   it('never verifies an unknown contract on any leg', async () => {
     const fetchFn = stubFetch([
       { match: 'tokens.1inch.io/v1.2/1', status: 200, body: ONE_INCH_CHAIN_1 },
@@ -405,6 +629,23 @@ describe('resolveTokenIcon', () => {
     expect(trustWalletIconUrl('eth', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')).toContain(
       '/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
     );
+  });
+});
+
+describe('BITGET_CHAIN_FOR_CHAIN', () => {
+  it('maps the chains Bitget indexes live and no others', () => {
+    expect(BITGET_CHAIN_FOR_CHAIN['eth']).toBe('eth');
+    expect(BITGET_CHAIN_FOR_CHAIN['bsc']).toBe('bnb');
+    expect(BITGET_CHAIN_FOR_CHAIN['matic']).toBe('matic');
+    expect(BITGET_CHAIN_FOR_CHAIN['arb']).toBe('arbitrum');
+    expect(BITGET_CHAIN_FOR_CHAIN['base']).toBe('base');
+    expect(BITGET_CHAIN_FOR_CHAIN['avax']).toBe('avax');
+    // Solana is unusable (sol errors, solana stubs) and op stubs
+    // for real tokens; neither is ever fetched.
+    expect(BITGET_CHAIN_FOR_CHAIN['sol']).toBeUndefined();
+    expect(BITGET_CHAIN_FOR_CHAIN['op']).toBeUndefined();
+    expect(BITGET_CHAIN_FOR_CHAIN['ton']).toBeUndefined();
+    expect(BITGET_CHAIN_FOR_CHAIN['btc']).toBeUndefined();
   });
 });
 

@@ -46,6 +46,27 @@
  *   updated 2023-12-26 — too stale to be the source — so the
  *   Extended list (995 tokens) is used; all 13 Default tokens are
  *   in it.
+ * - Bitget Agent API (EVM, Lane A usable, 2026-11-25): the Agent
+ *   API at copenapi.bgwapi.io (bitget-wallet-skill, MIT, no key —
+ *   BKHmacAuth is an unsalted SHA-256 of public request values,
+ *   so the browser reproduces it with WebCrypto; no secret is
+ *   ever involved). Two calls: batchGetBaseInfo (token info) must
+ *   return this exact chain + contract with a real symbol and
+ *   name — a fake contract returns a zeroed stub with neither —
+ *   and the security audit must answer highRisk false (a high
+ *   risk audit vetoes; the audit alone never verifies, since a
+ *   fake also answers highRisk false while its audit is pending).
+ *   Only the chains verified live 2026-11-25 are queried (eth,
+ *   bnb, matic, arbitrum, base, avax). Solana is not usable:
+ *   chain "sol" errors (errno 200200) and "solana" returns the
+ *   zeroed stub for real and fake alike. LIMIT, verified live
+ *   2026-11-25: the API's OPTIONS preflight demands
+ *   X-SIGN/X-TIMESTAMP, which a browser preflight never carries,
+ *   so from a browser this leg fails at the preflight and
+ *   verifies nothing — it is wired fail-closed and will verify
+ *   the moment the API allows browser calls. Bitget's icon host
+ *   (cdn.jjdsn.site) is not an allowed image origin, so the leg
+ *   never supplies a logoURI.
  * - CoinGecko: the contract endpoint for the exact platform +
  *   contract (see resolveTokenCoingeckoId in adapters/token-balances).
  *   It is checked by the Add Token dialog BEFORE these legs, because
@@ -104,6 +125,29 @@ export function evmChainIdFor(chain: ChainId): number | null {
 export const ONE_INCH_CHAIN_IDS: ReadonlySet<number> = new Set([
   1, 10, 56, 100, 137, 324, 42161, 43114, 8453, 59144,
 ]);
+
+/** Bitget Agent API base (bitget-wallet-skill, MIT, no key). */
+export const BITGET_AGENT_API_BASE = 'https://copenapi.bgwapi.io';
+
+/**
+ * Bawa chain → Bitget Agent API chain code (bitget-wallet-skill).
+ * Only the chains verified live 2026-11-25 are mapped: a real
+ * token's batchGetBaseInfo record (symbol + name present) was
+ * returned for eth (USDC, PEPE), bnb (WBNB), matic (WMATIC),
+ * arbitrum (USDC), base (USDC) and avax (WAVAX). Solana is
+ * deliberately absent: chain "sol" errors (errno 200200) and
+ * "solana" returns a zeroed stub for any contract, real or fake;
+ * op returns a stub for real USDC too. An unmapped chain is
+ * skipped, not fetched.
+ */
+export const BITGET_CHAIN_FOR_CHAIN: Partial<Record<ChainId, string>> = {
+  eth: 'eth',
+  bsc: 'bnb',
+  matic: 'matic',
+  arb: 'arbitrum',
+  base: 'base',
+  avax: 'avax',
+};
 
 /**
  * Trust Wallet Assets blockchains/<dir> for token icons
@@ -234,6 +278,7 @@ let jupiterBannedCache: Promise<Set<string>> | null = null;
 let oneInchCache = new Map<number, Promise<Record<string, unknown>>>();
 let uniswapCache: Promise<unknown> | null = null;
 let pancakeswapCache: Promise<unknown> | null = null;
+let bitgetCache = new Map<string, Promise<boolean>>();
 
 /** Test-only: clear the session list caches. */
 export function resetTokenVerificationCaches(): void {
@@ -242,6 +287,7 @@ export function resetTokenVerificationCaches(): void {
   oneInchCache = new Map();
   uniswapCache = null;
   pancakeswapCache = null;
+  bitgetCache = new Map();
 }
 
 const JUPITER_VALIDATED_CSV_URL =
@@ -375,10 +421,174 @@ function findInTokenList(
   return null;
 }
 
+/** Hex-encode bytes (BKHmacAuth X-SIGN). */
+function hexEncode(bytes: Uint8Array): string {
+  let out = '';
+  for (const byte of bytes) out += byte.toString(16).padStart(2, '0');
+  return out;
+}
+
+/**
+ * One signed Bitget Agent API POST (bitget-wallet-skill
+ * bitget-wallet-agent-api.py _request): BKHmacAuth is an unsalted
+ * SHA-256 of method + path + body + timestamp — no secret, so the
+ * browser reproduces it with WebCrypto. Returns the parsed JSON,
+ * or null on any failure (fail-closed, never throws). In the
+ * browser this POST is preflighted (custom headers), and the
+ * API's OPTIONS handler demands X-SIGN/X-TIMESTAMP, which a
+ * preflight never carries — so from a browser the call fails at
+ * the preflight and the leg verifies nothing (see the module
+ * header). The leg is wired anyway, fail-closed, so it verifies
+ * the moment the API allows browser calls.
+ */
+async function bitgetSignedPost(
+  path: string,
+  body: Record<string, unknown>,
+  fetchFn: FetchFn,
+): Promise<unknown> {
+  const subtle = (globalThis as { crypto?: Crypto }).crypto?.subtle;
+  if (subtle === undefined) return null;
+  const bodyStr = JSON.stringify(body);
+  const ts = String(Date.now());
+  let sign: string;
+  try {
+    const digest = await subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(`POST${path}${bodyStr}${ts}`),
+    );
+    sign = `0x${hexEncode(new Uint8Array(digest))}`;
+  } catch {
+    return null;
+  }
+  try {
+    const response = await fetchFn(`${BITGET_AGENT_API_BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        channel: 'toc_agent',
+        brand: 'toc_agent',
+        clientversion: '10.0.0',
+        language: 'en',
+        token: 'toc_agent',
+        'X-SIGN': sign,
+        'X-TIMESTAMP': ts,
+      },
+      body: bodyStr,
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+/** Exact chain + contract match (EVM addresses case-insensitive). */
+function bitgetEntryMatches(
+  entry: unknown,
+  bitgetChain: string,
+  contract: string,
+): entry is Record<string, unknown> {
+  if (!isRecord(entry)) return false;
+  const entryChain = entry['chain'];
+  const entryContract = entry['contract'];
+  return (
+    typeof entryChain === 'string' &&
+    entryChain.toLowerCase() === bitgetChain.toLowerCase() &&
+    typeof entryContract === 'string' &&
+    entryContract.toLowerCase() === contract.toLowerCase()
+  );
+}
+
+/**
+ * Bitget token-info match: batchGetBaseInfo returns an entry for
+ * ANY contract — a fake returns a zeroed stub (no symbol/name,
+ * price 0, holders 0; verified live 2026-11-25) — so the match
+ * requires the exact chain + contract AND a non-empty symbol and
+ * name. A stub is never a verification.
+ */
+async function bitgetTokenInfoMatches(
+  bitgetChain: string,
+  contract: string,
+  fetchFn: FetchFn,
+): Promise<boolean> {
+  const payload = await bitgetSignedPost(
+    '/market/v3/coin/batchGetBaseInfo',
+    { list: [{ chain: bitgetChain, contract }] },
+    fetchFn,
+  );
+  if (!isRecord(payload) || payload['status'] !== 0) return false;
+  const data = payload['data'];
+  if (!isRecord(data) || !Array.isArray(data['list'])) return false;
+  for (const entry of data['list']) {
+    if (!bitgetEntryMatches(entry, bitgetChain, contract)) continue;
+    const symbol = entry['symbol'];
+    const name = entry['name'];
+    return (
+      typeof symbol === 'string' &&
+      symbol !== '' &&
+      typeof name === 'string' &&
+      name !== ''
+    );
+  }
+  return false;
+}
+
+/**
+ * Bitget security veto: the audit alone never verifies — a fake
+ * contract also answers highRisk false (audit pending, support 0;
+ * verified live 2026-11-25) — but a highRisk audit vetoes the
+ * token-info match. Any failure fails closed.
+ */
+async function bitgetSecurityClean(
+  bitgetChain: string,
+  contract: string,
+  fetchFn: FetchFn,
+): Promise<boolean> {
+  const payload = await bitgetSignedPost(
+    '/market/v3/coin/security/audits',
+    { list: [{ chain: bitgetChain, contract }], source: 'bg' },
+    fetchFn,
+  );
+  if (!isRecord(payload) || payload['status'] !== 0) return false;
+  const data = payload['data'];
+  if (!Array.isArray(data)) return false;
+  for (const entry of data) {
+    if (!bitgetEntryMatches(entry, bitgetChain, contract)) continue;
+    return entry['highRisk'] === false;
+  }
+  return false;
+}
+
+/**
+ * The Bitget leg: token-info identity (exact chain + contract,
+ * real symbol/name) AND a clean security audit (no high risk).
+ * EVM chains in BITGET_CHAIN_FOR_CHAIN only; anything else is
+ * skipped, not fetched. One check per chain + contract per load.
+ */
+async function bitgetTokenVerified(
+  chain: ChainId,
+  contract: string,
+  fetchFn: FetchFn,
+): Promise<boolean> {
+  const bitgetChain = BITGET_CHAIN_FOR_CHAIN[chain];
+  if (bitgetChain === undefined) return false;
+  const key = `${chain}:${contract.toLowerCase()}`;
+  const cached = bitgetCache.get(key);
+  if (cached !== undefined) return cached;
+  const pending = (async () => {
+    const info = await bitgetTokenInfoMatches(bitgetChain, contract, fetchFn);
+    if (!info) return false;
+    return bitgetSecurityClean(bitgetChain, contract, fetchFn);
+  })();
+  bitgetCache.set(key, pending);
+  return pending;
+}
+
 /**
  * The trusted-list legs, in order: Jupiter Strict (Solana), 1inch
- * (EVM chains 1inch serves), Uniswap Default (any EVM chain), then
- * PancakeSwap Extended (BSC). CoinGecko is NOT checked here — the
+ * (EVM chains 1inch serves), Uniswap Default (any EVM chain),
+ * PancakeSwap Extended (BSC), then Bitget (EVM chains it indexes,
+ * token-info + clean security audit). CoinGecko is NOT checked here — the
  * Add Token dialog checks it first, because it also yields the price
  * id and image. A leg that fails is skipped, never verified.
  */
@@ -434,6 +644,13 @@ export async function resolveTokenListVerification(input: {
         logoUri: match.logoUri,
       };
     }
+  }
+  // Bitget — EVM chains it indexes, last: token-info identity plus
+  // a clean security audit. It never supplies a logoURI: Bitget's
+  // icon host (cdn.jjdsn.site) is not an allowed image origin, so
+  // the row falls back to the Trust Wallet / CoinGecko icon.
+  if (await bitgetTokenVerified(chain, contract, fetchFn)) {
+    return { verified: true, source: 'bitget', logoUri: null };
   }
   return { verified: false, source: null, logoUri: null };
 }

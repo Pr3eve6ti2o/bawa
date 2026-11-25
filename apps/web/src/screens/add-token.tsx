@@ -355,7 +355,7 @@ export function AddTokenDialog({
       // 5. Trusted-list verification (token-verify Lane A): the
       // CoinGecko contract lookup first (it also yields the price id
       // and the token image), then the swap lists — Jupiter Strict,
-      // 1inch, Uniswap Default, PancakeSwap — only when CoinGecko
+      // 1inch, Uniswap Default, PancakeSwap, Bitget — only when CoinGecko
       // did not verify, so the common path stays one request. A
       // banned mint (Jupiter's banned list, Solana) is refused
       // outright, never added. A token no list holds is still added
