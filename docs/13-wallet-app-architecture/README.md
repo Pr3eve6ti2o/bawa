@@ -59,7 +59,7 @@ The conceptual stack above is realised in the web starter as screens, one
 state provider, a vault, Core, and read-only chain adapters. Secrets live only
 inside the dashed boundary (the vault closure and Core); only public addresses
 and balance results cross to the public-data side. Verified against
-`apps/web/src/` on adopt-proper (`e493720`).
+`apps/web/src/` on token-gaps (`7a170f4`).
 
 ```mermaid
 flowchart TB
@@ -74,7 +74,7 @@ flowchart TB
   end
 
   subgraph STATE["State — apps/web/src/state/wallet-context.tsx"]
-    CTX["apps/web/src/state/wallet-context.tsx<br/>WalletContext provider<br/>VaultState: no-vault / unlocked<br/>Current (5e7eb1d): no lock screen; auto-lock not implemented<br/>Requested /security setting (not yet implemented): optional auto-lock toggle, OFF by default<br/>Duration: Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day<br/>Requested enabled behavior: lock after the chosen period; password required to unlock<br/>selectedChain defaults to btc<br/>refreshBalances(): public balances"]
+    CTX["apps/web/src/state/wallet-context.tsx<br/>WalletContext provider<br/>VaultState: no-vault / unlocked<br/>Current (7a170f4): auto-lock implemented — optional /security setting, OFF by default<br/>Duration: Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day<br/>Enabled behavior: lock after the chosen period; password required to unlock<br/>selectedChain defaults to btc<br/>refreshBalances(): public balances"]
   end
 
   subgraph WALLET["Wallet layer — apps/web/src/wallet/core.ts"]
@@ -83,7 +83,7 @@ flowchart TB
 
     subgraph SECRET["Secret trust boundary: vault closure + Core<br/>apps/web/src/wallet/vault.ts + apps/web/src/wallet/core.ts"]
       direction TB
-      VAULT["apps/web/src/wallet/vault.ts<br/>PBKDF2: 600,000 iterations, SHA-256; AES-GCM-256<br/>localStorage key: bawa-vault<br/>Envelope only: version, KDF params, salt, IV, ciphertext<br/>Auto-lock OFF (current): raw derived key stored under bawa-vault-key in localStorage next to the envelope for auto-unlock<br/>Auto-lock ON (requested; not yet implemented): raw derived key is not persisted<br/>Decrypted mnemonic: transient module closure, only while unlocked<br/>Never in React state, refs, localStorage or logs"]
+      VAULT["apps/web/src/wallet/vault.ts<br/>PBKDF2: 600,000 iterations, SHA-256; AES-GCM-256<br/>localStorage key: bawa-vault<br/>Envelope only: version, KDF params, salt, IV, ciphertext<br/>Auto-lock OFF (current): raw derived key stored under bawa-vault-key in localStorage next to the envelope for auto-unlock<br/>Auto-lock ON (implemented): raw derived key is not persisted<br/>Decrypted mnemonic: transient module closure, only while unlocked<br/>Never in React state, refs, localStorage or logs"]
       CORE["apps/web/src/wallet/core.ts<br/>loaded via apps/web/src/engine/boundary.ts<br/>Trust Wallet Core 4.9.3 WASM<br/>Generates 24-word BIP-39 mnemonic; empty passphrase<br/>Derives addresses with default paths:<br/>BTC m/84'/0'/0'/0/0<br/>ETH m/44'/60'/0'/0/0<br/>TRX m/44'/195'/0'/0/0<br/>TON m/44'/607'/0' — one address"]
       SEND["apps/web/src/wallet/send.ts<br/>Offline transaction construction and local signing<br/>Uses real vault keys<br/>broadcastSigned returns { status: 'disabled' }<br/>No broadcast path"]
     end
@@ -343,7 +343,7 @@ Use the worker’s recognised request fields, `chain`, `xpub` and `index`. Do no
 
 ### Signing boundary
 
-Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tooling and both platform drafts pin version `4.8.4` at base commit `754721cd`). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
+Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tooling and both platform drafts pin version `4.9.3`). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
 
 Give the signer an immutable unsigned transaction, an explicit chain/network context and the minimum evidence needed to validate the proposed spend. For Bitcoin, include previous-output information sufficient to check input values and scripts. Identify signing keys through a locally authorised key reference, not by passing private keys through application messages.
 
@@ -474,7 +474,7 @@ Two cross-checks against the code: the adapters hardcode the same defaults as th
 
 #### History indexers — summary
 
-The full per-chain history table and the indexer provider entries live in [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer) ("RPC is not an indexer"), where a reader of history looks. The summary: 16 of 87 chains have a verified keyless history indexer — Bitcoin (mempool.space / Blockstream), Ethereum, Polygon, Arbitrum, Optimism, Base, Celo, Scroll, Aurora (Blockscout instances), Avalanche and Mantle (Routescan), TRON (TronGrid), TON (TonCenter), Solana (Solana RPC), Litecoin (Litecoinspace / BlockCypher), Dogecoin (SoChain / BlockCypher). Six chains have **no** working keyless indexer and their history stays blocked, never faked: **BNB Smart Chain, Gnosis, Linea, opBNB, Metis, Fantom** — an Etherscan API key or another indexer is an owner decision, not a code fix.
+The full per-chain history table and the indexer provider entries live in [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer) ("RPC is not an indexer"), where a reader of history looks. The summary: 17 of 87 chains have a verified keyless history indexer — Bitcoin (mempool.space / Blockstream), Ethereum, Polygon, Arbitrum, Optimism, Base, Celo, Scroll, Aurora (Blockscout instances), Avalanche and Mantle (Routescan), TRON (TronGrid), TON (TonCenter), Solana (Solana RPC), Litecoin (Litecoinspace / BlockCypher), Dogecoin (SoChain / BlockCypher), Linea (Etherscan V2, wired 2026-11-24). Five chains have **no** working keyless indexer and their history stays blocked, never faked: **BNB Smart Chain, Gnosis, opBNB, Metis, Fantom** — an Etherscan API key or another indexer is an owner decision, not a code fix.
 
 One flag on the Blockscout and Scrollscan hosts: Blockscout moved all API traffic to its keyed Pro API on 1 July 2026 and retired the per-instance APIs the wallet calls keyless — but Lane B probed those same per-instance hosts live on 2026-11-23 and they returned real transactions with no key. The keyless calls work today and are documented as they are; if they stop answering, history on those chains needs a Pro key (free tier: 100,000 credits/day at 5 requests/second, key required; Builder $49/month). See docs/06 for the full note.
 

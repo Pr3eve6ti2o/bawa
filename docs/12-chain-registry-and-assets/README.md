@@ -201,7 +201,7 @@ verify-signature.
 ```mermaid
 flowchart TB
     accTitle: Bawa chain support overview
-    accDescr: token-gaps supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus eighteen additional chains with create, derive, restore, receive and balance verified and the remaining five operations unsupported (history verified for SOL, LTC and DOGE only, per chains.ts). The 13-chain registry was merged into adopt-proper from panel-rebuild/multichain-create; the 9 newer EVM chains were added afterwards on panel-rebuild/token-gaps. It is not a separate branch.
+    accDescr: token-gaps supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus eighteen additional chains with create, derive, restore, receive and balance verified and the remaining five operations unsupported (history verified for 13 of the 18 — SOL, LTC, DOGE, MATIC, ARB, OP, Base, AVAX, CELO, Linea, Mantle, Scroll, Aurora — per chains.ts and docs/06). The registry grew from 13 chains (multichain-create) to 87 on token-gaps: 22 curated + 65 expansion.
 
     S["Sources of truth<br/>registry/capabilities.json: chainSupport<br/>apps/web/src/wallet/chains.ts:<br/>ChainId, pathFor, per-chain capabilities with evidence"]
 
@@ -211,7 +211,7 @@ flowchart TB
 
     T["Partially verified: TON<br/>DOCUMENTED_NOT_TESTED: fee-quote, verify-signature<br/>IMPLEMENTED_AND_VERIFIED: other 8 operations"]
 
-    D["Extended: 18 additional chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge), Gnosis, Celo,<br/>Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive, balance<br/>History verified for SOL, LTC, DOGE only<br/>NOT_SUPPORTED: history (other 15), fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
+    D["Extended: 18 additional chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge), Gnosis, Celo,<br/>Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive, balance<br/>History verified for 13 of the 18 (SOL, LTC, DOGE,<br/>MATIC, ARB, OP, Base, AVAX, CELO, Linea,<br/>Mantle, Scroll, Aurora)<br/>NOT_SUPPORTED: history (other 5), fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
 
     S --> A
     A --> F
@@ -221,7 +221,7 @@ flowchart TB
 
 Derivation paths below are Bawa's pinned `pathFor` values
 (`apps/web/src/wallet/chains.ts`; `a` = account, `i` = index). TON and SOL
-are single-address: their paths ignore account and index. The fifty-five EVM chains beyond ETH that share its derivation scheme all use coin type 60, the same path shape as ETH — they are distinct chains that share a derivation scheme, not the same chain. Five more EVM chains (Filecoin, Theta, IoTeX, Rootstock, Ethereum Classic) derive on their own coin paths.
+are single-address: their paths ignore account and index. The fifty-six EVM chains beyond ETH that share its derivation scheme all use coin type 60, the same path shape as ETH — they are distinct chains that share a derivation scheme, not the same chain. Five more EVM chains (Filecoin, Theta, IoTeX, Rootstock, Ethereum Classic) derive on their own coin paths.
 
 | Chain | Derivation path | token-gaps (87 chains in chainSupport) |
 | --- | --- | --- | --- |
@@ -308,7 +308,7 @@ Keep the following separate:
 | RPC / node / indexer | Current chain state, history, logs and UTXOs |
 | Application database | Address allocation, orders, payments and reconciliation |
 
-Bawa's tools derive addresses for native assets only. BTC, ETH and TRX are watch-only; TON is generation-only, with one deposit address and no xpub. SOL and ADA are reference-only in the docs. The tools provide no token derivation, token balances or token transfers.
+Bawa's tools derive addresses for native assets only. BTC, ETH and TRX are watch-only; TON is generation-only, with one deposit address and no xpub. SOL is wired (adapter + balance + offline signing); ADA is derive-only (CIP-1852, receive works, no balance/history/send adapter). The tools provide no token derivation, token balances or token transfers.
 
 Token tracking in `docs/06` and `docs/07` (ERC-20, TRC-20 and [SPL](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/tokens/index.mdx), indexers, `Transfer` events and token metadata) is downstream consumption of chain data, not Bawa functionality.
 

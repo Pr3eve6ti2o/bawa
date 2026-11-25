@@ -1,8 +1,8 @@
 # Architecture
 
-This is the code map for Bawa on the `panel-rebuild/adopt-proper` line (base commit `e493720`). Read it alongside `README.md` and `CONTRIBUTING.md`.
+This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `7a170f4`, 2026-11-26). Read it alongside `README.md` and `CONTRIBUTING.md`.
 
-Branch state described here: `panel-rebuild/adopt-proper`. The wallet is 4 chains (BTC, ETH, TRX, TON). The 13-chain registry lives on `panel-rebuild/multichain-create` — see the chain diagram in `docs/12-chain-registry-and-assets/README.md`.
+Branch state described here: `panel-rebuild/token-gaps`. The web wallet wires **87 chains** — 22 curated chains in `apps/web/src/wallet/chains.ts` plus 65 expansion chains in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAIN_COUNT = 65`; 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference: Cardano, Starknet, Kaspa). The registry lives in-tree at `registry/` (`capabilities.json` v4, 87 `chainSupport` keys) — see the chain diagram in `docs/12-chain-registry-and-assets/README.md` and the full 87-chain specification in `docs/CREATE-THIS-SPEC.md` §2.
 
 The builder routes requests through `ai/` and selects from `registry/`. Build and check entry points live in `scripts/`. The starters under `apps/` are deployables; wallet generation and recovery are separate offline tools under `tools/`.
 
@@ -11,19 +11,19 @@ The builder routes requests through `ai/` and selects from `registry/`. Build an
 ```mermaid
 flowchart TB
     accTitle: Bawa wallet-builder repository architecture
-    accDescr: ai/ classifies requests into seven profiles. scripts/build-wallet.mjs selects only registry-defined stacks, then generates, verifies and reports. scripts/generate-project.mjs scaffolds generated/<profile-id>. apps/web alone consumes packages/contracts. Secrets never cross from offline generation or the web vault into watch-only or public network layers. Web broadcast is disabled; Android has neither signing nor broadcast.
+    accDescr: ai/ classifies requests into eight profiles. scripts/build-wallet.mjs selects only registry-defined stacks, then generates, verifies and reports. scripts/generate-project.mjs scaffolds generated/<profile-id>. apps/web alone consumes packages/contracts. Secrets never cross from offline generation or the web vault into watch-only or public network layers. Web broadcast is disabled; Android has neither signing nor broadcast.
 
-    ai["ai/<br/>Request routing and prompts<br/>Classifies requests into 1 of 7 profiles"]
-    registry["registry/<br/>Machine-readable JSON: profiles.json (7 profiles),<br/>capabilities.json, engines.json, ui.json<br/>Builder selects from these; never invents a stack"]
+    ai["ai/<br/>Request routing and prompts<br/>Classifies requests into 1 of 8 profiles"]
+    registry["registry/<br/>Machine-readable JSON: profiles.json (8 profiles),<br/>capabilities.json (v4, 87 chains), engines.json, ui.json<br/>Builder selects from these; never invents a stack"]
     build["scripts/build-wallet.mjs<br/>One prompt: classify → generate → verify → report"]
     generate["scripts/generate-project.mjs<br/>Project scaffolding"]
     output["generated/&lt;profile-id&gt;<br/>Scaffolded project"]
     contracts["packages/contracts<br/>TypeScript contracts<br/>Consumed by apps/web only"]
-    android["apps/android<br/>Kotlin + Compose; watch-only<br/>No signing; no broadcast"]
-    docs["docs/<br/>Guides 01–16 + mainnet docs"]
+    android["apps/android<br/>Kotlin + Compose; watch-only UI starter<br/>No signing; no broadcast; no data layer yet"]
+    docs["docs/<br/>Guides 01–16 + mainnet docs + CREATE-THIS-SPEC"]
 
     subgraph secretBoundary["tools/ + apps/web vault — TRUST BOUNDARY<br/>Mnemonic, seed and private keys never enter apps/android or public network layers"]
-        web["apps/web<br/>React 19 + Vite; BTC, ETH, TRX, TON<br/>In-browser generation: Trust Wallet Core 4.9.3<br/>Vault: PBKDF2 + AES-GCM-256 in localStorage<br/>Offline signing; broadcast DISABLED<br/>broadcastSigned returns status disabled"]
+        web["apps/web<br/>React 19 + Vite; 87 chains wired, 22 enabled by default<br/>In-browser generation: Trust Wallet Core 4.9.3<br/>Vault: PBKDF2 + AES-GCM-256 in localStorage; optional auto-lock<br/>Offline signing (BTC/ETH/TRX/TON/SOL + 61 EVM); broadcast DISABLED<br/>broadcastSigned returns status disabled"]
 
         subgraph offlineTools["tools/ — offline, TTY-gated"]
             hd["tools/hdwallet-gen<br/>Node; wallet-core 4.9.3<br/>derive.js, generate.js, compare.js,<br/>extended-key.js, derive-ton.js"]
@@ -57,11 +57,11 @@ build flow (request → classify → plan → generate) is in
 
 ### `apps/web`
 
-The web starter is a deployable built with React 19, Vite and Tailwind. It is MIT-licensed and consumes the TypeScript contracts from `packages/contracts`. It performs in-browser wallet generation and recovery, read-only balances/history via adapters, and offline send signing, with broadcast disabled.
+The web starter is a deployable built with React 19, Vite and Tailwind. It is MIT-licensed and consumes the TypeScript contracts from `packages/contracts`. It performs in-browser wallet generation and recovery, read-only balances/history via adapters (balance on 66 chains, history on 17), prices via CoinGecko with CoinLore/Coinbase/DexScreener/TonAPI fallbacks (80 of 87 chains), and offline send signing, with broadcast disabled.
 
 ### `apps/android`
 
-The Android starter is a watch-only deployable built with Kotlin, Compose and Material 3. It is Apache-2.0-licensed.
+The Android starter is a watch-only UI starter built with Kotlin, Compose and Material 3. It is Apache-2.0-licensed. It has no chain registry, no RPCs, no tokens, no prices, no icons, no network permission, no data layer and no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`) — see `docs/CREATE-THIS-SPEC.md` §2.6 for the data gap and the JSON-export proposal that unblocks it.
 
 It does not consume `packages/contracts` and does not perform offline wallet generation or recovery.
 
@@ -75,9 +75,9 @@ Wallet generation and recovery here belong to the offline, TTY-gated side of the
 
 ### `registry/`
 
-Machine-readable JSON defines 7 wallet profiles, plus capability, engine and UI registries.
+Machine-readable JSON defines 8 wallet profiles, plus capability, engine and UI registries. `capabilities.json` (v4) covers 87 chains in `chainSupport`; its `coins` table holds 57 entries (53 prospective stubs, 4 supported). The validator (`scripts/validate-registry.mjs`) currently fails against it (exit 1, 149 errors — the validator hard-codes a 13-chain universe and a v3 version check); see `docs/index.md` for the true state. Do not claim "registry validation 10/10" until it passes first-hand.
 
-These registries provide the builder’s allowed choices. The builder selects from them; it never invents a stack.
+These registries provide the builder's allowed choices. The builder selects from them; it never invents a stack.
 
 ### `scripts/`
 
@@ -93,7 +93,7 @@ It has one consumer today, not two. It is not a contract layer shared by the web
 
 ### `docs/`
 
-`docs/` contains guides 01–16 and the `web-wallet`, `android-wallet` and `mainnet` documentation.
+`docs/` contains guides 01–16, the `web-wallet`, `android-wallet` and `mainnet` documentation, and the canonical guide `docs/CREATE-THIS-SPEC.md` (§0–§18) plus the design system `docs/DESIGN-SYSTEM.md`.
 
 Other named documents are `docs/CAPABILITY-MAP.md`, `docs/archive/branch-audit.md`, `docs/EXTERNAL-TOOLS.md` and `docs/archive/mainnet-gap-assessment.md`.
 
@@ -111,6 +111,8 @@ Request routing and prompts for the builder live here. Read them with `WALLET_BU
 | ETH | `m/44'/60'/0'/0/i` |
 | TRX | `m/44'/195'/0'/0/i` |
 | TON — generation-only | `m/44'/607'/0'` |
+
+57 chains share the `m/44'/60'/0'/0/0` key (56 EVM chains plus Injective, which uses the same path but is Cosmos, not EVM) — see `docs/HOW-IT-WORKS.md`.
 
 ### Mnemonics, files and network behaviour
 
@@ -147,6 +149,7 @@ Update this map when components, boundaries or invariants change—not for every
 
 ## Change notes
 
+- 2026-11-26 (guide-update pass, `panel-rebuild/guide-update`): rewritten to the 87-chain token-gaps tree (`7a170f4`); 8 profiles; registry in-tree with its validator failure honestly stated; Android starter described as a watch-only UI starter with the §2.6 data gap; web box lists the 87-chain wiring, balances/history coverage and the price fallbacks.
 - 2026-11-20 (Lane D, repo-organisation programme; merged into
   `panel-rebuild/adopt-proper` by Lane B): added the repository
   architecture diagram; fixed the stale "on `feature/ai-wallet-builder`"

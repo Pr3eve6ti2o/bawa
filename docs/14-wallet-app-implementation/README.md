@@ -189,7 +189,7 @@ Use versioned migrations for storage changes, preserving authenticated encryptio
 
 Target policy: Make auto-lock an OPTIONAL setting, OFF by default, on `/security`, with a toggle and a duration selector: Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period, and unlocking requires the password. While auto-lock is on, the raw derived key must NOT be stored—the lock must be real. While auto-lock is off, the raw derived key IS stored under `bawa-vault-key` in `localStorage` next to the vault envelope so the vault can auto-unlock.
 
-Current implementation at `adopt-proper` HEAD `5e7eb1d` (2026-11-20): the lock was removed, there is no lock screen, and `createVault()` stores the raw derived key as base64 under `bawa-vault-key` in `localStorage` so the vault auto-unlocks. The optional auto-lock restoration described above is NOT yet implemented.
+Current implementation at token-gaps HEAD `7a170f4` (2026-11-26): auto-lock IS implemented (`apps/web/src/wallet/auto-lock.ts`, owner order 2026-11-20) as the optional setting described above, OFF by default. While auto-lock is off, `createVault()` stores the raw derived key as base64 under `bawa-vault-key` in `localStorage` so the vault auto-unlocks; while it is on, the raw derived key is NOT stored and the vault locks after the chosen period.
 
 Include an acceptance test that leaves an unlocked session inactive and verifies locking at the chosen timeout. Exercise immediate locking separately.
 
@@ -392,7 +392,7 @@ Keep the reported test results separate and retain their stated limits:
 
 - 31 offline unit tests pass (mocked transport; no live-network coverage), run by the author against the validation draft, not shipped in any repo.
 - See `docs/index.md` for the Android test count: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Android SDK). This is a source annotation count, not an executed or passing test count.
-- The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0. At adopt-proper HEAD 5e7eb1d (2026-11-20), test/smoke.test.js contains 114 check() assertions, counted directly. This assertion count is not a current test-run result.
+- The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0. At token-gaps HEAD 7a170f4 (2026-11-26), test/smoke.test.js contains 115 check() assertions, counted directly. This assertion count is not a current test-run result.
 
 Do not combine these counts or use them as evidence of a build, device run or live-network validation.
 

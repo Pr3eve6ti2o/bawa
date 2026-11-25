@@ -29,11 +29,11 @@ Update on 2026-11-20: the engine is now `@trustwallet/wallet-core@4.9.3`, and th
 
 For the documented watch-only import workflow, see `docs/05-watch-only` and the `apps/web` import-wallet screen (xpub import for BTC/ETH/TRX; public-address import for TON).
 
-An additional limitation is that vault locking is not provided by the current implementation. Any optional restoration must follow this policy.
+Vault locking IS provided: auto-lock is implemented (see the policy below). Any optional restoration must follow this policy.
 
 The vault stays unlocked by default. Auto-lock is an optional setting on the /security page: a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period and unlocking needs the password. Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored (the lock must be real); while auto-lock is off, the raw derived key IS stored under `bawa-vault-key` so the vault can auto-unlock.
 
-Current implementation at 5e7eb1d: no lock exists; the optional restoration is not yet implemented.
+Current implementation (token-gaps `7a170f4`, 2026-11-26): auto-lock is implemented (`apps/web/src/wallet/auto-lock.ts`, owner order 2026-11-20); the vault stays unlocked by default and the optional auto-lock follows the policy above.
 
 ## 2. Privacy: xpubs are sensitive public material
 
@@ -239,11 +239,11 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ### Release blocker
 
-1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); at adopt-proper HEAD 5e7eb1d the lockfile pins @trustwallet/wallet-core to 4.9.3; `npm ci` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
+1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); at adopt-proper HEAD 5e7eb1d the lockfile pins @trustwallet/wallet-core to 4.9.3; `npm ci` runs inside `tools/hdwallet-gen`. A root lockfile now exists (`package-lock.json`), so `npm ci` is runnable against the repository root and the exact dependency graph is reproducible there. At the former pin `082f7915` no lockfile existed anywhere in the repository.
 
    `npm ci` requires a lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile.
 
-   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09 (user decision, recorded in `REPIN-NOTES.md`). This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The remaining lockfile gap is the root lockfile only.
+   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09 (user decision, recorded in `REPIN-NOTES.md`). This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The root lockfile gap is closed (2026-11-26); no Android-app lockfile is evidenced.
 
 ### TARGET — CI design, not existing CI
 
