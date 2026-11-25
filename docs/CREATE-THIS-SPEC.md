@@ -30,7 +30,11 @@ coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
 the implementation. Lane H's mining record is §18. Merged-tree
 gates (loud-stone, Node 22): typecheck 0, build 0, vitest 110 files
-/ 2,945 passed + 5 skipped, eslint 0, link check 0,
+/ 2,945 passed + 5 skipped (Lane C's loud-stone run — NOT reproduced
+in this sandbox on Node 22, 2026-11-26: 104 failed / 2,841 passed +
+5 skipped on the guide-update tip, 79 failed / 2,866 passed + 5 skipped
+on pristine token-gaps `7a170f4`; timeout-dominated, varies run to run
+— see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -365,8 +369,9 @@ guide must not let an agent assume otherwise:
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
   (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest —
-  110 files, 2,945 passed + 5 skipped, verified 2026-11-26 on the
-  merged usable-install tree, `docs/index.md`). Engine smoke suite:
+  110 files; the 2,945-passed + 5-skipped figure is Lane C's loud-stone
+  run and did NOT reproduce in this sandbox on Node 22 (2026-11-26),
+  see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -1044,7 +1049,7 @@ were re-measured from that tree (see the rows below).
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |
 | §2.4 XRP/Stellar/NEAR | Coordinator first-hand registry check, 2026-11-25 (survey) | Not previously recorded in the guide | Added |
 | §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1821` (cardano), `:1848` (kaspa), `:1875` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
-| §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files / 2,945 + 5 skipped, 2026-11-26; smoke 440; dinero.js dropped) |
+| §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files — the 2,945 + 5 skipped figure is Lane C's loud-stone run, not reproduced in this sandbox, 2026-11-26; smoke 440; dinero.js dropped) |
 | §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:2`, `:82`; `auto-lock.ts:21-26` | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |
 | §5 offline signing | `apps/web/src/wallet/send.ts:2527-2530` (Solana); capability table in `WALLET_BUILDER.md` | Correct; SOL `@solana/web3.js` route added from code | Verified |
 | §6 token verification | `apps/web/src/wallet/token-verification.ts:25-45`, `:101` | Correct in code; `docs/TOKEN-VERIFY-PROGRAMME.md` records the programme | Verified |

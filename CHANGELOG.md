@@ -15,6 +15,11 @@
 - Added implementation, testing, reference and recovery documents.
 - Added CI execution for the independent public-vector verification.
 
+- Expansion programme (2026-11-24, merged into `panel-rebuild/token-gaps` at `6c93e66`; record: `docs/EXPANSION-PROGRAMME.md`): 22 → 84 chains wired into the app (adapters, prices, icons, explorers), 124 RPCs verified live, Solana sending via @solana/web3.js (native SOL + SPL USDC sign and verify offline, broadcast still disabled), diagrams redrawn purpose-first, cold load −43%. The tree has since grown to 87 chains (130 RPCs) on token-gaps.
+- Token-verify programme (2026-11-24/25; record: `docs/TOKEN-VERIFY-PROGRAMME.md`): tokens verified by contract address, not name or symbol — CoinGecko contract endpoint first, then Jupiter Strict, 1inch, Uniswap Default and PancakeSwap Extended — so a real token shows a verified mark with its real logo and live price while a fake copycat shows Unverified and never gets the real logo; Add Token works for any token on any chain by contract address (including a fix for the base defect that no SPL token could ever be added by contract); 5 bugs fixed in the new-chains bug hunt; `npm audit` 0 vulnerabilities; all 28 icon-less chains gained a real icon.
+- Usable-install programme (2026-11-26; record: `docs/index.md`): the example wallet installs and builds cleanly on Node 22 — typecheck 0 errors, `npm run build` exit 0, eslint 0, engine smoke 440 checks pass (412 smoke + 28 register-links). Web vitest: the 2,945-passed + 5-skipped figure is Lane C's loud-stone run and did NOT reproduce in this sandbox on Node 22 (104 failed / 2,841 passed + 5 skipped on the guide-update tip; 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4`; timeout-dominated, varies run to run) — see `docs/index.md`.
+- Bundle budget re-baselines (owner orders): 4,177,711 → 4,215,000 (commit `4a12409`, 2026-11-25) → **4,650,000** (commit `7a170f4`, 2026-11-25; `docs/DECISIONS.md` §27). The merged tree measures 4,648,952 total JS and passes the 4,650,000 budget by 1,048 bytes (0.02% margin); the CI gate enforces 4,650,000 (`ci.yml:193`).
+
 ## [1.1.0] — Documentation and hardening pass — date not evidenced
 
 - Hardened secret handling, filesystem permissions and public-only derivation boundaries.

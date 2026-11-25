@@ -101,7 +101,7 @@ guards the pin.
 ```sh
 npm run typecheck   # tsc --noEmit, 0 errors
 npm run build       # copy-wasm + tsc + vite build, 0 errors
-npm run test        # vitest run — 110 files, 2,945 passed + 5 skipped (verified 2026-11-26, docs/index.md)
+npm run test        # vitest run — 110 files; the 2,945-passed + 5-skipped figure is Lane C's loud-stone run, NOT reproduced in this sandbox on Node 22 (2026-11-26) — see docs/index.md
 ```
 
 **Upstream sources.** The engine is Apache-2.0, upstream

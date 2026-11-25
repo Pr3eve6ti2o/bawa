@@ -49,7 +49,7 @@ pass.** Tightening the bar is silent; loosening it is loud (see
 
 | Metric | Today (2026-11-26, this tree) | Direction |
 | --- | --- | --- |
-| Web vitest | 110 files, 2,945 tests passed + 5 skipped (verified 2026-11-26 on the merged tree, Node 22) | must not fall |
+| Web vitest | 110 files — FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run. The 2,945-passed figure is Lane C's loud-stone run, not reproduced here | must not fall |
 | Web bundle JS | 4,648,952 bytes total (measured 2026-11-26 on token-gaps `7a170f4`, fresh build, Node 22); largest chunk (boundary) 2,906,541 bytes; passes the 4,650,000 budget by 1,048 bytes | must not grow (ratchet: budgets above are the owner-ordered 4,650,000) |
 | Web test duration | ~91 s (`vitest run`, 2026-11-26) | must not grow without a reason |
 | Root smoke checks | 440 checks pass, 0 fail (412 smoke + 28 register-links, verified 2026-11-26) | must not fall |
