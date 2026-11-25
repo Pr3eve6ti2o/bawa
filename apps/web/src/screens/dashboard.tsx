@@ -24,10 +24,15 @@ import { useAnimatedHeroValue } from './use-hero-ticker';
 // QR scanner. It links to /send?scan=1, which opens the scanner on
 // arrival — the welcome screen has no Scan tile because without a vault
 // there is nothing to send from. The icon is the ScanIcon SVG (the
-// owner-reference glyph), not a BawaIconName.
+// owner-reference glyph), not a BawaIconName. Buy (Lane D,
+// usable-install) is the third action: fiat top-up via Coinbase
+// Onramp, opening the Receive screen's Buy panel
+// (/receive?buy=1, the /send?scan=1 precedent) — a separate /buy
+// route cannot fit the bundle budget (see onramp.ts).
 const ACTIONS = [
   { to: '/send', icon: <BawaIcon name="send" className="size-6" />, label: 'Send' },
   { to: '/receive', icon: <BawaIcon name="receive" className="size-6" />, label: 'Receive' },
+  { to: '/receive?buy=1', icon: <BawaIcon name="plus" className="size-6" />, label: 'Buy' },
   { to: '/send?scan=1', icon: <ScanIcon className="size-6" />, label: 'Scan' },
   { to: '/transactions', icon: <BawaIcon name="activity" className="size-6" />, label: 'Activity' },
 ] as const;
@@ -371,6 +376,7 @@ export function DashboardScreen() {
           to the wide hero. Mobile is unchanged: the row follows the hero
           in the single column, balance first, actions second. */}
       <div className="grid grid-cols-4 gap-2 lg:self-end">
+      <div className="grid grid-cols-5 gap-2 lg:self-end">
         {ACTIONS.map(({ to, icon, label }) => (
           <Link
             key={to}

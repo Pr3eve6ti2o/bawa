@@ -153,7 +153,7 @@ async function reachDetails(div: HTMLDivElement): Promise<void> {
   await clickButton(div, 'Ethereum · ETH');
 }
 
-async function mountScreen() {
+async function mountScreen(entry = '/receive') {
   const div = document.createElement('div');
   document.body.appendChild(div);
   const root = createRoot(div);
@@ -161,7 +161,7 @@ async function mountScreen() {
   testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/receive']}>
+      <MemoryRouter initialEntries={[entry]}>
         <ReceiveScreen />
       </MemoryRouter>,
     );
@@ -204,6 +204,109 @@ describe('receive screen', () => {
       expect(mounted.div.textContent).not.toContain('Watch-only account');
       expect(mounted.div.textContent).toContain('Mainnet only');
     } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the Buy panel for ?buy=1 with the honest unconfigured state', async () => {
+    setWallet();
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      expect(mounted.div.textContent).toContain('Buy crypto');
+      expect(mounted.div.textContent).toContain("Buy isn't set up yet");
+      expect(mounted.div.textContent).toContain(
+        'Coinbase Onramp onboarding and API keys',
+      );
+      expect(
+        [...mounted.div.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === 'Buy with Coinbase',
+        ),
+      ).toBeUndefined();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('opens the real Onramp URL in a pop-up from the Buy panel', async () => {
+    vi.stubEnv('VITE_COINBASE_ONRAMP_APP_ID', 'test-app-id');
+    const popup = {
+      location: { href: '' },
+      close: vi.fn(),
+      closed: false,
+    };
+    const openSpy = vi
+      .spyOn(window, 'open')
+      .mockReturnValue(popup as unknown as WindowProxy);
+    setWallet();
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      const button = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Buy with Coinbase',
+      );
+      expect(button).not.toBeUndefined();
+      // The vault address wins over the watch-only one (Receive's
+      // own resolution: receive, then vault, then watch-only).
+      expect(mounted.div.textContent).toContain(VAULT_ETH);
+      await act(async () => {
+        button?.click();
+      });
+      expect(openSpy).toHaveBeenCalledWith(
+        'about:blank',
+        '_blank',
+        'width=430,height=600',
+      );
+      const url = new URL(popup.location.href);
+      expect(url.origin).toBe('https://pay.coinbase.com');
+      expect(url.pathname).toBe('/buy/select-asset');
+      expect(url.searchParams.get('appId')).toBe('test-app-id');
+      expect(url.searchParams.get('addresses')).toBe(
+        `{"${VAULT_ETH}":["ethereum"]}`,
+      );
+      expect(mounted.div.textContent).toContain(
+        'Coinbase opened in a pop-up',
+      );
+    } finally {
+      openSpy.mockRestore();
+      vi.unstubAllEnvs();
+      await mounted.cleanup();
+    }
+  });
+
+  it('reports a blocked pop-up from the Buy panel', async () => {
+    vi.stubEnv('VITE_COINBASE_ONRAMP_APP_ID', 'test-app-id');
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    setWallet();
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      const button = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Buy with Coinbase',
+      );
+      expect(button).not.toBeUndefined();
+      // The panel shows the first destination: the vault address,
+      // which wins over the watch-only one.
+      expect(mounted.div.textContent).toContain(VAULT_ETH);
+      await act(async () => {
+        button?.click();
+      });
+      expect(mounted.div.textContent).toContain(
+        'Pop-up blocked. Allow pop-ups and try again.',
+      );
+    } finally {
+      openSpy.mockRestore();
+      vi.unstubAllEnvs();
+      await mounted.cleanup();
+    }
+  });
+
+  it('asks for unlock on the Buy panel when the vault is locked', async () => {
+    vi.stubEnv('VITE_COINBASE_ONRAMP_APP_ID', 'test-app-id');
+    setWallet({ vaultState: 'locked' });
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      expect(mounted.div.textContent).toContain('Unlock your wallet to buy');
+      expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
       await mounted.cleanup();
     }
   });

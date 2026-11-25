@@ -1087,9 +1087,10 @@ describe('dashboard screen', () => {
 
   it('shows a Scan action on the homepage that opens the QR scanner', async () => {
     // Lane J: the Scan tile is the fourth action on the dashboard
-    // (Send / Receive / Scan / Activity) and links to /send?scan=1,
+    // (Send / Receive / Buy / Scan / Activity) and links to /send?scan=1,
     // which opens the Round 2 QR scanner on arrival. SVG icon only
-    // (ui-ux-pro-max checklist); no new colours.
+    // (ui-ux-pro-max checklist); no new colours. Buy is the third
+    // action (Lane D, usable-install): the Coinbase Onramp entry.
     setWallet(
       balancesFor({
         btc: { status: 'available', value: '100000000' },
@@ -1105,14 +1106,22 @@ describe('dashboard screen', () => {
       ) as HTMLAnchorElement | null;
       expect(scan).not.toBeNull();
       expect(scan?.textContent).toContain('Scan');
+      // Lane D: the Buy tile sits between Receive and Scan and
+      // links to the Buy panel (/receive?buy=1).
+      const buy = mounted.div.querySelector(
+        'a[href="/receive?buy=1"]',
+      ) as HTMLAnchorElement | null;
+      expect(buy).not.toBeNull();
+      expect(buy?.textContent).toContain('Buy');
       const actions = [...mounted.div.querySelectorAll('a')].filter(
         (candidate) =>
           candidate.textContent === 'Send' ||
           candidate.textContent === 'Receive' ||
+          candidate.textContent === 'Buy' ||
           candidate.textContent === 'Scan' ||
           candidate.textContent === 'Activity',
       );
-      expect(actions).toHaveLength(4);
+      expect(actions).toHaveLength(5);
     } finally {
       await mounted.cleanup();
     }

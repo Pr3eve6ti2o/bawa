@@ -1,8 +1,15 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
+import {
+  buildOnrampAddresses,
+  coinbaseOnrampAppId,
+  onrampDestinations,
+  openCoinbaseOnramp,
+  type OnrampDestination,
+} from '../wallet/onramp';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
 import { buildBawaSendLink, buildPaymentUri, DEFAULT_QR_CARD_TEMPLATE, QR_CARD_TEMPLATES, qrCardToPngFile, type QrCardTemplate } from '../wallet/payment-links';
 import {
@@ -115,12 +122,65 @@ function ChainRow({
   );
 }
 
+// Lane D (usable-install): the Buy panel's states. Each impossible
+// state gets its own explanation and the next step, never a dead
+// Buy button.
+type BuyStatus = 'idle' | 'opening' | 'opened' | 'load-failed' | 'blocked';
+
+type BuyUnavailable = {
+  title: string;
+  body: string;
+  to: string;
+  action: string;
+};
+
+function buyUnavailableState(
+  configured: boolean,
+  vaultState: string,
+  hasDestination: boolean,
+): BuyUnavailable | null {
+  if (!configured) {
+    return {
+      title: "Buy isn't set up yet",
+      body: 'Buying needs Coinbase Onramp onboarding and API keys, which aren’t configured yet.',
+      to: '/receive',
+      action: 'Back to Receive',
+    };
+  }
+  if (vaultState === 'no-vault') {
+    return {
+      title: 'Create a wallet first',
+      body: 'You need a wallet first.',
+      to: '/create-wallet',
+      action: 'Create wallet',
+    };
+  }
+  if (vaultState === 'locked') {
+    return {
+      title: 'Unlock your wallet to buy',
+      body: 'Unlock to see where a purchase would be delivered.',
+      to: '/lock',
+      action: 'Unlock',
+    };
+  }
+  if (!hasDestination) {
+    return {
+      title: 'No address to deliver to',
+      body: 'This wallet has no address on a network Coinbase delivers to.',
+      to: '/import-wallet',
+      action: 'Import wallet',
+    };
+  }
+  return null;
+}
+
 export function ReceiveScreen() {
   const {
     addresses,
     balances,
     tokenBalances,
     vaultAddresses,
+    vaultState,
     selectedChain,
     setSelectedChain,
     customTokens,
@@ -154,6 +214,55 @@ export function ReceiveScreen() {
   const pickerRef = useRef<HTMLElement | null>(null);
   const [isRotating, setIsRotating] = useState(false);
   const qrRef = useRef<HTMLDivElement | null>(null);
+
+  // Lane D (usable-install): the Buy panel (?buy=1) — fiat top-up
+  // via Coinbase Onramp. Its state lives here with the rest of the
+  // screen's state so the panel can early-return below.
+  const [searchParams] = useSearchParams();
+  const buyMode = searchParams.get('buy') === '1';
+  const [buyStatus, setBuyStatus] = useState<BuyStatus>('idle');
+  const buyAppId = coinbaseOnrampAppId();
+  // The destinations are cheap to recompute (ten entries at most),
+  // so no memo: the panel only shows one of them, and the widget
+  // itself is the network picker.
+  const buyDestinations = onrampDestinations({
+    receiveAddresses,
+    vaultAddresses,
+    watchAddresses: addresses,
+  });
+  // The panel's address: the first destination. The widget is
+  // the picker — the panel shows the one address the purchase
+  // lands on by default, and every destination goes in the URL.
+  const buyDestination: OnrampDestination | null =
+    buyDestinations[0] ?? null;
+  const buyUnavailable = buyUnavailableState(
+    buyAppId !== null,
+    vaultState,
+    buyDestination !== null,
+  );
+
+  function handleBuy(): void {
+    const onrampAddresses =
+      buyDestination === null
+        ? null
+        : buildOnrampAddresses(buyDestinations);
+    if (
+      buyAppId === null ||
+      buyDestination === null ||
+      onrampAddresses === null
+    ) {
+      return;
+    }
+    setBuyStatus('opening');
+    const outcome = openCoinbaseOnramp({
+      appId: buyAppId,
+      addresses: onrampAddresses,
+      defaultNetwork: buyDestination.network,
+    });
+    if (outcome === 'load-failed') setBuyStatus('load-failed');
+    else if (outcome === 'blocked') setBuyStatus('blocked');
+    else setBuyStatus('opened');
+  }
 
   const chains = availableFor('receive');
   const chain = chains.includes(selectedChain) ? selectedChain : chains[0];
@@ -548,6 +657,95 @@ export function ReceiveScreen() {
       fiatMinorUnits: null as number | null,
     })),
   ]);
+
+  // Lane D (usable-install): ?buy=1 renders the Buy panel instead
+  // of the stepped flow — the dashboard Buy tile links here
+  // (/receive?buy=1, the /send?scan=1 precedent). A separate /buy
+  // route cannot fit the bundle budget (see onramp.ts): the panel
+  // reuses this screen's Card/Button, so it adds ~2 KB, not a
+  // whole screen chunk. There is no network picker here on
+  // purpose: the widget itself is the picker — the addresses
+  // handed to it cover every deliverable network.
+  if (buyMode) {
+    return (
+      <div className="space-y-3">
+        <h1 className="text-2xl font-semibold text-ink">Buy crypto</h1>
+        <Card radius="xl">
+          <div className="flex flex-col items-start gap-2 p-4">
+            {buyUnavailable !== null ? (
+              <>
+                <p className="text-sm font-semibold text-ink">
+                  {buyUnavailable.title}
+                </p>
+                <p className="text-sm text-ink">{buyUnavailable.body}</p>
+                {buyUnavailable.to !== '/receive' && (
+                  <Button asChild size="sm">
+                    <Link to={buyUnavailable.to}>{buyUnavailable.action}</Link>
+                  </Button>
+                )}
+              </>
+            ) : (
+              buyDestination !== null && (
+                <>
+                  <p className="text-sm font-semibold text-ink">
+                    Deliver to
+                  </p>
+                  <p className="w-full break-all font-mono text-xs text-ink">
+                    {buyDestination.address}
+                  </p>
+                  <p className="text-sm text-ink">
+                    Change the network and asset in Coinbase.
+                  </p>
+                  {devnetEnabled === true && (
+                    <p className="text-sm text-ink">
+                      Devnet test mode is on — buying delivers real mainnet
+                      crypto, so it stays off.
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={
+                      devnetEnabled === true || buyStatus === 'opening'
+                    }
+                    onClick={() => handleBuy()}
+                  >
+                    {buyStatus === 'opening'
+                      ? 'Opening Coinbase…'
+                      : 'Buy with Coinbase'}
+                  </Button>
+                  {buyStatus === 'opened' && (
+                    <p role="status" className="text-sm text-ink">
+                      Coinbase opened in a pop-up — complete your purchase
+                      there.
+                    </p>
+                  )}
+                  {buyStatus === 'load-failed' && (
+                    <p role="alert" className="text-sm text-ink">
+                      Coinbase couldn&apos;t be loaded. Check your connection.
+                    </p>
+                  )}
+                  {buyStatus === 'blocked' && (
+                    <p role="alert" className="text-sm text-ink">
+                      Pop-up blocked. Allow pop-ups and try again.
+                    </p>
+                  )}
+                </>
+              )
+            )}
+          </div>
+        </Card>
+        <p className="text-sm text-ink">
+          <Link
+            to="/receive"
+            className="font-medium text-primary underline underline-offset-4"
+          >
+            Back to Receive
+          </Link>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
