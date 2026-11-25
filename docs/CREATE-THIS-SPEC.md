@@ -293,6 +293,57 @@ derive/receive only).
   (`price-fallbacks.ts:222-224`), so the price-fallback count is
   80 of 87 (§7).
 
+### §2.6 Machine-readable export for other builders (Android) — the JSON-export proposal
+
+**The registry exists; it is incomplete, not absent.** `registry/
+capabilities.json` (v4) already enumerates all 87 chain ids in
+`chainSupport`, and its `coins` table already holds 57 entries with
+real fields (derivationTemplate, decimals, curve, networkId, assetId,
+rpcEndpoints) — but 53 of the 57 are prospective stubs with empty
+`rpcEndpoints` and `bawaChainId` null; only btc/eth/trx/ton are
+supported with real RPCs. 52 of the 87 `chainSupport` keys have no
+coin entry at all (only 35 of the 57 coin keys match a `chainSupport`
+key — the rest use Trust Wallet Assets naming: `bitcoin`, `ethereum`,
+`arbitrum`, `avalanchec`, …); there are no icons, explorers, or
+CoinGecko ids anywhere in the JSON. An agent told "there is no JSON
+registry" would rebuild what already exists; the work is completion,
+not creation.
+
+**Proposal (not yet implemented):** export the web wallet's data as
+generated, CI-run JSON — `registry/chains.json` (87 chains: id, name,
+symbol, chainId, coinType, addressFormat, derivationTemplate,
+rpcEndpoints, explorer, coingeckoId, icon, testnet) + `registry/
+tokens.json` (the 21 default tokens, `tokens.ts:182`). This is the
+step that unblocks the Android programme: data export first,
+toolchain in parallel, then the data layer. Until the export exists,
+no Android lane may hand-write chain data from the TypeScript files.
+
+**Why Android needs it — the data gap (A1–A12).** The Android starter
+(`apps/android`) is a watch-only UI starter, not a wallet, and the
+guide must not let an agent assume otherwise:
+- Chain data: 4 derivation-path templates + a confirmation-policy
+  evaluator for BTC/ETH only, as metadata — `DerivationPolicy.kt:5-10`
+  ("Policy metadata only; this watch-only starter does not derive
+  addresses"), `ConfirmationPolicy.kt`. No chain registry, no RPCs,
+  no tokens, no prices, no icons in the app.
+- No network permission: zero `<uses-permission>` in
+  `AndroidManifest.xml` — the app cannot reach any network today.
+- No data layer: no Room, Ktor, Retrofit or OkHttp in the build.
+- No on-device derivation: `ENGINE_BINDING_AVAILABLE = false`
+  (`DerivationPolicy.kt:56`) — no Trust Wallet Core AAR exists for any
+  version, so on-device derivation is OPEN.
+- Tests: 57 `@Test` annotations across 5 Kotlin test files, executed
+  count NOT-RUN (no Android SDK on the build machine, so Gradle tests
+  are NOT-RUN — `AGENTS.md` §3).
+- Toolchain gap: AGP 8.2.2 + compileSdk 35 (`build.gradle.kts:3-4,12`)
+  are officially unsupported; no Android SDK/JDK on loud-stone.
+- **Policy tension, recorded not resolved:** watch-only is
+  mainnet-only by owner order 2026-11-23 (`docs/DECISIONS.md`,
+  Gap 21) — while the Android starter's own header states testnet-only
+  (`apps/android/app/build.gradle.kts:1-2`: "Testnet only; mainnet is
+  out of scope"). Any Android watch-only work must resolve this with
+  the owner first; do not thread devnet through watch-only silently.
+
 ## §3. HD wallet and engine — fixed pins
 
 - Engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.9.3**;
@@ -916,7 +967,16 @@ The survey's verified facts, which Lane F implemented from:
 - Default visual direction: **Bawa Balanced**. Web foundation: **token-ui**
   (`consenlabs/token-ui`), **MIT**, vendored in `apps/web/src/ui/`.
   Android foundation: **Tether WDK Starter Kotlin**, **UI layer only**,
-  **Apache-2.0**, in `apps/android`.
+  **Apache-2.0**, in `apps/android`. The Android starter is a watch-only
+  UI starter, not a wallet: 4 derivation-path templates + a
+  confirmation-policy evaluator for BTC/ETH only, no chain registry,
+  no RPCs/tokens/prices/icons, no network permission, no data layer,
+  no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP
+  8.2.2 + compileSdk 35 officially unsupported, no Android SDK/JDK on
+  the build machine. Android work is blocked on the JSON export in
+  §2.6 (data export first, toolchain in parallel, then the data
+  layer) — and on the owner resolving the mainnet-only vs testnet-only
+  tension (§2.6).
 - Four-colour cap (§0.3) governs the whole app; the `--qr-*` exception
   is confined to the QR card and its PNG exporter.
 - Dead controls in a state where they cannot act are defects: show zero
