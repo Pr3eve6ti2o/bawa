@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/components/card';
+import { Input } from '../ui/components/input';
+import { Label } from '../ui/components/label';
+import { ChainSearchSelect, filterChains } from './chain-search-select';
+import { ChainLogo } from './token-logo';
 import { useWallet } from '../state/wallet-context';
 import {
   CHAINS,
@@ -24,18 +28,141 @@ import { probeRpcEndpoint, type RpcProbeResult } from '../wallet/rpc-probe';
 import { loadCachedPrices, type PriceSource } from '../wallet/prices';
 import { DevnetSetting } from './devnet-setting';
 
-// The /networks screen reads the 13-chain registry directly and lets
+// The popular four — the same four chains Receive's picker puts first
+// (POPULAR_RECEIVE_CHAINS in ./receive.tsx) and the dashboard's Popular
+// strip used: the original adapter chains. Kept as a literal here so
+// this screen does not import the receive route's module graph.
+const POPULAR_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+
+// One chain row in the Mainnet list: logo, name, chain ID and — where
+// the wallet has fetched one — the host that answered its last balance
+// (the row's current RPC status, DESIGN-SYSTEM.md §6 Networks), plus
+// the enable state and the two actions. Compact list rows, not cards:
+// 84 cards made this screen 31,140 px tall at 390 px.
+function NetworkChainRow({
+  chain,
+  isEnabled,
+  customCount,
+  lastBalanceSource,
+  onToggle,
+}: {
+  chain: ChainId;
+  isEnabled: boolean;
+  customCount: number;
+  lastBalanceSource: string | undefined;
+  onToggle: (chain: ChainId, enabled: boolean) => void;
+}) {
+  const config = CHAINS[chain];
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+      <span className="flex min-w-0 items-center gap-3">
+        <ChainLogo chain={chain} size={32} />
+        <span className="min-w-0">
+          <span className="block font-semibold">
+            {config.displayName}{' '}
+            <span className="text-sm font-normal text-muted-foreground">
+              {config.symbol}
+            </span>{' '}
+            <code className="text-sm font-normal text-muted-foreground">
+              {chain}
+            </code>
+          </span>
+          {(customCount > 0 || lastBalanceSource !== undefined) && (
+            <span className="block text-sm text-muted-foreground">
+              {customCount > 0 &&
+                `${customCount} custom token${customCount === 1 ? '' : 's'}`}
+              {customCount > 0 && lastBalanceSource !== undefined && ' · '}
+              {lastBalanceSource !== undefined &&
+                `Last balance from ${lastBalanceSource}`}
+            </span>
+          )}
+        </span>
+      </span>
+      <span className="flex items-center gap-2">
+        {isEnabled ? (
+          <>
+            <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+              ACTIVE
+            </span>
+            <button
+              type="button"
+              className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+              onClick={() => onToggle(chain, false)}
+            >
+              Disable
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="flex h-6 items-center rounded-[12px] border px-3 text-[10px] font-bold text-muted-foreground">
+              DISABLED
+            </span>
+            <button
+              type="button"
+              className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+              onClick={() => onToggle(chain, true)}
+            >
+              Enable
+            </button>
+          </>
+        )}
+        <Link
+          to={`/assets/${chain}`}
+          className="rounded-[22px] border px-3 py-2 text-sm font-medium"
+        >
+          View
+        </Link>
+      </span>
+    </li>
+  );
+}
+
+// The /networks screen reads the 84-chain registry directly and lets
 // the owner enable or disable each chain (token-discovery programme).
 // A disabled chain's rows are hidden from /assets and the dashboard;
 // its derived addresses stay in the vault, so re-enabling restores
 // them without any re-derivation. Nothing is deleted here.
+//
+// Lane 6 redesign: the list was one flat 84-row run of tall cards
+// with the devnet switch, the RPC manager and prices buried below it.
+// Now the mode switch (devnet) is first, the list is searchable and
+// grouped (Popular first, then alphabetical), and the RPC manager
+// shows one chain at a time instead of repeating all 84 rows a
+// second time. The order on this screen is: mode, chains, RPC, prices.
 export function NetworkSelectionScreen() {
-  const { enabledChains, setChainEnabled, customTokens, devnetEnabled } = useWallet();
+  const { enabledChains, setChainEnabled, customTokens, devnetEnabled, balances } = useWallet();
   const enabled = new Set(enabledChains ?? SUPPORTED_CHAINS);
   const customByChain = new Map<ChainId, number>();
   for (const token of customTokens ?? []) {
     customByChain.set(token.chain, (customByChain.get(token.chain) ?? 0) + 1);
   }
+  const [query, setQuery] = useState('');
+  const needle = query.trim();
+  // A search replaces both groups with one flat filtered list (the
+  // same name/symbol/id filter Receive's chain picker uses); with no
+  // search the full list shows, Popular first, the rest alphabetical.
+  const searched = needle === '' ? null : filterChains(SUPPORTED_CHAINS, needle);
+  const popular = POPULAR_CHAINS.filter((chain) =>
+    SUPPORTED_CHAINS.includes(chain),
+  );
+  const others = useMemo(
+    () =>
+      SUPPORTED_CHAINS.filter((chain) => !POPULAR_CHAINS.includes(chain)).sort(
+        (a, b) =>
+          CHAINS[a].displayName.localeCompare(CHAINS[b].displayName, 'en-GB'),
+      ),
+    [],
+  );
+  const rowFor = (chain: ChainId) => (
+    <NetworkChainRow
+      key={chain}
+      chain={chain}
+      isEnabled={enabled.has(chain)}
+      customCount={customByChain.get(chain) ?? 0}
+      lastBalanceSource={balances?.[chain]?.source}
+      onToggle={setChainEnabled}
+    />
+  );
 
   return (
     <section className="space-y-6" aria-labelledby="networks-heading">
@@ -46,78 +173,50 @@ export function NetworkSelectionScreen() {
         <p className="text-sm text-muted-foreground">
           {devnetEnabled
             ? "Devnet test mode is on. This wallet connects to test networks with valueless test tokens."
-            : "Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. A temporary devnet test mode is available below."}
+            : "Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. Devnet test mode is at the top of this screen."}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {enabled.size} of {SUPPORTED_CHAINS.length} chains enabled.
         </p>
       </header>
+
+      <DevnetSetting />
 
       <Card radius="xl">
         <CardHeader>
           <CardTitle>Mainnet</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            {SUPPORTED_CHAINS.map((chain) => {
-              const config = CHAINS[chain];
-              const isEnabled = enabled.has(chain);
-              const customCount = customByChain.get(chain) ?? 0;
-              return (
-                <li
-                  key={chain}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-[15px] border border-border bg-card p-3"
-                >
-                  <span>
-                    <span className="font-semibold">{config.displayName}</span>
-                    {' '}
-                    <span className="text-sm text-muted-foreground">{config.symbol}</span>
-                    {customCount > 0 && (
-                      <span className="ml-2 text-sm text-muted-foreground">
-                        {`${customCount} custom token${customCount === 1 ? '' : 's'}`}
-                      </span>
-                    )}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    {isEnabled ? (
-                      <>
-                        <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
-                          ACTIVE
-                        </span>
-                        <button
-                          type="button"
-                          className="rounded-[22px] border px-3 py-2 text-sm font-medium"
-                          onClick={() => setChainEnabled(chain, false)}
-                        >
-                          Disable
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex h-6 items-center rounded-[12px] border px-3 text-[10px] font-bold text-muted-foreground">
-                          DISABLED
-                        </span>
-                        <button
-                          type="button"
-                          className="rounded-[22px] border px-3 py-2 text-sm font-medium"
-                          onClick={() => setChainEnabled(chain, true)}
-                        >
-                          Enable
-                        </button>
-                      </>
-                    )}
-                    <Link
-                      to={`/assets/${chain}`}
-                      className="rounded-[22px] border px-3 py-2 text-sm font-medium"
-                    >
-                      View
-                    </Link>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="network-search">Search chains</Label>
+            <Input
+              id="network-search"
+              type="search"
+              placeholder="Search by name, symbol or chain ID"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          {searched !== null ? (
+            searched.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No chains match &ldquo;{needle}&rdquo;. Try a name, symbol or
+                chain ID.
+              </p>
+            ) : (
+              <ul className="space-y-2">{searched.map(rowFor)}</ul>
+            )
+          ) : (
+            <>
+              <h3 className="text-sm font-semibold">Popular</h3>
+              <ul className="space-y-2">{popular.map(rowFor)}</ul>
+              <h3 className="text-sm font-semibold">All chains</h3>
+              <ul className="space-y-2">{others.map(rowFor)}</ul>
+            </>
+          )}
         </CardContent>
       </Card>
-
-      <DevnetSetting />
 
       <RpcEndpointManager />
 
@@ -305,23 +404,21 @@ function RpcEndpointManager() {
           refreshes balances straight away, so you can see it work.
         </p>
 
+        {/* Lane 6 redesign: the chain choice was a bare <select> of 83
+            entries. It is now the same search picker Track and Import
+            use — search by name, symbol or id. Dogecoin is not in it:
+            it keeps its built-in failover pair and takes no custom RPC. */}
+        <ChainSearchSelect
+          chains={RPC_MANAGED_CHAINS}
+          value={selectedChain}
+          onChange={setSelectedChain}
+          id="rpc-chain"
+        />
+        <p className="text-sm text-muted-foreground">
+          Built-in failover: Dogecoin keeps its SoChain / BlockCypher pair
+          and takes no custom RPC.
+        </p>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Chain
-            <select
-              value={selectedChain}
-              onChange={(event) =>
-                setSelectedChain(event.target.value as ChainId)
-              }
-              className="rounded-[12px] border bg-card px-3 py-2 text-sm"
-            >
-              {RPC_MANAGED_CHAINS.map((chain) => (
-                <option key={chain} value={chain}>
-                  {CHAINS[chain].displayName}
-                </option>
-              ))}
-            </select>
-          </label>
           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
             Custom RPC URL
             <input
@@ -404,8 +501,13 @@ function RpcEndpointManager() {
           </p>
         )}
 
+        {/* Lane 6 redesign: this list repeated all 84 chains a second
+            time (the Mainnet list above already shows every chain).
+            It now shows the one chain picked above; the global
+            actions (switch all, reset all, check all) still cover
+            every chain. */}
         <ul className="space-y-3">
-          {SUPPORTED_CHAINS.map((chain) => {
+          {[selectedChain].map((chain) => {
             const config = CHAINS[chain];
             const endpoints = resolveRpcEndpoints(chain);
             const managed = (RPC_MANAGED_CHAINS as readonly ChainId[]).includes(

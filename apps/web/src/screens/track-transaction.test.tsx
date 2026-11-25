@@ -134,8 +134,26 @@ async function clickButton(div: HTMLDivElement, text: string): Promise<void> {
   });
 }
 
+// Lane 6 redesign: chains are picked through the search picker, not a
+// wall of buttons. Open the picker and click the option by name.
+async function pickChain(div: HTMLDivElement, name: string): Promise<void> {
+  const input = div.querySelector<HTMLInputElement>('#track-chain');
+  if (!input) throw new Error('Chain picker not found');
+  await act(async () => {
+    input.focus();
+    input.click();
+  });
+  const option = [...div.querySelectorAll('[role="option"]')].find((o) =>
+    o.textContent?.includes(name),
+  ) as HTMLElement | undefined;
+  if (!option) throw new Error(`Chain option not found: ${name}`);
+  await act(async () => {
+    option.click();
+  });
+}
+
 describe('TrackTransactionScreen', () => {
-  it('renders the heading and all four chain names', () => {
+  it('renders the heading and offers every chain through the search picker', async () => {
     mounted = mount();
     const { div } = mounted;
     const heading = Array.from(div.querySelectorAll('h1, h2, h3')).find(
@@ -143,8 +161,19 @@ describe('TrackTransactionScreen', () => {
     );
 
     expect(heading).toBeDefined();
+    const input = div.querySelector<HTMLInputElement>('#track-chain');
+    expect(input).not.toBeNull();
+    // Closed, the picker shows only the selected chain.
+    expect(input?.value).toBe('Bitcoin');
+    await act(async () => {
+      input!.focus();
+      input!.click();
+    });
+    const options = [...div.querySelectorAll('[role="option"]')].map(
+      (o) => o.textContent,
+    );
     for (const chain of ['Bitcoin', 'Ethereum', 'TRON', 'TON']) {
-      expect(findButton(div, chain).textContent).toContain(chain);
+      expect(options.join(' ')).toContain(chain);
     }
   });
 
@@ -156,7 +185,7 @@ describe('TrackTransactionScreen', () => {
     mounted = mount();
     const { div } = mounted;
 
-    setInputValue(div.querySelector('input'), btcHash);
+    setInputValue(div.querySelector<HTMLInputElement>('#transaction-hash'), btcHash);
     await clickButton(div, 'Look up');
 
     expect(lookupTransaction).toHaveBeenCalledTimes(1);
@@ -171,7 +200,7 @@ describe('TrackTransactionScreen', () => {
     mounted = mount();
     const { div } = mounted;
 
-    setInputValue(div.querySelector('input'), '0'.repeat(64));
+    setInputValue(div.querySelector<HTMLInputElement>('#transaction-hash'), '0'.repeat(64));
     await clickButton(div, 'Look up');
 
     expect(lookupTransaction).toHaveBeenCalledTimes(1);
@@ -188,7 +217,7 @@ describe('TrackTransactionScreen', () => {
     mounted = mount();
     const { div } = mounted;
 
-    setInputValue(div.querySelector('input'), '0'.repeat(64));
+    setInputValue(div.querySelector<HTMLInputElement>('#transaction-hash'), '0'.repeat(64));
     await clickButton(div, 'Look up');
 
     expect(div.textContent).toContain('Could not look up this transaction');
@@ -211,12 +240,12 @@ describe('TrackTransactionScreen', () => {
     mounted = mount();
     const { div } = mounted;
 
-    await clickButton(div, 'TON');
+    await pickChain(div, 'TON');
     const accountInput = findInputByLabel(div, 'Account address');
     expect(accountInput).toBeInstanceOf(window.HTMLInputElement);
     expect(accountInput.value).toBe('');
 
-    setInputValue(div.querySelector('input'), btcHash);
+    setInputValue(div.querySelector<HTMLInputElement>('#transaction-hash'), btcHash);
     await clickButton(div, 'Look up');
     expect(lookupTransaction).toHaveBeenCalledTimes(1);
     expect(div.textContent).toContain('TON lookups need the account address');
@@ -241,7 +270,7 @@ describe('TrackTransactionScreen', () => {
     mounted = mount();
     const { div } = mounted;
 
-    setInputValue(div.querySelectorAll('input')[1], btcAddress);
+    setInputValue(div.querySelector<HTMLInputElement>('#activity-address'), btcAddress);
     await clickButton(div, 'Show recent activity');
 
     expect(getRecentActivity).toHaveBeenCalledTimes(1);
@@ -257,7 +286,7 @@ describe('TrackTransactionScreen', () => {
     mounted = mount();
     const { div } = mounted;
 
-    setInputValue(div.querySelectorAll('input')[1], btcAddress);
+    setInputValue(div.querySelector<HTMLInputElement>('#activity-address'), btcAddress);
     await clickButton(div, 'Show recent activity');
 
     expect(getRecentActivity).toHaveBeenCalledTimes(1);
@@ -291,7 +320,7 @@ describe('TrackTransactionScreen', () => {
     expect(div.querySelector('details')).toBeNull();
     const guide = div.querySelector('[aria-labelledby="track-guide-heading"]');
     expect(guide).not.toBeNull();
-    expect(guide?.textContent).toContain('Pick a chain above.');
+    expect(guide?.textContent).toContain('Search for the chain.');
     expect(guide?.textContent).toContain('Paste the transaction hash.');
     expect(guide?.textContent).toContain('Look it up to see its status.');
     expect(guide?.textContent).toContain('What a result shows');

@@ -5,6 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
 import { SecuritySettingsScreen } from './security-settings';
 import { useWallet } from '../state/wallet-context';
+import packageJson from '../../package.json';
 
 vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
@@ -177,6 +178,25 @@ describe('security settings screen', () => {
       expect(link?.textContent).toContain('Open Networks');
       expect(text).not.toContain('RPC endpoints');
       expect(text).not.toContain('Use backup');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('points at Wallets for connected wallets and shows the app version', async () => {
+    setWallet('unlocked');
+    const mounted = await mountScreen();
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('Connected wallets');
+      const link = mounted.div.querySelector(
+        'a[href="/wallets"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain('Open Wallets');
+      // The version line is a hardcoded string in the screen; it must
+      // match package.json, or this fails on the next bump.
+      expect(text).toContain(`Version ${packageJson.version}`);
     } finally {
       await mounted.cleanup();
     }
