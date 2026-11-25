@@ -7,11 +7,14 @@ import {
   PRICE_ASSET_IDS,
   PRICE_CACHE_KEY,
   PRICE_IDS,
+  fetchPriceHistory,
   fetchPrices,
   fiatValueForBalance,
+  formatChangePct,
   formatUnitPriceUsd,
   isFreshQuote,
   loadCachedPrices,
+  parsePriceHistory,
   parsePriceResponse,
   portfolioTotal,
   quoteFreshnessLabel,
@@ -594,7 +597,7 @@ describe('fetchPrices', () => {
       expect(calls).toHaveLength(1);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       expect(calls[0]!.url).toBe(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin,xdai,celo,mantle,metis-token,fantom,crypto-com-chain,kava,filecoin,frax-ether,berachain-bera,sei-network,apecoin,sonic-3,hyperliquid,monad,ronin,immutable-x,fuse-network-token,velas,syscoin,theta-fuel,iotex,okb,astar,telos,conflux-token,coredaoorg,songbird,pulsechain,xdce-crowd-sale,chiliz,ethereum-classic,flare-networks,zetachain,flow,cosmos,osmosis,ripple,stellar,polkadot,near,aptos,tezos,algorand,hedera-hashgraph,injective-protocol,celestia,dydx-chain,axelar,usd-coin,juno-network,cardano,kaspa,starknet&vs_currencies=usd&include_last_updated_at=true',
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin,xdai,celo,mantle,metis-token,fantom,crypto-com-chain,kava,filecoin,frax-ether,berachain-bera,sei-network,apecoin,sonic-3,hyperliquid,monad,ronin,immutable-x,fuse-network-token,velas,syscoin,theta-fuel,iotex,okb,astar,telos,conflux-token,coredaoorg,songbird,pulsechain,xdce-crowd-sale,chiliz,ethereum-classic,flare-networks,zetachain,flow,cosmos,osmosis,ripple,stellar,polkadot,near,aptos,tezos,algorand,hedera-hashgraph,injective-protocol,celestia,dydx-chain,axelar,usd-coin,juno-network,cardano,kaspa,starknet&vs_currencies=usd&include_last_updated_at=true&include_24hr_change=true',
       );
       const headers = (
         calls[0]!.init as { headers: Record<string, string> }
@@ -1677,5 +1680,146 @@ describe('usePrices devnet (temporary devnet mode)', () => {
     } finally {
       await cleanup();
     }
+  });
+});
+
+// TEST-DATA-001 (rule: 24 h movement comes from CoinGecko's
+// usd_24h_change on the same /simple/price call; no movement is ever
+// invented): parses the field onto the quote when present.
+describe('24h change (Lane 4, UX-major data)', () => {
+  it('parses usd_24h_change onto the quote when CoinGecko sends it', () => {
+    const payload = {
+      ...freshPayload(),
+      bitcoin: {
+        usd: 62683,
+        last_updated_at: secondsBefore(30_000),
+        usd_24h_change: 2.3456,
+      },
+    };
+    const entry = parsePriceResponse(payload, NOW_MS).btc;
+    expect(entry).toMatchObject({
+      status: 'fresh',
+      quote: { usdPrice: '62683', change24hPct: 2.3456 },
+    });
+  });
+
+  // TEST-DATA-002 (regression: a missing / non-finite change must
+  // read as no movement, never 0.00%).
+  it('omits the change, never 0.00%, when the field is absent or not a finite number', () => {
+    const without = parsePriceResponse(freshPayload(), NOW_MS).btc;
+    expect(without.status).toBe('fresh');
+    if (without.status === 'fresh') {
+      expect(without.quote.change24hPct).toBeUndefined();
+      expect('change24hPct' in without.quote).toBe(false);
+    }
+    for (const change of ['2.3', Number.NaN, Number.POSITIVE_INFINITY]) {
+      const payload = {
+        ...freshPayload(),
+        bitcoin: {
+          usd: 62683,
+          last_updated_at: secondsBefore(30_000),
+          usd_24h_change: change,
+        },
+      };
+      const entry = parsePriceResponse(payload, NOW_MS).btc;
+      expect(entry.status).toBe('fresh');
+      if (entry.status === 'fresh') {
+        expect(entry.quote.change24hPct).toBeUndefined();
+      }
+    }
+  });
+
+  // TEST-DATA-003 (rule: movements render signed, two decimals).
+  it('formats a movement signed with two decimals', () => {
+    expect(formatChangePct(2.3456)).toBe('+2.35%');
+    expect(formatChangePct(-1.2)).toBe('-1.20%');
+    expect(formatChangePct(0)).toBe('0.00%');
+    expect(formatChangePct(-0.001)).toBe('0.00%');
+  });
+});
+
+// TEST-DATA-004 (rule: the chart plots real CoinGecko market-chart
+// points only; fewer than two valid points is not a chart).
+describe('price history (Lane 4, UX-major data)', () => {
+  it('parses a market_chart payload into time-ordered points', () => {
+    const result = parsePriceHistory({
+      prices: [
+        [NOW_MS - 6 * 3_600_000, 60000],
+        [NOW_MS - 3 * 3_600_000, 61000],
+        [NOW_MS, 62683],
+      ],
+    });
+    expect(result).toEqual({
+      status: 'ok',
+      points: [
+        { timeMs: NOW_MS - 6 * 3_600_000, price: 60000 },
+        { timeMs: NOW_MS - 3 * 3_600_000, price: 61000 },
+        { timeMs: NOW_MS, price: 62683 },
+      ],
+    });
+  });
+
+  it('drops non-finite pairs and reports unavailable under two points', () => {
+    expect(
+      parsePriceHistory({
+        prices: [
+          [NOW_MS, 62683],
+          ['bad', 61000],
+          [NOW_MS - 1000, Number.NaN],
+          [NOW_MS - 2000, 0],
+        ],
+      }),
+    ).toEqual({ status: 'unavailable' });
+    expect(parsePriceHistory({ prices: [] })).toEqual({ status: 'unavailable' });
+    expect(parsePriceHistory(null)).toEqual({ status: 'unavailable' });
+    expect(parsePriceHistory({})).toEqual({ status: 'unavailable' });
+  });
+
+  // TEST-DATA-005 (rule: one on-demand 7-day market_chart call per
+  // asset; a 429 is a rate-limited error, never invented points).
+  it('fetches the 7-day market chart for one CoinGecko id', async () => {
+    const calls: string[] = [];
+    const fetchFn = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(String(url));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          prices: [
+            [NOW_MS - 3_600_000, 60000],
+            [NOW_MS, 62683],
+          ],
+        }),
+        headers: { get: () => null },
+      };
+    });
+    const result = await fetchPriceHistory(
+      fetchFn as unknown as typeof fetch,
+      'bitcoin',
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toBe(
+      'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=7',
+    );
+    expect(result).toEqual({
+      status: 'ok',
+      points: [
+        { timeMs: NOW_MS - 3_600_000, price: 60000 },
+        { timeMs: NOW_MS, price: 62683 },
+      ],
+    });
+  });
+
+  it('maps a 429 to a rate-limited chart error, never invented points', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    }));
+    const result = await fetchPriceHistory(
+      fetchFn as unknown as typeof fetch,
+      'bitcoin',
+    );
+    expect(result).toEqual({ status: 'error', reason: 'rate-limited' });
   });
 });

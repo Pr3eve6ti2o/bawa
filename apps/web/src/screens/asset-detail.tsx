@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
@@ -6,7 +6,13 @@ import { chainConfig } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { TxRow } from './tx-row';
-import { fiatValueForBalance, unitPriceForChain, usePrices } from '../wallet/prices';
+import {
+  PRICE_IDS,
+  fiatValueForBalance,
+  formatChangePct,
+  unitPriceForChain,
+  usePrices,
+} from '../wallet/prices';
 import { fiatValueForTokenBalance, useTokenPrices } from '../wallet/token-prices';
 import {
   DEFAULT_TOKENS,
@@ -27,6 +33,11 @@ import { CopyButton } from '../ui/components/copy-button';
 import { usePriceFeedAutoRefresh } from './use-live-prices';
 import { ChainLogo, TokenLogo } from './token-logo';
 import type { BalanceState } from '../state/wallet-context';
+
+// Lane 4 (UX-major, data): the 7-day price chart is lazy-loaded —
+// its code (and its market-chart fetch) only exists once the asset
+// screen mounts, never in the main bundle.
+const PriceChart = lazy(() => import('./price-chart').then((module) => ({ default: module.PriceChart })));
 
 const DERIVATION_PATHS = {
   btc: "m/84'/0'/0'/0/i",
@@ -286,6 +297,20 @@ export function AssetDetailScreen() {
       : pricesState.entries[chainId];
   const priceSource =
     priceEntryForSource?.status === 'fresh' ? priceEntryForSource.quote.source : 'CoinGecko';
+  // Lane 4 (UX-major, data): the 24 h movement, when the feed sent
+  // one — a fallback quote carries none, and the line is omitted
+  // rather than showing a fabricated 0.00%.
+  const change24hPct =
+    priceEntryForSource?.status === 'fresh'
+      ? priceEntryForSource.quote.change24hPct
+      : undefined;
+  // Lane 4 (UX-major, data): the chart's CoinGecko id — the native
+  // asset's PRICE_IDS id, or the token's CoinGecko id when it has one.
+  // No id means no chart data, and the chart says so honestly.
+  const chartCoingeckoId =
+    tokenRecord !== undefined
+      ? (tokenRecord.coingeckoId ?? null)
+      : (PRICE_IDS[chainId] ?? null);
   const detailsBalance =
     effectiveBalance.status === 'loading'
       ? 'Loading…'
@@ -467,6 +492,14 @@ export function AssetDetailScreen() {
             />
           </>
         )}
+        {/* Lane 4 (UX-major, data): the 24 h movement next to the
+            holding, from the same live feed as the per-unit price.
+            Omitted when the feed did not send one — never 0.00%. */}
+        {change24hPct !== undefined ? (
+          <p className="text-sm text-ink">
+            {`24h ${formatChangePct(change24hPct)} · ${priceSource}`}
+          </p>
+        ) : null}
         {(effectiveBalance.status === 'available' || effectiveBalance.status === 'zero') && effectiveBalance.stale === true ? (
           <p className="text-sm text-panel-text-muted">
             Showing the last loaded balance — it may be out of date.
@@ -516,6 +549,29 @@ export function AssetDetailScreen() {
           </Button>
         )}
       </div>
+
+      {/* Lane 4 (UX-major, data): the 7-day price chart, lazy-loaded
+          (see the lazy import above) — real CoinGecko history only,
+          with its honest empty/error states inside the component. */}
+      {/* Lane 4 (UX-major, data): the fallback is a plain placeholder,
+          NOT the Skeleton — Skeleton renders BawaLoading's literal
+          "Loading…" label, which the Lane F first-navigation
+          regression test (app-routing.test.tsx) asserts never appears
+          on the first render of this screen. The detail itself stays
+          eager; only the chart area waits for its chunk. */}
+      <Suspense
+        fallback={
+          <div
+            role="status"
+            aria-label="Price chart loading"
+            className="h-[120px] w-full rounded-bawa border-2 border-ink bg-paper"
+          >
+            <span className="sr-only">Loading price chart…</span>
+          </div>
+        }
+      >
+        <PriceChart coingeckoId={chartCoingeckoId} label={displayTitle} />
+      </Suspense>
 
       {/*
         Details block, in MetaMask's market position (after the actions,

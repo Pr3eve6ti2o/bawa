@@ -1,6 +1,6 @@
 /**
  * CoinGecko public API: https://api.coingecko.com/api/v3 (terms 2026-11-20).
- * GET /simple/price?ids=bitcoin,ethereum,tron,the-open-network&vs_currencies=usd&include_last_updated_at=true
+ * GET /simple/price?ids=bitcoin,ethereum,tron,the-open-network&vs_currencies=usd&include_last_updated_at=true&include_24hr_change=true
  * IDs: btc=bitcoin; eth=ethereum; trx=tron; ton=the-open-network;
  * sol=solana; bsc=binancecoin; matic=polygon-ecosystem-token;
  * arb=ethereum (Arbitrum native asset is ETH — NOT 'arbitrum', the ARB
@@ -265,6 +265,15 @@ export type PriceQuote = {
   providerUpdatedAtMs: number;
   fetchedAtMs: number;
   source: PriceSource;
+  /**
+   * Lane 4 (UX-major, data): the 24 h price movement in percent, from
+   * CoinGecko's `usd_24h_change` on /simple/price. Present only when
+   * the provider returned a finite number — a fallback quote
+   * (CoinLore / DexScreener / TonAPI / Coinbase) or a CoinGecko
+   * response without the field carries no change, and the UI omits
+   * the movement instead of showing a fabricated 0.00%.
+   */
+  change24hPct?: number;
 };
 
 export type PriceEntry =
@@ -438,6 +447,12 @@ export function parseCoingeckoPriceEntry(
   if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
     return { status: 'unavailable', reason: 'invalid-price' };
   }
+  // Lane 4 (UX-major, data): the 24 h movement, when CoinGecko sent
+  // it. A missing / non-numeric / non-finite value means no movement
+  // is shown — never a 0.00% invented from an absent field. The field
+  // is set only when finite, so existing exact-equality tests on
+  // quotes without the field keep passing.
+  const change24h = ownValue(entry, 'usd_24h_change');
   const quote: PriceQuote = {
     chain: identity.chain,
     assetId: identity.assetId,
@@ -447,6 +462,9 @@ export function parseCoingeckoPriceEntry(
     providerUpdatedAtMs: updatedAt * 1000,
     fetchedAtMs: nowMs,
     source: 'CoinGecko',
+    ...(typeof change24h === 'number' && Number.isFinite(change24h)
+      ? { change24hPct: change24h }
+      : {}),
   };
   return isFreshQuote(quote, nowMs)
     ? { status: 'fresh', quote }
@@ -758,7 +776,10 @@ export async function fetchCoingeckoSimplePrices<T>(
 ): Promise<T> {
   const url =
     `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
-    '&vs_currencies=usd&include_last_updated_at=true';
+    // Lane 4 (UX-major, data): the 24 h movement rides on the same
+    // call — one extra query flag, no extra request against the
+    // keyless ~5 calls/min budget.
+    '&vs_currencies=usd&include_last_updated_at=true&include_24hr_change=true';
   const result = await fetchJsonWithTimeout(fetchFn, url, coingeckoHeaders());
   if (result.status === 'error') {
     return allError(result.error);
@@ -801,6 +822,87 @@ export async function fetchPrices(
     allError,
     (payload) => parsePriceResponse(payload, resolvedNowMs),
   );
+}
+
+/**
+ * Lane 4 (UX-major, data): a price movement as the UI shows it —
+ * signed, two decimals (`+2.34%`, `-1.20%`, `0.00%`). The caller
+ * decides whether a movement exists at all; this formats a known one.
+ */
+export function formatChangePct(pct: number): string {
+  const rounded = Math.round(pct * 100) / 100;
+  const text = Math.abs(rounded).toFixed(2);
+  if (rounded > 0) return `+${text}%`;
+  if (rounded < 0) return `-${text}%`;
+  return '0.00%';
+}
+
+/** One point of a CoinGecko market chart: epoch ms + USD price. */
+export type PriceHistoryPoint = { timeMs: number; price: number };
+
+export type PriceHistoryResult =
+  | { status: 'ok'; points: PriceHistoryPoint[] }
+  | { status: 'unavailable' }
+  | {
+      status: 'error';
+      reason: 'rate-limited' | 'network' | 'provider' | 'timeout';
+    };
+
+/**
+ * Lane 4 (UX-major, data): parse a CoinGecko /market_chart payload
+ * (`{ prices: [[ms, usd], …] }`) into chart points. Only finite
+ * [time, price] pairs with a positive price survive; fewer than two
+ * points is not a chart — `unavailable`, never a line through one
+ * point or a flat line invented from a single price.
+ */
+export function parsePriceHistory(payload: unknown): PriceHistoryResult {
+  if (!isPlainObject(payload)) return { status: 'unavailable' };
+  const raw = ownValue(payload, 'prices');
+  if (!Array.isArray(raw)) return { status: 'unavailable' };
+  const points: PriceHistoryPoint[] = [];
+  for (const pair of raw) {
+    if (!Array.isArray(pair) || pair.length < 2) continue;
+    const timeMs = pair[0];
+    const price = pair[1];
+    if (
+      typeof timeMs !== 'number' ||
+      !Number.isFinite(timeMs) ||
+      typeof price !== 'number' ||
+      !Number.isFinite(price) ||
+      price <= 0
+    ) {
+      continue;
+    }
+    points.push({ timeMs, price });
+  }
+  if (points.length < 2) return { status: 'unavailable' };
+  return { status: 'ok', points };
+}
+
+/**
+ * Lane 4 (UX-major, data): 7-day price history for one CoinGecko id
+ * (a native asset's PRICE_IDS id, or a token's coingeckoId) — the
+ * chart's only data source. One on-demand call when the asset screen
+ * mounts, never on a timer: the chart is history, not a live feed, and
+ * the keyless CoinGecko budget (~5 calls/min/shared IP) must not
+ * spend a call a minute on it. A 429 / failure is `error`, an empty
+ * or malformed payload is `unavailable` — the chart shows the honest
+ * state, never invented points. Same origin as the price feed
+ * (api.coingecko.com), so no new CSP origin is needed.
+ */
+export async function fetchPriceHistory(
+  fetchFn: typeof fetch,
+  coingeckoId: string,
+  days = 7,
+): Promise<PriceHistoryResult> {
+  const url =
+    `${PRICE_PROVIDER_BASE_URL}/coins/${encodeURIComponent(coingeckoId)}` +
+    `/market_chart?vs_currency=usd&days=${days}`;
+  const result = await fetchJsonWithTimeout(fetchFn, url, coingeckoHeaders());
+  if (result.status === 'error') {
+    return { status: 'error', reason: result.error.reason };
+  }
+  return parsePriceHistory(result.payload);
 }
 
 export function usdPriceToMinorUnitsPerWhole(usdPrice: string): string {

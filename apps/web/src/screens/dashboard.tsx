@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { BawaIcon, ScanIcon } from '../ui/components/icons';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
-import { availableFor } from '../wallet/chains';
+import { availableFor, chainConfig } from '../wallet/chains';
 import {
+  fiatValueForBalance,
+  formatChangePct,
   idlePriceEntries,
   portfolioTotal,
   PRICE_ATTRIBUTION_TEXT,
@@ -17,6 +19,7 @@ import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
+import { Skeleton } from '../ui/components/skeleton';
 import { useLivePrices } from './use-live-prices';
 import { useAnimatedHeroValue } from './use-hero-ticker';
 
@@ -158,6 +161,100 @@ export function DashboardScreen() {
     }
     return { minorUnits, partial, loadedZero, unpricedNonzero };
   }, [devnetEnabled, tokenList, tokenBalances, tokenPricesState.entries]);
+
+  // Lane 4 (UX-major, data): the portfolio breakdown — one unified
+  // list across chains and tokens, sorted by fiat value, with each
+  // holding's share of the priced total and its 24 h movement where
+  // the feed sent one. A funded holding whose value cannot be priced
+  // stays in the list as "Value unavailable" (never $0.00, never
+  // dropped); zero balances are counted in the footnote, not listed.
+  // In devnet mode test tokens have no market value, so there is no
+  // breakdown at all — same rule as the hero total.
+  type BreakdownHolding = {
+    key: string;
+    label: string;
+    detail: string;
+    minorUnits: number | null;
+    valueText: string | null;
+    change24hPct: number | undefined;
+  };
+  const breakdown = useMemo(() => {
+    if (devnetEnabled) {
+      return { holdings: [] as BreakdownHolding[], zeroCount: 0, pricedTotal: 0 };
+    }
+    const holdings: BreakdownHolding[] = [];
+    let zeroCount = 0;
+    let pricedTotal = 0;
+    const nowMs = Date.now();
+    for (const chain of availableFor('balance')) {
+      const balance = balances[chain];
+      if (balance === undefined || balance.status === 'loading') continue;
+      if (balance.status === 'unavailable' || balance.status === 'error') continue;
+      if (balance.status === 'zero' || balance.value === '0') {
+        zeroCount += 1;
+        continue;
+      }
+      const entry = pricesState.entries[chain];
+      const fiat = fiatValueForBalance(chain, balance, entry, nowMs);
+      const change24hPct =
+        entry?.status === 'fresh' ? entry.quote.change24hPct : undefined;
+      if (fiat.kind === 'fiat') {
+        pricedTotal += fiat.minorUnits;
+        holdings.push({
+          key: chain,
+          label: chainConfig(chain).displayName,
+          detail: chainConfig(chain).symbol,
+          minorUnits: fiat.minorUnits,
+          valueText: fiat.text,
+          change24hPct,
+        });
+      } else {
+        holdings.push({
+          key: chain,
+          label: chainConfig(chain).displayName,
+          detail: chainConfig(chain).symbol,
+          minorUnits: null,
+          valueText: null,
+          change24hPct,
+        });
+      }
+    }
+    for (const token of tokenList) {
+      const balance = (tokenBalances ?? {})[tokenKey(token.chain, token.contract)];
+      if (balance === undefined || balance.status === 'loading') continue;
+      if (balance.status === 'unavailable' || balance.status === 'error') continue;
+      if (balance.status === 'zero' || balance.value === '0') {
+        zeroCount += 1;
+        continue;
+      }
+      const entry = tokenPricesState.entries[tokenKey(token.chain, token.contract)];
+      const fiat = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
+      const change24hPct =
+        entry?.status === 'fresh' ? entry.quote.change24hPct : undefined;
+      if (fiat.kind === 'fiat') {
+        pricedTotal += fiat.minorUnits;
+        holdings.push({
+          key: tokenKey(token.chain, token.contract),
+          label: token.name,
+          detail: `${token.symbol} · ${chainConfig(token.chain).displayName}`,
+          minorUnits: fiat.minorUnits,
+          valueText: fiat.text,
+          change24hPct,
+        });
+      } else {
+        holdings.push({
+          key: tokenKey(token.chain, token.contract),
+          label: token.name,
+          detail: `${token.symbol} · ${chainConfig(token.chain).displayName}`,
+          minorUnits: null,
+          valueText: null,
+          change24hPct,
+        });
+      }
+    }
+    holdings.sort((a, b) => (b.minorUnits ?? -1) - (a.minorUnits ?? -1));
+    return { holdings, zeroCount, pricedTotal };
+  }, [devnetEnabled, balances, pricesState.entries, tokenList, tokenBalances, tokenPricesState.entries]);
 
   // Only chains with a verified balance adapter count toward the hero.
   // The multichain-extension chains have no balance adapter yet, so their
@@ -326,6 +423,14 @@ export function DashboardScreen() {
         <p className="font-display text-xl text-ink">Total value in US dollars.</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
+        )}
+        {/* Lane 4 (UX-major, data): when the prices were last fetched —
+            the freshness signal for the total above. Only once a fetch
+            has landed; before that the rows carry their own states. */}
+        {hero.showAttribution && pricesState.lastFetchedAtMs !== null && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">
+            {`Prices updated ${new Date(pricesState.lastFetchedAtMs).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}.`}
+          </p>
         )}
         {hero.partialNote && (
           <p className="text-xs leading-[18px] text-panel-text-muted">Partial total. Some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
@@ -498,6 +603,84 @@ export function DashboardScreen() {
               )}
               <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />
             </Card>
+            {/* Lane 4 (UX-major, data): portfolio breakdown — the unified
+                per-chain / per-token view of the total above. Funded
+                holdings only, largest first; an unpriced holding reads
+                "Value unavailable", never $0.00. NFTs have no indexer
+                configured, so they are named as unavailable rather than
+                listed with a fake value. */}
+            <section aria-label="Portfolio breakdown" className="mt-6">
+              <h2 className="text-lg font-semibold text-ink">Breakdown</h2>
+              {devnetEnabled ? (
+                <p className="mt-4 text-sm text-ink">
+                  Devnet test mode — test tokens have no market value, so
+                  there is no breakdown.
+                </p>
+              ) : heroLoading ? (
+                <>
+                  {/* h-[140px], not 68px: Skeleton embeds BawaLoading
+                      (48px spinner + dots + 1.5rem label ≈ 130px tall),
+                      so a 68px box lets "Loading…" overflow and paint
+                      over the NFT card below — seen in the CDP capture. */}
+                  <div role="status" className="mt-4">
+                    <Skeleton className="h-[140px] w-full" />
+                    <span className="sr-only">Loading portfolio breakdown…</span>
+                  </div>
+                </>
+              ) : breakdown.holdings.length === 0 ? (
+                <p className="mt-4 text-sm text-ink">
+                  Nothing to break down yet — receive on any chain to get started.
+                </p>
+              ) : (
+                <>
+                  <ul className="mt-4 divide-y divide-border rounded-bawa border-2 border-ink bg-paper">
+                    {breakdown.holdings.slice(0, 8).map((holding) => (
+                      <li key={holding.key} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-ink">{holding.label}</span>
+                          <span className="block text-xs text-panel-text-muted">
+                            {holding.detail}
+                            {holding.change24hPct !== undefined ? ` · 24h ${formatChangePct(holding.change24hPct)}` : ''}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right">
+                          <span className="block text-sm font-semibold text-ink">
+                            {hideBalance
+                              ? '••••••'
+                              : (holding.valueText ?? 'Value unavailable')}
+                          </span>
+                          <span className="block text-xs text-panel-text-muted">
+                            {holding.minorUnits !== null && breakdown.pricedTotal > 0 && !hideBalance
+                              ? `${((holding.minorUnits / breakdown.pricedTotal) * 100).toFixed(1)}% of portfolio`
+                              : holding.minorUnits === null
+                                ? 'Share unknown'
+                                : '—'}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {breakdown.holdings.length > 8 ? (
+                    <p className="mt-2 text-xs leading-[18px] text-panel-text-muted">
+                      {`And ${breakdown.holdings.length - 8} more holding${breakdown.holdings.length - 8 === 1 ? '' : 's'} — see Assets above for the full list.`}
+                    </p>
+                  ) : null}
+                  {breakdown.zeroCount > 0 ? (
+                    <p className="mt-2 text-xs leading-[18px] text-panel-text-muted">
+                      {`${breakdown.zeroCount} asset${breakdown.zeroCount === 1 ? '' : 's'} at zero balance — not listed here.`}
+                    </p>
+                  ) : null}
+                </>
+              )}
+              <div className="mt-4 rounded-bawa border-2 border-dashed border-ink bg-paper p-4">
+                <p className="text-sm font-semibold text-ink">NFTs — not connected yet</p>
+                <p className="mt-1 text-sm text-ink">
+                  Bawa has no NFT indexer configured, so NFTs are not listed
+                  here and are never given a made-up value. Connecting one
+                  needs an NFT indexer provider and key — an owner decision.
+                </p>
+              </div>
+            </section>
             <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
           </section>
             <div className="hidden lg:block">

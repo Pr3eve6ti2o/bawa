@@ -1413,5 +1413,55 @@ describe('dashboard screen', () => {
       await mounted.cleanup();
     }
   });
+
+  // TEST-DATA-008 (rule: the portfolio breakdown lists funded
+  // holdings largest first with value, share and 24 h movement, counts
+  // zero balances in a footnote, and names NFTs as unconnected rather
+  // than valuing them at $0.00).
+  it('shows the portfolio breakdown with share and 24h movement', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '1000000000000000000' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    const lastUpdatedAt = Math.floor(Date.now() / 1000) - 30;
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        bitcoin: { usd: 62683, last_updated_at: lastUpdatedAt, usd_24h_change: 2.5 },
+        ethereum: { usd: 1774.93, last_updated_at: lastUpdatedAt, usd_24h_change: -1 },
+        tron: { usd: 0.310229, last_updated_at: lastUpdatedAt },
+        'the-open-network': { usd: 1.028, last_updated_at: lastUpdatedAt },
+      }),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      const breakdown = mounted.div.querySelector(
+        '[aria-label="Portfolio breakdown"]',
+      );
+      expect(breakdown).not.toBeNull();
+      const text = breakdown?.textContent ?? '';
+      expect(text).toContain('Bitcoin');
+      expect(text).toContain('$62,683.00');
+      expect(text).toContain('97.2% of portfolio');
+      expect(text).toContain('24h +2.50%');
+      expect(text).toContain('Ethereum');
+      expect(text).toContain('$1,774.93');
+      expect(text).toContain('2.8% of portfolio');
+      expect(text).toContain('24h -1.00%');
+      expect(text.indexOf('Bitcoin')).toBeLessThan(text.indexOf('Ethereum'));
+      expect(text).toContain('2 assets at zero balance');
+      expect(text).toContain('NFTs — not connected yet');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
 });
 

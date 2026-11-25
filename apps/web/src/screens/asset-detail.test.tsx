@@ -35,6 +35,14 @@ vi.mock('../wallet/chains', () => ({
   chainConfig: vi.fn(),
 }));
 
+// Lane 4 (UX-major, data): the lazy chart is stubbed here so the
+// detail tests never fire a live CoinGecko market-chart fetch; the
+// chart's own states are covered by price-chart.test.tsx
+// (TEST-DATA-006).
+vi.mock('./price-chart', () => ({
+  PriceChart: () => null,
+}));
+
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
@@ -624,6 +632,63 @@ describe('asset detail screen', () => {
       expect(heading?.textContent).not.toContain('✓ Verified');
     } finally {
       await mounted.cleanup();
+    }
+  });
+
+  // TEST-DATA-009 (rule: the 24 h movement shows next to the holding
+  // when the feed sent one, and is omitted — never 0.00% — when it
+  // did not).
+  it('shows the 24h movement when the feed sent one, and omits it otherwise', async () => {
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1000000000000000000' },
+      },
+      perChain(emptyHistory),
+    );
+    setPrices({
+      ...unavailablePrices,
+      eth: {
+        status: 'fresh',
+        quote: {
+          chain: 'eth',
+          assetId: 'eip155:1/slip44:60',
+          providerAssetId: 'ethereum',
+          usdPrice: '2000',
+          providerUpdatedAtMs: Date.now(),
+          fetchedAtMs: Date.now(),
+          source: 'CoinGecko',
+          change24hPct: 2.5,
+        },
+      },
+    });
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('24h +2.50% · CoinGecko');
+    } finally {
+      await mounted.cleanup();
+    }
+    setPrices({
+      ...unavailablePrices,
+      eth: {
+        status: 'fresh',
+        quote: {
+          chain: 'eth',
+          assetId: 'eip155:1/slip44:60',
+          providerAssetId: 'ethereum',
+          usdPrice: '2000',
+          providerUpdatedAtMs: Date.now(),
+          fetchedAtMs: Date.now(),
+          source: 'CoinGecko',
+        },
+      },
+    });
+    const mountedWithout = await mountScreen('/assets/eth');
+    try {
+      expect(mountedWithout.div.textContent).not.toContain('24h');
+      expect(mountedWithout.div.textContent).not.toContain('0.00%');
+    } finally {
+      await mountedWithout.cleanup();
     }
   });
 });

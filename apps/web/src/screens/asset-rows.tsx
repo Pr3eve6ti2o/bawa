@@ -65,6 +65,10 @@ type AssetRowModel =
       key: string;
       title: string;
       subtitle: string;
+      /** Lane 4 (UX-major, data): the full search text — name,
+          symbol, chain id and (for tokens) the whole contract
+          address — so search matches more than the two lines shown. */
+      searchText?: string;
       link: string;
       isToken: boolean;
       logoChain: ChainId | null;
@@ -79,6 +83,8 @@ type AssetRowModel =
       key: string;
       title: string;
       subtitle: string;
+      /** Lane 4 (UX-major, data): full search text (see above). */
+      searchText?: string;
       symbol: string;
       statusText: string;
       price: PriceCell;
@@ -96,6 +102,8 @@ type AssetRowModel =
       key: string;
       title: string;
       subtitle: string;
+      /** Lane 4 (UX-major, data): full search text (see above). */
+      searchText?: string;
       symbol: string;
       balanceStatus: 'zero' | 'available';
       amount: string;
@@ -280,6 +288,9 @@ function getNativeRowModel(
       key: chain,
       title: config.displayName,
       subtitle: config.symbol,
+      // Lane 4 (UX-major, data): a row still loading is searchable
+      // too — the chain id is in the search text from the start.
+      searchText: `${config.displayName} ${config.symbol} ${chain}`,
       link,
       isToken: false,
       logoChain: chain,
@@ -293,6 +304,9 @@ function getNativeRowModel(
       key: chain,
       title: config.displayName,
       subtitle: config.symbol,
+      // Lane 4 (UX-major, data): search matches the chain id too —
+      // typing "btc" finds Bitcoin even though the id is not shown.
+      searchText: `${config.displayName} ${config.symbol} ${chain}`,
       symbol: config.symbol,
       statusText:
         balance.status === 'unavailable'
@@ -334,6 +348,7 @@ function getNativeRowModel(
     key: chain,
     title: config.displayName,
     subtitle: config.symbol,
+    searchText: `${config.displayName} ${config.symbol} ${chain}`,
     symbol: config.symbol,
     balanceStatus: balance.status,
     amount: balance.status === 'zero' ? 'Zero balance' : value,
@@ -391,6 +406,9 @@ function getTokenRowModel(
       // name was not displayed on the mobile homepage.
       title: token.name,
       subtitle,
+      // Lane 4 (UX-major, data): a token still loading is searchable
+      // by its whole contract address too, not only once loaded.
+      searchText: `${token.name} ${token.symbol} ${chainName} ${token.chain} ${token.contract}`,
       link,
       isToken: true,
       logoChain: null,
@@ -406,6 +424,10 @@ function getTokenRowModel(
       key,
       title: token.name,
       subtitle,
+      // Lane 4 (UX-major, data): search matches the whole contract
+      // address, not just the shortened form in the subtitle — a
+      // pasted contract finds its token.
+      searchText: `${token.name} ${token.symbol} ${chainName} ${token.chain} ${token.contract}`,
       symbol: token.symbol,
       statusText:
         balance.status === 'unavailable'
@@ -451,6 +473,7 @@ function getTokenRowModel(
     key,
     title: token.name,
     subtitle,
+    searchText: `${token.name} ${token.symbol} ${chainName} ${token.chain} ${token.contract}`,
     symbol: token.symbol,
     balanceStatus: balance.status,
     amount: balance.status === 'zero' ? 'Zero balance' : value,
@@ -836,21 +859,35 @@ export function AssetRows({
   // Lane 2: the search query (asset list only) filters the same models
   // — name, symbol or chain, case-insensitive — after the zero filter,
   // so the two compose ("hide zero" + "usd" shows funded stablecoins).
+  // Lane 4 (UX-major, data): the match runs against the model's full
+  // search text — chain id and the whole contract address included —
+  // so a pasted contract or a chain id finds its row.
   const normalizedQuery = query?.trim().toLowerCase() ?? '';
   let visible = hideZero ? models.filter((model) => !isZeroBalance(model)) : models;
   if (normalizedQuery !== '') {
     visible = visible.filter((model) =>
-      `${model.title} ${model.subtitle}`.toLowerCase().includes(normalizedQuery),
+      (model.searchText ?? `${model.title} ${model.subtitle}`)
+        .toLowerCase()
+        .includes(normalizedQuery),
     );
   }
   const provenance = priceProvenanceLine(prices, tokenPrices, nowMs);
+  // Lane 4 (UX-major, data): the match count, next to the provenance
+  // line — both counts are real (visible rows of all rows), so a
+  // search that finds nothing still says how big the list is.
+  const searchCount =
+    normalizedQuery !== '' ? (
+      <p className="px-4 pt-3 pb-1 text-xs text-muted-foreground">
+        {`${visible.length} of ${models.length} assets match “${query?.trim()}”`}
+      </p>
+    ) : null;
 
   if (visible.length === 0) {
     if (normalizedQuery !== '') {
       return (
         <div className="space-y-2 p-4">
           <p className="text-sm text-muted-foreground">
-            {`No assets match “${query?.trim()}”`}
+            {`No assets match “${query?.trim()}” — try Add token to search by name or contract address.`}
           </p>
           <Button type="button" variant="outline" onClick={() => onClearQuery?.()}>
             Show all assets
@@ -901,6 +938,7 @@ export function AssetRows({
       <>
         {lockedNotice}
         <div className="@container">
+        {searchCount}
         {provenance !== null ? (
           <p className="px-4 pt-3 pb-1 text-right text-xs text-muted-foreground">
             {provenance}
@@ -928,6 +966,7 @@ export function AssetRows({
   return (
     <>
       {lockedNotice}
+      {searchCount}
       {provenance !== null ? (
         <p className="px-4 pt-3 pb-1 text-right text-xs text-muted-foreground">
           {provenance}
