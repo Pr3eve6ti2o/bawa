@@ -1,0 +1,83 @@
+{
+  "g": [
+    {
+      "s": "transfer(address _to, uint256 _value)",
+      "i": "Send",
+      "p": [
+        {
+          "t": "address",
+          "l": "To"
+        },
+        {
+          "t": "uint",
+          "l": "Amount",
+          "m": true
+        }
+      ]
+    },
+    {
+      "s": "approve(address _spender, uint256 _value)",
+      "i": "Approve",
+      "p": [
+        {
+          "t": "address",
+          "l": "Spender"
+        },
+        {
+          "t": "uint",
+          "l": "Amount",
+          "m": true
+        }
+      ]
+    }
+  ],
+  "c": [
+    {
+      "n": "1inch AggregationRouterV6",
+      "a": "0x111111125421ca6dc452d289314280a0f8842a65",
+      "c": [
+        1,
+        10,
+        56,
+        100,
+        137,
+        146,
+        250,
+        8217,
+        8453,
+        42161,
+        43114,
+        59144,
+        1313161554
+      ],
+      "f": [
+        {
+          "s": "unoswapTo(uint256 to, uint256 token, uint256 amount, uint256 minReturn, uint256 dex)",
+          "i": "Swap",
+          "p": [
+            {
+              "t": "address",
+              "l": "Beneficiary"
+            },
+            {
+              "t": "address",
+              "l": "token"
+            },
+            {
+              "t": "uint",
+              "l": "Amount to Send"
+            },
+            {
+              "t": "uint",
+              "l": "Minimum to Receive"
+            },
+            {
+              "t": "address",
+              "l": "Last pool"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

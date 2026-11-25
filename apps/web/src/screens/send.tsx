@@ -68,6 +68,7 @@ import {
   signTonOffline,
   signSolOffline,
   broadcastSignedDevnet,
+  buildErc20TransferData,
   ERC20_GAS_LIMIT,
   estimateTokenSendFee,
   previewTokenSendAmount,
@@ -93,6 +94,7 @@ import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
 import { ChainSearchSelect, SEND_RECENT_CHAINS_KEY } from './chain-search-select';
+import type { ClearSigningInput } from '../wallet/clear-signing';
 import { ChainLogo, TokenLogo } from './token-logo';
 import { TokenPickerRow } from './token-picker-row';
 import type { SendApprovalStage } from './send-approval';
@@ -1288,6 +1290,37 @@ export function SendScreen() {
         )
       : null;
 
+  // Contract call for the review screen's clear-signing section: an
+  // ERC-20 token send calls the token contract with
+  // transfer(recipient, amount) calldata — the same calldata the
+  // signer builds. Built only when the preview, token and chain are
+  // all valid; any failure leaves the section off rather than
+  // breaking the review.
+  let reviewContractCall: ClearSigningInput | undefined;
+  if (
+    preview !== null &&
+    preview.ok &&
+    selectedToken !== null &&
+    tokenStandardFor(chain).standard === 'erc20'
+  ) {
+    const evmChainId = chainConfig(chain).evmChainId;
+    if (evmChainId !== null) {
+      try {
+        reviewContractCall = {
+          chainId: evmChainId,
+          contract: selectedToken.contract,
+          data: buildErc20TransferData(recipient, preview.amountBaseUnits),
+          token: {
+            decimals: selectedToken.decimals,
+            symbol: selectedToken.symbol,
+          },
+        };
+      } catch {
+        reviewContractCall = undefined;
+      }
+    }
+  }
+
   if (chainsWithWallet.length === 0 || !from) {
     // Locked vault, no addresses in state (UI/UX round 2, deep-link
     // fix): the vault exists — the header says so — so "No wallet
@@ -1916,6 +1949,7 @@ export function SendScreen() {
             total={reviewTotalText}
             feeNote={preview.feeNote}
             tokenContract={selectedToken?.contract}
+            contractCall={reviewContractCall}
             disabledReason={BROADCAST_DISABLED_MESSAGE}
             stage={approvalStage}
             devnetNetworkName={devnetName}

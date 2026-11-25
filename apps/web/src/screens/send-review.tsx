@@ -9,6 +9,10 @@
 // Only data the caller already has is shown; no risk score is invented.
 // `from` is optional so existing callers keep working unchanged.
 import { Button } from '../ui/components/button';
+import {
+  resolveContractCall,
+  type ClearSigningInput,
+} from '../wallet/clear-signing';
 import type { SendApprovalStage } from './send-approval';
 
 export type SendReviewProps = {
@@ -28,6 +32,13 @@ export type SendReviewProps = {
   fiatAmount?: string;
   /** Token contract / mint / master, when the send is a token transfer. Shown as its own row so the signer can check it. */
   tokenContract?: string;
+  /**
+   * EVM contract call this send makes, when it makes one (ERC-20
+   * token sends). Shown as a human-readable clear-signing section
+   * when the vendored ERC-7730 snapshot matches the call, and as the
+   * raw data otherwise — a reading is never invented.
+   */
+  contractCall?: ClearSigningInput;
   disabledReason: string;
   stage: SendApprovalStage;
   onBack: () => void;
@@ -77,6 +88,7 @@ export function SendReview({
   feeNote,
   fiatAmount,
   tokenContract,
+  contractCall,
   disabledReason,
   stage,
   onBack,
@@ -84,6 +96,8 @@ export function SendReview({
   devnetNetworkName,
 }: SendReviewProps) {
   const { heading, helper } = approvalStageCopy[stage];
+  const clearSigning =
+    contractCall === undefined ? null : resolveContractCall(contractCall);
 
   return (
     <section
@@ -168,6 +182,48 @@ export function SendReview({
           </div>
         </dl>
       </div>
+
+      {contractCall !== undefined && (
+        <div className="space-y-2 rounded-xl border border-border p-4">
+          <h2 className="text-sm font-semibold">Contract call</h2>
+          {clearSigning === null ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                No clear-signing information for this call — showing the raw
+                data. Check it carefully before signing.
+              </p>
+              <p className="break-all font-mono text-xs">
+                {contractCall.data}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {clearSigning.contractName ?? 'Standard ERC-20'} ·{' '}
+                {clearSigning.intent} — {clearSigning.functionName}
+              </p>
+              <dl className="divide-y divide-border">
+                {clearSigning.rows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-start justify-between gap-4 py-2"
+                  >
+                    <dt className="shrink-0 text-sm text-muted-foreground">
+                      {row.label}
+                    </dt>
+                    <dd className="min-w-0 break-all text-right font-mono text-sm">
+                      {row.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-xs text-muted-foreground">
+                Labels from the ERC-7730 registry snapshot.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       <small className="block text-sm text-muted-foreground">{feeNote}</small>
 

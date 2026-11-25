@@ -1,4 +1,5 @@
 import type { ChainId } from '../engine/boundary';
+import { formatChainId } from './caip';
 
 export type { ChainId };
 
@@ -552,7 +553,12 @@ function evmChainFacts(
   slip44 = 60,
 ): Pick<ChainConfig, 'networkId' | 'assetId' | 'profileId'> {
   return {
-    networkId: `eip155:${evmChainId}`,
+    // CAIP-2 chain id, built through the shared helper rather than a
+    // template string (Lane F).
+    networkId: formatChainId({
+      namespace: 'eip155',
+      reference: String(evmChainId),
+    }),
     assetId: `eip155:${evmChainId}/slip44:${slip44}`,
     profileId: 'bawa-evm-bip44-v1',
   };
