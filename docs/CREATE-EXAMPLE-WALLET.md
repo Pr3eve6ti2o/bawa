@@ -7,7 +7,7 @@ _Last verified: 2026-11-23, from a clean checkout of `panel-rebuild/readme-showc
 A running copy of the Bawa example web wallet on your machine. It is a fully
 functional example wallet built using this guide, and it runs entirely in the
 browser. You can create a wallet, import one, or add a watch-only wallet, and
-see real balances for its 87 chains. Broadcast stays disabled, so the wallet
+see real balances for its 22 curated chains (66 chains have balance adapters). Broadcast stays disabled, so the wallet
 cannot send funds. Never fund it with real money.
 
 ## Prerequisites

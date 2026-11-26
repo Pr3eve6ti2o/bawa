@@ -100,7 +100,7 @@ MetaMask). Bawa follows the same pattern and differs in one place that
 matters: **it is safe by default in a way the others are not** — sending
 is off, not on. That is the honest answer to "why choose this wallet over
 those": you choose it when you want a wallet that can receive, watch and
-track across 87 chains while being unable, by construction, to send your
+track balances across 66 chains (history on 17) while being unable, by construction, to send your
 money away — and you can read the code that makes that true.
 
 ## Words to use / words to avoid

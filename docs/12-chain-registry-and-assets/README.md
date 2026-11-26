@@ -205,8 +205,8 @@ Base, Avalanche (avax), Litecoin (ltc), Dogecoin (doge) — and all 9
 have balance `IMPLEMENTED_AND_VERIFIED` in `chainSupport` and a
 balance adapter in the app (none is in the 21 derive-only chains,
 `chain-registry.test.ts`). History in the registry lags the app for
-5 of the 9 (matic, arb, base, avax, bsc read `NOT_SUPPORTED` in the
-registry but are history-verified in `chains.ts`) — the known
+4 of the 9 (matic, arb, base, avax read `NOT_SUPPORTED` in the
+registry but are history-verified in `chains.ts`); bsc reads `NOT_SUPPORTED` in the registry and is blocked in `chains.ts` too — the known
 registry-data lag, not a profile defect. The profile's chains list
 itself is correct as written; the open item is the 83 chains
 `chainSupport` scopes to this profile alone while `profiles.json`

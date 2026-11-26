@@ -151,7 +151,7 @@ step stops the work; it is never silently skipped or faked.
 **The count is 87: 22 curated chains in `apps/web/src/wallet/chains.ts`
 plus 65 expansion chains in `apps/web/src/wallet/chains-expanded.ts`
 (`EXPANDED_CHAINS`, line 148; `EXPANDED_CHAIN_COUNT = 65`, line 1903).
-The 65 break down as 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3
+The 65 break down as 45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other) + 3
 OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) — whose full
 fact records live in the same file (cardano `:1821`, kaspa `:1848`,
 starknet `:1875`), not in a separate file. `SUPPORTED_CHAINS`
@@ -168,7 +168,7 @@ two live-verified RPC endpoints — 130 in total
 (`explorerTxLive: true`); the other 20 were not live-clicked, do not
 claim they were. Price fallbacks per source on the 65 (see §7):
 CoinGecko 65, CoinLore 56, Coinbase 46, DexScreener 15; 60 of the 65
-have at least one non-CoinGecko fallback in their chain record.
+have at least one non-CoinGecko fallback in their chain record. Caveat: the DexScreener leg is record-declared only for the expanded chains — `dexScreenerChainId` is set on 15 records, but the runtime (`priceFallbackSourcesFor`, `price-fallbacks.ts:371-379`) grants DexScreener only via `NATIVE_WRAPPED_TOKENS` (13 curated chains), so at runtime 58 of the 65 have at least one non-CoinGecko fallback (pulsechain and telos are the two that fall out).
 `docs/02-chains/README.md` §2 previously said Solana was
 reference-only — that is stale and fixed: Solana is a wired chain in the
 87-chain set.
@@ -1043,7 +1043,7 @@ were re-measured from that tree (see the rows below).
 | §0.3 4-colour cap + `--qr-*` | `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Correct in DECISIONS §24; now stated in this spec | Verified |
 | §0.4 no fake data | `apps/web/src/wallet/price-fallbacks.ts` header; `chains.ts` `availableFor` | Correct | Verified |
 | §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 87-chain app — noted as OPEN, not silently widened | Fixed (note updated 84 → 87) |
-| §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:148`, `:1903` (`EXPANDED_CHAIN_COUNT = 65` — 45 EVM + 10 non-EVM + 7 Cosmos + 3 OKX-reference in the same file); §2.5 (Cardano `:1821`, Kaspa `:1848`, Starknet `:1875`) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87; 62 → 65, guide-update pass) |
+| §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:148`, `:1903` (`EXPANDED_CHAIN_COUNT = 65` — 45 EVM + 17 non-EVM (9 Cosmos + 8 other) + 3 OKX-reference in the same file); §2.5 (Cardano `:1821`, Kaspa `:1848`, Starknet `:1875`) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87; 62 → 65, guide-update pass) |
 | §2.1 derivation paths | `chains.ts:403-455` (EVM_PATH, SOL/TON); `WALLET_BUILDER.md` policy table | Correct; SOL indexed form added from code | Verified |
 | §2.2 icons / assets pin | `chains-expanded.ts` header; `TRUST_WALLET_ASSETS_PIN` | Correct | Verified |
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |

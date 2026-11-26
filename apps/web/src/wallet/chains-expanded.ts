@@ -5,7 +5,7 @@
  * price, adapter or UI code was touched. A later lane wires these facts into
  * the wallet (derivation, RPC failover, explorers, price sources, icons).
  *
- * Coverage: 65 NEW chains (45 EVM + 10 non-EVM + 7 Cosmos-ecosystem
+ * Coverage: 65 NEW chains (45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other)
  * + 3 OKX lanes — Cardano, Starknet, Kaspa), taking the wallet from
  * 22 chains to 87. Every chain was cross-checked against
  * at least two sources (Trust Wallet Core registry, Chainlist, official chain
@@ -141,7 +141,7 @@ export interface ExpandedChainFacts {
   notes: string;
 }
 
-/** The 65 verified new chains (45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference). */
+/** The 65 verified new chains (45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other) + 3 OKX-reference). */
 export const EXPANDED_CHAINS: ExpandedChainFacts[] = [
   {
     key: "zksync",
