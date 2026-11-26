@@ -298,13 +298,23 @@ export function WalletManagementScreen() {
       <h1 id="wallets-heading" className="text-2xl font-semibold">
         Wallets
       </h1>
-      <p className="text-sm text-muted-foreground">
-        Wallets is where you manage the wallets this app knows about. Your
-        vault — the wallet made from your recovery phrase — is at the top.
-        Below it are any watch-only wallets you imported: the app can show
-        their balances and history, but it can never spend from them,
-        because no private key is stored here.
-      </p>
+      {/* Lane B (Finish the Product, G10): the opening essay used to
+          render in full and make the page 7,622 px tall on a phone.
+          It collapses into a disclosure now — same words, same
+          "How accounts work" details/summary shape below — so the
+          actions come first and the essay is one tap away. */}
+      <details>
+        <summary className="cursor-pointer text-sm font-semibold">
+          About Wallets
+        </summary>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Wallets is where you manage the wallets this app knows about. Your
+          vault — the wallet made from your recovery phrase — is at the top.
+          Below it are any watch-only wallets you imported: the app can show
+          their balances and history, but it can never spend from them,
+          because no private key is stored here.
+        </p>
+      </details>
 
       <Card radius="xl">
         <CardHeader>
