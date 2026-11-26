@@ -46,25 +46,41 @@
 // (docs.ston.fi/developer-section/omniston/chains.md, fetched
 // 2026-11-26 — 15 chains; the 11 that are Bawa chains are listed
 // here with their contract addresses exactly as published).
-// TRON (open verification #10): still listed on the live page with
-// USDT (TRC-20 TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t), and the
-// production WebSocket wss://omni-ws.ston.fi accepts connections
-// (probed 2026-11-26: open, clean close). But NO live TRON quote
-// has been seen — that needs the RFQ flow, i.e. the SDK — and NO
-// current per-transaction limit is published anywhere on the page
-// (the $1,000/tx figure is a June-2026 secondary report, not a
-// current official figure, so it is not quoted). TRON pairs are
-// therefore flagged live-unverified and are NOT offered until a live
-// quote is seen. TRON status: partially closed — live listing
-// confirmed, live quote + current limit still open.
+// TRON (open verification #10 — Lane C, 2026-11-27): chains page
+// re-fetched 2026-11-27 (HTTP 200): TRON still listed with USDT
+// (TRC-20 TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t); production
+// WebSocket wss://omni-ws.ston.fi re-probed the same day: open,
+// clean close (code 1000, wasClean, 967 ms). LIVE RFQ ATTEMPTED
+// with the SDK (@ston-fi/omniston-sdk@0.8.13, production WS):
+// control 1 USDT TON -> USDC Base quoted live in 926 ms
+// (quoteId 29febd35…42ba, outputUnits 972488), so the harness
+// works — but every TRON RFQ came back noQuote (server ack, then
+// noQuote ~5 s in, nothing in 45 s): TRON -> TON 10 and 1 USDT,
+// TON -> TRON 10 and 1 USDT, TRON -> Base 10 USDT. No resolver is
+// quoting TRON in either direction at any tried amount. TRON
+// therefore STAYS live-unverified and is NOT offered. NO current
+// per-transaction limit exists anywhere official: the chains page,
+// environments page, SDK guide and SDK 0.8.13 source contain no
+// tx-limit figure (only the reconnection max-5 and the HTLC
+// one-execution-per-order max, both unrelated). The only figure is
+// the official STON.fi blog launch post (2026-06-16, "temporarily
+// limited to $1,000 per transaction" AT LAUNCH) — five months
+// stale, not current, so it is not quoted. TRON status: listing
+// confirmed, live quote still open (no resolvers quoting), current
+// limit still open (no official figure).
 //
 // TON signing (the main engineering cost): Bawa already signs TON
-// transfers offline (signTonOffline in wallet/send.ts, V4R2) — but
-// Omniston orders need TON Connect-style signing of the order's
-// messages (orderTx.messages), a different message shape, and that
-// path is NOT wired. Quotes need no signature; execution needs the
-// SDK + that signing path + the owner's separate go-ahead. Broadcast
-// stays DISABLED on mainnet until then.
+// transfers offline (signTonOffline in wallet/send.ts, V4R2) — and
+// the Omniston order path is now wired too: signStonfiOrderTonOffline
+// in wallet/stonfi-signing.ts signs an orderTx's messages (TON
+// Connect-style, arbitrary payloads + stateInit) with the same V4R2
+// engine and returns a signed BoC only. Verified 2026-11-27 against
+// a REAL live orderTx (1 USDT on TON -> USDC on Base, quoteId
+// 7fc458a6…59e): the Ed25519 signature verifies against the derived
+// public key and the payload cell is embedded in the signed tree.
+// Quotes need no signature; execution needs the RFQ flow + the
+// owner's separate broadcast authorisation. Broadcast stays DISABLED
+// on mainnet until then.
 import type { ChainId } from '../engine/boundary';
 import type { SwapTokenChoice } from './swap-quotes';
 import type {
@@ -78,9 +94,9 @@ import type {
 export const STONFI_OMNISTON_WS_URL = 'wss://omni-ws.ston.fi';
 /** Omniston API version. */
 export const STONFI_API_VERSION = 'v1beta8';
-/** SDK package (NOT yet a dependency — see the module note). */
+/** SDK package (installed — see the module note). */
 export const STONFI_SDK_PACKAGE = '@ston-fi/omniston-sdk';
-/** Exact pin for the SDK add (latest 0.8.x, MIT, verified 2026-11-26). */
+/** Exact pin for the SDK (latest 0.8.x, MIT, verified 2026-11-27). */
 export const STONFI_SDK_EXACT_VERSION = '0.8.13';
 /** DEX pool fee default, percent (0.2% LPs + 0.1% protocol). */
 export const STONFI_DEX_POOL_FEE_PERCENT = 0.3;
@@ -93,8 +109,9 @@ export const STONFI_TRON_UNVERIFIED_MESSAGE =
   'TRON is listed by STON.fi, but no live TRON quote has been seen yet — ' +
   'it is not offered until one is.';
 export const STONFI_TON_SIGNING_MESSAGE =
-  'TON signing for STON.fi orders is not wired yet — Bawa signs TON ' +
-  'transfers offline, but Omniston order messages need a separate path.';
+  'TON signing for STON.fi orders is wired — Bawa signs the order\u2019s ' +
+  'messages offline and returns a signed BoC. Execution still needs ' +
+  'the owner\u2019s separate broadcast authorisation; nothing is sent.';
 
 /** Bawa chain -> Omniston chain id (docs chains page). */
 export const STONFI_CHAIN_IDS: Readonly<Record<string, string>> = {

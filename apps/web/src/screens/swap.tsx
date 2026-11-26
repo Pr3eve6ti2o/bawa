@@ -1326,10 +1326,10 @@ export function SwapScreen() {
           the quote rate limit. Relay quotes need a proxy or
           access-token endpoint — not set up yet. Live STON.fi quotes
           come from version {STONFI_SDK_EXACT_VERSION} of its SDK,
-          installed for the TON corridor. Executing a quote needs
-          signing and broadcast, which stay switched off until
-          separately approved. Nothing on this screen signs or sends
-          anything.
+          installed for the TON corridor, and TON order signing is
+          wired. Executing a quote needs the owner&apos;s separate
+          broadcast authorisation, which stays switched off until
+          approved. Nothing on this screen signs or sends anything.
         </p>
         <Link
           to="/send"
