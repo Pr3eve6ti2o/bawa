@@ -216,6 +216,13 @@ jobs:
         run: |
           cd apps/web && node scripts/generate-chains.mjs --check
 
+      - name: Android registry drift check (Step 1 of the Android data programme)
+        run: |
+          cd apps/web && node scripts/generate-android-registry.mjs --check
+
+      - name: Android registry tests
+        run: node tests/android-registry.test.mjs
+
   # Critical-path E2E harness (repo-study Phase 3, item 27). Runs the
   # Playwright suite against the built app and enforces its verdict.
   # Failure screenshots contain no secret-bearing regions (the harness

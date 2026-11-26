@@ -1,0 +1,523 @@
+{
+  "$defs": {
+    "addressFormat": {
+      "additionalProperties": false,
+      "description": "Address shape for the chain. Null when the sources record no format for the chain (not in address-detection.ts CHAIN_PATTERNS and not an EVM 0x chain) — the reason is in the entry's `notes`.",
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "kind": {
+          "description": "evm: the shared 0x shape on all EVM chains. chain: a shape belonging to this chain alone.",
+          "enum": [
+            "evm",
+            "chain"
+          ],
+          "type": "string"
+        },
+        "label": {
+          "description": "Human label, e.g. 'Ethereum (0x)' or 'Bitcoin'.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "patterns": {
+          "items": {
+            "description": "RegExp source for the shape (Bitcoin has two: bech32 and legacy base58).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "label",
+        "patterns",
+        "description"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "chain": {
+      "additionalProperties": false,
+      "properties": {
+        "addressFormat": {
+          "$ref": "#/$defs/addressFormat"
+        },
+        "assetId": {
+          "description": "CAIP-19 native asset identifier (slip44 namespace).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "coinType": {
+          "description": "SLIP-44 coin index the derivation path derives from (the coin component of the derivation template; for Solana and TON, the coin component of the account-0 path, since they have no single template). NOT the chain's registered SLIP-44 number — that is assetSlip44. The two differ for the EVM chains that derive on the Ethereum path (coin 60) while carrying their own registered number (BSC 714, Polygon 966, Avalanche 9000, Celo 527, Fantom 250); the difference is noted on the entry.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "coinTypeName": {
+          "description": "Trust Wallet Core CoinType property name (ChainConfig coinTypeName).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "coingeckoId": {
+          "description": "CoinGecko /coins/list id for the native asset (PRICE_IDS).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "curve": {
+          "description": "Signing curve from the coins table. Null for the chains with no coins-table entry — never inferred.",
+          "enum": [
+            "secp256k1",
+            "ed25519",
+            null
+          ],
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decimals": {
+          "description": "Native token decimals (CHAIN_DECIMALS).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "derivationPath": {
+          "description": "Account-0 derivation path, evaluated from the chain's pathFor (account 0, index 0).",
+          "pattern": "^m/",
+          "type": "string"
+        },
+        "derivationTemplate": {
+          "description": "Derivation path with {account} / {index} placeholders, reconstructed from pathFor and verified at five (account, index) pairs. Null for Solana and TON (Ed25519 scheme — see `notes`).",
+          "pattern": "^m/",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evmChainId": {
+          "description": "EVM chain id, or null for non-EVM chains. Note: 60 chains carry one (the 59 0x watch-only chains plus Ronin, whose wallet address is ronin:-prefixed, and Filecoin, whose wallet address is f1...).",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "explorerTxUrlPattern": {
+          "description": "Transaction URL with a {hash} placeholder (filecoin: {messageCid}, tezos: {opHash}). Null for the curated chains, which record no pattern.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "explorerUrl": {
+          "description": "Explorer base URL (chains.ts historyExplorerBase, else chains-expanded.ts explorerBaseUrl). Null when neither source records one.",
+          "format": "uri",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "description": "Stable chain key, as in SUPPORTED_CHAINS.",
+          "pattern": "^[a-z0-9]+$",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name (ChainConfig displayName).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "network": {
+          "description": "Mainnet is the default; test networks live in the top-level testnets array.",
+          "enum": [
+            "mainnet"
+          ],
+          "type": "string"
+        },
+        "networkId": {
+          "description": "CAIP-2 network identifier (mainnet only).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "notes": {
+          "description": "Present only when something is missing or exceptional: names the gap and the source that lacks it.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "priceFallbackIds": {
+          "$ref": "#/$defs/priceFallbackIds"
+        },
+        "priceSources": {
+          "description": "Price sources in try order (priceFallbackSourcesFor): CoinGecko always first.",
+          "items": {
+            "enum": [
+              "CoinGecko",
+              "CoinLore",
+              "DexScreener",
+              "TonAPI",
+              "Coinbase"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "profileId": {
+          "description": "Pinned recovery profile (a path change changes recovered addresses).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "rpcEndpoints": {
+          "description": "Mainnet RPC endpoints, primary first (the live-verified set from chains.ts). All https — an http endpoint is a source error, not a fallback.",
+          "items": {
+            "format": "uri",
+            "pattern": "^https://",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "symbol": {
+          "description": "Native token ticker.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "trustWalletCoinType": {
+          "description": "Trust Wallet Core CoinType number (chains-expanded.ts coinType, cross-checked against the coins table coinId). Null when neither source records one for the chain.",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "assetSlip44": {
+          "description": "The chain's registered SLIP-44 number, parsed from the assetId's /slip44:N segment. Equals coinType except for the EVM chains that derive on the Ethereum path (see coinType).",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "symbol",
+        "network",
+        "coinType",
+        "assetSlip44",
+        "coinTypeName",
+        "trustWalletCoinType",
+        "curve",
+        "evmChainId",
+        "networkId",
+        "assetId",
+        "profileId",
+        "addressFormat",
+        "derivationPath",
+        "derivationTemplate",
+        "decimals",
+        "rpcEndpoints",
+        "explorerUrl",
+        "explorerTxUrlPattern",
+        "coingeckoId",
+        "priceSources",
+        "priceFallbackIds"
+      ],
+      "type": "object"
+    },
+    "priceFallbackIds": {
+      "additionalProperties": false,
+      "description": "Per-source identifiers for the price fallbacks in priceSources. Each is null when that source has no identifier for the chain.",
+      "properties": {
+        "coinbaseProduct": {
+          "description": "Coinbase Exchange product id, e.g. 'ETH-USD' (price-fallbacks.ts COINBASE_PRODUCT_IDS / chains-expanded.ts priceSources).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coinloreId": {
+          "description": "CoinLore coin id (COINLORE_NATIVE_IDS).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dexscreenerChainId": {
+          "description": "DexScreener chain slug (dex-prices.ts DEXSCREENER_CHAIN_FOR_CHAIN, else chains-expanded.ts priceSources).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "wrappedNativeContract": {
+          "description": "Verified wrapped-native token contract for the DexScreener leg (NATIVE_WRAPPED_TOKENS).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "wrappedNativeDexChain": {
+          "description": "DexScreener chain slug for the wrapped-native contract above.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "coinloreId",
+        "coinbaseProduct",
+        "dexscreenerChainId",
+        "wrappedNativeContract",
+        "wrappedNativeDexChain"
+      ],
+      "type": "object"
+    },
+    "testnet": {
+      "additionalProperties": false,
+      "description": "One of the four temporary devnet networks (devnet-endpoints.ts). Mainnet is the default; these are the only test networks the export carries.",
+      "properties": {
+        "apiBaseUrl": {
+          "description": "Read API base URL (balances, history, UTXOs, seqno).",
+          "format": "uri",
+          "type": "string"
+        },
+        "devnetName": {
+          "description": "Short devnet name shown in the UI, e.g. 'Bitcoin testnet4'.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "evmChainId": {
+          "description": "EVM chain id (Sepolia only).",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "explorerTxUrl": {
+          "description": "Transaction explorer URL prefix; the hash is appended.",
+          "format": "uri",
+          "type": "string"
+        },
+        "fallbackApiBaseUrl": {
+          "description": "Keyless fallback read API (Nile only).",
+          "format": "uri",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "genesisHash": {
+          "description": "BTC testnet4 genesis hash (identity check).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "historyBaseUrl": {
+          "description": "Blockscout-style history API base (Sepolia only).",
+          "format": "uri",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+$",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "network": {
+          "enum": [
+            "testnet"
+          ],
+          "type": "string"
+        },
+        "networkId": {
+          "description": "CAIP-2-style network identifier; never a mainnet id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "rpcUrl": {
+          "description": "RPC URL for EVM chains (Sepolia only).",
+          "format": "uri",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "symbol": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "devnetName",
+        "symbol",
+        "network",
+        "networkId",
+        "apiBaseUrl",
+        "rpcUrl",
+        "historyBaseUrl",
+        "evmChainId",
+        "explorerTxUrl",
+        "genesisHash",
+        "fallbackApiBaseUrl"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://bawa.example/registry/schemas/chains.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Schema for registry/chains.json — the versioned Android chain export, generated by apps/web/scripts/generate-android-registry.mjs from the web wallet's TypeScript sources. Never hand-edit the JSON; the generator validates its output against this schema on every run.",
+  "properties": {
+    "chainCount": {
+      "description": "Number of entries in chains (mainnet only; testnets are counted separately).",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "chains": {
+      "items": {
+        "$ref": "#/$defs/chain"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "coverage": {
+      "additionalProperties": false,
+      "description": "Completeness counts so a consumer can see at a glance which fields are fully populated and which have gaps (gaps are also named per entry in `notes`).",
+      "properties": {
+        "chains": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "chainsWithAddressFormat": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "chainsWithCurve": {
+          "description": "Chains with a curve from the coins table (only the 57 mapped coins carry one).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "chainsWithDerivationTemplate": {
+          "description": "Chains with a single derivation template (Solana and TON have none: the Ed25519 scheme changes shape — see their `notes`).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "chainsWithExplorer": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "chainsWithSecondPriceSource": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "chainsWithTrustWalletCoinType": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "coingeckoAloneChains": {
+          "description": "Chains with no verified second price source (CoinGecko only).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rpcEndpoints": {
+          "description": "Total RPC endpoints across all chains.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "testnets": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "chains",
+        "testnets",
+        "rpcEndpoints",
+        "chainsWithExplorer",
+        "chainsWithDerivationTemplate",
+        "chainsWithAddressFormat",
+        "chainsWithTrustWalletCoinType",
+        "chainsWithCurve",
+        "chainsWithSecondPriceSource",
+        "coingeckoAloneChains"
+      ],
+      "type": "object"
+    },
+    "generated": {
+      "description": "Generated-file notice: do not edit by hand.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "generatedAt": {
+      "description": "UTC timestamp of generation. Ignored by --check (wall-clock values would otherwise read as drift).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "generator": {
+      "description": "Command that generates this file.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "registry": {
+      "enum": [
+        "chains"
+      ],
+      "type": "string"
+    },
+    "sourceCommit": {
+      "description": "Last commit that touched any data source file (git log -1 over the sources). Null when git is unavailable.",
+      "pattern": "^[0-9a-f]{40}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sourceDirty": {
+      "description": "True when any data source file had uncommitted changes at generation time. Null when git is unavailable.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "testnets": {
+      "items": {
+        "$ref": "#/$defs/testnet"
+      },
+      "type": "array"
+    },
+    "version": {
+      "description": "Export version, starting at 1. Bump on any breaking shape change.",
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "generated",
+    "generator",
+    "registry",
+    "version",
+    "generatedAt",
+    "sourceCommit",
+    "sourceDirty",
+    "chainCount",
+    "chains",
+    "testnets",
+    "coverage"
+  ],
+  "type": "object"
+}
