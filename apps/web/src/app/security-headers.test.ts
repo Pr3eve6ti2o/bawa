@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CONTENT_SECURITY_POLICY,
+  CONTENT_SECURITY_POLICY_META,
   SECURITY_HEADERS,
 } from './security-headers';
 import { CHAINS, SUGGESTED_CUSTOM_RPCS } from '../wallet/chains';
@@ -316,6 +317,18 @@ describe('T47 security headers', () => {
       'https://tokens.uniswap.org',
       'https://raw.githubusercontent.com',
     ]);
+  });
+
+  it('meta CSP omits frame-ancestors (a <meta> tag cannot set it) and is otherwise identical to the header CSP', () => {
+    // Browsers ignore frame-ancestors delivered via <meta> and log a
+    // console error on every page — so the build-time meta must not carry
+    // it, while the HTTP-header policy keeps it (preview.headers).
+    expect(CONTENT_SECURITY_POLICY_META).not.toContain('frame-ancestors');
+    expect(CONTENT_SECURITY_POLICY_META).not.toContain('report-uri');
+    expect(CONTENT_SECURITY_POLICY_META).not.toContain('report-to');
+    expect(CONTENT_SECURITY_POLICY).toBe(
+      CONTENT_SECURITY_POLICY_META + "; frame-ancestors 'none'",
+    );
   });
 
   it('preview/server headers carry the CSP and framing + sniffing guards', () => {

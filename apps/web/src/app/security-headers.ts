@@ -4,6 +4,9 @@
 // - vite.config.ts: `preview.headers` (served with `vite preview`) and the
 //   build-only CSP <meta> injected into dist/index.html.
 // - src/app/security-headers.test.ts: regression tests on the policy text.
+// Two exports: CONTENT_SECURITY_POLICY (HTTP header, full policy) and
+// CONTENT_SECURITY_POLICY_META (<meta> tag: the same policy minus
+// frame-ancestors, which a <meta> tag cannot set — see below).
 //
 // The policy is strict on purpose: the app loads no third-party script,
 // style, font, image or worker resource. Everything except the pinned
@@ -129,17 +132,20 @@
 //   1RPC backups returned -32001 usage-limit and were replaced by dRPC.//   No other origin, no wildcard. Explorer links (tronscan.org,
 //   tonviewer.com) are plain links, not fetches, so they need no entry.
 // - object-src 'none', base-uri 'self': no plugins, no <base> hijack.
-// - frame-ancestors 'none' is in the shared string: it is ignored when the
-//   policy is delivered via a <meta> tag, but enforced as an HTTP header
-//   (preview.headers and production hosting) — see README.md. X-Frame-Options
-//   is header-only and covers older browsers.
+// - frame-ancestors 'none' lives ONLY in the HTTP-header policy
+//   (CONTENT_SECURITY_POLICY): browsers ignore it — and log a console error
+//   — when the policy is delivered via a <meta> tag, so the meta policy
+//   (CONTENT_SECURITY_POLICY_META) omits it. It is enforced as an HTTP header
+//   (preview.headers); GitHub Pages sends no custom headers, so the Pages
+//   deployment has no enforceable frame-ancestors location in this repo —
+//   see README.md. X-Frame-Options is header-only and covers older browsers.
 // Providers Phase 2, Lane A (2026-11-26): the WalletConnect origins
 // (wss://relay.walletconnect.org, https://verify.walletconnect.org,
 // https://verify.walletconnect.com) were removed with the feature —
 // no Reown Cloud projectId exists, so the relay never connects and
 // the screen, client and @walletconnect/* dependencies were deleted
 // rather than shipped dead. Nothing in the app fetches them now.
-export const CONTENT_SECURITY_POLICY = [
+const CSP_DIRECTIVES = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
@@ -148,12 +154,26 @@ export const CONTENT_SECURITY_POLICY = [
   "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.drpc.org https://rpc.flashbots.net https://eth.blockscout.com https://explorer.optimism.io https://scrollscan.com https://celo.blockscout.com https://explorer.aurora.dev https://api.routescan.io https://polygon.blockscout.com https://base.blockscout.com https://arbitrum.blockscout.com https://api.etherscan.io https://lineascan.build https://api.trongrid.io https://apilist.tronscanapi.com https://tron-rpc.publicnode.com https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://li.quest https://backend.gas.zip wss://omni-ws.ston.fi https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://aurora.drpc.org https://rpc.fantom.network https://rpc2.fantom.network https://106.rpc.thirdweb.com https://361.rpc.thirdweb.com https://43111.rpc.thirdweb.com https://4689.rpc.thirdweb.com https://480.rpc.thirdweb.com https://50.rpc.thirdweb.com https://57.rpc.thirdweb.com https://60808.rpc.thirdweb.com https://747.rpc.thirdweb.com https://abstract.drpc.org https://apechain.drpc.org https://api.kaspa.org https://api.koios.rest https://api.mainnet.abs.xyz https://api.mainnet.aptoslabs.com https://api.node.glif.io https://api.roninchain.com https://arbitrum-nova-rpc.publicnode.com https://astar.drpc.org https://axelar-rpc.polkachu.com https://axelar-rpc.publicnode.com https://babel-api.mainnet.iotex.io https://berachain-rpc.publicnode.com https://boba-ethereum.gateway.tenderly.co https://celestia-rpc.polkachu.com https://celestia-rpc.publicnode.com https://core.drpc.org https://cosmos-rpc.polkachu.com https://cosmos-rpc.publicnode.com https://cronos-evm-rpc.publicnode.com https://dydx-rpc.polkachu.com https://dydx-rpc.publicnode.com https://etc.etcdesktop.com https://eth-rpc-api.thetatoken.org https://evm-rpc.sei-apis.com https://evm.astar.network https://evm.confluxrpc.com https://evm.confluxrpc.org https://evm.cronos.com https://evm.kava.io https://evmexplorer.velas.com https://flare-api.flare.network https://flare.rpc.thirdweb.com https://fraxtal-rpc.publicnode.com https://fullnode.mainnet.aptoslabs.com https://fuse.drpc.org https://geth-at.etc-network.info https://horizon.stellar.lobstr.co https://horizon.stellar.org https://hyperliquid-rpc.publicnode.com https://immutable-zkevm.drpc.org https://injective-rpc.polkachu.com https://injective-rpc.publicnode.com https://juno-rpc.polkachu.com https://juno-rpc.publicnode.com https://kava-evm-rpc.publicnode.com https://mainnet-api.4160.nodely.dev https://mainnet-api.algonode.cloud https://mainnet-public.mirrornode.hedera.com https://mainnet.boba.network https://mainnet.era.zksync.io https://mainnet.evm.nodes.onflow.org https://mainnet.mirrornode.hedera.com https://mainnet.mode.network https://mainnet.unichain.org https://manta-pacific.drpc.org https://mode.drpc.org https://monad.drpc.org https://mycrypto.rsk.co https://near.drpc.org https://noble-rpc.polkachu.com https://nova.arbitrum.io https://osmosis-rpc.publicnode.com https://pacific-rpc.manta.network https://polkadot-rpc.publicnode.com https://public-node.rsk.co https://pulsechain-rpc.publicnode.com https://ronin.drpc.org https://rpc-gel.inkonchain.com https://rpc-noble.keplr.app https://rpc-qnd.inkonchain.com https://rpc.ankr.com https://rpc.apechain.com https://rpc.berachain.com https://rpc.chiliz.com https://rpc.coredao.org https://rpc.frax.com https://rpc.fuse.io https://rpc.gobob.xyz https://rpc.hemi.network https://rpc.hyperliquid.xyz https://rpc.immutable.com https://rpc.mainnet.near.org https://rpc.mainnet.taiko.xyz https://rpc.monad.xyz https://rpc.osmosis.zone https://rpc.polkadot.io https://rpc.pulsechain.com https://rpc.soneium.org https://rpc.soniclabs.com https://rpc.syscoin.org https://rpc.telos.net https://rpc.tzbeta.net https://rpc.tzkt.io https://rpc.xdc.network https://rpc.xlayer.tech https://rpc.zora.energy https://s1.ripple.com:51234 https://sei-rpc.polkachu.com https://sei-rpc.publicnode.com https://sei.drpc.org https://soneium-rpc.publicnode.com https://songbird-api.flare.network https://sonic-rpc.publicnode.com https://starknet-mainnet.drpc.org https://starknet.drpc.org https://taiko-rpc.publicnode.com https://telos.drpc.org https://unichain-rpc.publicnode.com https://worldchain-mainnet.g.alchemy.com https://xlayerrpc.okx.com https://xrplcluster.com https://zetachain-evm.blockpi.network https://zetachain-mainnet.g.allthatnode.com https://zksync.drpc.org https://zora.drpc.org https://etc.blockscout.com https://explorer.fuse.io https://explorer.hemi.xyz https://explorer.mode.network https://explorer.roninchain.com https://explorer.syscoin.org https://flare-explorer.flare.network https://pacific-explorer.manta.network https://songbird-explorer.flare.network https://zetascan.com https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com https://tokens.1inch.io https://tokens.pancakeswap.finance https://tokens.uniswap.org https://raw.githubusercontent.com",  "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  // frame-ancestors is ignored when this policy is delivered via a <meta>
-  // tag, but it is enforced when delivered as an HTTP header (preview.headers
-  // and production hosting). Keeping it in the single shared string means
-  // the header path is protected and the meta path is unaffected.
+];
+
+// HTTP-header policy: the full policy, including frame-ancestors 'none'.
+// Enforced wherever the app is served with headers (vite preview via
+// SECURITY_HEADERS below). GitHub Pages sends no custom headers, so on the
+// production Pages host there is no enforceable frame-ancestors location
+// in this repo — the <meta> tag cannot supply it.
+export const CONTENT_SECURITY_POLICY = [
+  ...CSP_DIRECTIVES,
   "frame-ancestors 'none'",
 ].join('; ');
+
+// <meta>-delivered policy: identical to the header policy minus
+// frame-ancestors, which a <meta> tag cannot set — Chrome logs
+// "The Content Security Policy directive 'frame-ancestors' is ignored
+// when delivered via a <meta> element" for every page that carries it.
+// No other directive in this policy is in the set browsers ignore in a
+// <meta> (frame-ancestors, report-uri, report-to), so nothing else is
+// dropped here.
+export const CONTENT_SECURITY_POLICY_META = CSP_DIRECTIVES.join('; ');
 
 export const SECURITY_HEADERS: Record<string, string> = {
   'Content-Security-Policy': CONTENT_SECURITY_POLICY,

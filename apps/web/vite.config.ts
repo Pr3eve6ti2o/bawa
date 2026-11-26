@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import {
-  CONTENT_SECURITY_POLICY,
+  CONTENT_SECURITY_POLICY_META,
   SECURITY_HEADERS,
 } from './src/app/security-headers'
 
@@ -13,9 +13,10 @@ import {
 //    transformIndexHtml plugin). It is NOT in source index.html and NOT
 //    injected in dev: Vite dev injects an inline react-refresh preamble that
 //    a script-src 'self' policy would block, breaking `npm run dev` / HMR.
-//    Production hosts serving dist/ statically must send the same headers
-//    (see README.md "Security notes" — the meta tag alone cannot set
-//    frame-ancestors, which only the HTTP header enforces).
+//    The meta carries CONTENT_SECURITY_POLICY_META: the header policy minus
+//    frame-ancestors, which a <meta> tag cannot set (browsers ignore it and
+//    log a console error). Production hosts serving dist/ statically must
+//    send the same headers (see README.md "Security notes").
 // Dev server headers are deliberately minimal (no CSP): localhost dev is not
 // a deployment target, and a dev CSP would break HMR without protecting users.
 // GitHub Pages (panel-rebuild/pages-base): the <base> tag must match the
@@ -53,7 +54,7 @@ export default defineConfig({
       transformIndexHtml(html, ctx) {
         if (ctx.server) return html
         const meta =
-          `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`
+          `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY_META}">`
         return html
           .replace('<base href="/" />', `<base href="${resolvedBase}" />`)
           .replace('</head>', `${meta}\n  </head>`)

@@ -73,6 +73,26 @@ describe('shipped web wallet Content Security Policy (T49 F-02)', () => {
     );
   });
 
+  test('the build-time meta uses the meta-only policy (no frame-ancestors)', () => {
+    // frame-ancestors is ignored — and warns — when delivered via a <meta>
+    // tag, so the injected meta must come from CONTENT_SECURITY_POLICY_META
+    // (header policy minus frame-ancestors), not the header policy itself.
+    const config = read('../apps/web/vite.config.ts');
+    assert.ok(
+      config.includes('CONTENT_SECURITY_POLICY_META'),
+      'vite.config.ts must inject the meta-only CSP policy',
+    );
+    assert.ok(
+      config.includes('${CONTENT_SECURITY_POLICY_META}'),
+      'the injected meta content must be the meta-only policy',
+    );
+    const policy = read('../apps/web/src/app/security-headers.ts');
+    assert.ok(
+      policy.includes('CONTENT_SECURITY_POLICY_META'),
+      'security-headers.ts must export the meta-only policy',
+    );
+  });
+
   test('source index.html carries no CSP meta (dev stays clean, one policy ships)', () => {
     const html = read('../apps/web/index.html');
     assert.ok(
