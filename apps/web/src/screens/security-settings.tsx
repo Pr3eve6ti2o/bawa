@@ -22,7 +22,8 @@ export function SecuritySettingsScreen() {
 
   // Lane 6 redesign (DESIGN-SYSTEM.md §6 Settings): sections in order —
   // vault lock, mnemonic backup, connected wallets, connections
-  // (networks / devnet / prices), about, then what the wallet does.
+  // (networks / devnet / prices), the WalletConnect note, about,
+  // then what the wallet does.
   // Before, the reading panel came first and buried the one control
   // (auto-lock) under it; the controls now come first and the reading
   // stays, in full, below them. Desktop two-column grid, mobile single
@@ -112,6 +113,31 @@ export function SecuritySettingsScreen() {
           >
             Open Networks
           </Link>
+        </CardContent>
+      </Card>
+
+      <Card radius="xl" className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>WalletConnect</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="max-w-[75ch] text-sm text-ink">
+            WalletConnect — connecting Bawa to dApps — is not available in
+            this build. It needs a free Reown Cloud project ID, which has
+            not been set up. No keys or funds are affected.
+          </p>
+          <p className="max-w-[75ch] text-sm text-ink">
+            To bring it back later: create a free account at{" "}
+            <a
+              href="https://cloud.reown.com"
+              className="font-medium text-ink bawa-squiggle-underline"
+            >
+              cloud.reown.com
+            </a>
+            , create a project, copy the project ID into{" "}
+            <code>VITE_WALLETCONNECT_PROJECT_ID</code>, and restore the
+            WalletConnect files from git history.
+          </p>
         </CardContent>
       </Card>
 

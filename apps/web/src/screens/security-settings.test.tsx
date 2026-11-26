@@ -183,6 +183,26 @@ describe('security settings screen', () => {
     }
   });
 
+  it('says WalletConnect is not available in this build', async () => {
+    // Providers Phase 2, Lane A: the WalletConnect screen, client and
+    // dependencies were removed — no Reown Cloud projectId exists, and
+    // without one the relay never connects. Security carries the honest
+    // note instead of a dead screen.
+    setWallet('unlocked');
+    const mounted = await mountScreen();
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('WalletConnect');
+      expect(text).toContain('not available in this build');
+      expect(text).toContain('Reown Cloud project ID');
+      expect(text).toContain('No keys or funds are affected');
+      expect(text).toContain('cloud.reown.com');
+      expect(text).toContain('VITE_WALLETCONNECT_PROJECT_ID');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('points at Wallets for connected wallets and shows the app version', async () => {
     setWallet('unlocked');
     const mounted = await mountScreen();

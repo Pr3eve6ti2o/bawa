@@ -121,10 +121,10 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
     }
   });
 
-  it('keeps the More menu destinations unchanged (12 links)', () => {
+  it('keeps the More menu destinations unchanged (11 links)', () => {
     // UX-major Lane 5: Address book joins the More menu after Wallets.
     // UX-major Lane 6: Swap joins the More menu first.
-    expect(MORE_LINKS).toHaveLength(12);
+    expect(MORE_LINKS).toHaveLength(11);
     expect(MORE_LINKS.map(({ to }) => to)).toEqual([
       '/swap',
       '/wallets',
@@ -135,7 +135,6 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
       '/create',
       '/security',
       '/networks',
-      '/walletconnect',
       '/mnemonic-backup',
       '/welcome',
     ]);

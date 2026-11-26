@@ -44,6 +44,111 @@ const LIFI_OK_FIXTURE = {
   },
 };
 
+// Live gas.zip fixtures (Lane C): the chains rows are verbatim from
+// GET /v2/chains on 2026-11-26; the quote is the live 0.005 ETH ->
+// Base response from the same day.
+const GASZIP_CHAINS_FIXTURE = {
+  chains: [
+    {
+      chain: 1,
+      decimals: 18,
+      inbound: true,
+      mainnet: true,
+      maxOutbound: 100,
+      minOutbound: 0.05,
+      name: 'Ethereum',
+      price: 1706.93,
+      symbol: 'ETH',
+    },
+    {
+      chain: 501474,
+      decimals: 9,
+      inbound: true,
+      mainnet: true,
+      maxOutbound: 0,
+      minOutbound: 0.015,
+      name: 'Solana',
+      price: 70.96,
+      symbol: 'SOL',
+    },
+    {
+      chain: 8453,
+      decimals: 18,
+      inbound: true,
+      mainnet: true,
+      maxOutbound: 2000,
+      minOutbound: 0.015,
+      name: 'Base',
+      price: 1706.93,
+      symbol: 'ETH',
+    },
+  ],
+};
+
+const GASZIP_QUOTE_FIXTURE = {
+  calldata: '0x010036',
+  contractDepositTxn: {
+    data: '0xc9630cb00000000000000000000000000000000000000000000000000000000000000036eafd154aed18c7b98205d008dd21f5de29122042000000000000000000000000',
+    to: '0x2a37D63EAdFe4b4682a3c28C1c2cD4F109Cc2762',
+    value: '0x11c37937e08000',
+  },
+  expires: 1795697166,
+  quotes: [
+    {
+      chain: 8453,
+      decimals: 18,
+      expected: 4999610396600102,
+      expectedNative: 4999610396600102,
+      gas: 126000000000,
+      speed: 3.0,
+      usd: 8.5351,
+    },
+  ],
+};
+
+function stubGasZipFetch(): void {
+  const fn = (async (url: unknown) => {
+    const target = String(url);
+    if (target.includes('backend.gas.zip/v2/chains')) {
+      return new Response(JSON.stringify(GASZIP_CHAINS_FIXTURE), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    if (target.includes('backend.gas.zip/v2/quotes/')) {
+      return new Response(JSON.stringify(GASZIP_QUOTE_FIXTURE), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify(LIFI_OK_FIXTURE), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }) as unknown as typeof fetch;
+  vi.stubGlobal('fetch', fn);
+}
+
+function setRefuelWallet(): void {
+  setWallet({
+    vaultAddresses: {
+      eth: [FROM],
+      base: [RECIPIENT],
+      matic: [RECIPIENT],
+    },
+    balances: {
+      eth: { status: 'available', value: '1000000000000000000' },
+      base: { status: 'available', value: '1000000000000000000' },
+      matic: { status: 'available', value: '10000000000000000000' },
+    },
+  });
+}
+
+async function openRefuel(div: HTMLDivElement): Promise<void> {
+  await click(div, 'Refuel gas');
+  await waitForText(div, 'From network');
+}
+
 function setWallet(overrides: Record<string, unknown> = {}): void {
   vi.mocked(useWallet).mockReturnValue({
     vaultState: 'unlocked',
@@ -437,6 +542,89 @@ describe('SwapScreen', () => {
     try {
       await waitForText(mounted.div, 'Quotes are for mainnet');
       expect(findButton(mounted.div, 'Get quote').disabled).toBe(true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('compares providers after a quote: Relay honest state, STON.fi corridor, best quote', async () => {
+    setWallet();
+    stubFetch(LIFI_OK_FIXTURE);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(
+        mounted.div,
+        'networks have no swap provider in this wallet yet',
+      );
+      await pickToken(mounted.div, 'Token on Polygon', 'USDC');
+      await enterAmount(mounted.div, '0.1');
+      await click(mounted.div, 'Get quote');
+      await waitForText(mounted.div, 'You receive');
+      await waitForText(mounted.div, 'Compare providers');
+      expect(mounted.div.textContent).toContain(
+        'Relay quotes need a proxy or access-token endpoint — not set up yet',
+      );
+      // The default pair is native ETH -> native POL: STON.fi covers
+      // stablecoins only, so the corridor row says so.
+      expect(mounted.div.textContent).toContain(
+        'STON.fi covers stablecoins only',
+      );
+      // LI.FI is the only live quote, so it is the best by definition.
+      expect(mounted.div.textContent).toContain('Best quote');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('refuels gas through gas.zip: live chains, live quote, deposit address shown', async () => {
+    setRefuelWallet();
+    stubGasZipFetch();
+    const mounted = await mountScreen();
+    try {
+      await openRefuel(mounted.div);
+      const input = mounted.div.querySelector(
+        '#refuel-amount',
+      ) as HTMLInputElement | null;
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input as HTMLInputElement, '0.005');
+      });
+      await waitForText(mounted.div, 'About $8.53');
+      await click(mounted.div, 'Get refuel quote');
+      await waitForText(mounted.div, 'Refuel quote');
+      expect(mounted.div.textContent).toContain('0.004999 ETH');
+      expect(mounted.div.textContent).toContain('($8.54)');
+      // The deposit address comes from the live quote — never the
+      // docs example address.
+      expect(mounted.div.textContent).toContain(
+        '0x2a37D63EAdFe4b4682a3c28C1c2cD4F109Cc2762',
+      );
+      expect(mounted.div.textContent).not.toContain(
+        '0x391E7C679d29bD940d63be94AD22A25d25b5A604',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('blocks a refuel above the $50 per-chain maximum', async () => {
+    setRefuelWallet();
+    stubGasZipFetch();
+    const mounted = await mountScreen();
+    try {
+      await openRefuel(mounted.div);
+      const input = mounted.div.querySelector(
+        '#refuel-amount',
+      ) as HTMLInputElement | null;
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input as HTMLInputElement, '1');
+      });
+      await waitForText(
+        mounted.div,
+        'Above the $50.00 maximum per destination chain.',
+      );
+      expect(findButton(mounted.div, 'Get refuel quote').disabled).toBe(true);
     } finally {
       await mounted.cleanup();
     }

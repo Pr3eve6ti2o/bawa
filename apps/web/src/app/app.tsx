@@ -69,16 +69,6 @@ const loadAddressBook = () =>
     default: m.AddressBookScreen,
   }));
 const AddressBookScreen = lazy(loadAddressBook);
-// Lane C (install-all-usable, 2026-11-25): the WalletConnect screen
-// is a lazy route like the others. The SignClient SDK itself is a
-// second, deeper lazy chunk: the screen dynamic-imports
-// walletconnect-client.ts, so the 348 KB SDK chunk is fetched only when
-// the user opens WalletConnect with a projectId configured.
-const loadWalletConnect = () =>
-  import('../screens/walletconnect').then((m) => ({
-    default: m.WalletConnectScreen,
-  }));
-const WalletConnectScreen = lazy(loadWalletConnect);
 // Lane 6 (UX-major programme): the Swap screen is a lazy route like
 // the others — its own chunk, never in the main bundle. Quotes only;
 // nothing in it signs or broadcasts.
@@ -107,7 +97,6 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/networks': loadNetworkSelection,
   '/wallets': loadWalletManagement,
   '/address-book': loadAddressBook,
-  '/walletconnect': loadWalletConnect,
   '/swap': loadSwap,
   '/lock': loadLock,
 };
@@ -541,7 +530,6 @@ export function App() {
             <Route path="wallets" element={<WalletManagementScreen />} />
             <Route path="address-book" element={<AddressBookScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />
-            <Route path="walletconnect" element={<WalletConnectScreen />} />
             <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>

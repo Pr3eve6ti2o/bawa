@@ -10,6 +10,27 @@ import {
   openCoinbaseOnramp,
   type OnrampDestination,
 } from '../wallet/onramp';
+import {
+  MOONPAY_CURRENCY_BY_CHAIN,
+  RAMP_ASSET_BY_CHAIN,
+  banxaDestinations,
+  banxaPartnerRef,
+  buildBanxaUrl,
+  buildMercuryoUrl,
+  buildMoonpayUrl,
+  buildOnramperUrl,
+  buildRampUrl,
+  buyDestinationsFor,
+  buyProviders,
+  mercuryoWidgetId,
+  moonpayPublishableKey,
+  onramperApiKey,
+  openBuyProviderUrl,
+  rampEnabledAssetsFor,
+  rampHostApiKey,
+  type BuyProviderId,
+  type BuyProviderInfo,
+} from '../wallet/buy-providers';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
 import { buildBawaSendLink, buildPaymentUri, DEFAULT_QR_CARD_TEMPLATE, QR_CARD_TEMPLATES, qrCardToPngFile, type QrCardTemplate } from '../wallet/payment-links';
 import {
@@ -122,9 +143,11 @@ function ChainRow({
   );
 }
 
-// Lane D (usable-install): the Buy panel's states. Each impossible
-// state gets its own explanation and the next step, never a dead
-// Buy button.
+// Lane D (usable-install): the Buy panel's wallet states. Each
+// impossible state gets its own explanation and the next step, never
+// a dead Buy button. (The "not set up yet" state is no longer
+// panel-level: Lane B shows the provider picker instead, and each
+// unconfigured provider row says so itself.)
 type BuyStatus = 'idle' | 'opening' | 'opened' | 'load-failed' | 'blocked';
 
 type BuyUnavailable = {
@@ -135,18 +158,9 @@ type BuyUnavailable = {
 };
 
 function buyUnavailableState(
-  configured: boolean,
   vaultState: string,
   hasDestination: boolean,
 ): BuyUnavailable | null {
-  if (!configured) {
-    return {
-      title: "Buy isn't set up yet",
-      body: 'Buying needs Coinbase Onramp onboarding and API keys, which aren’t configured yet.',
-      to: '/receive',
-      action: 'Back to Receive',
-    };
-  }
   if (vaultState === 'no-vault') {
     return {
       title: 'Create a wallet first',
@@ -166,12 +180,133 @@ function buyUnavailableState(
   if (!hasDestination) {
     return {
       title: 'No address to deliver to',
-      body: 'This wallet has no address on a network Coinbase delivers to.',
+      body: 'This wallet has no address on a network any Buy provider delivers to.',
       to: '/import-wallet',
       action: 'Import wallet',
     };
   }
   return null;
+}
+
+// Lane B (providers Phase 2): Ramp's regional restrictions
+// (RESEARCH.md §2.1). Bawa cannot detect the buyer's region, so
+// they are stated on the Ramp row rather than silently enforced;
+// the pure gating helpers live in wallet/buy-providers.ts.
+const RAMP_RESTRICTIONS =
+  'Not available in Louisiana, Minnesota, Nevada, New Jersey, New York, Pennsylvania, Vermont, Washington or Puerto Rico. No USDT, USDT0, DAI or AUSD in the EU/EEA. No stablecoins in Texas.';
+
+// Lane B: Banxa Referral is a plain redirect — what it cannot do.
+const BANXA_LIMITS =
+  'A plain redirect — no quote in Bawa, no webhooks and no order lookup.';
+
+// Lane B (providers Phase 2): one row per Buy provider, in rank
+// order. Each row states its keys, its indicative fee and its honest
+// state — never a fake "Buy". A row has a button only when its
+// provider is configured (and, for Ramp and Coinbase, when this
+// wallet has an address on a network it delivers to).
+function BuyProviderRow({
+  provider,
+  destination,
+  buttonLabel,
+  note,
+  onBuy,
+  buyDisabled,
+  isActive,
+  buyStatus,
+}: {
+  provider: BuyProviderInfo;
+  destination: string | null;
+  buttonLabel: string | null;
+  note: string | null;
+  onBuy: () => void;
+  buyDisabled: boolean;
+  isActive: boolean;
+  buyStatus: BuyStatus;
+}) {
+  const tag =
+    provider.id === 'ramp'
+      ? 'Recommended'
+      : provider.id === 'banxa'
+        ? 'Link only'
+        : provider.id === 'transak'
+          ? 'Needs a backend'
+          : null;
+  return (
+    <Card radius="xl">
+      <div className="flex flex-col items-start gap-2 p-4">
+        <p className="text-sm font-semibold text-ink">
+          {provider.rank}. {provider.name}
+          {tag !== null ? ` — ${tag}` : ''}
+        </p>
+        <p className="text-sm text-ink">{provider.keyCopy}</p>
+        <p className="text-sm text-ink">{provider.feeCopy}</p>
+        {buttonLabel === null ? (
+          <>
+            {provider.readiness === 'needs-backend' ? (
+              <p className="text-sm text-ink">
+                Needs a backend — {provider.setupCopy}
+              </p>
+            ) : provider.readiness === 'ready' ||
+              provider.readiness === 'ready-no-prefill' ? (
+              <p className="text-sm text-ink">
+                No address on a network {provider.name} delivers to.
+              </p>
+            ) : provider.id === 'coinbase' ? (
+              <>
+                <p className="text-sm font-semibold text-ink">
+                  Buy isn&apos;t set up yet
+                </p>
+                <p className="text-sm text-ink">{provider.setupCopy}</p>
+              </>
+            ) : (
+              <p className="text-sm text-ink">
+                Not set up yet — {provider.setupCopy}
+              </p>
+            )}
+            {note !== null && <p className="text-sm text-ink">{note}</p>}
+          </>
+        ) : (
+          <>
+            {destination !== null && (
+              <>
+                <p className="text-sm font-semibold text-ink">
+                  Deliver to
+                </p>
+                <p className="w-full break-all font-mono text-xs text-ink">
+                  {destination}
+                </p>
+              </>
+            )}
+            {note !== null && <p className="text-sm text-ink">{note}</p>}
+            <Button
+              type="button"
+              size="sm"
+              disabled={buyDisabled}
+              onClick={onBuy}
+            >
+              {buttonLabel}
+            </Button>
+          </>
+        )}
+        {isActive && buyStatus === 'opened' && (
+          <p role="status" className="text-sm text-ink">
+            {provider.name} opened in a pop-up — complete your purchase
+            there.
+          </p>
+        )}
+        {isActive && buyStatus === 'load-failed' && (
+          <p role="alert" className="text-sm text-ink">
+            {provider.name} couldn&apos;t be loaded. Check your connection.
+          </p>
+        )}
+        {isActive && buyStatus === 'blocked' && (
+          <p role="alert" className="text-sm text-ink">
+            Pop-up blocked. Allow pop-ups and try again.
+          </p>
+        )}
+      </div>
+    </Card>
+  );
 }
 
 export function ReceiveScreen() {
@@ -215,16 +350,19 @@ export function ReceiveScreen() {
   const [isRotating, setIsRotating] = useState(false);
   const qrRef = useRef<HTMLDivElement | null>(null);
 
-  // Lane D (usable-install): the Buy panel (?buy=1) — fiat top-up
-  // via Coinbase Onramp. Its state lives here with the rest of the
-  // screen's state so the panel can early-return below.
+  // Lane D (usable-install) + Lane B (providers Phase 2): the Buy
+  // panel (?buy=1) — a provider picker, not one provider. Its state
+  // lives here with the rest of the screen's state so the panel can
+  // early-return below.
   const [searchParams] = useSearchParams();
   const buyMode = searchParams.get('buy') === '1';
   const [buyStatus, setBuyStatus] = useState<BuyStatus>('idle');
+  const [buyProvider, setBuyProvider] = useState<BuyProviderId | null>(null);
   const buyAppId = coinbaseOnrampAppId();
   // The destinations are cheap to recompute (ten entries at most),
-  // so no memo: the panel only shows one of them, and the widget
-  // itself is the network picker.
+  // so no memo: each provider row shows the first destination on a
+  // network it delivers to, and the widget itself is the picker for
+  // the rest.
   const buyDestinations = onrampDestinations({
     receiveAddresses,
     vaultAddresses,
@@ -235,10 +373,37 @@ export function ReceiveScreen() {
   // lands on by default, and every destination goes in the URL.
   const buyDestination: OnrampDestination | null =
     buyDestinations[0] ?? null;
+  // Lane B: the same address resolution, per provider map. Ramp and
+  // MoonPay need a destination to pre-fill; Onramper and Mercuryo
+  // carry no pre-fill (their addresses need a server signature), so
+  // they need none; Banxa pre-fills when it can and opens bare when
+  // it cannot.
+  const rampDestinations = buyDestinationsFor(RAMP_ASSET_BY_CHAIN, {
+    receiveAddresses,
+    vaultAddresses,
+    watchAddresses: addresses,
+  });
+  const moonpayDestinations = buyDestinationsFor(
+    MOONPAY_CURRENCY_BY_CHAIN,
+    {
+      receiveAddresses,
+      vaultAddresses,
+      watchAddresses: addresses,
+    },
+  );
+  const banxaDestinationList = banxaDestinations({
+    receiveAddresses,
+    vaultAddresses,
+    watchAddresses: addresses,
+  });
+  const hasAnyBuyDestination =
+    buyDestinations.length > 0 ||
+    rampDestinations.length > 0 ||
+    moonpayDestinations.length > 0 ||
+    banxaDestinationList.length > 0;
   const buyUnavailable = buyUnavailableState(
-    buyAppId !== null,
     vaultState,
-    buyDestination !== null,
+    hasAnyBuyDestination,
   );
 
   function handleBuy(): void {
@@ -262,6 +427,171 @@ export function ReceiveScreen() {
     if (outcome === 'load-failed') setBuyStatus('load-failed');
     else if (outcome === 'blocked') setBuyStatus('blocked');
     else setBuyStatus('opened');
+  }
+
+  // Lane B: open one provider row's widget. Coinbase keeps its own
+  // opener (handleBuy above); the rest share openBuyProviderUrl.
+  // The URL is built first so a build failure closes nothing — the
+  // pop-up only opens once the URL exists.
+  function handleBuyProvider(id: BuyProviderId): void {
+    if (devnetEnabled === true) return;
+    setBuyProvider(id);
+    if (id === 'coinbase') {
+      handleBuy();
+      return;
+    }
+    let url: string;
+    try {
+      switch (id) {
+        case 'ramp': {
+          const dest = rampDestinations[0];
+          const key = rampHostApiKey();
+          if (key === null || dest === undefined) return;
+          url = buildRampUrl({
+            hostApiKey: key,
+            userAddress: dest.address,
+            enabledCryptoAssets: rampEnabledAssetsFor(dest.chain),
+          });
+          break;
+        }
+        case 'moonpay': {
+          const key = moonpayPublishableKey();
+          if (key === null) return;
+          url = buildMoonpayUrl({
+            apiKey: key,
+            defaultCurrencyCode: moonpayDestinations[0]?.asset,
+          });
+          break;
+        }
+        case 'onramper': {
+          const key = onramperApiKey();
+          if (key === null) return;
+          url = buildOnramperUrl({ apiKey: key });
+          break;
+        }
+        case 'banxa': {
+          const ref = banxaPartnerRef();
+          if (ref === null) return;
+          const dest = banxaDestinationList[0];
+          url = buildBanxaUrl({
+            partnerRef: ref,
+            walletAddress: dest?.address,
+            coinType: dest?.coinType,
+            blockchain: dest?.blockchain,
+          });
+          break;
+        }
+        case 'mercuryo': {
+          const widgetId = mercuryoWidgetId();
+          if (widgetId === null) return;
+          url = buildMercuryoUrl({ widgetId });
+          break;
+        }
+        case 'transak':
+          return;
+      }
+    } catch {
+      setBuyStatus('load-failed');
+      return;
+    }
+    setBuyStatus('opening');
+    const outcome = openBuyProviderUrl(url);
+    if (outcome === 'blocked') setBuyStatus('blocked');
+    else setBuyStatus('opened');
+  }
+
+  // Lane B: what one provider row shows. destination is the address
+  // the purchase is delivered to (null when the row pre-fills
+  // nothing); buttonLabel null means no button — the row states why.
+  function buyRowFor(provider: BuyProviderInfo): {
+    destination: string | null;
+    buttonLabel: string | null;
+    note: string | null;
+  } {
+    switch (provider.id) {
+      case 'ramp': {
+        if (provider.readiness !== 'ready') {
+          return {
+            destination: null,
+            buttonLabel: null,
+            note: RAMP_RESTRICTIONS,
+          };
+        }
+        const dest = rampDestinations[0];
+        if (dest === undefined) {
+          return {
+            destination: null,
+            buttonLabel: null,
+            note: RAMP_RESTRICTIONS,
+          };
+        }
+        return {
+          destination: dest.address,
+          buttonLabel: 'Buy with Ramp',
+          note: RAMP_RESTRICTIONS,
+        };
+      }
+      case 'moonpay': {
+        if (provider.readiness !== 'ready-no-prefill') {
+          return { destination: null, buttonLabel: null, note: null };
+        }
+        return {
+          destination: null,
+          buttonLabel: 'Buy with MoonPay',
+          note: 'Your address can’t be pre-filled yet — address pre-fill needs a signing backend. You’ll paste your own address inside MoonPay.',
+        };
+      }
+      case 'onramper': {
+        if (provider.readiness !== 'ready-no-prefill') {
+          return { destination: null, buttonLabel: null, note: null };
+        }
+        return {
+          destination: null,
+          buttonLabel: 'Buy with Onramper',
+          note: 'Your address can’t be pre-filled yet — passing wallet addresses needs a server-signed URL. You’ll paste your own address inside Onramper.',
+        };
+      }
+      case 'banxa': {
+        if (provider.readiness !== 'ready') {
+          return {
+            destination: null,
+            buttonLabel: null,
+            note: BANXA_LIMITS,
+          };
+        }
+        const dest = banxaDestinationList[0];
+        return {
+          destination: dest?.address ?? null,
+          buttonLabel: 'Buy with Banxa',
+          note: BANXA_LIMITS,
+        };
+      }
+      case 'transak':
+        return { destination: null, buttonLabel: null, note: null };
+      case 'mercuryo': {
+        if (provider.readiness !== 'ready-no-prefill') {
+          return { destination: null, buttonLabel: null, note: null };
+        }
+        return {
+          destination: null,
+          buttonLabel: 'Buy with Mercuryo',
+          note: 'Your address can’t be pre-filled yet — address signing needs the server-side widget secret, and the exact signature scheme is unresolved. You’ll paste your own address inside Mercuryo.',
+        };
+      }
+      case 'coinbase': {
+        if (provider.readiness !== 'ready') {
+          return { destination: null, buttonLabel: null, note: null };
+        }
+        if (buyDestination === null) {
+          return { destination: null, buttonLabel: null, note: null };
+        }
+        return {
+          destination: buyDestination.address,
+          buttonLabel: 'Buy with Coinbase',
+          note: 'Change the network and asset in Coinbase.',
+        };
+      }
+    }
   }
 
   const chains = availableFor('receive');
@@ -658,83 +988,64 @@ export function ReceiveScreen() {
     })),
   ]);
 
-  // Lane D (usable-install): ?buy=1 renders the Buy panel instead
-  // of the stepped flow — the dashboard Buy tile links here
-  // (/receive?buy=1, the /send?scan=1 precedent). A separate /buy
-  // route cannot fit the bundle budget (see onramp.ts): the panel
-  // reuses this screen's Card/Button, so it adds ~2 KB, not a
-  // whole screen chunk. There is no network picker here on
-  // purpose: the widget itself is the picker — the addresses
-  // handed to it cover every deliverable network.
+  // Lane D (usable-install) + Lane B (providers Phase 2): ?buy=1
+  // renders the Buy provider picker instead of the stepped flow —
+  // the dashboard Buy tile links here (/receive?buy=1, the
+  // /send?scan=1 precedent). A separate /buy route cannot fit the
+  // bundle budget (see onramp.ts): the panel reuses this screen's
+  // Card/Button. There is no network picker here on purpose: each
+  // widget itself is the picker — the addresses handed to it cover
+  // every deliverable network.
   if (buyMode) {
     return (
       <div className="space-y-3">
         <h1 className="text-2xl font-semibold text-ink">Buy crypto</h1>
-        <Card radius="xl">
-          <div className="flex flex-col items-start gap-2 p-4">
-            {buyUnavailable !== null ? (
-              <>
-                <p className="text-sm font-semibold text-ink">
-                  {buyUnavailable.title}
-                </p>
-                <p className="text-sm text-ink">{buyUnavailable.body}</p>
-                {buyUnavailable.to !== '/receive' && (
-                  <Button asChild size="sm">
-                    <Link to={buyUnavailable.to}>{buyUnavailable.action}</Link>
-                  </Button>
-                )}
-              </>
-            ) : (
-              buyDestination !== null && (
-                <>
-                  <p className="text-sm font-semibold text-ink">
-                    Deliver to
-                  </p>
-                  <p className="w-full break-all font-mono text-xs text-ink">
-                    {buyDestination.address}
-                  </p>
-                  <p className="text-sm text-ink">
-                    Change the network and asset in Coinbase.
-                  </p>
-                  {devnetEnabled === true && (
-                    <p className="text-sm text-ink">
-                      Devnet test mode is on — buying delivers real mainnet
-                      crypto, so it stays off.
-                    </p>
-                  )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={
-                      devnetEnabled === true || buyStatus === 'opening'
-                    }
-                    onClick={() => handleBuy()}
-                  >
-                    {buyStatus === 'opening'
-                      ? 'Opening Coinbase…'
-                      : 'Buy with Coinbase'}
-                  </Button>
-                  {buyStatus === 'opened' && (
-                    <p role="status" className="text-sm text-ink">
-                      Coinbase opened in a pop-up — complete your purchase
-                      there.
-                    </p>
-                  )}
-                  {buyStatus === 'load-failed' && (
-                    <p role="alert" className="text-sm text-ink">
-                      Coinbase couldn&apos;t be loaded. Check your connection.
-                    </p>
-                  )}
-                  {buyStatus === 'blocked' && (
-                    <p role="alert" className="text-sm text-ink">
-                      Pop-up blocked. Allow pop-ups and try again.
-                    </p>
-                  )}
-                </>
-              )
+        {buyUnavailable !== null ? (
+          <Card radius="xl">
+            <div className="flex flex-col items-start gap-2 p-4">
+              <p className="text-sm font-semibold text-ink">
+                {buyUnavailable.title}
+              </p>
+              <p className="text-sm text-ink">{buyUnavailable.body}</p>
+              {buyUnavailable.to !== '/receive' && (
+                <Button asChild size="sm">
+                  <Link to={buyUnavailable.to}>{buyUnavailable.action}</Link>
+                </Button>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <>
+            {devnetEnabled === true && (
+              <p className="text-sm text-ink">
+                Devnet test mode is on — buying delivers real mainnet
+                crypto, so it stays off.
+              </p>
             )}
-          </div>
-        </Card>
+            {buyProviders().map((provider) => {
+              const row = buyRowFor(provider);
+              return (
+                <BuyProviderRow
+                  key={provider.id}
+                  provider={provider}
+                  destination={row.destination}
+                  buttonLabel={row.buttonLabel}
+                  note={row.note}
+                  onBuy={() => handleBuyProvider(provider.id)}
+                  buyDisabled={
+                    devnetEnabled === true || buyStatus === 'opening'
+                  }
+                  isActive={buyProvider === provider.id}
+                  buyStatus={buyStatus}
+                />
+              );
+            })}
+            <p className="text-sm text-ink">
+              Fees are indicative only — the quote at purchase time is
+              authoritative.
+            </p>
+          </>
+        )}
         <p className="text-sm text-ink">
           <Link
             to="/receive"

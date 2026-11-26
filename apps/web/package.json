@@ -34,8 +34,6 @@
     "@radix-ui/react-tabs": "1.1.13",
     "@scure/bip39": "2.4.0",
     "@trustwallet/wallet-core": "4.9.3",
-    "@walletconnect/sign-client": "2.21.0",
-    "@walletconnect/utils": "2.21.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "jsqr": "1.4.0",
@@ -79,15 +77,6 @@
     "jayson": {
       "stream-json": "3.7.0",
       "uuid": "11.1.1"
-    },
-    "@walletconnect/utils": {
-      "decode-uri-component": "0.5.1",
-      "viem": {
-        "ws": "8.21.0",
-        "isows": {
-          "ws": "8.21.0"
-        }
-      }
     }
   }
 }

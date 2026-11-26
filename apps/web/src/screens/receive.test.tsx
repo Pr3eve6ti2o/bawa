@@ -311,6 +311,206 @@ describe('receive screen', () => {
     }
   });
 
+  // Lane B (providers Phase 2): the Buy provider picker.
+  it('shows all seven providers in rank order, none offering a fake Buy', async () => {
+    setWallet();
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      const text = mounted.div.textContent ?? '';
+      const order = [
+        'Ramp',
+        'MoonPay',
+        'Onramper',
+        'Banxa',
+        'Transak',
+        'Mercuryo',
+        'Coinbase',
+      ];
+      let lastIndex = -1;
+      for (const name of order) {
+        const index = text.indexOf(name, lastIndex + 1);
+        expect(index).toBeGreaterThan(lastIndex);
+        lastIndex = index;
+      }
+      expect(text).toContain('Not set up yet');
+      expect(text).toContain('Needs a backend');
+      expect(text).toContain('hostApiKey');
+      expect(text).toContain('sk_live_');
+      expect(text).toContain('partnerRef');
+      expect(text).toContain('widget_id');
+      expect(text).toContain(
+        'Fees are indicative only — the quote at purchase time is authoritative.',
+      );
+      expect(
+        [...mounted.div.querySelectorAll('button')].find((candidate) =>
+          candidate.textContent?.startsWith('Buy with'),
+        ),
+      ).toBeUndefined();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('opens the Ramp widget pre-filled with the vault address and asset', async () => {
+    vi.stubEnv('VITE_RAMP_HOST_API_KEY', 'test-ramp-key');
+    const popup = {
+      location: { href: '' },
+      close: vi.fn(),
+      closed: false,
+    };
+    const openSpy = vi
+      .spyOn(window, 'open')
+      .mockReturnValue(popup as unknown as WindowProxy);
+    setWallet();
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Not available in Louisiana',
+      );
+      await clickButton(mounted.div, 'Buy with Ramp');
+      expect(openSpy).toHaveBeenCalledWith(
+        'about:blank',
+        '_blank',
+        'width=430,height=600',
+      );
+      const url = new URL(popup.location.href);
+      expect(url.origin).toBe('https://app.ramp.network');
+      expect(url.searchParams.get('hostApiKey')).toBe('test-ramp-key');
+      expect(url.searchParams.get('userAddress')).toBe(VAULT_ETH);
+      expect(url.searchParams.get('enabledCryptoAssets')).toBe('ETH');
+      expect(url.searchParams.get('variant')).toBe('hosted-auto');
+      expect(url.searchParams.get('defaultFlow')).toBe('ONRAMP');
+      expect(mounted.div.textContent).toContain(
+        'Ramp opened in a pop-up',
+      );
+    } finally {
+      openSpy.mockRestore();
+      vi.unstubAllEnvs();
+      await mounted.cleanup();
+    }
+  });
+
+  it('opens MoonPay without a pre-filled address and says so plainly', async () => {
+    vi.stubEnv('VITE_MOONPAY_API_KEY', 'pk_live_test');
+    const popup = {
+      location: { href: '' },
+      close: vi.fn(),
+      closed: false,
+    };
+    const openSpy = vi
+      .spyOn(window, 'open')
+      .mockReturnValue(popup as unknown as WindowProxy);
+    setWallet();
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      expect(mounted.div.textContent).toContain(
+        'paste your own address inside MoonPay',
+      );
+      await clickButton(mounted.div, 'Buy with MoonPay');
+      const url = new URL(popup.location.href);
+      expect(url.origin).toBe('https://buy.moonpay.com');
+      expect(url.searchParams.get('apiKey')).toBe('pk_live_test');
+      expect(url.searchParams.get('defaultCurrencyCode')).toBe('eth');
+      expect(url.searchParams.has('walletAddress')).toBe(false);
+      expect(url.searchParams.has('signature')).toBe(false);
+      expect(mounted.div.textContent).toContain(
+        'MoonPay opened in a pop-up',
+      );
+    } finally {
+      openSpy.mockRestore();
+      vi.unstubAllEnvs();
+      await mounted.cleanup();
+    }
+  });
+
+  it('opens Banxa pre-filled with the vault address, coin and chain', async () => {
+    vi.stubEnv('VITE_BANXA_PARTNER_REF', 'bawa');
+    const popup = {
+      location: { href: '' },
+      close: vi.fn(),
+      closed: false,
+    };
+    const openSpy = vi
+      .spyOn(window, 'open')
+      .mockReturnValue(popup as unknown as WindowProxy);
+    setWallet();
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      expect(mounted.div.textContent).toContain(
+        'A plain redirect — no quote in Bawa',
+      );
+      await clickButton(mounted.div, 'Buy with Banxa');
+      const url = new URL(popup.location.href);
+      expect(url.origin).toBe('https://bawa.banxa.com');
+      expect(url.searchParams.get('walletAddress')).toBe(VAULT_ETH);
+      expect(url.searchParams.get('coinType')).toBe('ETH');
+      expect(url.searchParams.get('blockchain')).toBe('ETH');
+    } finally {
+      openSpy.mockRestore();
+      vi.unstubAllEnvs();
+      await mounted.cleanup();
+    }
+  });
+
+  it('offers TON on Ramp but not on Coinbase for a TON-only wallet', async () => {
+    vi.stubEnv('VITE_RAMP_HOST_API_KEY', 'test-ramp-key');
+    vi.stubEnv('VITE_COINBASE_ONRAMP_APP_ID', 'test-app-id');
+    const popup = {
+      location: { href: '' },
+      close: vi.fn(),
+      closed: false,
+    };
+    const openSpy = vi
+      .spyOn(window, 'open')
+      .mockReturnValue(popup as unknown as WindowProxy);
+    const TON_ADDRESS = 'UQTestTonAddress1234567890';
+    setWallet({
+      addresses: { btc: [], eth: [], trx: [], ton: [] },
+      vaultAddresses: { btc: [], eth: [], trx: [], ton: [TON_ADDRESS] },
+    });
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      expect(mounted.div.textContent).toContain(
+        'No address on a network Coinbase delivers to.',
+      );
+      expect(
+        [...mounted.div.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === 'Buy with Coinbase',
+        ),
+      ).toBeUndefined();
+      await clickButton(mounted.div, 'Buy with Ramp');
+      const url = new URL(popup.location.href);
+      expect(url.searchParams.get('userAddress')).toBe(TON_ADDRESS);
+      expect(url.searchParams.get('enabledCryptoAssets')).toBe('TON_GRAM');
+    } finally {
+      openSpy.mockRestore();
+      vi.unstubAllEnvs();
+      await mounted.cleanup();
+    }
+  });
+
+  it('says no address to deliver to when no provider covers the wallet', async () => {
+    setWallet({
+      addresses: { btc: [], eth: [], trx: [], ton: [], fantom: [] },
+      vaultAddresses: {
+        btc: [],
+        eth: [],
+        trx: [],
+        ton: [],
+        fantom: ['0xFantomAddress000000000000000000'],
+      },
+    });
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      expect(mounted.div.textContent).toContain('No address to deliver to');
+      expect(mounted.div.textContent).toContain(
+        'no address on a network any Buy provider delivers to',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('renders no empty status line before any copy action (P8 dead-space fix)', async () => {
     // Reverify lane 1: the owner kept the 40 px Receive fix
     // (2026-11-23), but the UI/UX rework of this screen reintroduced
