@@ -56,8 +56,8 @@ table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
 **Bundle note:** the merged tree passes the budget — total JS
-4,691,234 vs the 6,000,000 budget (§0.2), passing by 1,308,766 bytes;
-largest chunk 2,906,541 (under the 3,050,000 cap). The budget was
+4,330,659 vs the 6,000,000 budget (§0.2), passing by 1,669,341 bytes;
+largest chunk 2,906,489 (under the 3,050,000 cap). The budget was
 re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26);
 see §0.2 for why.
 
@@ -91,12 +91,11 @@ see §0.2 for why.
    (route chunk 10,085 B) — none of it on the cold-load path (home cold
    load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
    The WalletConnect lazy chunk (348,194 B) was removed with the feature
-   in the providers programme (2026-11-26, §11); the 4,691,234 total
-   above predates that removal, and the new total is for the
-   verification lane to measure — do not quote a new total until it is
-   measured.
-   The merged tree measures 4,691,234 total JS and passes by **1,308,766
-   bytes (21.8% margin)**. Whether the gate should exclude lazy
+   in the providers programme (2026-11-26, §11). The providers
+   verification lane (Lane D, 2026-11-26) measured the new total on the
+   providers tree: 4,330,659 bytes total JS, passing by **1,669,341
+   bytes (27.8% margin)**; largest chunk 2,906,489 bytes (under the
+   3,050,000 cap). Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
 3. **Four-colour cap.** The app uses at most four colours, named by the
    design tokens in `docs/DESIGN-SYSTEM.md` §2.1
@@ -883,7 +882,7 @@ The survey's verified facts, which Lane D implemented from:
   aimed at self-custody wallets as the destination.
 - **Lazy-load only.** Measured via Bundlephobia: **7,473 B minified /
   2,841 B gzip** — 7,473 B alone exceeds the ~5,304 B headroom at survey
-  time (1.4× over; headroom is now 1,308,766 B under the 6,000,000 budget —
+  time (1.4× over; headroom is now 1,669,341 B under the 6,000,000 budget —
   see §0.2, 2026-11-26). It is loaded by dynamic import on the Buy screen
   only, by design. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
