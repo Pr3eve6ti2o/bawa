@@ -98,7 +98,7 @@ Treat these as unlocked dependency installs, not as evidence of a reproducible d
 
 ### Release blockers
 
-1. Install boundary. `tools/hdwallet-gen/package-lock.json` was committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (2026-11-08) and pinned `@trustwallet/wallet-core` to 4.8.4; at adopt-proper HEAD 5e7eb1d the lockfile pins `@trustwallet/wallet-core` to 4.9.3. Use `npm ci` inside `tools/hdwallet-gen`; D22 verified that this succeeds on 2026-11-08. No root lockfile exists, but the root package has no dependencies. Remove the root install step rather than adding a root lockfile.
+1. Install boundary. `tools/hdwallet-gen/package-lock.json` was committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (2026-11-08) and pinned `@trustwallet/wallet-core` to 4.8.4; at adopt-proper HEAD 5e7eb1d the lockfile pins `@trustwallet/wallet-core` to 4.9.3. Use `npm ci` inside `tools/hdwallet-gen`; D22 verified that this succeeds on 2026-11-08. A root lockfile exists (`package-lock.json`); the root package carries devDependencies (eslint) and `npm ci` runs at the root.
 
 2. **Failing pinned CI.** The syntax failures and the missing smoke-test file were resolved by the phase-1 repair (main @ e3b65fb832db287fdc8d54794980dd0b3456cc12, 2026-11-08); require a passing complete workflow on the candidate revision. Do not substitute a differential-test pass or a result from the repair copy.
 
@@ -993,7 +993,7 @@ Keep recovery material out of the checkout and installation reports. `CONTRIBUTI
 
 ## Dependency lockfile discipline
 
-**The lockfile release gate is not yet met.** A search of this tree found no root `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` or `Pipfile.lock`. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); at adopt-proper HEAD 5e7eb1d the lockfile pins @trustwallet/wallet-core to 4.9.3; no root lockfile and no Android-app lockfile are evidenced. A production lockfile still needs to be generated, reviewed, tested and committed.
+**The lockfile release gate is met for the root and `tools/hdwallet-gen`.** A root `package-lock.json` exists, and `tools/hdwallet-gen/package-lock.json` pins @trustwallet/wallet-core to 4.9.3; no Android-app lockfile is evidenced. The 4.8.4 pin at e3b65fb832db287fdc8d54794980dd0b3456cc12 is the historical record — the current pin is 4.9.3.
 
 A lockfile records the resolved dependency tree: exact package versions, including dependencies of dependencies, and integrity hashes. Version ranges in `package.json` alone can resolve differently on later installs. Without a lockfile, unchanged Bawa code can receive packages that were never part of the tested build.
 

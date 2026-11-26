@@ -2296,3 +2296,85 @@ scripts/secret-scan.mjs`). Viewed by eye: the WalletConnect screen
 at 390/820/1440/1919 (missing-projectId state) and the More menu at
 390.
 
+
+## §27 — Bundle budget re-baseline to 4,650,000 (owner order) — 2026-11-25
+
+**Decision (owner order, commit `7a170f4`):** the web bundle budget is
+re-baselined a second time, 4,215,000 → **4,650,000** total JS in
+`dist/assets` (largest chunk unchanged, ≤ 3,050,000). The merged tree
+measures **4,648,952** total JS (largest chunk 2,906,541) and passes by
+**1,048 bytes**. `CONSTRAINTS.md:40` and the CI bundle-size gate
+(`.github/workflows/ci.yml:193`) enforce 4,650,000.
+
+**Why (recorded so the next re-baseline is a decision, not a reflex):**
+the first re-baseline (4,185,000 → 4,215,000, commit `4a12409`) covered
+redesign growth (+30,623; the trim hunt found no legitimate trim ≥
+25,808 — see §28). The second covers the six Part A integrations: most
+of the growth is on-demand lazy code the gate counts anyway —
+WalletConnect 348,194 B, jsQR 129,986 B, Shamir library 4,785 B (route
+chunk 10,085 B) — none of it on the cold-load path (home cold load
+fetches 564,002 B, no WalletConnect). Headroom is now 1,048 bytes
+(0.02%): any addition over ~1 KB is a budget decision. Whether the gate
+should exclude lazy chunks is an open owner question, not a lane
+decision. Full rationale: `docs/CREATE-THIS-SPEC.md` §0.2; numbers:
+`PERF.md` (merged-tree row, 2026-11-26).
+
+## §28 — UI redesign programme, Lanes 1–3 and 5–6 (merged 2026-11-25)
+
+**What:** the full redesign (drawing-illustration style, 4-colour cap)
+landed on `panel-rebuild/token-gaps` in six lane merges from base
+`7fea3e4`, tip `a81b6f8` (six merges + one e2e helper fix). Only Lane 4
+(Receive + QR templates E–G) was previously recorded here (§25); this
+section records Lanes 1–3 and 5–6 so the guide does not stay silent on
+five sixths of the redesign. Design foundation:
+`docs/DESIGN-SYSTEM.md` (moved into the repo by the guide-update pass,
+2026-11-26; originally the redesign programme's Lane 0 document).
+
+| Lane | Scope | Branch / commit | Merge |
+| --- | --- | --- | --- |
+| 1 | Shell + dashboard | `redesign/shell-dashboard` `44496b7` | `0a8ad30` |
+| 2 | Assets list + detail + history | `redesign/assets-history` `4a56320` | `2546eda` |
+| 3 | Send redesign | `redesign/send` `168631f` | `34e2a03` |
+| 5 | Onboarding + watch-only + Add Token | `redesign/onboarding` `bc669d9` | `69aff9c` |
+| 6 | Track + Networks + Settings/Security | `redesign/settings` `44e9549` | `d9d6384` |
+| 4 | Receive + QR templates E–G | `redesign/receive-qr` `c811e9b` | `754347e` (see §25) |
+
+**Gates on the merged tree (tip `a81b6f8`):** `tsc --noEmit` 0 errors;
+`npm run build` exit 0, palette audit passed; eslint 0; vitest 99
+files, 2,829 passed + 5 skipped, 0 failed; QR e2e 7/7 (all templates
+decode via jsQR to the same payment URI); CDP sweep 4 tests, 91
+screenshots — no horizontal overflow on any route, zero `pageerror`s.
+
+**Bundle at merge:** 4,210,808 — over the then-budget (4,185,000) by
+25,808, which blocked the push until the owner ordered the
+re-baselines (§27). The trim hunt found no legitimate trim ≥ 25,808:
+no duplicated helpers, no PNG-draw duplication, no oversized imports;
+a trim would have had to cut live feature code (receive + send +
+import-wallet growth combined). Lane 5 vs Lane 6 reconciliation
+(wallet-management / welcome) is recorded in the programme record
+(`~/workspace/bawa-redesign/PROGRAMME.md`).
+
+**Also recorded here:** "Popular chains" was removed from the
+homepage by owner order (finish-product Lanes G–J) — do not re-add
+any chain marketing strip to the dashboard (`docs/DESIGN-SYSTEM.md`
+§6). The single "Create wallet" button rule and the 44 px touch rule
+are in the design system (§2.5, §6); the 44 px gap in `Button`
+(`sm` 32 px, `xs` 28 px, `icon-sm` 32 px) was still open at merge
+time and is being closed by the ux-major programme (uncommitted at
+the guide-update pass — nothing to record yet).
+
+## §29 — Live-preview republish + G1–G15 closed (2026-11-26, guide-update pass)
+
+**Republish:** `gh-pages` is at `3635412` — "Publish token-gaps
+`7a170f4` to GitHub Pages (redesign + 87 chains + WalletConnect + Buy
++ Shamir + ERC-7730, bundle re-baselined to 4,650,000)" — verified
+first-hand by `git ls-remote` + `git log origin/gh-pages` on
+2026-11-26. The Pages site serves the token-gaps `7a170f4` build.
+
+**Live-preview gaps G1–G15: closed.** D1–D3 are fixed in code on
+token-gaps; D4 (indexer slowness on some chains) is inherent to the
+upstream indexers, not a Bawa defect — no code fix is owed for it.
+**Caution, standing:** a `browser.open` text fetch of the Pages site
+still renders "84 chains" from a stale crawl cache — trust the
+served asset hash, not the fetched text, when checking the live
+chain count.

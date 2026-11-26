@@ -200,7 +200,7 @@ Their presence and inspected wording are verified. Procedures without correspond
 
 ### Engine version and input-validation boundaries
 
-**OPEN — version alignment.** Guides 11 and 09 use **Wallet Core 4.9.2** as their reference engine: tag `17e3cd4`, published **6 November 2026**. They record signing demonstration **D21** and re-confirmation **D31** on 4.9.2. Guide 11 explicitly documents that `npm ci` instead installs 4.8.4.
+**CLOSED 2026-11-26 (guide-update pass) — version alignment.** Guides 11 and 09 used **Wallet Core 4.9.2** as their reference engine (tag `17e3cd4`, published **6 November 2026**); docs/11 now pins **4.9.3** throughout (tag `4.9.3`, commit `7a21615f`, published 2026-11-11) and the 4.9.2 demonstration records (D21, D31) stand as historical evidence for that pin, not as current-engine results.
 
 These are distinct evidence bases. The 4.9.2 demonstration records must not be presented as results from the H6 repository tools, nor as network-spend evidence.
 
@@ -258,7 +258,7 @@ The following corrections govern this section. Updating stale plan and README de
 4. **Doc 4 §5 proof SHA:** H6 now names **`d2f0960c` (H5)** while `main` is at H6. This is the known **one-commit proof lag**, not a matching-HEAD proof reference. The §5 step-1 **`MAIN_HEAD` capture is the reader’s baseline check**; no reader-specific capture is assumed here.
 5. **Counts and UI/UX review scope:** the earlier approximately **72–74** figures were tree-entry counts including directories, not file counts. The UI/UX catalogue was reviewed against **`b3814e0b`**, with **74 tree entries**. That is not an H6 review; equivalence to the current baseline is **UNVERIFIED**.
 
-**Baseline confidence.** Proven are the clean H6 repository state, inspected manifests and documentation, the 4.8.4 tool pin, and the recorded local check/test outcomes in the stated environment. Supported-Node execution, repository-tool execution on 4.9.2, application deliverables and end-to-end network operation are not proven. Daemon defects and independent review remain OPEN. No live testnet spend or mainnet use has occurred, and M-35 does not authorise rehearsal execution.
+**Baseline confidence.** Proven are the clean H6 repository state, inspected manifests and documentation, the 4.8.4 tool pin, and the recorded local check/test outcomes in the stated environment. Supported-Node execution, repository-tool execution on 4.9.2, application deliverables and end-to-end network operation are not proven. Daemon defects and independent review remain OPEN. No mainnet use has occurred; devnet TON test sends have run (`docs/DEVNET-ISSUES.md:50-66`). M-35 does not authorise rehearsal execution.
 ## 2. Architecture, dependency map and repository structure
 
 Baseline: HEAD `aab79dab`, H6, inspected **10 November 2026**. Filesystem labels (`exists`, `to-create`) are separate from delivery status. The target architecture is **PROPOSED**; **IMPLEMENTED_AND_VERIFIED** applies only to evidenced functionality. **DOCUMENTED_NOT_TESTED** distinguishes guide or draft evidence from product verification. Unresolved decisions are **OPEN**; unsupported capability claims are **UNVERIFIED**.

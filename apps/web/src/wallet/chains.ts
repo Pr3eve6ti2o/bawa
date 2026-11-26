@@ -337,12 +337,13 @@ const BALANCE_EVIDENCE_2026_11_24 =
   + 'on chain id and balance) for balance.';
 
 /**
- * Lane 80-APP: derivation evidence for the 62 expanded chains
+ * Lane 80-APP: derivation evidence for the 65 expanded chains
  * (Wallet Core 4.9.3 probe 2026-11-24, BIP-39 test-vector mnemonic:
  * getAddressForCoin and the explicit-key path agree and
  * CoinTypeExt.validate is true; the xpub round-trip agrees too for the
- * 55 secp256k1 chains, and is absent — Ed25519 has no extended public
- * key — for the other seven).
+ * 55 secp256k1 chains, and is absent — Ed25519/Stark chains have no
+ * extended public key, and Kaspa has no Wallet Core coin — for the
+ * other ten).
  */
 function capabilitiesForExpandedChain(
   chain: ChainId,

@@ -94,7 +94,7 @@ All links checked: **2026-11-08**.
    |---|---|---|
    | Node | `>=22 <23` | Declared range. The observed verification ran on Node v24.22.2, which is outside this range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). |
    | Python | `>=3.11` | Observed version: 3.12.3. |
-   | Trust Wallet Core (`@trustwallet/wallet-core`) | `4.9.2` | Exact pin: no `^` or `~`. Published 2026-11-06. |
+   | Trust Wallet Core (`@trustwallet/wallet-core`) | `4.9.3` | Exact pin: no `^` or `~`. Published 2026-11-11 (tag `4.9.3`, commit `7a21615f`). Re-pinned from 4.9.2 by the guide-update pass, 2026-11-26; the 4.9.2 row above was the pin verified on 2026-11-08. |
    | esbuild — dev dependency | `0.25.5` | Exact pin: no `^` or `~`. |
    | http-server — dev dependency | Exact installed version; record during setup | Install it, record the installed version in `package.json` without `^` or `~`, and commit the lockfile with it. No numeric version is supplied here. |
 

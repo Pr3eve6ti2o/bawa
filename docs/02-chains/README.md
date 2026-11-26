@@ -8,7 +8,7 @@ The common pattern is: secure a secret, then derive deterministic key material f
 
 ## 2. Bawa scope: support is more than a coin type
 
-Bawa supports watch-only address derivation for BTC, ETH, and TRX, and single-address generation plus a public-key-only watch-only route via derive-ton.js for TON (32-byte Ed25519 public key; one V4 R2 address; no index; not xpub-based derivation). Solana (SOL) is a wired chain in the 87-chain set (22 curated + 62 expansion + 3 OKX-reference; see docs/CREATE-THIS-SPEC.md §2) — the earlier "reference-only" label for SOL is stale and corrected here. Cardano (ADA) is in the app as a derive-only chain since Lane B of the usable-install programme (2026-11-26): CIP-1852 derivation via Wallet Core 4.9.3, receive works, balance/history/send have no adapter. Kaspa and Starknet are likewise derive-only (see docs/CREATE-THIS-SPEC.md §2.5). Listing a chain in the comparison table does not mean Bawa implements it.
+Bawa supports watch-only address derivation for BTC, ETH, and TRX, and single-address generation plus a public-key-only watch-only route via derive-ton.js for TON (32-byte Ed25519 public key; one V4 R2 address; no index; not xpub-based derivation). Solana (SOL) is a wired chain in the 87-chain set (22 curated + 65 expansion, including the 3 OKX-reference chains; see docs/CREATE-THIS-SPEC.md §2) — the earlier "reference-only" label for SOL is stale and corrected here. Cardano (ADA) is in the app as a derive-only chain since Lane B of the usable-install programme (2026-11-26): CIP-1852 derivation via Wallet Core 4.9.3, receive works, balance/history/send have no adapter. Kaspa and Starknet are likewise derive-only (see docs/CREATE-THIS-SPEC.md §2.5). Listing a chain in the comparison table does not mean Bawa implements it.
 
 Reference comparison table:
 
@@ -356,15 +356,19 @@ TON cross-wallet compatibility with any specific wallet is not established.
 
 A TON address depends on the contract version and wallet ID as well as the key. If you change either while keeping the same key, you get a different account. Funds sent to the unconfigured address are not visible in your intended wallet.
 
-## 7. Solana (reference-only)
+## 7. Solana (wired — adapter, balance, offline signing)
 
-This section is reference-only: Bawa supplies no SOL derivation.
+Solana is a wired chain in the 87-chain set: the web wallet derives
+SOL addresses via Wallet Core 4.9.3, reads balances and history via
+its adapter, and signs native SOL and SPL tokens offline
+(`signSolOffline` / `signSplOffline`, `apps/web/src/wallet/send.ts`;
+see `docs/CREATE-THIS-SPEC.md` §5). Broadcast stays disabled.
 
 Solana uses coin type `501` (SLIP-0044), Ed25519 keys and an account model: addressed accounts hold lamport balances plus account data. See the [version-controlled account documentation](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/core/accounts/index.mdx).
 
 The Wallet Core registry lists two wallet path forms:
 
-Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'.
+Wallet Core 4.9.3 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. Bawa uses `m/44'/501'/0'` (account 0).
 
 Do not treat these paths as interchangeable. SLIP-0010 Ed25519 uses hardened-only child derivation; the extra `/0'` is another derivation step. Use your target wallet’s exact policy, including account numbering and import behaviour. Verify your results with published test material and known expected addresses for that wallet and path.
 
@@ -385,9 +389,12 @@ Representative Cosmos Hub path: `m/44'/118'/0'/0/i` — but the chain's own conf
 
 JavaScript/TypeScript: CosmJS plus the Cosmos SDK ecosystem. Do not maintain a hand-written spreadsheet of chain IDs and prefixes for a production multi-chain app — use a maintained registry and still validate the particular chain's configuration.
 
-## 9. Cardano (reference-only)
+## 9. Cardano (derive-only)
 
-Reference-only: Bawa supplies no ADA derivation.
+Cardano is a derive-only chain since Lane B of the usable-install
+programme (2026-11-26): CIP-1852 derivation via Wallet Core 4.9.3
+(`getPublicKeyEd25519Cardano`), receive works, balance/history/send
+have no adapter (see `docs/CREATE-THIS-SPEC.md` §2.5).
 
 CIP-1852 Shelley-era hierarchy: `m/1852'/1815'/account'/role/index`. Roles are `0` external payment (receiving), `1` internal payment (change), `2` staking — sibling branches, not consecutive steps. Coin type `1815` (SLIP-0044).
 
@@ -422,8 +429,8 @@ Use the actual network's documentation and test vectors before assuming a Bitcoi
 | ETH/EVM | Supported, watch-only (ETH) | 60 | secp256k1 | Account | `m/44'/60'/0'/0/i`, BIP-44 | 20-byte hex with `0x` | Watch-only ETH derivation on exactly the shown route |
 | TRX | Supported, watch-only | 195 | secp256k1 | Account | `m/44'/195'/0'/0/i`, BIP-44 | Base58Check `T…` (hex begins `41`) | Watch-only derivation on exactly the shown route |
 | TON | Generation-only | 607 | Ed25519 | Smart-contract wallet account | `ton_path` via `CoinTypeExt.derivationPath(CoinType.ton)` | Raw `<workchain>:<account-id-hex>`, or friendly Base64/Base64url (workchain 0 without the test-only flag: `EQ…` bounceable, `UQ…` non-bounceable) | Generates one deposit address per wallet; no xpub; no watch-only child derivation |
-| SOL | Reference-only | 501 | Ed25519 | Account | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. | Base58-encoded public key (no fixed textual prefix) | No derivation, generation, or signing |
-| ADA | Reference-only | 1815 | Ed25519 with Cardano's extended-key scheme | Extended-UTXO | Payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` (CIP-1852) | Shelley Bech32 `addr1…` mainnet / `addr_test1…` testnet; reward `stake1…` / `stake_test1…` (CIP-19) | No derivation, generation, or signing |
+| SOL | Wired (adapter + balance + offline signing) | 501 | Ed25519 | Account | Wallet Core 4.9.3 registry path: m/44'/501'/0'. | Base58-encoded public key (no fixed textual prefix) | Derivation, balance, history and offline signing (native SOL + SPL); broadcast disabled |
+| ADA | Derive-only | 1815 | Ed25519 with Cardano's extended-key scheme | Extended-UTXO | Payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` (CIP-1852) | Shelley Bech32 `addr1…` mainnet / `addr_test1…` testnet; reward `stake1…` / `stake_test1…` (CIP-19) | CIP-1852 derivation via Wallet Core 4.9.3; receive works; no balance/history/send adapter |
 
 The BTC/ETH/TRX entries are the derive tools' COMPLETE chain and path set. An ETH-shaped address does not establish support for another EVM network. `i` is a non-hardened address index; in SOL references, `x'` is a hardened account index.
 

@@ -2,7 +2,7 @@
 
 This index is the single entry point for Bawa documentation; the root [README.md](../README.md), [WALLET_BUILDER.md](../WALLET_BUILDER.md), and [docs/README.md](README.md) each point here.
 
-This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 26 November 2026 named below (engine smoke 440, web vitest 110 files, 2,945 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 26 November 2026 named below (engine smoke 440, web vitest 110 files — PASSES on loud-stone (2,945 passed + 5 skipped, 0 failed, Node 22, Lane E 2026-11-26); FAILS in this sandbox, timeout-dominated); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -78,19 +78,19 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 
 ## The builder
 
-- Registries — `IMPLEMENTED_AND_VERIFIED` for registry validation, 10/10: [profiles](../registry/profiles.json) (8 profiles), [capabilities](../registry/capabilities.json), [engines](../registry/engines.json) and [UI](../registry/ui.json).
+- Registries — `OPEN` (was claimed `IMPLEMENTED_AND_VERIFIED`, 10/10 — that claim is withdrawn, 2026-11-26): [profiles](../registry/profiles.json) (8 profiles), [capabilities](../registry/capabilities.json), [engines](../registry/engines.json) and [UI](../registry/ui.json). `node scripts/validate-registry.mjs` exits 1 with 149 errors on this tree: the validator hard-codes a 13-chain universe and a registry-v3 version check while `capabilities.json` is v4 with 87 chains in `chainSupport` and `profiles.json` chains lists cover only the 13. The registry DATA is inconsistent too (`chainSupport.history` I&V = 10 vs 17 verified in `chains.ts`). The stale `iv-semantics` string ("covers 22 chains") was fixed to 87 in this pass; the validator, the profiles chains lists and the failing tests are an open item, not fixed here — do not re-claim 10/10 until the validator passes first-hand.
 - Price feed: CoinGecko, see ADR-0007 (`docs/adr/0007-price-feed-provider.md`).
-- [Schema validation](../scripts/validate-registry.mjs) — `IMPLEMENTED_AND_VERIFIED` for registry checks: validation entry point for `registry/schemas/`.
+- [Schema validation](../scripts/validate-registry.mjs) — `OPEN`: validation entry point for `registry/schemas/`. Exits 1 with 149 errors on this tree (see the Registries line above) — the validator hard-codes a 13-chain universe and a v3 version check against a v4 registry.
 - [AI request routing](../ai/request-routing.md) — `DOCUMENTED_NOT_TESTED`: routing guidance and the route into prompts in `ai/`.
 - [Capability detection](../ai/detect-capabilities.mjs) — `IMPLEMENTED_AND_VERIFIED` for reporting: executed in Phases 3 and 8 and its output checked against the registries and starters.
 - [UI candidates](../research/ui-candidates.md) — `PROPOSED`: candidate research, not implementation evidence.
 - [Web template upstream](../templates/web/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
 - [Android template upstream](../templates/android/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
-- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/`, web vitest 110 files, 2,945 passed + 5 skipped (verified 2026-11-26 on this tree) and a successful build (usable-install gates, 2026-11-26).
+- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/` — build passes and engine smoke is 440/440, and web vitest PASSES on loud-stone (110 files, 2,945 passed + 5 skipped, 0 failed, 81.97 s, Node 22, Lane E 2026-11-26). It does NOT pass in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped on the guide-update tip, and 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4` (110 files, 2,950 tests) — failures dominated by 5 s timeouts (76 and 59), varying run to run. The sandbox failures are environment artefacts, not code defects; the passing-test state rests on the loud-stone run.
 - [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 57 `@Test` annotations counted across 5 test files (re-counted 2026-11-20); the executed passing count was NOT re-established here — no Android SDK on this machine, so Gradle tests are `NOT-RUN`. The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`.
 - [Contracts](../packages/contracts/src/index.ts) — `IMPLEMENTED_AND_VERIFIED` for compilation: imported by `apps/web` and checked by the web typecheck and build. One consumer today (`apps/web`); see `ARCHITECTURE.md`.
 - Scripts — `IMPLEMENTED_AND_VERIFIED` for the exercised workflow: [setup](../scripts/setup.mjs), [build](../scripts/build-platforms.mjs), [test](../scripts/run-test-suites.mjs) and [wallet build](../scripts/build-wallet.mjs) (web 3/3, multi-chain 6/6 steps VERIFIED).
-- [Registry tests](../tests/registry.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 10/10.
+- [Registry tests](../tests/registry.test.mjs) — `FAIL` (was claimed `IMPLEMENTED_AND_VERIFIED`: 10/10 — withdrawn, 2026-11-26): 27 pass / 2 fail on this tree. One failing test asserts `capabilities.version === 2` on the real (now v4) registry — a stale test, not a data failure; the other failure is the same v3/v4 version drift. Do not re-claim 10/10 until the suite passes first-hand.
 - [Negative-input tests](../tests/negative-inputs.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 36/36.
 - [Chain-fixture tests](../tests/chain-fixtures.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 8 tests, run first-hand (part of the 17 pass / 0 fail / 1 skipped Phase 9 run).
 - [Failure-mode tests](../tests/failure-modes.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 10 test declarations; the suite passed in the 2026-11-20 phase9 run (157/158 pass overall; the single failure was in stale-data, not here).
@@ -122,7 +122,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [R-01 invalid-point validation](archive/handoff-2026-11-10.md) — `RESOLVED`: implemented in the shared validator (`tools/hdwallet-gen/extended-key.js`, bad-point rejection) and mirrored in `apps/web/src/engine/boundary.ts` (R-01). The earlier OPEN note in this index was stale.
 - [Android Add path](android-evidence.md) — `UNVERIFIED`: APK installation and launch do not verify Add.
 
-The registry covers 87 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom, zksync, cronos, kava, filecoin, zora, mode, fraxtal, berachain, sei, arbnova, worldchain, manta, unichain, ink, abstract, soneium, apechain, sonic, hyperevm, monad, ronin, immutable, fuse, velas, syscoin, theta, iotex, xlayer, boba, taiko, astar, telos, conflux, core, songbird, rootstock, pulsechain, xdc, chiliz, etc, flare, zetachain, hemi, bob, flowevm, cosmos, osmosis, xrp, stellar, polkadot, near, aptos, tezos, algorand, hedera, injective, celestia, dydx, seicosmos, axelar, noble, juno, cardano, kaspa, starknet. Chain-level IMPLEMENTED_AND_VERIFIED means verified in at least one explicitly identified profile. Network operations are verified for btc, eth, trx, ton only. The 62 additional chains are scoped to the multichain-extended-wallet profile. The 13-chain registry in registry/capabilities.json (chainSupport) was merged into adopt-proper from panel-rebuild/multichain-create; the 9 newer EVM chains were added afterwards on panel-rebuild/token-gaps. It is not a separate branch.
+The registry covers 87 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom, zksync, cronos, kava, filecoin, zora, mode, fraxtal, berachain, sei, arbnova, worldchain, manta, unichain, ink, abstract, soneium, apechain, sonic, hyperevm, monad, ronin, immutable, fuse, velas, syscoin, theta, iotex, xlayer, boba, taiko, astar, telos, conflux, core, songbird, rootstock, pulsechain, xdc, chiliz, etc, flare, zetachain, hemi, bob, flowevm, cosmos, osmosis, xrp, stellar, polkadot, near, aptos, tezos, algorand, hedera, injective, celestia, dydx, seicosmos, axelar, noble, juno, cardano, kaspa, starknet. Chain-level IMPLEMENTED_AND_VERIFIED means verified in at least one explicitly identified profile. Network operations are verified for btc, eth, trx, ton only. The 65 additional chains are scoped to the multichain-extended-wallet profile. The registry grew from 13 chains (merged into adopt-proper from panel-rebuild/multichain-create) to 87 on panel-rebuild/token-gaps: 22 curated + 65 expansion, including the 3 OKX-reference chains (Cardano, Starknet, Kaspa).
 
 ## Project structure
 
@@ -142,22 +142,22 @@ bawa/
     devnet issues log, performance and security-findings records, and
     the dated 2026-11-18 research reports.
   apps/
-    web/            (435 files) The wallet web app: React 19 + TypeScript
+    web/            (467 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
-                    (routing, shell), `src/screens` (58 files, one
+                    (routing, shell), `src/screens` (63 files, one
                     screen per route), `src/state` (wallet context; the refresh lives
-                    in wallet-context), `src/wallet` (94 files: chains, vault,
+                    in wallet-context), `src/wallet` (89 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
                     (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),
-                    `src/assets` (chain/token icons), `e2e/` (14
+                    `src/assets` (chain/token icons), `e2e/` (15
                     Playwright specs, plus helpers and manifest),
                     `scripts/` (wasm copy,
                     palette audit, chains generation).
     android/        (30 files) The Android starter (Kotlin): app, core
                     (derivation/confirmation policy, key validation),
                     ui screens and ViewModel.
-  docs/             (225 files) The guide and programme records, in
+  docs/             (227 files) The guide and programme records, in
                     Diátaxis order (see the sections above): numbered
                     docs 01-16, platform guides, reference, evidence,
                     archive. The single entry point is this index.
@@ -166,7 +166,7 @@ bawa/
                     schemas (`profile`, `registry`).
   packages/
     contracts/      The `@bawa/contracts` package (package + index).
-  scripts/          (20 files) Builder and gate scripts (`.mjs`):
+  scripts/          (22 files) Builder and gate scripts (`.mjs`):
                     `build-wallet`, `generate-project`, `plan-build`,
                     `classify-request`, `quality-gates`, `gate-verdict`,
                     `secret-scan`, `check-wallet-cycles`,

@@ -13,9 +13,9 @@ The profiles are validated and carry individual statuses: `hd-wallet-cli`, `bitc
 - `bitcoin-wallet` — Bitcoin-focused wallet requests; transaction support must not be assumed.
 - `evm-wallet` — ETH/EVM-oriented requests; support beyond the specified ETH policy is OPEN.
 - `multichain-wallet` — Combined BTC, ETH, TRX and TON requests; TON remains generation-only and single-address.
-- `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only. The web wallet now wires 87 chains (22 curated + 62 expansion + 3 OKX-reference — see `docs/CREATE-THIS-SPEC.md` §2); this profile's registry entry has NOT been re-validated for the 87-chain set, so the wider set is OPEN for this profile until the registry is updated.
+- `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only. The web wallet now wires 87 chains (22 curated + 65 expansion, including the 3 OKX-reference chains — see `docs/CREATE-THIS-SPEC.md` §2); this profile's registry entry has NOT been re-validated for the 87-chain set, so the wider set is OPEN for this profile until the registry is updated.
 - `web-wallet` — Browser-wallet requests; token-ui foundation inspected in Phase 5 and adopted in Phase 6 (vendored in `apps/web/src/ui/`).
-- `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7).
+- `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7). It is a watch-only UI starter, not a wallet: 4 derivation-path templates + a confirmation-policy evaluator for BTC/ETH only, no chain registry/RPCs/tokens/prices/icons, no network permission, no data layer, no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP 8.2.2 + compileSdk 35 officially unsupported, no Android SDK/JDK on the build machine. Android work is blocked on the JSON export (`registry/chains.json` + `registry/tokens.json`, completing the existing registry — see `docs/CREATE-THIS-SPEC.md` §2.6) and on the owner resolving the mainnet-only vs testnet-only tension (watch-only is mainnet-only by owner order 2026-11-23; the Android starter states testnet-only).
 - `watch-only-wallet` — Public-data-only observation requests, without secret intake or signing; monitoring support still requires evidence.
 
 Profile selection is routing, not a capability claim. There are eight validated profiles. Do not invent a ninth profile or assume profiles can be combined without plan support.
@@ -31,7 +31,7 @@ Profile selection is routing, not a capability claim. There are eight validated 
 - **Prompts:** installed in `ai/prompts/` (`create-*.md`); inspect actual files rather than inventing filenames.
 
 Profiles: 8
-Chains: 84 (22 curated by default + 62 expansion) — see registry/capabilities.json and docs/CREATE-THIS-SPEC.md §2
+Chains: 87 (22 curated by default + 65 expansion) — see registry/capabilities.json and docs/CREATE-THIS-SPEC.md §2
 
 ADR reference: ADR-0007 (docs/adr/0007-price-feed-provider.md)
 ADR reference: ADR-0008 (docs/adr/0008-ecdsa-residual-risk.md)
@@ -75,7 +75,7 @@ The vault stays unlocked by default. Auto-lock is an optional setting on the /se
 
 Auto-lock IS implemented (owner order 2026-11-20): an optional setting on the /security page, off by default — toggle plus duration (Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day). Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored under `bawa-vault-key` (the lock is real); while auto-lock is off, it IS stored so the vault can auto-unlock. See `apps/web/src/wallet/auto-lock.ts` and `apps/web/src/wallet/vault.ts`, and `docs/CREATE-THIS-SPEC.md` §4.
 Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.9.3**; Node range **>=22 <23**.
-Adopted `apps/web` libraries (ADR-0005): `@scure/bip39` **2.4.0**, `decimal.js` **10.6.0**, `dinero.js` **2.0.2**, and `mnemonic-words` **2.0.0**, with `bip39` **3.1.2** as a devDependency used only as a test oracle.
+Adopted `apps/web` libraries (ADR-0005): `@scure/bip39` **2.4.0**, `decimal.js` **10.6.0**, and `mnemonic-words` **2.0.0**, with `bip39` **3.1.2** as a devDependency used only as a test oracle. (`dinero.js` was removed by the token-verify programme; `decimal.js` is the differential-test oracle for the BigInt `decimal.ts`, which replaced both at runtime — see ADR-0005.)
 Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.3**.
 Unspecified commands, interfaces or dependency versions are OPEN until inspected.
 
@@ -101,7 +101,7 @@ guards the pin.
 ```sh
 npm run typecheck   # tsc --noEmit, 0 errors
 npm run build       # copy-wasm + tsc + vite build, 0 errors
-npm run test        # vitest run — 110 files, 2,945 passed + 5 skipped (verified 2026-11-26, docs/index.md)
+npm run test        # vitest run — 110 files; the 2,945-passed + 5-skipped figure is Lane C's loud-stone run, NOT reproduced in this sandbox on Node 22 (2026-11-26) — see docs/index.md
 ```
 
 **Upstream sources.** The engine is Apache-2.0, upstream
@@ -121,14 +121,16 @@ AnySigner probe runs, disposable keys, no broadcast), and
 
 **What this workflow does not prove.** A successful build and test run
 prove only their build scope. They do not demonstrate transaction
-handling, mainnet readiness, or a send on any network — no send has
-ever run on any network, and broadcast stays disabled.
+handling, mainnet readiness, or a send on any network — no MAINNET send
+has ever run, and broadcast stays disabled. (Devnet test sends have run:
+TON testnet, app sends 1–3 with transaction hashes;
+`docs/DEVNET-ISSUES.md:50-66`.)
 
 ## Capability section (generated from `chains.ts`)
 
 <!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
      Regenerate when chains.ts changes; the CI drift check fails otherwise.
-     Generated 2026-11-23 from chains.ts at 24523d17239b16ff400786350de9587b67dfd2e1. -->
+     Generated 2026-11-26 from chains.ts at 2a6cd801d24c67de73e29efe1f061343fd13a750. -->
 
 | Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify | simulate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -138,34 +140,34 @@ ever run on any network, and broadcast stays disabled.
 | TON | verified | verified | verified | verified | verified | blocked | verified | verified | blocked | candidate |
 | Solana (SOL) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
 | BNB Smart Chain (BNB) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Polygon (POL) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Arbitrum One (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| OP Mainnet (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Base (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Avalanche C-Chain (AVAX) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Polygon (POL) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Arbitrum One (ETH) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| OP Mainnet (ETH) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Base (ETH) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Avalanche C-Chain (AVAX) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
 | Litecoin (LTC) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
 | Dogecoin (DOGE) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
 | Gnosis (XDAI) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Celo (CELO) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Linea (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Mantle (MNT) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Scroll (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Celo (CELO) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Linea (ETH) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Mantle (MNT) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Scroll (ETH) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
 | opBNB (BNB) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
 | Metis (METIS) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
-| Aurora (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Aurora (ETH) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
 | Fantom (FTM) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
 
 TON `fee-quote` is blocked: a TON fee depends on the unsigned message,
 which is Phase 4 work — no fee number is ever invented. TON
 `post-sign-verify` is blocked: the signed BOC is not re-parsed (no BOC
 parser vendored); verification is no-error + 32-byte hash + BOC magic
-only. `simulate` is candidate on all twenty-two chains: declared for item 9, owned by the send lane in `send.ts`; no simulation runs yet, and simulation is a pre-check, never confirmation. The eighteen additional chains are live listed chains with create, derive, restore, receive and balance verified. History is verified for Solana, Litecoin and Dogecoin only; history, fee-quote, unsigned-plan, local-sign and post-sign-verify are blocked for the other fifteen — no adapter or send builder exists for them yet, and no capability is ever faked. Listing a chain never implies it can do an operation; a chain is
+only. `simulate` is candidate on all twenty-two chains: declared for item 9, owned by the send lane in `send.ts`; no simulation runs yet, and simulation is a pre-check, never confirmation. The eighteen additional chains are live listed chains with create, derive, restore, receive and balance verified. History is verified for thirteen of the eighteen — Solana, Litecoin, Dogecoin, Polygon, Arbitrum One, OP Mainnet, Base, Avalanche, Celo, Linea, Mantle, Scroll and Aurora (Linea wired 2026-11-24 via Etherscan V2, `chains.ts:291`); history is blocked for the other five (BNB Smart Chain, Gnosis, opBNB, Metis, Fantom — no working keyless indexer). Fee-quote, unsigned-plan, local-sign and post-sign-verify are blocked for all eighteen in the capability record — the generalised offline signer covers the EVM chains and SOL signs offline (`docs/CREATE-THIS-SPEC.md` §5), but the record verifies local-sign for the four adapter chains only — and no capability is ever faked. Listing a chain never implies it can do an operation; a chain is
 available for an operation only when `availableFor(capability)` in
 `apps/web/src/wallet/chains.ts` returns it.
 
 <!-- END GENERATED: capabilities from apps/web/src/wallet/chains.ts. -->
 
-**Note on the table above (2026-11-25, Lane G):** the generated table covers only the 22 curated chains in `apps/web/src/wallet/chains.ts`. The 62 expansion chains live in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAINS`, `EXPANDED_CHAIN_COUNT = 62`), plus 3 OKX-reference chains (Cardano, Starknet, Kaspa — see `docs/CREATE-THIS-SPEC.md` §2.5) — 87 chains in total. Do not read the 22-row table as the chain count. See `docs/CREATE-THIS-SPEC.md` §2 for the full 87-chain specification and the per-operation availability rule (`availableFor`).
+**Note on the table above (2026-11-26, guide-update pass):** the generated table covers only the 22 curated chains in `apps/web/src/wallet/chains.ts`. The 65 expansion chains live in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAINS`, `EXPANDED_CHAIN_COUNT = 65`), including the 3 OKX-reference chains (Cardano, Starknet, Kaspa — see `docs/CREATE-THIS-SPEC.md` §2.5) — 87 chains in total. Do not read the 22-row table as the chain count. See `docs/CREATE-THIS-SPEC.md` §2 for the full 87-chain specification and the per-operation availability rule (`availableFor`).
 
 If you want to use a wallet to hold funds, see the product-user route
 in [README.md](README.md) ("If you want a wallet to use"). This

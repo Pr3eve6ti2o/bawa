@@ -179,7 +179,7 @@ Lane C note, 2026-11-24 (owner order, FIX-ALL programme): this rule is scoped, n
 
 ### Wallet-provider repositories
 
-**Trust Wallet Core** — `trustwallet/wallet-core`, MIT. Keys, derivation, addresses and signing for all 84 chains; pinned 4.9.3. See [docs/11](../11-trust-wallet-and-independent-verification/README.md#derivation-and-oracle-sources-the-wallet-is-built-from).
+**Trust Wallet Core** — `trustwallet/wallet-core`, MIT. Keys, derivation, addresses and signing for all 87 chains; pinned 4.9.3. See [docs/11](../11-trust-wallet-and-independent-verification/README.md#derivation-and-oracle-sources-the-wallet-is-built-from).
 
 **Trust Wallet Assets** — `trustwallet/assets`, MIT. Token metadata and logos; pinned commit `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e`. See [docs/12](../12-chain-registry-and-assets/README.md#logos-actually-vendored-in-the-app).
 

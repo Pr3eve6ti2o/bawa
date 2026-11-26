@@ -501,8 +501,9 @@ live record of this gap.
 All nine chains are registered with balance adapters on mainnet
 (`registerAllAdapters` in `apps/web/src/wallet/adapters/index.ts`:
 generic EVM adapter for the six EVM chains, Solana, Litecoin and
-Dogecoin adapters; `availableFor('balance')` is all 22 chains,
-proved by `chains.test.ts`), and the six ERC-20 logos ARE displayed
+Dogecoin adapters; `availableFor('balance')` is 66 chains — all 22
+curated plus 44 expansion chains — proved by
+`chain-registry.test.ts:100`), and the six ERC-20 logos ARE displayed
 by the token rows (`asset-rows.tsx:135` renders `TokenLogo`; the
 six tokens are in `DEFAULT_TOKENS` in `tokens.ts`). History is
 verified for SOL/LTC/DOGE (Lane C) plus Celo/Optimism/Scroll (gap
@@ -512,6 +513,8 @@ a missing adapter. `DEVNET-ISSUES.md` issue 8 is updated to match.
 The devnet half (no devnet adapters for these chains) is unchanged
 by design: no devnet equivalent was pursued because the app cannot
 exercise them on devnet either.
+
+**Guide-update note (2026-11-26) — gap 1 reframed for the 87-chain tree.** The nine-chain gap above is closed on mainnet: all 22 curated chains have balance adapters, and history is verified for 17 of them (the five blocked are BNB Smart Chain, Gnosis, opBNB, Metis, Fantom). The missing-adapter gap now applies to the expansion chains: 44 of the 65 have balance adapters and 21 do not (`availableFor('balance')` is 66 of 87). History is verified for 17 chains overall. The fix stays chain-by-chain; rows that cannot act must still say so.
 
 ## 4. E2E harness against the `/bawa/` build — fixed here
 

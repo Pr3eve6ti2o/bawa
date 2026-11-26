@@ -137,7 +137,7 @@ Per-chain history status (probed live 2026-11-23 unless noted):
 | Dogecoin | SoChain / BlockCypher | Verified |
 | Gnosis | — | **Blocked — gnosisscan.io 403s; no keyless indexer answers** |
 | Celo | celo.blockscout.com | Verified |
-| Linea | — | **Blocked — no keyless indexer answers** |
+| Linea | Etherscan V2 | Verified (wired 2026-11-24, `HISTORY_EVIDENCE_2026_11_24_LINEA`, `apps/web/src/wallet/chains.ts:291`) |
 | Mantle | Routescan | Verified (hash lookup unsupported — shape differs) |
 | Scroll | scrollscan.com | Verified |
 | opBNB | — | **Blocked — no keyless indexer answers** |
@@ -145,7 +145,7 @@ Per-chain history status (probed live 2026-11-23 unless noted):
 | Aurora | explorer.aurora.dev | Verified |
 | Fantom | — | **Blocked — no keyless indexer answers** |
 
-The six blocked chains — BNB Smart Chain, Gnosis, Linea, opBNB, Metis, Fantom — were each probed and no keyless public history indexer answers for them (the Etherscan-family hosts 404 or 403). Their history stays blocked, never faked. Unblocking them needs an Etherscan API key or another indexer — an owner decision, because it is a keyed service. Note the stale comment in `apps/web/src/wallet/adapters/index.ts` (`EVM_HISTORY_SOURCES`) still says "the other twelve non-ETH EVM chains stay unwired": it predates the Lane B verification above and is out of date.
+The five blocked chains — BNB Smart Chain, Gnosis, opBNB, Metis, Fantom — were each probed and no keyless public history indexer answers for them (the Etherscan-family hosts 404 or 403). Their history stays blocked, never faked. (Linea was the sixth until 2026-11-24, when it was wired via Etherscan V2 — see the table above.) Unblocking them needs an Etherscan API key or another indexer — an owner decision, because it is a keyed service. Note the stale comment in `apps/web/src/wallet/adapters/index.ts` (`EVM_HISTORY_SOURCES`) still says "the other twelve non-ETH EVM chains stay unwired": it predates the Lane B verification above and is out of date.
 
 ## 4. UTXO tracking vs account tracking
 

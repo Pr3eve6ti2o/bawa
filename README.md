@@ -30,6 +30,8 @@ Real screenshots of the example web wallet running from this branch, taken with 
 | <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" height="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" height="360"> |
 | Portfolio, assets and recent activity. | The same wallet on mobile. |
 
+> **Note (2026-11-26, guide-update pass):** these two screenshots predate the November redesign (taken 2026-11-23) — they show the pre-redesign dashboard. Re-taking them via CDP is pending; no live browser was available in this lane. Treat them as stale until re-taken.
+
 ### Create your own
 
 Prefer to build one yourself? Follow [Create the example web wallet](docs/CREATE-EXAMPLE-WALLET.md) — or run it straight from a terminal:
@@ -238,6 +240,7 @@ Recent programmes, each with its full record, gates and branch state in `docs/`:
 - **Scan QR fix (2026-11-24)** — bare-address scan advances and prefills; merged into `token-gaps` (merge commit `2e8f128`). Record: [docs/SCAN-QR-FIX.md](docs/SCAN-QR-FIX.md).
 - **Expansion programme (2026-11-24)** — diagrams redrawn, captcha merge + FuckCaptcha import onto `main`, Solana sending via @solana/web3.js, 22 → 84 chains, cold-load −43%; merged into `token-gaps` (commit `6c93e66`); `main` `7f9d364`. Record: [docs/EXPANSION-PROGRAMME.md](docs/EXPANSION-PROGRAMME.md).
 - **Token Verify programme (2026-11-24)** — token verification by contract address, new-chains bug hunt, bundle gate kept under budget, npm audit 9 → 0, all 28 icon-less chains get real icons; merged into `token-gaps` (commit `7f12de4`); Pages republished from the final tip. Record: [docs/TOKEN-VERIFY-PROGRAMME.md](docs/TOKEN-VERIFY-PROGRAMME.md).
-- **CI budget align (2026-11-25)** — CI bundle budget aligned to `CONSTRAINTS.md` (4,177,711); merged into `token-gaps` (commit `6a91cbd`).
+- **CI budget align (2026-11-25)** — CI bundle budget aligned to `CONSTRAINTS.md` (4,177,711); merged into `token-gaps` (commit `6a91cbd`). Superseded the same day by the owner-ordered re-baseline below.
+- **Bundle budget re-baseline (2026-11-25)** — budget re-baselined to 4,650,000 by owner order; merged tree measures 4,648,952 total JS, passing by 1,048 bytes (commit `7a170f4`). Record: [docs/DECISIONS.md](docs/DECISIONS.md) §27.
 
 No code from these programmes was merged into `adopt-proper`. Lanes E and F (captcha generalisation, FuckCaptcha guides) merged into `main` at `7f9d364`. The durable preview (GitHub Pages) serves the latest `token-gaps` build; to preview this branch, check out `panel-rebuild/token-gaps` and run the web starter locally.

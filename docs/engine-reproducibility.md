@@ -167,3 +167,15 @@ The binding remains **OPEN**, and JDK 17 remains **PROPOSED**, until the corresp
 - **No Android build yet:** there is no successful Android build evidence here. The binding is OPEN; the draft’s sandbox blockage was not re-tested.
 - **No expansion of the Node range:** this VM’s Node v24.22.2 is outside `>=22 <23`. Tests passing anyway is a recorded deviation, not a change to the supported range.
 - **No automatic upgrade or CI reproducibility claim:** npm release availability does not validate an upgrade, and the current `npm install` drift remains unresolved.
+
+## 7. Engine smoke suite — 440 checks (2026-11-26)
+
+Re-run first-hand by the guide-update pass on 2026-11-26, Node v22.23.4,
+in `tools/hdwallet-gen` (`npm ci` then `npm test`, exit 0): **412** smoke
+`ok` checks + **28** register-links `PASS` checks = **440, 0 fail**.
+This matches the 2026-11-24 record in
+`docs/README-MARKETING-PROGRAMME.md:89-94`, so the 440 citation lands
+on this tree. Setup note: the first run failed `MODULE_NOT_FOUND`
+(`@trustwallet/wallet-core`) because `tools/hdwallet-gen/node_modules`
+was not installed — `npm ci` in that directory is required before
+`npm test`; that is a setup step, not a product failure.

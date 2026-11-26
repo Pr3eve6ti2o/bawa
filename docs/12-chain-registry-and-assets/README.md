@@ -37,7 +37,7 @@ Reference.
 
 **Status:** Metadata reference; contribution and validation procedures are incomplete.
 
-Bawa ships a local chain registry: `registry/capabilities.json` (v4, with 84 chains in `chainSupport`), `registry/engines.json`, `registry/profiles.json`, and `registry/ui.json`. This section interprets Bawa’s local registry alongside the upstream Trust Wallet Core registry (`registry.json`) and Trust Wallet Assets, and explains what each can and cannot answer for Bawa.
+Bawa ships a local chain registry: `registry/capabilities.json` (v4, with 87 chains in `chainSupport`), `registry/engines.json`, `registry/profiles.json`, and `registry/ui.json`. This section interprets Bawa’s local registry alongside the upstream Trust Wallet Core registry (`registry.json`) and Trust Wallet Assets, and explains what each can and cannot answer for Bawa.
 
 The Trust Wallet Core registry is mainnet metadata: it holds 168 entries and zero testnet entries. It describes coin, derivation and address parameters for Trust Wallet Core; it does not define Bawa's supported networks. Trust Wallet Assets supplies asset metadata for identification and display; an entry there does not establish Bawa's engine compatibility or payment support.
 
@@ -198,20 +198,34 @@ Wallet Core registry described above. Statuses are `IMPLEMENTED_AND_VERIFIED`,
 receive, balance, history, fee-quote, plan-transfer, local-sign,
 verify-signature.
 
+**Re-validation note (2026-11-26, guide-update pass):**
+`multichain-extended-wallet` (`registry/profiles.json`) lists 9
+chains — SOL, BSC, Polygon (matic), Arbitrum (arb), OP Mainnet (op),
+Base, Avalanche (avax), Litecoin (ltc), Dogecoin (doge) — and all 9
+have balance `IMPLEMENTED_AND_VERIFIED` in `chainSupport` and a
+balance adapter in the app (none is in the 21 derive-only chains,
+`chain-registry.test.ts`). History in the registry lags the app for
+4 of the 9 (matic, arb, base, avax read `NOT_SUPPORTED` in the
+registry but are history-verified in `chains.ts`); bsc reads `NOT_SUPPORTED` in the registry and is blocked in `chains.ts` too — the known
+registry-data lag, not a profile defect. The profile's chains list
+itself is correct as written; the open item is the 83 chains
+`chainSupport` scopes to this profile alone while `profiles.json`
+lists only these 9 (validator failure, see `docs/index.md`).
+
 ```mermaid
 flowchart TB
     accTitle: Bawa chain support overview
-    accDescr: token-gaps supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus eighteen additional chains with create, derive, restore, receive and balance verified and the remaining five operations unsupported (history verified for SOL, LTC and DOGE only, per chains.ts). The 13-chain registry was merged into adopt-proper from panel-rebuild/multichain-create; the 9 newer EVM chains were added afterwards on panel-rebuild/token-gaps. It is not a separate branch.
+    accDescr: token-gaps supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus eighteen additional chains with create, derive, restore, receive and balance verified and the remaining five operations unsupported (history verified for 13 of the 18 — SOL, LTC, DOGE, MATIC, ARB, OP, Base, AVAX, CELO, Linea, Mantle, Scroll, Aurora — per chains.ts and docs/06). The registry grew from 13 chains (multichain-create) to 87 on token-gaps: 22 curated + 65 expansion.
 
     S["Sources of truth<br/>registry/capabilities.json: chainSupport<br/>apps/web/src/wallet/chains.ts:<br/>ChainId, pathFor, per-chain capabilities with evidence"]
 
-    A["token-gaps<br/>84 chains in chainSupport"]
+    A["token-gaps<br/>87 chains in chainSupport"]
 
     F["Fully verified: BTC / ETH / TRX<br/>All 10 operations: IMPLEMENTED_AND_VERIFIED"]
 
     T["Partially verified: TON<br/>DOCUMENTED_NOT_TESTED: fee-quote, verify-signature<br/>IMPLEMENTED_AND_VERIFIED: other 8 operations"]
 
-    D["Extended: 18 additional chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge), Gnosis, Celo,<br/>Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive, balance<br/>History verified for SOL, LTC, DOGE only<br/>NOT_SUPPORTED: history (other 15), fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
+    D["Extended: 18 additional chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge), Gnosis, Celo,<br/>Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive, balance<br/>History verified for 13 of the 18 (SOL, LTC, DOGE,<br/>MATIC, ARB, OP, Base, AVAX, CELO, Linea,<br/>Mantle, Scroll, Aurora)<br/>NOT_SUPPORTED: history (other 5), fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
 
     S --> A
     A --> F
@@ -221,9 +235,9 @@ flowchart TB
 
 Derivation paths below are Bawa's pinned `pathFor` values
 (`apps/web/src/wallet/chains.ts`; `a` = account, `i` = index). TON and SOL
-are single-address: their paths ignore account and index. The fifty-five EVM chains beyond ETH that share its derivation scheme all use coin type 60, the same path shape as ETH — they are distinct chains that share a derivation scheme, not the same chain. Five more EVM chains (Filecoin, Theta, IoTeX, Rootstock, Ethereum Classic) derive on their own coin paths.
+are single-address: their paths ignore account and index. The fifty-six EVM chains beyond ETH that share its derivation scheme all use coin type 60, the same path shape as ETH — they are distinct chains that share a derivation scheme, not the same chain. Five more EVM chains (Filecoin, Theta, IoTeX, Rootstock, Ethereum Classic) derive on their own coin paths.
 
-| Chain | Derivation path | token-gaps (84 chains in chainSupport) |
+| Chain | Derivation path | token-gaps (87 chains in chainSupport) |
 | --- | --- | --- | --- |
 | Bitcoin (btc) | `m/84'/0'/a'/0/i` | Fully verified (10/10) |
 | Ethereum (eth) | `m/44'/60'/a'/0/i` | Fully verified (10/10) |
@@ -308,7 +322,7 @@ Keep the following separate:
 | RPC / node / indexer | Current chain state, history, logs and UTXOs |
 | Application database | Address allocation, orders, payments and reconciliation |
 
-Bawa's tools derive addresses for native assets only. BTC, ETH and TRX are watch-only; TON is generation-only, with one deposit address and no xpub. SOL and ADA are reference-only in the docs. The tools provide no token derivation, token balances or token transfers.
+Bawa's tools derive addresses for native assets only. BTC, ETH and TRX are watch-only; TON is generation-only, with one deposit address and no xpub. SOL is wired (adapter + balance + offline signing); ADA is derive-only (CIP-1852, receive works, no balance/history/send adapter). The tools provide no token derivation, token balances or token transfers.
 
 Token tracking in `docs/06` and `docs/07` (ERC-20, TRC-20 and [SPL](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/tokens/index.mdx), indexers, `Transfer` events and token metadata) is downstream consumption of chain data, not Bawa functionality.
 

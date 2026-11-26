@@ -178,7 +178,7 @@ When checking a backup restore, use a tiny testnet amount, not real funds.
 
 ### Why do two wallets show different addresses for the same seed?
 
-Bawa supports watch-only derivation for BTC, ETH and TRX. TON support is generation-only, not watch-only. Solana and Cardano are reference-only and are not supported by Bawa; their notes below describe comparisons with other wallets, not Bawa capabilities.
+Bawa supports watch-only derivation for BTC, ETH and TRX. TON support is generation-only, not watch-only. Solana is a wired chain in Bawa (adapter, balance, offline signing for native SOL and SPL tokens); Cardano is derive-only (CIP-1852 derivation via Wallet Core 4.9.3, receive works, no balance/history/send adapter). Their notes below describe Bawa capabilities as well as comparisons with other wallets.
 
 Start by comparing settings rather than assuming a faulty wallet. Check the mnemonic words, then check the BIP-39 passphrase, including whether one was used.
 
