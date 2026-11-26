@@ -2190,6 +2190,8 @@ What was done (branch `redesign/receive-qr`, local-only, not pushed):
    stay legible and tappable.
 ## §26 — WalletConnect (Lane C, "install all usable" programme) — 2026-11-25
 
+**AMENDMENT — REMOVED (providers programme, 2026-11-26).** WalletConnect was removed from the web wallet in commit `7fb1c4a` (providers Phase 2, on top of the guide merge `5ef6416`). Reason, proven from WalletConnect's own docs and a live test: the relay authenticates the Cloud projectId and the owner has none — without one the relayer never connects and `connect()` yields no pairing URI, so the screen, its client modules, the lazy route/nav/CSP entries and both `@walletconnect/*` 2.21.0 dependencies were removed rather than shipped dead. The Security screen carries a restoration note. Restoration: free account at https://cloud.reown.com, a project, the projectId in `VITE_WALLETCONNECT_PROJECT_ID`, and the files from git history. The record below is the 2026-11-25 integration as it stood; it binds any restoration (Apache-2.0 2.21.0 pin, lazy-load, message-signing only).
+
 Branch `usable-lane-c-walletconnect` (from token-gaps `7fea3e4`),
 hands-on, 0 Sol calls (AgentRouter API stopped by owner order).
 Wires WalletConnect dApp connectivity into the web wallet: a

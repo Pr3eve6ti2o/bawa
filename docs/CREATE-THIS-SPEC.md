@@ -43,11 +43,17 @@ see §17).
 | --- | --- | --- | --- |
 | A | Bitget Agent API as an extra token verifier | §6.6 | IMPLEMENTED (browser leg + agent-side script) |
 | B | Cardano, Starknet, Kaspa from OKX js-wallet-sdk | §2.5 | IMPLEMENTED (derive-only) |
-| C | WalletConnect 2.21.0, lazy-loaded | §11 | IMPLEMENTED |
+| C | WalletConnect 2.21.0, lazy-loaded | §11 | REMOVED (providers programme, 2026-11-26) |
 | D | Coinbase Onramp Buy, lazy-loaded | §12 | IMPLEMENTED |
 | E | Shamir backup shares | §13 | IMPLEMENTED |
 | F | ERC-7730 clear signing | §14 | IMPLEMENTED |
 | H | Mining pass (wallet-repos, agent-repos, skills) | §18 | IMPLEMENTED |
+
+Providers programme (2026-11-26, commit `7fb1c4a`, hands-on, 0 Sol
+calls): removed WalletConnect (§11), added the Buy provider picker
+(§12.1) and the swaps providers (§12A). It is recorded in the trace
+table (§17) and in the sections themselves, not in the Part A table
+above — Part A is the six lanes only.
 
 **Bundle note:** the merged tree passes the budget — total JS
 4,691,234 vs the 6,000,000 budget (§0.2), passing by 1,308,766 bytes;
@@ -81,9 +87,14 @@ see §0.2 for why.
    4,650,000 → 6,000,000 (`f5a5f19`, 2026-11-26, owner order; UX-major
    programme). Most
    of the growth is on-demand lazy code the gate counts anyway:
-   WalletConnect 348,194 B, jsQR 129,986 B, Shamir library 4,785 B
+   jsQR 129,986 B, Shamir library 4,785 B
    (route chunk 10,085 B) — none of it on the cold-load path (home cold
    load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
+   The WalletConnect lazy chunk (348,194 B) was removed with the feature
+   in the providers programme (2026-11-26, §11); the 4,691,234 total
+   above predates that removal, and the new total is for the
+   verification lane to measure — do not quote a new total until it is
+   measured.
    The merged tree measures 4,691,234 total JS and passes by **1,308,766
    bytes (21.8% margin)**. Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
@@ -719,22 +730,61 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   E1: the DoD line states the mainnet rule; E1 is the recorded, expiring
   devnet-only exception. Do not edit the DoD line to weaken it.
 
-## §11. WalletConnect — IMPLEMENTED (Lane C)
+## §11. WalletConnect — REMOVED (providers programme, 2026-11-26)
 
-**Status: IMPLEMENTED.** The `/walletconnect` screen pairs with a
-dApp by `wc:` URI, shows the session proposal for approve/reject,
-and answers signing requests — message signing ONLY
-(`personal_sign`, `eth_signTypedData`, `eth_signTypedData_v4`,
-`eth_chainId`, `eth_accounts`) for Ethereum chains. Transaction
-signing (`eth_sendTransaction`, `eth_signTransaction`) is never
-approved — sending stays switched off, so no session can move
-funds. Implementation: `apps/web/src/wallet/walletconnect.ts` +
-`apps/web/src/screens/walletconnect.tsx`, lazy-loaded from
-`apps/web/src/app/app.tsx` (`loadWalletConnect`, route
-`/walletconnect`); sidebar "More" on desktop, "More" menu on
-mobile. Decision record: `docs/DECISIONS.md` §26.
+**Status: REMOVED.** WalletConnect was removed from the web wallet
+in the providers programme (commit `7fb1c4a`, 2026-11-26, hands-on,
+0 Sol calls). The `/walletconnect` screen no longer exists. What was
+deleted, verified against that commit:
+`apps/web/src/screens/walletconnect.tsx` + its test;
+`apps/web/src/wallet/walletconnect.ts`,
+`walletconnect-client.ts`, `walletconnect-signing.ts` + their tests;
+the lazy `/walletconnect` route, the `loadWalletConnect` loader and
+the preload-map entry in `apps/web/src/app/app.tsx`; the nav entry in
+`apps/web/src/app/sidebar-nav.tsx`; the CSP entries for
+`wss://relay.walletconnect.org`, `https://verify.walletconnect.org`
+and `https://verify.walletconnect.com` in
+`apps/web/src/app/security-headers.ts`; and the
+`@walletconnect/sign-client` and `@walletconnect/utils` 2.21.0
+dependencies from `apps/web/package.json` (+ `package-lock.json`).
+The `VITE_WALLETCONNECT_PROJECT_ID` prompt went with the screen; the
+name now appears only in the restoration note below and its test. The
+~348 KB lazy SDK chunk went away with the dependency (it measured
+348,194 B in the Lane C tree; see §0.2 — the merged-tree total there
+predates the removal). The screen list in `apps/web/README.md` was
+updated the same way. Two files still mention WalletConnect in
+comments only — `apps/web/src/wallet/caip.ts` (function names mirror
+`@walletconnect/utils`) and `apps/web/src/wallet/send.ts` — neither
+imports the package.
 
-The survey's verified facts, which Lane C implemented from:
+Why — proven from WalletConnect's own docs and a live test, not
+assumed (research: `RESEARCH.md` §1 in
+`/home/boxd/workspace/bawa-providers/`, and
+`research/walletconnect.md` there): the relay authenticates the Cloud
+projectId — the Relay doc's error table returns 401 when the project
+ID doesn't exist, and Reown's AppKit options doc marks `projectId`
+"Required: Yes". With the real `@walletconnect/sign-client@2.21.0`
+and no projectId, `init()` succeeds but the relayer never connects
+and `connect()` never yields a pairing URI (live test, 2026-11-26: no
+`relayer_connect` event in 12 s; a raw WebSocket probe was closed
+with JSON-RPC error 3000 "JWT is missing"). Omitting the id does not
+fail loudly — it ships a dead screen. A self-hosted relay is not a
+path: WalletConnect's own relay README says it is unsupported, the
+repo is frozen at the pre-2.21.6 protocol, and the v2 pairing URI
+carries no relay address (`relay-protocol=irn` only), so both peers
+must share one relay and every public dApp uses the official one.
+
+What replaces it — a short honest note where the screen was, in
+Security settings (`apps/web/src/screens/security-settings.tsx`):
+"WalletConnect — connecting Bawa to dApps — is not available in this
+build. It needs a free Reown Cloud project ID, which has not been set
+up. No keys or funds are affected." Restoration, if the owner ever
+wants it: create a free account at https://cloud.reown.com, create a
+project, copy the projectId into `VITE_WALLETCONNECT_PROJECT_ID`,
+and restore the deleted files from git history.
+
+History kept, because it still binds a future restoration
+(`docs/DECISIONS.md` §26 is the Lane C decision record):
 
 - **Pin 2.21.0 — the last Apache-2.0 release.** The WalletConnect JS
   SDK is no longer Apache-2.0: 2.22.0+ switched to Reown Inc.'s custom
@@ -744,30 +794,29 @@ The survey's verified facts, which Lane C implemented from:
   or 2.5M RPC/month; §1(c) Reown owns all modifications/derivative works
   of the SDK; §10 binding arbitration, Delaware law. Bawa does not accept
   those terms by default. **Do not install 2.22.0 or later without an
-  owner decision recorded in `docs/DECISIONS.md`.**
-- **Lazy-load only, as a separate chunk.** Measured, not estimated:
-  minimal `import { SignClient }`, esbuild bundle + minify: **2.21.0 =
-  396,013 B minified / 121,377 B gzip** (~75× the survey-time headroom
-  of ~5,304 B; the current 1,308,766 B headroom is ~3.3× the chunk — see §0.2);
-  2.26.0 = 455,831 B / 137,742 B gzip. It stays lazy-loaded by design under the
-  6,000,000-byte budget (§0.2): the chunk would fit the budget now, but it is
-  only needed when the user opens the WalletConnect flow, so load it by dynamic
-  import then.
-- **Measured cost in Bawa's build (Lane C tree):** total JS 4,577,447
-  (+397,262 over its 4,180,185 base); lazy `walletconnect-client`
-  chunk 348,194 B; main-bundle delta +49,068 B; 0 occurrences of the
-  relay URL in the main chunk. In the merged rebased tree the total is
-  4,691,234 — inside the 6,000,000 budget by 1,308,766 bytes, so the CI
-  bundle gate (sums all of `dist/assets/*.js`) passes as written. The
-  budget was re-baselined to 6,000,000 by owner order at `f5a5f19`
-  (§0.2); do not re-baseline again without a new owner order.
-- **A WalletConnect Cloud projectId is required** for sign-client. Bawa
-  has none. Obtaining one is an owner step; never invent or hardcode
-  one. The projectId comes from the owner's setting or
-  `VITE_WALLETCONNECT_PROJECT_ID`; without one the screen says so
-  plainly. **No live dApp connection has been verified** — it needs the
-  owner's projectId.
-- **Wallet-side API only.** The verified wallet-side surface is
+  owner decision recorded in `docs/DECISIONS.md`.** Restoring at 2.21.0
+  needs the same owner decision for the projectId itself.
+- **What the removed screen did (for the record, not as a current
+  feature).** It paired with a dApp by `wc:` URI, showed the session
+  proposal for approve/reject, and answered signing requests —
+  message signing ONLY (`personal_sign`, `eth_signTypedData`,
+  `eth_signTypedData_v4`, `eth_chainId`, `eth_accounts`) for Ethereum
+  chains. Transaction signing (`eth_sendTransaction`,
+  `eth_signTransaction`) was never approved — sending stays switched
+  off, so no session could move funds. A live dApp connection was never
+  verified — it needed the owner's projectId.
+- **Measured cost of the removed code (Lane C tree, history).**
+  Minimal `import { SignClient }`, esbuild bundle + minify: **2.21.0 =
+  396,013 B minified / 121,377 B gzip**; 2.26.0 = 455,831 B / 137,742 B
+  gzip. In Bawa's build: total JS 4,577,447 (+397,262 over its 4,180,185
+  base); lazy `walletconnect-client` chunk 348,194 B; main-bundle delta
+  +49,068 B; 0 occurrences of the relay URL in the main chunk. All of
+  it is gone with the removal — do not quote these figures as current
+  costs.
+- **A WalletConnect Cloud projectId is required** for sign-client, on
+  any restoration. Bawa has none. Obtaining one is an owner step; never
+  invent or hardcode one.
+- **Wallet-side API only (for any future restoration).** The verified wallet-side surface is
   `approve` / `reject` / `respond` and session authenticate
   (in `walletconnect-monorepo`, `/home/boxd/workspace/wallet-repos/
   walletconnect-monorepo/`). Bawa IS a wallet: dApp-side libraries are
@@ -801,9 +850,15 @@ The survey's verified facts, which Lane C implemented from:
   Android SDK or JDK on loud-stone to build-verify the dependency.
   A WalletConnect Cloud projectId is still required (owner step;
   never invent or hardcode one).
-- Re-checked against Lane C's committed code by the coordinator's
-  re-check pass (2026-11-26): the screen, the message-only signing
-  set, the 2.21.0 pin and the lazy chunk are all in the merged tree.
+- Removal verified against commit `7fb1c4a` (providers programme,
+  2026-11-26): the screen, the three modules, the route, the nav
+  entry, the CSP entries and both dependencies are all gone from the
+  tree; the restoration note is in Security settings.
+- **The Android data programme's 4th decision (WalletConnect
+  projectId) is now moot for the web wallet** — the projectId
+  requirement is removed with the feature. It remains an owner step
+  only if WalletConnect is ever restored, or for the Android route
+  above.
 
 ## §12. Coinbase Onramp Buy — IMPLEMENTED (Lane D)
 
@@ -856,6 +911,231 @@ The survey's verified facts, which Lane D implemented from:
   re-check pass (2026-11-26): the Buy tile, the `?buy=1` panel, the
   `onramp.ts` URL builder and the absence of `cbpay-js` from
   `package.json` are all in the merged tree.
+
+### §12.1 Buy provider picker — seven on-ramps (providers programme, 2026-11-26)
+
+**Status: IMPLEMENTED.** The Buy panel is now a provider picker, not
+a single Coinbase button. Implementation:
+`apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rendered by
+`apps/web/src/screens/receive.tsx:1025`) + the existing Coinbase path
+in `apps/web/src/wallet/onramp.ts`. No SDK is bundled for any provider
+— every widget URL is hand-rolled, like the Coinbase URL builder.
+Providers are integrated in this order, and each row states plainly
+which keys it needs and where they live (source of truth:
+`RESEARCH.md` §2.8 in `/home/boxd/workspace/bawa-providers/`).
+
+**The deciding constraint:** Bawa is a static site with no backend
+(GitHub Pages). Any provider whose flow needs a server-side secret
+cannot work as-is — it needs a signing backend/proxy first. That is
+why Ramp (on-ramps) works today and MoonPay / Transak wait on a
+backend. The same constraint decides the swaps providers (§12A).
+
+| # | Provider | Key in the app (safe) | Secret (server-only, never in the app) | Works from a static page? |
+| --- | --- | --- | --- | --- |
+| 1 | Ramp — first, works today | `hostApiKey` — public by Ramp's own design (support article, updated 2026-11-12: "disclosing your API key within the URL is completely safe") | None for the widget | Yes |
+| 2 | MoonPay — second, alongside a signing backend | `pk_live_…` publishable key | `sk_live_…` — signs the widget URL (HMAC-SHA256) whenever `walletAddress` is pre-filled; without the signature the widget fails to load | No with address pre-fill; yes if the user pastes their own address (worse UX — do not present it as the polished path) |
+| 3 | Onramper — third, or instead of MoonPay | `apiKey` — public identifier in the widget URL | Signing key pair (production go-live) | Yes (widget) |
+| 4 | Banxa Referral — cheap fourth | None — only the `partnerRef` subdomain | `x-api-key` (API path only) | Yes (Referral) |
+| 5 | Transak — when a backend exists | API key | API secret — the widget URL itself is minted server-side since the 2026-11-16 migration; there is no client-side path | No |
+| 6 | Mercuryo — fallback | `widget_id` | Widget secret (address signing), Sign Key, `Sdk-Partner-Token` | Partial (redirect yes; address pre-fill no) |
+| 7 | Coinbase — the previous single provider, kept last | Public project ID (`VITE_COINBASE_ONRAMP_APP_ID`) | CDP API key + private key — since 2025-07-31 the widget needs a server-minted session token | No (without a backend); kept as a row, see §12 |
+
+- **What is built, and what is deliberately not.** `buy-providers.ts`
+  builds widget URLs for Ramp, MoonPay, Onramper, Banxa, Mercuryo and
+  Coinbase; MoonPay / Onramper / Mercuryo builders take NO address
+  (their signatures must come from a server — MoonPay omits
+  `walletAddress`, Onramper omits `wallets` / `networkWallets`,
+  Mercuryo omits the address, and its signature scheme is unresolved:
+  SHA-512 vs HMAC-SHA512 — resolve it from Mercuryo's own security
+  page before implementing address pre-fill). There is NO Transak
+  builder at all: no client-side path exists since the migration. No
+  key is ever invented: every config value is empty by default and
+  comes from the owner-must-provide list below. **Honest states:** any
+  provider whose key or onboarding the owner has not provided shows as
+  "not set up yet" with what is needed — never a fake "Buy" that
+  cannot work (`buyProviderReadiness`: `ready`, `ready-no-prefill`,
+  `not-configured`, `needs-backend`).
+- **Fees are indicative only; the quote at purchase time is
+  authoritative.** Ramp cheapest by bank transfer (up to 1.40%
+  manual); MoonPay up to 4.5% by card; Onramper $199/month business
+  plan (third-party figure) + provider quotes; Banxa 1.99% processing
+  on card/Apple Pay, 0% on other methods (spread and partner settings
+  dominate the all-in cost); Transak card 3.99% + $1, bank 2% + $1
+  (November 2026 figures — re-check at integration time, they moved
+  during 2026); Mercuryo up to 5.5% by card, up to 3% by bank; Coinbase
+  about 2.5% by card (third-party figure). Full table: `RESEARCH.md`
+  §2.9.
+- **Region gating (Ramp).** EU/EEA users cannot buy USDT/USDT0/DAI/AUSD;
+  eight US states + Puerto Rico unserved (Louisiana, Minnesota, Nevada,
+  New Jersey, New York, Pennsylvania, Vermont, Washington, Puerto
+  Rico); Texas no stablecoins. Bawa does not know the user's region,
+  so the restrictions are stated on the Ramp row and enforced by pure
+  helpers for callers that do know it; the default pre-fill buys the
+  chain's NATIVE asset, which no regional rule blocks.
+- **Per-chain availability is gated in the Buy UI, not one global list.**
+  `rampAssetFor`, `moonpayCurrencyFor`, `banxaCoinFor` and
+  `onramperSupportsChain` map each Bawa chain to the provider's live
+  asset list. **TON, previously unconfirmed for every provider, is now
+  confirmed live** (Buy lane, 2026-11-26, against the providers' own
+  live lists): Ramp — TON chain, `TON_GRAM` native (enabled) +
+  `TON_USDT`; MoonPay — code `gram`, `minBuyAmount` 5.21, TON address
+  regex; Banxa — GRAM on TON, Buy ✅ (restricted geo: US). Mercuryo
+  TON stays unconfirmed — its live pairs list mixes fiat and crypto
+  codes, so a bare `TON` entry there is ambiguous — and Mercuryo
+  carries no chain pre-fill anyway, so nothing in the UI depends on
+  it. Not prioritised: Paybis, Wert, Simplex, Stripe (backend-required,
+  sales-gated, fees/SDK unverified from own docs, or too narrow —
+  Stripe is US/EU + stablecoins only, still in preview).
+- **Owner must provide (onboarding is the bottleneck).** No provider
+  gives a production key instantly; every one needs a partner account
+  + KYB/business verification, so do not promise a date until the keys
+  are in hand. Ramp: onboarding form + KYB → production `hostApiKey`.
+  MoonPay: dashboard account → Account Review + Business Verification
+  (KYB) + product approval → `pk_live_…` + `sk_live_…`, plus a signing
+  backend before addresses can be pre-filled. Onramper: account +
+  API key + signing key pair + $199/month plan. Banxa: `partnerRef` +
+  API key. Transak: signup (corporate email) → KYB → API key + API
+  secret. Mercuryo: dashboard access via an integration manager →
+  widget + `widget_id`. Coinbase: onboarding + project ID (§12). Full
+  list: `RESEARCH.md` §4.1. **A live purchase has not been verified
+  for any provider** (no onboarding/keys exist yet).
+
+## §12A. Swaps — provider-aware quotes (providers programme, 2026-11-26)
+
+Numbered §12A, not §13, so the sections after it keep their numbers:
+it sits between Buy (§12) and Shamir (§13) because it belongs with
+the money-in/money-out features, and renumbering §13–§18 for it would
+break every cross-reference in this spec.
+
+**Status: IMPLEMENTED (quotes only).** One swaps button → one screen
+with a provider-aware quote comparison: per pair, each covering
+provider's expected output + fee + time, with the cheapest/best
+pre-selected; pairs no provider covers are shown as unavailable with
+the reason, never with an invented quote. Implementation:
+`apps/web/src/wallet/swap-providers.ts` (`providersForPair`,
+`selectBestRoute`, `COMPARE_CHAINS`, `UNCOVERED_CHAINS`),
+`swap-quotes.ts` (LI.FI), `relay-quotes.ts`, `stonfi-quotes.ts`,
+`gaszip-refuel.ts`, rendered by `apps/web/src/screens/swap.tsx`.
+Route selection prefers Relay / STON.fi where they cover the pair and
+are cheaper, and falls back to LI.FI otherwise; "cheaper" is the
+highest expected output for the same pair, ties break toward Relay,
+then STON.fi, then LI.FI, and only LIVE quotes compete — honest
+not-set-up / not-covered states never win. **Quotes first, execution
+only on the owner's separate go-ahead** — broadcast stays disabled on
+mainnet until then (§0.1). Nothing here signs, sends or bridges
+anything.
+
+**The deciding constraint** is the same as for Buy (§12.1): Bawa is a
+static site with no backend. Any provider whose flow needs a
+server-side secret cannot work as-is — it needs a signing
+backend/proxy first. That is why gas.zip and STON.fi work today and
+Relay waits on a proxy.
+
+1. **gas.zip — first, "Refuel gas".** No key, no account, no backend,
+   no SDK: public GET quotes from `https://backend.gas.zip/v2`
+   (`GET /v2/chains`, `GET /v2/quotes/<deposit_chain>/<deposit_wei>/
+   <outbound_chains>`) + one user-signed transaction to the Direct
+   Deposit address. It is gas refuel only (native gas assets) — it
+   does not swap or bridge tokens. It appears as a separate "Refuel
+   gas" action, never labelled a swap. Limits $0.25–$50 per destination
+   chain. No published fee schedule (verified gap) — the fee lives
+   only in the quote, so the UI must show the quote's per-chain
+   `expected`/`usd` before signing. Quotes expire — re-quote if stale.
+   Live-checked 2026-11-26: `GET /v2/chains` returned 186 entries
+   (the docs overview says 300+ destination / 77 deposit chains — the
+   live list is the authority at integration time); the deposit address
+   comes from the live quote's `contractDepositTxn.to` for THAT deposit
+   chain — never the docs' example address (`0x391E…`, which a live
+   quote showed is a different address, `0x2a37…`, and which gas.zip's
+   own screening flags as high-risk); a quote without it is malformed
+   and surfaces as unavailable. Solana is listed as a destination
+   (chain 501474) but live quotes fail with "Chain Limit Exceeded", so
+   it is excluded from the destination list with that reason, never
+   offered dead.
+2. **Relay (RelaySwap) — second, quotes-first.** The best general
+   cross-chain swap engine: one endpoint (`POST /quote/v3` on
+   `https://api.relay.link`) covers bridge, same-chain swap,
+   cross-chain swap and calls. Cheapest fees (0.00% bridge, 0.01–0.15%
+   swaps, +$0.02 flat). **Blocker: the API key is secret and
+   server-side only — it must never ship in the app.** The client talks
+   to a CONFIGURABLE proxy that appends the key server-side (the docs'
+   own recommendation), or sends a 15-minute access token minted by a
+   backend; the proxy base URL comes from `VITE_RELAY_PROXY_URL` and is
+   EMPTY by default — with no proxy configured, quotes report
+   `not-configured` with the honest sentence. This module NEVER fakes
+   keyless operation and NEVER accepts an API key (there is no apiKey
+   parameter anywhere in `relay-quotes.ts`, by design). No Relay SDK is
+   in the tree — quotes go over raw REST through the proxy, so there is
+   no `@relayprotocol/relay-sdk` version to pin (the research said pin
+   9.x if the SDK is ever adopted). **Licence UNVERIFIED** — npm
+   metadata declares no licence field; read the SDK repo's LICENSE file
+   before vendoring any of its code. The proxy's origin must also be
+   added to `connect-src` in `security-headers.ts` at deploy time. Owner
+   must provide: Relay Dashboard account + App + API key, and the
+   proxy/token endpoint. Coverage, live `GET /chains` 2026-11-26: **58
+   chains**, none disabled — 33 EVM chains + BTC, SOL, TON, TRX and
+   XRP. XRP IS covered (xrpvm, Limited, XRP only, bridging supported) —
+   the research had listed it as not covered. NOT covered: LTC, DOGE
+   (neither appears in `/chains`), fraxtal, immutable, taiko, astar,
+   telos, conflux, core, songbird, rootstock, pulsechain, xdc, chiliz,
+   flare, zetachain, hemi, opbnb, aurora, fantom, kava, filecoin, and
+   the whole Cosmos / Polkadot / NEAR / Aptos / Tezos / Algorand /
+   Hedera / Cardano / Kaspa / Starknet slice. Non-EVM legs are Limited:
+   BTC native only, TON GRAM only, TRON USDT/TRX only, XRP native only;
+   Solana is tokenSupport All. (The docs say 69+ networks — the live
+   `/chains` count of 58 is the authority.)
+3. **STON.fi Omniston (+ TON DEX) — third, as the TON leg.** The only
+   route that gives Bawa TON↔EVM swaps at all, with no key, MIT SDKs,
+   and a clean client-side flow. Omniston (RFQ + HTLC atomic swaps, API
+   v1beta8, `wss://omni-ws.ston.fi`) covers 15 chains, **stablecoins
+   only** (USDT/USDC/USDT0/pUSD/USDg + TON GRAM); Solana is NOT covered;
+   TRON is listed but its HTLC mainnet deployment was a Dec-2026
+   milestone — verify live before promising TRON↔TON. DEX pool fee
+   default 0.3%. **Status in the tree: quotes scaffolding only.**
+   `stonfi-quotes.ts` holds the Omniston asset table (from the live
+   chains page), the pair-coverage check and the QuoteRequest builder —
+   it is NOT a hand-rolled RFQ client. The live quotes need the SDK:
+   `npm install @ston-fi/omniston-sdk@0.8.13` — **exact pin 0.8.13**
+   (latest 0.8.x, MIT per npm registry metadata; the SDK README warns
+   breaking changes may happen even in minor releases while major
+   version is 0). The dep add is deliberately NOT done in the providers
+   commit (package.json belongs to another lane); until it lands, the
+   Swap screen shows the corridor honestly — which pairs it would cover,
+   and that live STON.fi quotes need the SDK. No STON.fi quote is ever
+   invented. TRON is live-unverified: still listed on the live chains
+   page with USDT (TRC-20 `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`) and the
+   production WebSocket accepts connections, but NO live TRON quote has
+   been seen — TRON pairs are flagged live-unverified and are NOT
+   offered until one is. **TON signing is the main engineering cost and
+   is NOT wired:** Bawa already signs TON transfers offline
+   (`signTonOffline` in `wallet/send.ts`, V4R2), but Omniston orders
+   need TON Connect-style signing of the order's messages — a different
+   message shape. Quotes need no signature; execution needs the SDK +
+   that signing path + the owner's separate go-ahead. Owner must
+   provide: destination-chain integrator address(es) and the fee choice
+   (`integratorFeePips` / `referralValue` bps); nothing else.
+4. **LI.FI — stays as the fallback.** Already integrated and proven live
+   in Bawa (0.1 ETH → POL). Apache-2.0, no key for basic use. Live
+   `GET https://li.quest/v1/chains` 2026-11-26 returns **64 chains**,
+   all EVM type in that response (including 3 Sepolia testnets); Solana
+   is supported via the separate chain id already in the tree
+   (1151111081099710). There is NO `@lifi/sdk` in this tree — Bawa
+   quotes LI.FI over raw REST (`li.quest`), not the SDK, so there is no
+   4.x version to pin (the research said pin the exact 4.x version if
+   the SDK is ever adopted). Sui, Stellar and Zcash coverage is per
+   LI.FI's docs (SDK providers) and is NOT verified through Bawa's REST
+   path — do not claim it from the app's chain list. 0.25% service fee
+   per transaction — the highest headline fee of the four, the price of
+   that breadth. Route selection prefers Relay / STON.fi where they
+   cover the pair and are cheaper, and falls back to LI.FI otherwise.
+
+**Coverage honesty:** no provider covers the Cosmos-family / Cardano /
+Starknet slice of Bawa's 87 chains, nor LTC, DOGE, Stellar or Filecoin
+— the exact uncovered set is computed in code (`UNCOVERED_CHAINS` in
+`swap-providers.ts`; a chain is offered in the pickers when at least
+one provider covers it, the rest are listed as uncovered with the
+reason). Label coverage per pair honestly in the UI, and never hardcode
+the list here — it moves when a provider's live list moves.
 
 ## §13. Shamir backup shares — IMPLEMENTED (Lane E)
 
@@ -1062,8 +1342,10 @@ were re-measured from that tree (see the rows below).
 | §8 QR cards | `apps/web/src/screens/qr-card.tsx`; `payment-links.ts:727-760` (`QR_CARD_TEMPLATES`, 7 entries; `QR_CARD_TEMPLATE_QR`); `docs/DECISIONS.md` §24 + §25 (redesign E/F/G) | Said four templates (A–D); the redesign added E/F/G on token-gaps | Fixed in place (four → seven) |
 | §9 watch-only mainnet-only | Owner decision 2026-11-23 (standing record); `apps/web/src/wallet/watch-only-families.ts`; `state/wallet-context.tsx` `ALL_CHAIN_IDS` hydration fix | `docs/05-watch-only/README.md` predates the 87-chain hydration fix | Verified; §9 states the fix |
 | §10 devnet / E1 | `apps/web/src/wallet/devnet.ts:30`; `docs/DECISIONS.md:399-410`; `CONSTRAINTS.md` E1 | Correct; E1 expiry 2027-02-20 stated | Verified |
-| §11 WalletConnect | `apps/web/src/wallet/walletconnect.ts`; `apps/web/src/screens/walletconnect.tsx`; `app.tsx` lazy route `/walletconnect`; `package.json` `@walletconnect/sign-client` 2.21.0; `docs/DECISIONS.md` §26 | Not in the guide before | Implemented (Lane C; live dApp connection NOT verified — needs the owner's projectId) |
+| §11 WalletConnect | Commit `7fb1c4a` (providers programme): screen + 3 modules + tests deleted; route/nav/CSP/deps removed; `security-settings.tsx` restoration note; `docs/DECISIONS.md` §26 (Lane C record, not updated by that commit — see report) | Was IMPLEMENTED (Lane C) | Removed in place (providers programme, 2026-11-26; Android Kotlin route kept as an unimplemented record) |
 | §12 Coinbase Onramp | `apps/web/src/wallet/onramp.ts` (URL builder, no SDK); `receive.tsx` `?buy=1` panel; `package.json` has NO `cbpay-js` | Not in the guide before | Implemented (Lane D; live purchase NOT verified — needs onboarding/keys) |
+| §12.1 Buy provider picker | `apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rank order, key copy, readiness); `receive.tsx:1025` renders the table | Not in the guide before | Implemented (providers programme, 2026-11-26; TON confirmed live for Ramp/MoonPay/Banxa, Mercuryo TON unconfirmed; no live purchase verified) |
+| §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, not installed; TON signing not wired); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes-only (providers programme, 2026-11-26; Relay proxy not configured; STON.fi SDK not installed; execution needs the owner's separate go-ahead) |
 | §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup-shares.tsx`; `app.tsx` lazy route `/backup-shares`; `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only) |
 | §14 ERC-7730 | `apps/web/src/wallet/clear-signing.ts`; `clear-signing-snapshot.json` (1,523 B); `apps/web/src/wallet/caip.ts`; `send-review.tsx` | Not in the guide before | Implemented (Lane F) |
 | §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
@@ -1071,9 +1353,11 @@ were re-measured from that tree (see the rows below).
 | §15 UI contract | `WALLET_BUILDER.md` "UI foundations and contract"; Doc 14 §5.1 | Correct | Verified |
 | §16 verify/report | `AGENTS.md` §5/§6 | Correct | Verified |
 
-**Not verified first-hand (re-check pass, 2026-11-26):** a live
-WalletConnect dApp connection (needs the owner's projectId); a live
-Coinbase Onramp purchase (needs onboarding + keys); the Bitget Agent
+**Not verified first-hand (re-check pass, 2026-11-26; providers
+programme additions, 2026-11-26):** Relay quotes with a live proxy (no
+proxy is configured yet); live STON.fi quotes (the SDK is not installed
+yet); a live purchase through any Buy provider (needs onboarding +
+keys); the Bitget Agent
 API leg from a browser (fail-closed at the CORS preflight — the
 agent-side script is the live path); `okx-cex-market` end-to-end
 behaviour (needs the `okx` CLI binary); the Cardano passphrase
