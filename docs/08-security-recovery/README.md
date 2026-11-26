@@ -33,7 +33,7 @@ Vault locking IS provided: auto-lock is implemented (see the policy below). Any 
 
 The vault stays unlocked by default. Auto-lock is an optional setting on the /security page: a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period and unlocking needs the password. Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored (the lock must be real); while auto-lock is off, the raw derived key IS stored under `bawa-vault-key` so the vault can auto-unlock.
 
-Current implementation (token-gaps `7a170f4`, 2026-11-26): auto-lock is implemented (`apps/web/src/wallet/auto-lock.ts`, owner order 2026-11-20); the vault stays unlocked by default and the optional auto-lock follows the policy above.
+Current implementation (token-gaps `8a1d681`, 2026-11-27): auto-lock is implemented (`apps/web/src/wallet/auto-lock.ts`, owner order 2026-11-20); the vault stays unlocked by default and the optional auto-lock follows the policy above.
 
 ## 2. Privacy: xpubs are sensitive public material
 

@@ -59,7 +59,7 @@ The conceptual stack above is realised in the web starter as screens, one
 state provider, a vault, Core, and read-only chain adapters. Secrets live only
 inside the dashed boundary (the vault closure and Core); only public addresses
 and balance results cross to the public-data side. Verified against
-`apps/web/src/` on token-gaps (`7a170f4`).
+`apps/web/src/` on token-gaps (`8a1d681`).
 
 ```mermaid
 flowchart TB
@@ -74,7 +74,7 @@ flowchart TB
   end
 
   subgraph STATE["State — apps/web/src/state/wallet-context.tsx"]
-    CTX["apps/web/src/state/wallet-context.tsx<br/>WalletContext provider<br/>VaultState: no-vault / unlocked<br/>Current (7a170f4): auto-lock implemented — optional /security setting, OFF by default<br/>Duration: Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day<br/>Enabled behavior: lock after the chosen period; password required to unlock<br/>selectedChain defaults to btc<br/>refreshBalances(): public balances"]
+    CTX["apps/web/src/state/wallet-context.tsx<br/>WalletContext provider<br/>VaultState: no-vault / unlocked<br/>Current (8a1d681): auto-lock implemented — optional /security setting, OFF by default<br/>Duration: Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day<br/>Enabled behavior: lock after the chosen period; password required to unlock<br/>selectedChain defaults to btc<br/>refreshBalances(): public balances"]
   end
 
   subgraph WALLET["Wallet layer — apps/web/src/wallet/core.ts"]

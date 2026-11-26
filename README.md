@@ -109,7 +109,7 @@ The web wallet in `apps/web` is a fully functional example wallet built using th
 
 - Create, import (24/25 words) and watch-only wallets; multiple accounts from one phrase; bulk account creation.
 - 22 native assets plus 21 default tokens (43 rows), with live prices.
-- Receive with a QR card and three templates — address, payment request, share link — plus copy and share.
+- Receive with a QR card — three QR modes (address, payment request, share link) and seven card templates — plus copy and share.
 - Add Token adds a token by contract address, and can enable any of the 87 chains.
 - Send walks through a stepped flow, but broadcast stays disabled, so nothing is ever sent.
 

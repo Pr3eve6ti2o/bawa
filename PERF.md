@@ -33,8 +33,8 @@ The +5% rule is unchanged.
 
 | Metric | Measured | Budget (enforced in CI) |
 | --- | --- | --- |
-| Total JS in `dist/assets` | 4,691,234 bytes (2026-11-26, merged tree on token-gaps `f5a5f19` + guide-update; fresh build, Node 22, Lane E; largest chunk 2,906,541) | ≤ 6,000,000 bytes — PASSES by 1,308,766 bytes (owner-ordered re-baseline `f5a5f19`, 2026-11-26) |
-| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,906,541 bytes (2026-11-26, merged tree on token-gaps `7a170f4`; was 2,905,067 on the Lane C tree, 2,905,015 on base `7fea3e4`) | ≤ 3,050,000 bytes (today + ~5%) |
+| Total JS in `dist/assets` | 4,457,283 bytes (2026-11-27, merged tree on token-gaps `8a1d681`; fresh build, Node 22; largest chunk 2,906,489) | ≤ 6,000,000 bytes — PASSES by 1,542,717 bytes (owner-ordered re-baseline `f5a5f19`, 2026-11-26) |
+| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,906,489 bytes (2026-11-27, merged tree on token-gaps `8a1d681`; was 2,906,541 on `7a170f4`, 2,905,067 on the Lane C tree, 2,905,015 on base `7fea3e4`) | ≤ 3,050,000 bytes (today + ~5%) |
 | Total CSS in `dist/assets` | 63,673 bytes (2026-11-24, Lane PERF: Noto Sans SC latin-only subsets; was 368,397 on base 8806e4a and 432,288 on d47d282) | recorded, not yet enforced |
 | Total `dist/` | 15,939,512 bytes (2026-11-24, Lane PERF; was 33,222,901 on base 8806e4a — the drop is the ~17 MB of unneeded Noto Sans SC subset font files no longer bundled, plus the WASM binary) | recorded, not yet enforced |
 

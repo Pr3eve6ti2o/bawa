@@ -1,7 +1,7 @@
 # Constraints
 
-Last reviewed: 2026-11-26 by the guide-update pass (Lane D, hands-on, 0 Sol calls).
-Base: `panel-rebuild/repo-study` at `0fd3a2e`.
+Last reviewed: 2026-11-27 by the guide-currency pass (hands-on, 0 Sol calls).
+Base: `panel-rebuild/token-gaps` at `8a1d681`.
 
 This is Bawa's written quality contract. It outlives any single session:
 a number here is a decision, not an aspiration. Every enforced row names
@@ -49,8 +49,8 @@ pass.** Tightening the bar is silent; loosening it is loud (see
 
 | Metric | Today (2026-11-26, this tree) | Direction |
 | --- | --- | --- |
-| Web vitest | 110 files — FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run. The 2,945-passed figure is Lane C's loud-stone run, not reproduced here | must not fall |
-| Web bundle JS | 4,691,234 bytes total (measured 2026-11-26 on token-gaps `f5a5f19` + guide-update, fresh build, Node 22); largest chunk (boundary) 2,906,541 bytes; passes the 6,000,000 budget by 1,308,766 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
+| Web vitest | 120 files — PASSES on loud-stone (3,121 passed + 5 skipped, 0 failed, Node 22, at token-gaps `8a1d681`, 2026-11-27). FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run — environment artefacts, not code defects | must not fall |
+| Web bundle JS | 4,457,283 bytes total (measured 2026-11-27 on token-gaps `8a1d681`, fresh build, Node 22); largest chunk (boundary) 2,906,489 bytes; passes the 6,000,000 budget by 1,542,717 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
 | Web test duration | ~91 s (`vitest run`, 2026-11-26) | must not grow without a reason |
 | Root smoke checks | 440 checks pass, 0 fail (412 smoke + 28 register-links, verified 2026-11-26) | must not fall |
 

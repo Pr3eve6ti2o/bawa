@@ -2367,11 +2367,7 @@ the guide-update pass — nothing to record yet).
 
 ## §29 — Live-preview republish + G1–G15 closed (2026-11-26, guide-update pass)
 
-**Republish:** `gh-pages` is at `3635412` — "Publish token-gaps
-`7a170f4` to GitHub Pages (redesign + 87 chains + WalletConnect + Buy
-+ Shamir + ERC-7730, bundle re-baselined to 4,650,000)" — verified
-first-hand by `git ls-remote` + `git log origin/gh-pages` on
-2026-11-26. The Pages site serves the token-gaps `7a170f4` build.
+**Republish:** `gh-pages` was at `3635412` — "Publish token-gaps `7a170f4` to GitHub Pages (redesign + 87 chains + WalletConnect + Buy + Shamir + ERC-7730, bundle re-baselined to 4,650,000)" — verified first-hand by `git ls-remote` + `git log origin/gh-pages` on 2026-11-26. Republished 2026-11-27 from token-gaps `8a1d681` (`gh-pages` `d9a24e8`, verified first-hand by `git ls-remote`); the Pages site serves the token-gaps `8a1d681` build.
 
 **Live-preview gaps G1–G15: closed.** D1–D3 are fixed in code on
 token-gaps; D4 (indexer slowness on some chains) is inherent to the
@@ -2386,3 +2382,15 @@ chain count.
 **Decision (owner order, commit `f5a5f19`):** the web bundle budget is re-baselined a third time, 4,650,000 → **6,000,000** total JS in `dist/assets` (largest chunk unchanged, ≤ 3,050,000). The merged tree measures **4,690,725** total JS (largest chunk 2,906,541) and passes by **1,309,275 bytes**. `CONSTRAINTS.md:40` and the CI bundle-size gate (`.github/workflows/ci.yml:193`) enforce 6,000,000.
 
 **Why (recorded so the next re-baseline is a decision, not a reflex):** the UX-major programme put the tree at 4,690,725 against the 4,650,000 budget — 40,725 over, with no legitimate trim found; most of the growth is on-demand lazy code the gate counts anyway. The owner ordered 6,000,000 as the typed word, superseding the 4,700,000 and 4,695,000 taps. Headroom is now 1,309,275 bytes.
+
+## §31 — Registry validator upgraded to v4 (2026-11-26, commit `2a0fa75`)
+
+**Decision (registry-fix programme, commit `2a0fa75`):** the registry validator is upgraded from v3 to v4 — version check 3 → 4, `chainSupport` keys use the 87-chain schema vocabulary, the v4 profiles rule replaces the v2 model; history I&V goes 10 → 17 chains and the schema enum 84 → 87 (+cardano, kaspa, starknet). The validator exits 0 with 0 errors; registry tests 29/29. The same commit records the 6,000,000 re-baseline in §30 and the CHANGELOG. Pushed `e9d3d3d` → `2a0fa75`.
+
+## §32 — Providers programme pushed (owner order 2026-11-26, pushed 2026-11-27, commit `e9d3d3d`)
+
+**Decision (providers programme):** WalletConnect is REMOVED (no projectId; the relayer never connects, `connect()` hangs, the WebSocket probe returns JSON-RPC error 3000 "JWT is missing"; restoration needs a free Reown Cloud projectId), the Buy picker lands on Receive (`receive.tsx` `?buy=1`: Ramp first, then MoonPay, Onramper, Banxa Referral, Transak, Mercuryo, Coinbase as-is; no key invented, every row says "Not set up yet" with exactly what is needed), and Swaps land (`swap.tsx`: gas.zip refuel, Relay quotes-first behind a configurable proxy, STON.fi TON corridor, LI.FI stays). Guide spec §11, §12.1 and §12A updated. Provider keys are all still missing — owner inputs, none invented; the Relay proxy is unconfigured. Owner approved the push 2026-11-27 00:06 IST.
+
+## §33 — STON.fi Lanes A–C merged (2026-11-27, commit `8a1d681`)
+
+**Decision (STON.fi lanes A–C):** `@ston-fi/omniston-sdk@0.8.13` is installed (exact pin, MIT verified from the installed package), live quotes are wired (`fetchStonfiQuote` over `wss://omni-ws.ston.fi`; proven live 2026-11-27: 1 USDT on TON → 0.972388 USDC on Base, "Best quote"), and TON order signing is wired (`signStonfiOrderTonOffline` in `stonfi-signing.ts` returns the signed BoC only, V4R2, mode 3; 15 tests). TRON stays live-unverified and is never offered; no current official per-transaction limit is published; execution/broadcast still needs the owner's separate go-ahead. Gates at `8a1d681`: tsc 0, eslint 0, build 0, vitest 120 files / 3,121 passed + 5 skipped, bundle 4,457,283 / 6,000,000.

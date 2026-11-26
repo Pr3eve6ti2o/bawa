@@ -204,13 +204,7 @@ chains — SOL, BSC, Polygon (matic), Arbitrum (arb), OP Mainnet (op),
 Base, Avalanche (avax), Litecoin (ltc), Dogecoin (doge) — and all 9
 have balance `IMPLEMENTED_AND_VERIFIED` in `chainSupport` and a
 balance adapter in the app (none is in the 21 derive-only chains,
-`chain-registry.test.ts`). History in the registry lags the app for
-4 of the 9 (matic, arb, base, avax read `NOT_SUPPORTED` in the
-registry but are history-verified in `chains.ts`); bsc reads `NOT_SUPPORTED` in the registry and is blocked in `chains.ts` too — the known
-registry-data lag, not a profile defect. The profile's chains list
-itself is correct as written; the open item is the 83 chains
-`chainSupport` scopes to this profile alone while `profiles.json`
-lists only these 9 (validator failure, see `docs/index.md`).
+`chain-registry.test.ts`). History in the registry no longer lags the app: the registry v4 update (commit `2a0fa75`, 2026-11-26) records history `IMPLEMENTED_AND_VERIFIED` for matic, arb, base and avax — 8 of the 9 profile chains have history I&V now; only bsc reads `NOT_SUPPORTED`, and bsc is blocked in `chains.ts` too. The profile's chains list itself is correct as written. The validator failure is closed — the v4 validator exits 0 with 0 errors (see `docs/index.md`).
 
 ```mermaid
 flowchart TB
@@ -270,7 +264,7 @@ are single-address: their paths ignore account and index. The fifty-six EVM chai
   working wallet chain.
 - No broadcast exists for any chain in the repo.
 
-Note (2026-11-23): `apps/web/src/wallet/chains.ts` records history verified for SOL, LTC and DOGE, but `registry/capabilities.json` still records history `NOT_SUPPORTED` for all eighteen additional chains. The two sources disagree; re-verification is open.
+Note (resolved 2026-11-26 by the registry v4 update, commit `2a0fa75`): history is now `IMPLEMENTED_AND_VERIFIED` in the registry for SOL, LTC and DOGE and 14 further chains (17 total); only bsc, gnosis, opbnb, metis and fantom still read `NOT_SUPPORTED`. The two sources agree; the re-verification is closed.
 
 ## Testnet and the registry
 

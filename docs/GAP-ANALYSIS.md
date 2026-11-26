@@ -452,6 +452,8 @@ use only and are never displayed. This is recorded in
 a mainnet gap too, not only a devnet one: the same chains have no
 adapter on mainnet either.
 
+**Update (2026-11-27, guide-currency pass):** this gap is closed — adapters have landed for all nine chains (`apps/web/src/wallet/adapters/sol.ts`, `ltc.ts`, `doge.ts`, and the generic EVM adapter `evm.ts` serving BSC/MATIC/ARB/OP/Base/AVAX, registered in `registerAllAdapters`). The 2026-11-23 text above is kept as the dated record.
+
 **Why it matters.** The dashboard lists 22 chains and the Receive
 screen lists them, so a reader reasonably expects each one to work.
 Nine of them cannot do anything past showing an address. The token

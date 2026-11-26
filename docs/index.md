@@ -2,13 +2,13 @@
 
 This index is the single entry point for Bawa documentation; the root [README.md](../README.md), [WALLET_BUILDER.md](../WALLET_BUILDER.md), and [docs/README.md](README.md) each point here.
 
-This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 26 November 2026 named below (engine smoke 440, web vitest 110 files — PASSES on loud-stone (2,945 passed + 5 skipped, 0 failed, Node 22, Lane E 2026-11-26); FAILS in this sandbox, timeout-dominated); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 26 November 2026 named below (engine smoke 440, web vitest 120 files — PASSES on loud-stone (3,121 passed + 5 skipped, 0 failed, Node 22, at token-gaps `8a1d681`, 2026-11-27); FAILS in this sandbox, timeout-dominated); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
 - [AGENTS.md](../AGENTS.md) — `DOCUMENTED_NOT_TESTED`: read first for repository instructions.
 - [WALLET_BUILDER.md](../WALLET_BUILDER.md) — `DOCUMENTED_NOT_TESTED`: route a request through the builder.
-- [CREATE-THIS-SPEC.md](CREATE-THIS-SPEC.md) — the single "create this" specification: every capability as explicit, ordered, machine-readable instructions with real files, numbers and constraints, each section traced to repo evidence; Part A sections (Bitget verifier, Cardano/Starknet/Kaspa, WalletConnect, Coinbase Onramp, Shamir, ERC-7730) are marked PENDING until their lanes commit. Read this with `WALLET_BUILDER.md` and `AGENTS.md`.
+- [CREATE-THIS-SPEC.md](CREATE-THIS-SPEC.md) — the single "create this" specification: every capability as explicit, ordered, machine-readable instructions with real files, numbers and constraints, each section traced to repo evidence; Part A sections (Bitget verifier, Cardano/Starknet/Kaspa, Coinbase Onramp, Shamir, ERC-7730) have all landed; WalletConnect was REMOVED in the providers programme (2026-11-26), not implemented. Read this with `WALLET_BUILDER.md` and `AGENTS.md`.
 - [Implementation plan](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md) — `DOCUMENTED_NOT_TESTED`: Phases 0–10, evidence vocabulary and outstanding milestones.
 - [Workflow command](../scripts/build-wallet.mjs) — `IMPLEMENTED_AND_VERIFIED` for sample request 1 (Create a Web wallet: 3/3 steps VERIFIED) and sample request 3 (Create a multi-chain wallet: 6/6 steps VERIFIED). Sample request 2 (Create an Android wallet) reports setup as SKIPPED without toolchains. Exercise dates are not stated in this index.
 - [README](../README.md) — `DOCUMENTED_NOT_TESTED`: the front door — what Bawa is, quickstart, and where to go next.
@@ -86,7 +86,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [UI candidates](../research/ui-candidates.md) — `PROPOSED`: candidate research, not implementation evidence.
 - [Web template upstream](../templates/web/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
 - [Android template upstream](../templates/android/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
-- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/` — build passes and engine smoke is 440/440, and web vitest PASSES on loud-stone (110 files, 2,945 passed + 5 skipped, 0 failed, 81.97 s, Node 22, Lane E 2026-11-26). It does NOT pass in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped on the guide-update tip, and 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4` (110 files, 2,950 tests) — failures dominated by 5 s timeouts (76 and 59), varying run to run. The sandbox failures are environment artefacts, not code defects; the passing-test state rests on the loud-stone run.
+- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/` — build passes and engine smoke is 440/440, and web vitest PASSES on loud-stone (120 files, 3,121 passed + 5 skipped, 0 failed, Node 22, at token-gaps `8a1d681`, 2026-11-27). It does NOT pass in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped on the guide-update tip, and 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4` (110 files, 2,950 tests) — failures dominated by 5 s timeouts (76 and 59), varying run to run. The sandbox failures are environment artefacts, not code defects; the passing-test state rests on the loud-stone run.
 - [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 57 `@Test` annotations counted across 5 test files (re-counted 2026-11-20); the executed passing count was NOT re-established here — no Android SDK on this machine, so Gradle tests are `NOT-RUN`. The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`.
 - [Contracts](../packages/contracts/src/index.ts) — `IMPLEMENTED_AND_VERIFIED` for compilation: imported by `apps/web` and checked by the web typecheck and build. One consumer today (`apps/web`); see `ARCHITECTURE.md`.
 - Scripts — `IMPLEMENTED_AND_VERIFIED` for the exercised workflow: [setup](../scripts/setup.mjs), [build](../scripts/build-platforms.mjs), [test](../scripts/run-test-suites.mjs) and [wallet build](../scripts/build-wallet.mjs) (web 3/3, multi-chain 6/6 steps VERIFIED).
@@ -126,8 +126,8 @@ The registry covers 87 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, bas
 
 ## Project structure
 
-Verified against the `panel-rebuild/token-gaps` tree at `4bfd181`
-(2026-11-25). Counts are tracked files (`git ls-files`).
+Verified against the `panel-rebuild/token-gaps` tree at `8a1d681`
+(2026-11-27). Counts are tracked files (`git ls-files`).
 
 ```text
 bawa/
@@ -142,11 +142,11 @@ bawa/
     devnet issues log, performance and security-findings records, and
     the dated 2026-11-18 research reports.
   apps/
-    web/            (467 files) The wallet web app: React 19 + TypeScript
+    web/            (486 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
-                    (routing, shell), `src/screens` (63 files, one
+                    (routing, shell), `src/screens` (68 files, one
                     screen per route), `src/state` (wallet context; the refresh lives
-                    in wallet-context), `src/wallet` (89 files: chains, vault,
+                    in wallet-context), `src/wallet` (126 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
                     (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),

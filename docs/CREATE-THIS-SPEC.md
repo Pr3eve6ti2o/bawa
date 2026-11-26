@@ -28,13 +28,7 @@ branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
-the implementation. Lane H's mining record is §18. Merged-tree
-gates (loud-stone, Node 22): typecheck 0, build 0, vitest 110 files
-/ 2,945 passed + 5 skipped (Lane C's loud-stone run — NOT reproduced
-in this sandbox on Node 22, 2026-11-26: 104 failed / 2,841 passed +
-5 skipped on the guide-update tip, 79 failed / 2,866 passed + 5 skipped
-on pristine token-gaps `7a170f4`; timeout-dominated, varies run to run
-— see docs/index.md), eslint 0, link check 0,
+the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 120 files / 3,121 passed + 5 skipped (loud-stone run at token-gaps `8a1d681`, 2026-11-27 — NOT reproduced in this sandbox on Node 22, 2026-11-26: 104 failed / 2,841 passed + 5 skipped on the guide-update tip, 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4`; timeout-dominated, varies run to run — see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -55,11 +49,7 @@ calls): removed WalletConnect (§11), added the Buy provider picker
 table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
-**Bundle note:** the merged tree passes the budget — total JS
-4,330,659 vs the 6,000,000 budget (§0.2), passing by 1,669,341 bytes;
-largest chunk 2,906,489 (under the 3,050,000 cap). The budget was
-re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26);
-see §0.2 for why.
+**Bundle note:** the merged tree passes the budget — total JS 4,457,283 vs the 6,000,000 budget (§0.2), passing by 1,542,717 bytes; largest chunk 2,906,489 (under the 3,050,000 cap). Measured on token-gaps `8a1d681` (2026-11-27). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
@@ -91,11 +81,7 @@ see §0.2 for why.
    (route chunk 10,085 B) — none of it on the cold-load path (home cold
    load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
    The WalletConnect lazy chunk (348,194 B) was removed with the feature
-   in the providers programme (2026-11-26, §11). The providers
-   verification lane (Lane D, 2026-11-26) measured the new total on the
-   providers tree: 4,330,659 bytes total JS, passing by **1,669,341
-   bytes (27.8% margin)**; largest chunk 2,906,489 bytes (under the
-   3,050,000 cap). Whether the gate should exclude lazy
+   in the providers programme (2026-11-26, §11). The STON.fi lanes (2026-11-27, token-gaps `8a1d681`) re-measured the total on the current tree: 4,457,283 bytes total JS, passing by **1,542,717 bytes (25.7% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
 3. **Four-colour cap.** The app uses at most four colours, named by the
    design tokens in `docs/DESIGN-SYSTEM.md` §2.1
@@ -321,8 +307,9 @@ coin entry at all (only 35 of the 57 coin keys match a `chainSupport`
 key — the rest use Trust Wallet Assets naming: `bitcoin`, `ethereum`,
 `arbitrum`, `avalanchec`, …); there are no icons, explorers, or
 CoinGecko ids anywhere in the JSON. An agent told "there is no JSON
-registry" would rebuild what already exists; the work is completion,
-not creation.
+registry" would rebuild what already exists; the work is completion, not creation.
+
+**Registry v4 event (2026-11-26, commit `2a0fa75`):** the validator was upgraded from v3 to v4 (87-chain vocabulary from the schema enum; the v4 profiles rule), history I&V went from 10 to 17 chains, and the schema enum went from 84 to 87 (+cardano, kaspa, starknet). The validator exits 0 with 0 errors; `docs/index.md` records the re-earned IMPLEMENTED_AND_VERIFIED status.
 
 **Proposal (not yet implemented):** export the web wallet's data as
 generated, CI-run JSON — `registry/chains.json` (87 chains: id, name,
@@ -379,10 +366,7 @@ guide must not let an agent assume otherwise:
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
-  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest —
-  110 files; the 2,945-passed + 5-skipped figure is Lane C's loud-stone
-  run and did NOT reproduce in this sandbox on Node 22 (2026-11-26),
-  see `docs/index.md`). Engine smoke suite:
+  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 120 files; the 3,121-passed + 5-skipped figure is the loud-stone run at token-gaps `8a1d681` (2026-11-27) and did NOT reproduce in this sandbox on Node 22 (2026-11-26), see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -882,8 +866,7 @@ The survey's verified facts, which Lane D implemented from:
   aimed at self-custody wallets as the destination.
 - **Lazy-load only.** Measured via Bundlephobia: **7,473 B minified /
   2,841 B gzip** — 7,473 B alone exceeds the ~5,304 B headroom at survey
-  time (1.4× over; headroom is now 1,669,341 B under the 6,000,000 budget —
-  see §0.2, 2026-11-26). It is loaded by dynamic import on the Buy screen
+  time (1.4× over; headroom is now 1,542,717 B under the 6,000,000 budget — see §0.2, 2026-11-27). It is loaded by dynamic import on the Buy screen
   only, by design. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
 - **The SDK is NOT bundled.** `@coinbase/cbpay-js` 2.4.0 (MIT) is not
@@ -1088,31 +1071,12 @@ Relay waits on a proxy.
    and a clean client-side flow. Omniston (RFQ + HTLC atomic swaps, API
    v1beta8, `wss://omni-ws.ston.fi`) covers 15 chains, **stablecoins
    only** (USDT/USDC/USDT0/pUSD/USDg + TON GRAM); Solana is NOT covered;
-   TRON is listed but its HTLC mainnet deployment was a Dec-2026
-   milestone — verify live before promising TRON↔TON. DEX pool fee
-   default 0.3%. **Status in the tree: quotes scaffolding only.**
-   `stonfi-quotes.ts` holds the Omniston asset table (from the live
-   chains page), the pair-coverage check and the QuoteRequest builder —
-   it is NOT a hand-rolled RFQ client. The live quotes need the SDK:
-   `npm install @ston-fi/omniston-sdk@0.8.13` — **exact pin 0.8.13**
-   (latest 0.8.x, MIT per npm registry metadata; the SDK README warns
-   breaking changes may happen even in minor releases while major
-   version is 0). The dep add is deliberately NOT done in the providers
-   commit (package.json belongs to another lane); until it lands, the
-   Swap screen shows the corridor honestly — which pairs it would cover,
-   and that live STON.fi quotes need the SDK. No STON.fi quote is ever
-   invented. TRON is live-unverified: still listed on the live chains
+   TRON is listed but live-unverified: the live chains page was re-fetched 2026-11-27 (HTTP 200, USDT TRC-20 `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`), the production WebSocket accepts connections, but every live TRON RFQ came back `noQuote` — no resolver is quoting TRON in either direction at any tried amount. TRON pairs are flagged live-unverified and are NOT offered until a live quote is seen. DEX pool fee
+   default 0.3%. **Status in the tree: live quotes + TON order signing wired, execution gated.** `stonfi-quotes.ts` holds the Omniston asset table (from the live chains page), the pair-coverage check, the QuoteRequest builder AND the live RFQ client (`fetchStonfiQuote`), which runs on the real SDK. The SDK is installed: `@ston-fi/omniston-sdk@0.8.13` — **exact pin 0.8.13** (latest 0.8.x, MIT verified first-hand from the installed package's LICENSE; the SDK README warns breaking changes may happen even in minor releases while major version is 0). It loads by dynamic import inside `fetchStonfiQuote`, so it lands in its own async chunk and only loads when a STON.fi quote is fetched. The Swap screen shows live quotes where the corridor covers the pair — proven live 2026-11-27: 1 USDT on TON → 0.972388 USDC on Base, "Best quote" — and the honest not-covered / no-quote state where it does not. No STON.fi quote is ever invented. No current per-transaction limit is published anywhere official — the only figure is the 2026-06-16 launch post's temporary $1,000 at launch, five months stale, so it is not quoted as current. TRON is live-unverified: still listed on the live chains
    page with USDT (TRC-20 `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`) and the
    production WebSocket accepts connections, but NO live TRON quote has
    been seen — TRON pairs are flagged live-unverified and are NOT
-   offered until one is. **TON signing is the main engineering cost and
-   is NOT wired:** Bawa already signs TON transfers offline
-   (`signTonOffline` in `wallet/send.ts`, V4R2), but Omniston orders
-   need TON Connect-style signing of the order's messages — a different
-   message shape. Quotes need no signature; execution needs the SDK +
-   that signing path + the owner's separate go-ahead. Owner must
-   provide: destination-chain integrator address(es) and the fee choice
-   (`integratorFeePips` / `referralValue` bps); nothing else.
+   offered until one is. **TON signing is wired (signed BoC only, no broadcast):** `signStonfiOrderTonOffline` in `stonfi-signing.ts` signs an order's messages TON Connect-style with the existing Trust Wallet Core engine (V4R2, mode 3, `m/44'/607'/0'` for account 0) and returns the signed BoC only — verified 2026-11-27 against a real live orderTx (quoteId `7fc458a6…59e`), 15 tests. Quotes need no signature; execution still needs the owner's separate broadcast go-ahead — broadcast stays DISABLED on mainnet until then. Owner must still provide: destination-chain integrator address(es) and the fee choice (`integratorFeePips` / `referralValue` bps); nothing else.
 4. **LI.FI — stays as the fallback.** Already integrated and proven live
    in Bawa (0.1 ETH → POL). Apache-2.0, no key for basic use. Live
    `GET https://li.quest/v1/chains` 2026-11-26 returns **64 chains**,
@@ -1319,7 +1283,7 @@ were re-measured from that tree (see the rows below).
 | Spec section | Traced to (file:line or survey) | Older guide state | Verdict |
 | --- | --- | --- | --- |
 | §0.1 broadcast disabled | `apps/web/src/wallet/send.ts:65-66`, `:987` | Correct in `AGENTS.md` §4/§8, `WALLET_BUILDER.md` | Verified |
-| §0.2 bundle 6,000,000 | `CONSTRAINTS.md:40` (re-baselined by owner order 2026-11-26, commit `f5a5f19`); CI `ci.yml:193` | Was 4,185,000 at Lane G writing; re-baselined with the redesign to 4,215,000, then to 4,650,000 by owner order at `7a170f4`, then to 6,000,000 by owner order at `f5a5f19` | Fixed in place (guide-update pass, 2026-11-26; budget updated in the Phase 7 merge) |
+| §0.2 bundle 6,000,000 | `CONSTRAINTS.md:40` (re-baselined by owner order 2026-11-26, commit `f5a5f19`); CI `ci.yml:194` | Was 4,185,000 at Lane G writing; re-baselined with the redesign to 4,215,000, then to 4,650,000 by owner order at `7a170f4`, then to 6,000,000 by owner order at `f5a5f19` | Fixed in place (guide-update pass, 2026-11-26; budget updated in the Phase 7 merge) |
 | §0.3 4-colour cap + `--qr-*` | `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Correct in DECISIONS §24; now stated in this spec | Verified |
 | §0.4 no fake data | `apps/web/src/wallet/price-fallbacks.ts` header; `chains.ts` `availableFor` | Correct | Verified |
 | §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 87-chain app — noted as OPEN, not silently widened | Fixed (note updated 84 → 87) |
@@ -1344,7 +1308,7 @@ were re-measured from that tree (see the rows below).
 | §11 WalletConnect | Commit `7fb1c4a` (providers programme): screen + 3 modules + tests deleted; route/nav/CSP/deps removed; `security-settings.tsx` restoration note; `docs/DECISIONS.md` §26 (Lane C record, not updated by that commit — see report) | Was IMPLEMENTED (Lane C) | Removed in place (providers programme, 2026-11-26; Android Kotlin route kept as an unimplemented record) |
 | §12 Coinbase Onramp | `apps/web/src/wallet/onramp.ts` (URL builder, no SDK); `receive.tsx` `?buy=1` panel; `package.json` has NO `cbpay-js` | Not in the guide before | Implemented (Lane D; live purchase NOT verified — needs onboarding/keys) |
 | §12.1 Buy provider picker | `apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rank order, key copy, readiness); `receive.tsx:1025` renders the table | Not in the guide before | Implemented (providers programme, 2026-11-26; TON confirmed live for Ramp/MoonPay/Banxa, Mercuryo TON unconfirmed; no live purchase verified) |
-| §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, not installed; TON signing not wired); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes-only (providers programme, 2026-11-26; Relay proxy not configured; STON.fi SDK not installed; execution needs the owner's separate go-ahead) |
+| §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, installed; live RFQ client + TON order signing wired, signed BoC only); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes + TON order signing (providers programme, 2026-11-26; STON.fi Lanes B/C, 2026-11-27; Relay proxy not configured; execution/broadcast needs the owner's separate go-ahead) |
 | §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup-shares.tsx`; `app.tsx` lazy route `/backup-shares`; `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only) |
 | §14 ERC-7730 | `apps/web/src/wallet/clear-signing.ts`; `clear-signing-snapshot.json` (1,523 B); `apps/web/src/wallet/caip.ts`; `send-review.tsx` | Not in the guide before | Implemented (Lane F) |
 | §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
@@ -1354,8 +1318,7 @@ were re-measured from that tree (see the rows below).
 
 **Not verified first-hand (re-check pass, 2026-11-26; providers
 programme additions, 2026-11-26):** Relay quotes with a live proxy (no
-proxy is configured yet); live STON.fi quotes (the SDK is not installed
-yet); a live purchase through any Buy provider (needs onboarding +
+proxy is configured yet); a live purchase through any Buy provider (needs onboarding +
 keys); the Bitget Agent
 API leg from a browser (fail-closed at the CORS preflight — the
 agent-side script is the live path); `okx-cex-market` end-to-end
@@ -1400,7 +1363,7 @@ not the current budget.**
 | WalletConnect Kotlin SDK, Android route | Apache-2.0 | Wallet (Android): dApp connectivity where the web bundle budget does not apply | Not added to `apps/android/app/build.gradle.kts` — the app is watch-only/testnet-only with no signing path, and no Android SDK/JDK exists on loud-stone to build-verify it | §11 (coordinates `com.walletconnect:web3wallet` 1.35.2, Maven-verified; `approveSession` / WalletKit note; projectId still an owner step) |
 | OKX sonar, Solana tx simulation | MIT | Wallet (dev tooling): simulate a Solana send construction locally before signing; never shipped | None — no cargo on loud-stone, build not run | §14 (commands + `sonar send` never on mainnet) |
 | Front-End-Checklist `touch-targets` | MIT | Wallet: touch-target floor for the web app | Audit only, no code change: class audit finds no interactive element below 24 px (default 40, sm 32, xs 28 — xs unused, icon-sm 32); WCAG 2.2 AA 24 px floor passes. The 44 px AAA gap is the known, owner-saved-layout state — restyling it is an owner decision, not a lane fix | This section |
-| Front-End-Checklist `performance-budget` | MIT | Guide + wallet: budgets enforced in CI | Verified, no code change: the bundle-size gate IS the budget (CI `ci.yml:193`, total + largest chunk). Lighthouse CI and production RUM are not wired — flagged, not added | This section |
+| Front-End-Checklist `performance-budget` | MIT | Guide + wallet: budgets enforced in CI | Verified, no code change: the bundle-size gate IS the budget (CI `ci.yml:194`, total + largest chunk). Lighthouse CI and production RUM are not wired — flagged, not added | This section |
 | Front-End-Checklist `code-splitting` | MIT | Wallet: heavy Part A modules behind dynamic import | Verified in the built `dist/`: WalletConnect and Shamir ship as separate lazy chunks, not in the main chunk (see the lane's bundle measurement) | This section |
 | Front-End-Checklist `leaked-secrets` | MIT | Wallet: secret hygiene | Ran `node scripts/secret-scan.mjs` on the worktree: exit 0, no findings. The new script carries no secrets or keys | This section |
 | Front-End-Checklist `token-storage-security` | MIT | Wallet: vault-key storage | Verified in code, no change: the skill's httpOnly-cookie prescription does not apply — Bawa has no server and no session tokens. The mitigation is the auto-lock key-storage invariant (§4): the derived key is stored under `bawa-vault-key` only while auto-lock is OFF, never while it is ON | This section |
