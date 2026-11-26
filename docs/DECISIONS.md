@@ -2380,3 +2380,9 @@ upstream indexers, not a Bawa defect — no code fix is owed for it.
 still renders "84 chains" from a stale crawl cache — trust the
 served asset hash, not the fetched text, when checking the live
 chain count.
+
+## §30 — Bundle budget re-baseline to 6,000,000 (owner order) — 2026-11-26
+
+**Decision (owner order, commit `f5a5f19`):** the web bundle budget is re-baselined a third time, 4,650,000 → **6,000,000** total JS in `dist/assets` (largest chunk unchanged, ≤ 3,050,000). The merged tree measures **4,690,725** total JS (largest chunk 2,906,541) and passes by **1,309,275 bytes**. `CONSTRAINTS.md:40` and the CI bundle-size gate (`.github/workflows/ci.yml:193`) enforce 6,000,000.
+
+**Why (recorded so the next re-baseline is a decision, not a reflex):** the UX-major programme put the tree at 4,690,725 against the 4,650,000 budget — 40,725 over, with no legitimate trim found; most of the growth is on-demand lazy code the gate counts anyway. The owner ordered 6,000,000 as the typed word, superseding the 4,700,000 and 4,695,000 taps. Headroom is now 1,309,275 bytes.

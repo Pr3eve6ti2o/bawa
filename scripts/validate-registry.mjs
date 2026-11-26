@@ -250,7 +250,7 @@ export function validateReferences(files) {
   return errors;
 }
 
-// Registry v2 (PR2 Lane A, 2026-11-19): the wallet-build operation set.
+// Registry v4 (upgraded 2026-11-27; was v2, PR2 Lane A, 2026-11-19): the wallet-build operation set.
 // Every profile carries an `operations` object mapping the 10 wallet-build
 // operations to a support status, and capabilities.json carries a
 // `chainSupport` roll-up keyed by chain. A catalogue listing is not support:
@@ -262,6 +262,11 @@ export function validateReferences(files) {
 // web-wallet fee-quote is DOCUMENTED_NOT_TESTED at profile level (TON is
 // blocked) while chainSupport btc/eth/trx fee-quote is
 // IMPLEMENTED_AND_VERIFIED.
+// Registry v4: chainSupport keys are the full 87-chain vocabulary from
+// the registry schema's chainSupport.propertyNames.enum (the contract for
+// chainSupport keys), not the 13-chain profile vocabulary (CHAINS). A
+// chain no profile lists is scoped to the multichain-extended-wallet
+// profile alone (the 74 expansion chains).
 export function validateOperationsV2(files) {
   const errors = [];
   const profiles = Array.isArray(files.profiles)
@@ -269,9 +274,21 @@ export function validateOperationsV2(files) {
     : (files.profiles?.profiles ?? []);
   const capabilities = files.capabilities;
 
-  if (capabilities?.version !== 3) {
+  if (capabilities?.version !== 4) {
     errors.push(
-      `ERROR capabilities.json.version: expected 3 (registry v3), found ${JSON.stringify(capabilities?.version)}`,
+      `ERROR capabilities.json.version: expected 4 (registry v4), found ${JSON.stringify(capabilities?.version)}`,
+    );
+  }
+
+  // Registry v4: the chainSupport vocabulary is the full 87-chain set from
+  // the registry schema (chainSupport.propertyNames.enum), the contract for
+  // chainSupport keys. CHAINS stays the 13-chain profile vocabulary
+  // (profiles.json chains arrays, validateReferences).
+  const chainSupportChains =
+    files.registrySchema?.properties?.chainSupport?.propertyNames?.enum;
+  if (!Array.isArray(chainSupportChains)) {
+    errors.push(
+      "ERROR registry.schema.json: chainSupport.propertyNames.enum must be an array",
     );
   }
 
@@ -323,7 +340,7 @@ export function validateOperationsV2(files) {
   }
   for (const [chain, entry] of Object.entries(chainSupport)) {
     const label = `capabilities.json.chainSupport.${chain}`;
-    if (!CHAINS.includes(chain)) {
+    if (Array.isArray(chainSupportChains) && !chainSupportChains.includes(chain)) {
       errors.push(`ERROR ${label}: unknown chain "${chain}"`);
     }
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
@@ -338,7 +355,11 @@ export function validateOperationsV2(files) {
         errors.push(`ERROR ${label}.profiles: unknown profile "${id}"`);
       }
     }
-    const expected = chainToProfiles.get(chain) ?? [];
+    // Registry v4: a chain no profile lists is scoped to the
+    // multichain-extended-wallet profile alone (the 74 expansion chains).
+    const expected = chainToProfiles.has(chain)
+      ? chainToProfiles.get(chain)
+      : ["multichain-extended-wallet"];
     const same =
       listed.length === expected.length &&
       [...listed].sort().join(",") === [...expected].sort().join(",");

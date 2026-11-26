@@ -413,7 +413,7 @@ test('Registry v2: an evidenced web-wallet send/sign claim is allowed, broadcast
   );
 });
 
-// Registry v2 shape: version 2, per-profile operations, chainSupport.
+// Registry v4 shape: version 4, per-profile operations, chainSupport.
 const V2_OPERATIONS = [
   'create',
   'derive',
@@ -433,10 +433,10 @@ const V2_STATUSES = new Set([
   'NOT_SUPPORTED',
 ]);
 
-test('Registry v2: version is 2, every profile has all ten operations, chainSupport covers every chain', () => {
+test('Registry v4: version is 4, every profile has all ten operations, chainSupport covers every chain', () => {
   const { entries: profiles } = readRegistry(registryDir, 'profiles');
   const capabilities = readJson(path.join(registryDir, 'capabilities.json'));
-  assert.equal(capabilities.version, 2);
+  assert.equal(capabilities.version, 4);
   const chainSupport = capabilities.chainSupport;
   assert.ok(chainSupport !== null && typeof chainSupport === 'object');
 
@@ -467,14 +467,29 @@ test('Registry v2: version is 2, every profile has all ten operations, chainSupp
       chainToProfiles.get(chain).push(profile.id);
     }
   }
-  assert.deepEqual(Object.keys(chainSupport).sort(), [...chainToProfiles.keys()].sort());
-  for (const [chain, ids] of chainToProfiles) {
+  // Registry v4: chainSupport covers the full 87-chain vocabulary from the
+  // registry schema, not just the 13 chains profiles list.
+  const registrySchema = readJson(
+    path.join(registryDir, 'schemas', 'registry.schema.json'),
+  );
+  const chainSupportChains =
+    registrySchema.properties.chainSupport.propertyNames.enum;
+  assert.deepEqual(
+    Object.keys(chainSupport).sort(),
+    [...chainSupportChains].sort(),
+  );
+  for (const chain of Object.keys(chainSupport)) {
+    // Registry v4: a chain no profile lists is scoped to the
+    // multichain-extended-wallet profile alone (the 74 expansion chains).
+    const ids = chainToProfiles.get(chain) ?? ['multichain-extended-wallet'];
     const entry = chainSupport[chain];
     assert.ok(entry, `chainSupport must cover ${chain}`);
     assert.deepEqual(
       [...entry.profiles].sort(),
       [...ids].sort(),
-      `chainSupport.${chain}.profiles must match the profiles listing ${chain}`,
+      chainToProfiles.has(chain)
+        ? `chainSupport.${chain}.profiles must match the profiles listing ${chain}`
+        : `chainSupport.${chain}.profiles must be ["multichain-extended-wallet"]`,
     );
     for (const operation of V2_OPERATIONS) {
       assert.ok(

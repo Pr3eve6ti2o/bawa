@@ -51,7 +51,7 @@
     },
     "chainSupport": {
       "type": "object",
-      "description": "Registry v2 per-chain roll-up (capabilities.json only). Each chain maps to the profiles listing it and the best demonstrated status per wallet-build operation on that chain.",
+      "description": "Registry v4 per-chain roll-up (capabilities.json only). Each chain maps to the profiles listing it and the best demonstrated status per wallet-build operation on that chain.",
       "propertyNames": {
         "enum": [
           "btc",
@@ -137,7 +137,10 @@
           "seicosmos",
           "axelar",
           "noble",
-          "juno"
+          "juno",
+          "cardano",
+          "kaspa",
+          "starknet"
         ]
       },
       "additionalProperties": {
