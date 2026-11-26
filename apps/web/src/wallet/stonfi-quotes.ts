@@ -22,11 +22,14 @@
 //
 //   npm install @ston-fi/omniston-sdk@0.8.13
 //
-// — exact pin 0.8.13 (latest 0.8.x, MIT per npm registry metadata,
-// verified 2026-11-26; the SDK README warns breaking changes may
+// — exact pin 0.8.13 (latest 0.8.x, MIT verified first-hand from
+// the installed LICENSE file + package.json "license" field,
+// 2026-11-27; the SDK README warns breaking changes may
 // happen even in minor releases while major version is 0, so the pin
-// must stay exact). The dep add is deliberately NOT done here:
-// package.json belongs to another lane and a dep add would collide.
+// must stay exact). The dep add is NOT committed here: the SDK was
+// installed only to run the live-RFQ probe below and then reverted;
+// package.json belongs to another lane (Lane A, panel-rebuild/stonfi)
+// and a dep add would collide.
 // Until it lands, the Swap screen shows the corridor honestly:
 // which pairs it would cover, and that live STON.fi quotes need the
 // SDK. No STON.fi quote is ever invented.
@@ -35,17 +38,28 @@
 // (docs.ston.fi/developer-section/omniston/chains.md, fetched
 // 2026-11-26 — 15 chains; the 11 that are Bawa chains are listed
 // here with their contract addresses exactly as published).
-// TRON (open verification #10): still listed on the live page with
-// USDT (TRC-20 TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t), and the
-// production WebSocket wss://omni-ws.ston.fi accepts connections
-// (probed 2026-11-26: open, clean close). But NO live TRON quote
-// has been seen — that needs the RFQ flow, i.e. the SDK — and NO
-// current per-transaction limit is published anywhere on the page
-// (the $1,000/tx figure is a June-2026 secondary report, not a
-// current official figure, so it is not quoted). TRON pairs are
-// therefore flagged live-unverified and are NOT offered until a live
-// quote is seen. TRON status: partially closed — live listing
-// confirmed, live quote + current limit still open.
+// TRON (open verification #10 — Lane C, 2026-11-27): chains page
+// re-fetched 2026-11-27 (HTTP 200): TRON still listed with USDT
+// (TRC-20 TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t); production
+// WebSocket wss://omni-ws.ston.fi re-probed the same day: open,
+// clean close (code 1000, wasClean, 967 ms). LIVE RFQ ATTEMPTED
+// with the SDK (@ston-fi/omniston-sdk@0.8.13, production WS):
+// control 1 USDT TON -> USDC Base quoted live in 926 ms
+// (quoteId 29febd35…42ba, outputUnits 972488), so the harness
+// works — but every TRON RFQ came back noQuote (server ack, then
+// noQuote ~5 s in, nothing in 45 s): TRON -> TON 10 and 1 USDT,
+// TON -> TRON 10 and 1 USDT, TRON -> Base 10 USDT. No resolver is
+// quoting TRON in either direction at any tried amount. TRON
+// therefore STAYS live-unverified and is NOT offered. NO current
+// per-transaction limit exists anywhere official: the chains page,
+// environments page, SDK guide and SDK 0.8.13 source contain no
+// tx-limit figure (only the reconnection max-5 and the HTLC
+// one-execution-per-order max, both unrelated). The only figure is
+// the official STON.fi blog launch post (2026-06-16, "temporarily
+// limited to $1,000 per transaction" AT LAUNCH) — five months
+// stale, not current, so it is not quoted. TRON status: listing
+// confirmed, live quote still open (no resolvers quoting), current
+// limit still open (no official figure).
 //
 // TON signing (the main engineering cost): Bawa already signs TON
 // transfers offline (signTonOffline in wallet/send.ts, V4R2) — but
