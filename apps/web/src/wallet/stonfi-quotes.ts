@@ -8,28 +8,39 @@
 // Solana is NOT covered; TRON is listed but no live TRON quote has
 // been seen yet (see below). DEX pool fee default 0.3%.
 //
-// WHAT THIS MODULE IS: the quote-flow scaffolding — the Omniston
-// asset table (from the live chains page), the pair-coverage check,
-// and the documented QuoteRequest builder — plus the honest state
-// that live quotes need the SDK. WHAT IT IS NOT: a hand-rolled RFQ
-// client. The RFQ protocol is a typed JSON-RPC-over-WebSocket stream
-// (protobuf-shaped QuoteRequest objects with $case unions, streaming
-// ack / quote_updated / no_quote / keep_alive, HTLC secret hashes
-// for cross-chain orders, order signing, and secret disclosure on
-// the right execution phases — see the Node.js SDK guide,
-// docs.ston.fi, read 2026-11-26). Re-implementing that by hand would
-// be a second SDK, so the remaining step is the dependency add:
+// WHAT THIS MODULE IS: the Omniston asset table (from the live
+// chains page), the pair-coverage check, the documented QuoteRequest
+// builder, AND the live RFQ client. The RFQ protocol is a typed
+// JSON-RPC-over-WebSocket stream (protobuf-shaped QuoteRequest
+// objects with $case unions, streaming ack / quote_updated /
+// no_quote / keep_alive, HTLC secret hashes for cross-chain
+// orders, order signing, and secret disclosure on the right
+// execution phases — see the Node.js SDK guide, docs.ston.fi,
+// read 2026-11-26). Re-implementing that by hand would be a second
+// SDK, so the live client runs on the real SDK:
 //
-//   npm install @ston-fi/omniston-sdk@0.8.13
+//   @ston-fi/omniston-sdk@0.8.13 — exact pin (the SDK README warns
+//   breaking changes may happen even in minor releases while major
+//   version is 0, so the pin must stay exact). MIT — verified
+//   first-hand 2026-11-27: package.json "license": "MIT" plus the
+//   LICENSE file text (Copyright (c) 2024 STON.fi), both read from
+//   the installed package. The SDK is loaded with a dynamic import
+//   inside fetchStonfiQuote, so it lands in its own async chunk —
+//   never in the main chunk — and only loads when a STON.fi quote
+//   is actually fetched. The Swap screen shows live quotes where
+//   the corridor covers the pair, and the honest not-covered /
+//   no-quote state where it does not. No STON.fi quote is ever
+//   invented.
 //
-// — exact pin 0.8.13 (latest 0.8.x, MIT per npm registry metadata,
-// verified 2026-11-26; the SDK README warns breaking changes may
-// happen even in minor releases while major version is 0, so the pin
-// must stay exact). The dep add is deliberately NOT done here:
-// package.json belongs to another lane and a dep add would collide.
-// Until it lands, the Swap screen shows the corridor honestly:
-// which pairs it would cover, and that live STON.fi quotes need the
-// SDK. No STON.fi quote is ever invented.
+// LIVE PROOF (2026-11-27, loud-stone, real SDK over
+// wss://omni-ws.ston.fi — full record in stonfi-quotes.test.ts):
+// 1 USDT on TON -> USDC on Base (1,000,000 base units in) returned
+// a live order quote of 972,487 USDC base units out (resolver
+// Arbiter, 5-minute tradeStartDeadline, ~13 s settlement). 1 TON
+// -> USDT on TON (1,000,000,000 in) returned a live swap quote of
+// 960,344 USDT base units out (min 950,741, resolver Omniston).
+// Both quotes arrived <1 s after the ack. RFQ only — no trade is
+// built, signed or sent here.
 //
 // Asset table: the live chains page
 // (docs.ston.fi/developer-section/omniston/chains.md, fetched
@@ -56,6 +67,12 @@
 // stays DISABLED on mainnet until then.
 import type { ChainId } from '../engine/boundary';
 import type { SwapTokenChoice } from './swap-quotes';
+import type {
+  InferObservableData,
+  Omniston,
+  Quote,
+  QuoteRequest,
+} from '@ston-fi/omniston-sdk';
 
 /** Omniston production WebSocket (trading / RFQ, JSON-RPC). */
 export const STONFI_OMNISTON_WS_URL = 'wss://omni-ws.ston.fi';
@@ -68,9 +85,10 @@ export const STONFI_SDK_EXACT_VERSION = '0.8.13';
 /** DEX pool fee default, percent (0.2% LPs + 0.1% protocol). */
 export const STONFI_DEX_POOL_FEE_PERCENT = 0.3;
 
-export const STONFI_SDK_NEEDED_MESSAGE =
-  `Live STON.fi quotes need ${STONFI_SDK_PACKAGE}@${STONFI_SDK_EXACT_VERSION} — ` +
-  'not installed yet, so no STON.fi quote is shown here.';
+/** One quote attempt gets 15 s; a hung provider must not hang the form. */
+export const STONFI_QUOTE_TIMEOUT_MS = 15_000;
+const STONFI_UNAVAILABLE_MESSAGE =
+  'STON.fi quotes are unavailable right now. Check your connection and try again.';
 export const STONFI_TRON_UNVERIFIED_MESSAGE =
   'TRON is listed by STON.fi, but no live TRON quote has been seen yet — ' +
   'it is not offered until one is.';
@@ -268,4 +286,260 @@ export function buildStonfiQuoteRequest(
           },
         ],
   };
+}
+
+/** One event of the RFQ stream, as the SDK delivers it. */
+export type StonfiRfqEvent = InferObservableData<
+  ReturnType<Omniston['requestForQuote']>
+>;
+
+/**
+ * The sliver of the Omniston client fetchStonfiQuote needs: one RFQ
+ * stream plus the transport close. The real client (default factory
+ * below) satisfies this structurally; tests inject a fake that
+ * replays canned events. Note the SDK's Omniston class declares no
+ * public close() in 0.8.13 (verified against its .d.ts and at
+ * runtime — `typeof omniston.close` is 'undefined'); the close path
+ * is the transport, `omniston.transport.close()`.
+ */
+export interface StonfiRfqClient {
+  readonly transport: { close: () => void };
+  requestForQuote: (request: QuoteRequest) => {
+    subscribe: (observer: {
+      next?: (event: StonfiRfqEvent | null) => void;
+      error?: (error: unknown) => void;
+      complete?: () => void;
+    }) => { unsubscribe: () => void };
+  };
+}
+
+/** A live STON.fi quote, parsed down to what the screen shows. */
+export interface StonfiQuote {
+  /** ID of the quote generated by the platform. */
+  quoteId: string;
+  /** Net amount the recipient would get, destination token base units. */
+  toAmountBaseUnits: string;
+  /** Minimum received (swap settlement only; null for orders). */
+  toAmountMinBaseUnits: string | null;
+  /** Estimated settlement time in seconds (null when not reported). */
+  estimatedSettlementDurationSeconds: number | null;
+  /** Order trade-start deadline, epoch ms (null for swap settlement). */
+  tradeStartDeadlineMs: number | null;
+  /** Epoch ms the quote was fetched — re-quote before acting on it. */
+  fetchedAtMs: number;
+}
+
+export type StonfiQuoteResult =
+  | { status: 'ok'; quote: StonfiQuote }
+  | { status: 'no-quote' }
+  | { status: 'not-covered'; reason: string }
+  | { status: 'unavailable'; reason: string };
+
+export interface StonfiQuoteInput {
+  fromChain: ChainId;
+  toChain: ChainId;
+  fromToken: SwapTokenChoice;
+  toToken: SwapTokenChoice;
+  /** Amount to swap, in the source token's smallest units. */
+  fromAmountBaseUnits: string;
+}
+
+export interface StonfiQuoteDeps {
+  /** Client factory override (tests); otherwise a live client is opened. */
+  createClient?: () => Promise<StonfiRfqClient> | StonfiRfqClient;
+  /** Quote wait budget override (tests); default STONFI_QUOTE_TIMEOUT_MS. */
+  timeoutMs?: number;
+}
+
+function asBaseUnits(value: unknown): string | null {
+  return typeof value === 'string' && /^\d+$/.test(value) ? value : null;
+}
+
+/**
+ * Convert one SDK Quote into the screen's StonfiQuote, or null when
+ * the quote is not usable: a missing/empty quote id, a zero or
+ * malformed output, a malformed swap minimum, or an order quote
+ * whose tradeStartDeadline has already passed. An unusable quote is
+ * ignored and the stream keeps running — the next quoteUpdated may
+ * be a good one. Never a partial quote.
+ */
+export function parseStonfiQuote(quote: Quote): StonfiQuote | null {
+  if (typeof quote.quoteId !== 'string' || quote.quoteId.length === 0) {
+    return null;
+  }
+  const toAmount = asBaseUnits(quote.outputUnits);
+  if (toAmount === null) return null;
+  try {
+    if (BigInt(toAmount) === 0n) return null;
+  } catch {
+    return null;
+  }
+  const estimated =
+    typeof quote.estimatedSettlementDuration === 'number' &&
+    Number.isFinite(quote.estimatedSettlementDuration) &&
+    quote.estimatedSettlementDuration >= 0
+      ? Math.round(quote.estimatedSettlementDuration)
+      : null;
+  const settlement = quote.settlementData;
+  if (settlement.$case === 'order') {
+    const deadline = settlement.value.tradeStartDeadline;
+    if (typeof deadline !== 'number' || !Number.isFinite(deadline)) {
+      return null;
+    }
+    const tradeStartDeadlineMs = deadline * 1000;
+    // An order quote past its trade-start deadline is expired: the
+    // resolver may still settle it at its discretion, but Bawa never
+    // offers an expired quote — the stream may deliver a fresh one.
+    if (tradeStartDeadlineMs <= Date.now()) return null;
+    return {
+      quoteId: quote.quoteId,
+      toAmountBaseUnits: toAmount,
+      toAmountMinBaseUnits: null,
+      estimatedSettlementDurationSeconds: estimated,
+      tradeStartDeadlineMs,
+      fetchedAtMs: Date.now(),
+    };
+  }
+  const minOutput = asBaseUnits(settlement.value.minOutputAmount);
+  if (minOutput === null) return null;
+  return {
+    quoteId: quote.quoteId,
+    toAmountBaseUnits: toAmount,
+    toAmountMinBaseUnits: minOutput,
+    estimatedSettlementDurationSeconds: estimated,
+    tradeStartDeadlineMs: null,
+    fetchedAtMs: Date.now(),
+  };
+}
+
+/**
+ * Open a live Omniston client. Dynamic import: the SDK lands in its
+ * own async chunk, loaded only when a STON.fi quote is fetched —
+ * never in the main chunk, and never until it is needed.
+ */
+async function defaultCreateClient(): Promise<StonfiRfqClient> {
+  const { Omniston } = await import('@ston-fi/omniston-sdk');
+  const omniston = new Omniston({ apiUrl: STONFI_OMNISTON_WS_URL });
+  return {
+    transport: omniston.transport,
+    requestForQuote: (request) => {
+      const stream = omniston.requestForQuote(request);
+      return { subscribe: (observer) => stream.subscribe(observer) };
+    },
+  };
+}
+
+/**
+ * Fetch one live STON.fi quote for a covered pair. Uncovered pairs
+ * return `not-covered` WITHOUT touching the network. The first valid
+ * quoteUpdated wins and the stream is closed; noQuote (or a null
+ * event, which the SDK sends when no resolver has a quote) is an
+ * honest `no-quote`; a stream error, a server-closed stream, or the
+ * 15 s timeout is `unavailable`. Quotes only: the returned quote
+ * carries no transaction data, nothing here signs, and execution
+ * (order building + TON message signing) is a separate step that is
+ * NOT wired — see the module note.
+ */
+export async function fetchStonfiQuote(
+  input: StonfiQuoteInput,
+  deps: StonfiQuoteDeps = {},
+): Promise<StonfiQuoteResult> {
+  const coverage = stonfiCoversPair(
+    input.fromChain,
+    input.fromToken,
+    input.toChain,
+    input.toToken,
+  );
+  if (!coverage.covered) {
+    return { status: 'not-covered', reason: coverage.reason };
+  }
+  const request = buildStonfiQuoteRequest(
+    input.fromChain,
+    input.fromToken,
+    input.toChain,
+    input.toToken,
+    input.fromAmountBaseUnits,
+  );
+  if (request === null) {
+    // Defensive: the builder returns null exactly when the pair is
+    // uncovered, which the coverage check above already excluded.
+    return {
+      status: 'not-covered',
+      reason: 'STON.fi does not cover this pair.',
+    };
+  }
+  const timeoutMs = deps.timeoutMs ?? STONFI_QUOTE_TIMEOUT_MS;
+  let client: StonfiRfqClient;
+  try {
+    const createClient = deps.createClient ?? defaultCreateClient;
+    client = await createClient();
+  } catch {
+    return { status: 'unavailable', reason: STONFI_UNAVAILABLE_MESSAGE };
+  }
+  return new Promise<StonfiQuoteResult>((resolve) => {
+    let settled = false;
+    let subscription: { unsubscribe: () => void } | null = null;
+    const timer = setTimeout(() => {
+      settle({ status: 'unavailable', reason: STONFI_UNAVAILABLE_MESSAGE });
+    }, timeoutMs);
+    function settle(result: StonfiQuoteResult): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        subscription?.unsubscribe();
+      } catch {
+        // Closing a dead stream must not fail the quote.
+      }
+      try {
+        client.transport.close();
+      } catch {
+        // Closing a dead transport must not fail the quote.
+      }
+      resolve(result);
+    }
+    let stream: ReturnType<StonfiRfqClient['requestForQuote']>;
+    try {
+      // The scaffold request is the documented guide shape (proven
+      // by the deep-equality test against the guide's order
+      // example); the cast is the seam to the SDK's generated type.
+      stream = client.requestForQuote(request as unknown as QuoteRequest);
+    } catch {
+      settle({ status: 'unavailable', reason: STONFI_UNAVAILABLE_MESSAGE });
+      return;
+    }
+    try {
+      subscription = stream.subscribe({
+        next: (event) => {
+          if (event === null) {
+            // The SDK sends null when no resolver has a quote after
+            // an old one expired: no valid quote for this RFQ.
+            settle({ status: 'no-quote' });
+            return;
+          }
+          if (event.$case === 'ack') return;
+          if (event.$case === 'quoteUpdated') {
+            const quote = parseStonfiQuote(event.value);
+            if (quote !== null) settle({ status: 'ok', quote });
+            return;
+          }
+          if (event.$case === 'noQuote') {
+            settle({ status: 'no-quote' });
+            return;
+          }
+          // 'unsubscribed': the server closed the stream before any
+          // usable quote arrived.
+          settle({ status: 'unavailable', reason: STONFI_UNAVAILABLE_MESSAGE });
+        },
+        error: () => {
+          settle({ status: 'unavailable', reason: STONFI_UNAVAILABLE_MESSAGE });
+        },
+        complete: () => {
+          settle({ status: 'unavailable', reason: STONFI_UNAVAILABLE_MESSAGE });
+        },
+      });
+    } catch {
+      settle({ status: 'unavailable', reason: STONFI_UNAVAILABLE_MESSAGE });
+    }
+  });
 }
