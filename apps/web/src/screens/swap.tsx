@@ -97,7 +97,6 @@ import {
   type RelayQuoteResult,
 } from '../wallet/relay-quotes';
 import {
-  STONFI_SDK_EXACT_VERSION,
   STONFI_SDK_NEEDED_MESSAGE,
   STONFI_TON_SIGNING_MESSAGE,
   stonfiCoversPair,
@@ -1283,11 +1282,12 @@ export function SwapScreen() {
           set up, your approval to sign, and broadcast switched on. A
           free LI.FI API key (from the LI.FI Partner Portal) would raise
           the quote rate limit. Relay quotes need a proxy or
-          access-token endpoint, and live STON.fi quotes need version{' '}
-          {STONFI_SDK_EXACT_VERSION} of its SDK — neither is set up yet.
-          Executing a quote needs signing and broadcast, which stay
-          switched off until separately approved. Nothing on this screen
-          signs or sends anything.
+          access-token endpoint, and live STON.fi quotes need the RFQ
+          flow wired up (its SDK is installed, and TON order signing is
+          wired) — neither is set up yet. Executing a quote needs the
+          owner&apos;s separate broadcast authorisation, which stays
+          switched off until approved. Nothing on this screen signs or
+          sends anything.
         </p>
         <Link
           to="/send"

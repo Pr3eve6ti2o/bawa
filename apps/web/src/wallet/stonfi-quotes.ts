@@ -18,18 +18,12 @@
 // for cross-chain orders, order signing, and secret disclosure on
 // the right execution phases — see the Node.js SDK guide,
 // docs.ston.fi, read 2026-11-26). Re-implementing that by hand would
-// be a second SDK, so the remaining step is the dependency add:
-//
-//   npm install @ston-fi/omniston-sdk@0.8.13
-//
-// — exact pin 0.8.13 (latest 0.8.x, MIT per npm registry metadata,
-// verified 2026-11-26; the SDK README warns breaking changes may
-// happen even in minor releases while major version is 0, so the pin
-// must stay exact). The dep add is deliberately NOT done here:
-// package.json belongs to another lane and a dep add would collide.
-// Until it lands, the Swap screen shows the corridor honestly:
-// which pairs it would cover, and that live STON.fi quotes need the
-// SDK. No STON.fi quote is ever invented.
+// be a second SDK. The SDK itself is now installed (0.8.13, exact
+// pin, MIT verified first-hand from the installed LICENSE +
+// package.json 2026-11-27); what remains for live quotes is wiring
+// the RFQ flow to it. Until that lands, the Swap screen shows the
+// corridor honestly: which pairs it would cover, and that no live
+// STON.fi quote is shown yet. No STON.fi quote is ever invented.
 //
 // Asset table: the live chains page
 // (docs.ston.fi/developer-section/omniston/chains.md, fetched
@@ -48,12 +42,17 @@
 // confirmed, live quote + current limit still open.
 //
 // TON signing (the main engineering cost): Bawa already signs TON
-// transfers offline (signTonOffline in wallet/send.ts, V4R2) — but
-// Omniston orders need TON Connect-style signing of the order's
-// messages (orderTx.messages), a different message shape, and that
-// path is NOT wired. Quotes need no signature; execution needs the
-// SDK + that signing path + the owner's separate go-ahead. Broadcast
-// stays DISABLED on mainnet until then.
+// transfers offline (signTonOffline in wallet/send.ts, V4R2) — and
+// the Omniston order path is now wired too: signStonfiOrderTonOffline
+// in wallet/stonfi-signing.ts signs an orderTx's messages (TON
+// Connect-style, arbitrary payloads + stateInit) with the same V4R2
+// engine and returns a signed BoC only. Verified 2026-11-27 against
+// a REAL live orderTx (1 USDT on TON -> USDC on Base, quoteId
+// 7fc458a6…59e): the Ed25519 signature verifies against the derived
+// public key and the payload cell is embedded in the signed tree.
+// Quotes need no signature; execution needs the RFQ flow + the
+// owner's separate broadcast authorisation. Broadcast stays DISABLED
+// on mainnet until then.
 import type { ChainId } from '../engine/boundary';
 import type { SwapTokenChoice } from './swap-quotes';
 
@@ -61,22 +60,23 @@ import type { SwapTokenChoice } from './swap-quotes';
 export const STONFI_OMNISTON_WS_URL = 'wss://omni-ws.ston.fi';
 /** Omniston API version. */
 export const STONFI_API_VERSION = 'v1beta8';
-/** SDK package (NOT yet a dependency — see the module note). */
+/** SDK package (installed — see the module note). */
 export const STONFI_SDK_PACKAGE = '@ston-fi/omniston-sdk';
-/** Exact pin for the SDK add (latest 0.8.x, MIT, verified 2026-11-26). */
+/** Exact pin for the SDK (latest 0.8.x, MIT, verified 2026-11-27). */
 export const STONFI_SDK_EXACT_VERSION = '0.8.13';
 /** DEX pool fee default, percent (0.2% LPs + 0.1% protocol). */
 export const STONFI_DEX_POOL_FEE_PERCENT = 0.3;
 
 export const STONFI_SDK_NEEDED_MESSAGE =
-  `Live STON.fi quotes need ${STONFI_SDK_PACKAGE}@${STONFI_SDK_EXACT_VERSION} — ` +
-  'not installed yet, so no STON.fi quote is shown here.';
+  'Live STON.fi quotes need the RFQ flow wired up — the SDK is ' +
+  'installed, but no STON.fi quote is shown here yet.';
 export const STONFI_TRON_UNVERIFIED_MESSAGE =
   'TRON is listed by STON.fi, but no live TRON quote has been seen yet — ' +
   'it is not offered until one is.';
 export const STONFI_TON_SIGNING_MESSAGE =
-  'TON signing for STON.fi orders is not wired yet — Bawa signs TON ' +
-  'transfers offline, but Omniston order messages need a separate path.';
+  'TON signing for STON.fi orders is wired — Bawa signs the order\u2019s ' +
+  'messages offline and returns a signed BoC. Execution still needs ' +
+  'the owner\u2019s separate broadcast authorisation; nothing is sent.';
 
 /** Bawa chain -> Omniston chain id (docs chains page). */
 export const STONFI_CHAIN_IDS: Readonly<Record<string, string>> = {
