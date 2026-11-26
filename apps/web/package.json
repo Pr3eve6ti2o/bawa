@@ -33,6 +33,7 @@
     "@radix-ui/react-switch": "1.2.6",
     "@radix-ui/react-tabs": "1.1.13",
     "@scure/bip39": "2.4.0",
+    "@ston-fi/omniston-sdk": "0.8.13",
     "@trustwallet/wallet-core": "4.9.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",

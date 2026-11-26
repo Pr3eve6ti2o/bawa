@@ -17,10 +17,11 @@
 // rough settlement time. Relay quotes need a proxy or access-token
 // endpoint (VITE_RELAY_PROXY_URL) — with none configured the Relay
 // row says so plainly and no Relay request is made (see
-// wallet/relay-quotes.ts). STON.fi live quotes need its SDK
-// (@ston-fi/omniston-sdk@0.8.13, not installed yet), so the STON.fi
-// row shows which pairs the corridor would cover and that live
-// quotes need the SDK (see wallet/stonfi-quotes.ts). There is no
+// wallet/relay-quotes.ts). STON.fi quotes are live through its
+// installed SDK (@ston-fi/omniston-sdk@0.8.13, exact pin, MIT —
+// Lane A, 2026-11-27, verified live: 1 USDT on TON -> 0.972487
+// USDC on Base) and compete in the comparison where the corridor
+// covers the pair (see wallet/stonfi-quotes.ts). There is no
 // execution path here: the LI.FI response's `transactionRequest` is
 // never read, nothing signs, and mainnet broadcast stays DISABLED
 // until separately authorised. The "What happens next" card says so
@@ -98,10 +99,9 @@ import {
 } from '../wallet/relay-quotes';
 import {
   STONFI_SDK_EXACT_VERSION,
-  STONFI_SDK_NEEDED_MESSAGE,
   STONFI_TON_SIGNING_MESSAGE,
-  stonfiCoversPair,
-  type StonfiCoverage,
+  fetchStonfiQuote,
+  type StonfiQuoteResult,
 } from '../wallet/stonfi-quotes';
 import {
   COMPARE_CHAINS,
@@ -297,8 +297,8 @@ type QuoteState =
 
 /** Relay quote result for the comparison (null until a quote is attempted). */
 type RelayState = RelayQuoteResult | null;
-/** STON.fi coverage for the comparison (null until a quote is attempted). */
-type StonfiState = StonfiCoverage | null;
+/** STON.fi quote result for the comparison (null until a quote is attempted). */
+type StonfiState = StonfiQuoteResult | null;
 
 type RefuelChainsState =
   | { status: 'idle' }
@@ -457,8 +457,9 @@ export function SwapScreen() {
     if (requestId.current !== id) return;
     // Relay quotes run through the configured proxy when one exists;
     // with none configured this returns not-configured without
-    // touching the network. STON.fi coverage is a pure table check —
-    // live quotes need its SDK, so the row states that plainly.
+    // touching the network. STON.fi quotes are live through the
+    // installed SDK; an uncovered pair returns not-covered without
+    // touching the network either.
     const relayResult: RelayQuoteResult = await fetchRelayQuote({
       fromChain,
       toChain,
@@ -470,7 +471,15 @@ export function SwapScreen() {
     });
     if (requestId.current !== id) return;
     setRelayState(relayResult);
-    setStonfiState(stonfiCoversPair(fromChain, fromToken, toChain, toToken));
+    const stonfiResult: StonfiQuoteResult = await fetchStonfiQuote({
+      fromChain,
+      toChain,
+      fromToken,
+      toToken,
+      fromAmountBaseUnits: amountBaseUnits,
+    });
+    if (requestId.current !== id) return;
+    setStonfiState(stonfiResult);
     if (result.status === 'ok') {
       setQuoteState({ status: 'ok', quote: result.quote, fromAmountBaseUnits: amountBaseUnits });
     } else if (result.status === 'no-route') {
@@ -724,6 +733,15 @@ export function SwapScreen() {
       provider: 'relay',
       toAmountBaseUnits: relayState.quote.toAmountBaseUnits,
       toAmountUsd: relayState.quote.toAmountUsd,
+    });
+  }
+  // STON.fi quotes carry no USD figure — the output amount alone
+  // competes (same pair, same destination token).
+  if (stonfiState?.status === 'ok') {
+    comparableQuotes.push({
+      provider: 'stonfi',
+      toAmountBaseUnits: stonfiState.quote.toAmountBaseUnits,
+      toAmountUsd: null,
     });
   }
   const bestProvider: SwapProviderId | null = selectBestRoute(comparableQuotes);
@@ -1041,15 +1059,38 @@ export function SwapScreen() {
             </div>
             {stonfiState === null ? (
               <p>Checking STON.fi…</p>
-            ) : !stonfiState.covered ? (
+            ) : stonfiState.status === 'not-covered' ? (
               <p>{stonfiState.reason}</p>
-            ) : (
+            ) : stonfiState.status === 'ok' ? (
               <>
-                <p>{STONFI_SDK_NEEDED_MESSAGE}</p>
+                <p>
+                  {formatDisplayAmount(
+                    stonfiState.quote.toAmountBaseUnits,
+                    toToken.decimals,
+                    toToken.symbol,
+                  )}
+                  {bestProvider === 'stonfi' ? ' — Best quote' : ''}
+                </p>
+                {stonfiState.quote.tradeStartDeadlineMs !== null && (
+                  <p>
+                    Valid until{' '}
+                    {new Date(
+                      stonfiState.quote.tradeStartDeadlineMs,
+                    ).toLocaleTimeString('en-GB')}{' '}
+                    — fetch a fresh one before acting on it.
+                  </p>
+                )}
                 {(fromChain === 'ton' || toChain === 'ton') && (
                   <p>{STONFI_TON_SIGNING_MESSAGE}</p>
                 )}
               </>
+            ) : stonfiState.status === 'no-quote' ? (
+              <p>
+                STON.fi has no quote for this pair right now. Try a
+                different token or network.
+              </p>
+            ) : (
+              <p>{stonfiState.reason}</p>
             )}
           </div>
           <p className="text-sm text-muted-foreground">
@@ -1283,11 +1324,12 @@ export function SwapScreen() {
           set up, your approval to sign, and broadcast switched on. A
           free LI.FI API key (from the LI.FI Partner Portal) would raise
           the quote rate limit. Relay quotes need a proxy or
-          access-token endpoint, and live STON.fi quotes need version{' '}
-          {STONFI_SDK_EXACT_VERSION} of its SDK — neither is set up yet.
-          Executing a quote needs signing and broadcast, which stay
-          switched off until separately approved. Nothing on this screen
-          signs or sends anything.
+          access-token endpoint — not set up yet. Live STON.fi quotes
+          come from version {STONFI_SDK_EXACT_VERSION} of its SDK,
+          installed for the TON corridor. Executing a quote needs
+          signing and broadcast, which stay switched off until
+          separately approved. Nothing on this screen signs or sends
+          anything.
         </p>
         <Link
           to="/send"
