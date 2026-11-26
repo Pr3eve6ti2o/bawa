@@ -1,0 +1,1 @@
+function e(e){return typeof e==`object`&&!!e&&!Array.isArray(e)}function t(e,t){try{return Object.prototype.hasOwnProperty.call(e,t)?e[t]:void 0}catch{return}}function n(e){if(typeof e!=`object`||!e||Array.isArray(e))return!1;try{let t=Object.getPrototypeOf(e);return t===Object.prototype||t===null}catch{return!1}}export{e as n,t as r,n as t};
