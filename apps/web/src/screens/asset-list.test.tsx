@@ -549,10 +549,11 @@ describe('asset list screen', () => {
     } as unknown as ReturnType<typeof useWallet>);
     const mounted = await mountScreen();
     try {
-      await waitForText(mounted, 'No wallet yet');
+      await waitForText(mounted, 'Zero balances');
       expect(mounted.div.textContent).not.toContain('Balance unavailable');
       expect(mounted.div.textContent).not.toContain('Could not load balance');
-      expect(mounted.div.textContent).not.toContain('Zero balance');
+      // Lane X (Lane D #44): the line is "Zero balances — no wallet yet."
+      expect(mounted.div.textContent).toContain('Zero balances — no wallet yet.');
       // No rows at all — no $0.00 values, no per-unit prices, no
       // filter bar, no per-row Retry.
       expect(mounted.div.textContent).not.toContain('$0.00');
@@ -593,9 +594,10 @@ describe('asset list screen', () => {
     } as unknown as ReturnType<typeof useWallet>);
     const mounted = await mountScreen();
     try {
-      await waitForText(mounted, 'No wallet yet');
+      await waitForText(mounted, 'Zero balances');
+      // Lane X (Lane D #44): the line is "Zero balances — no wallet yet."
       expect(mounted.div.textContent).toContain(
-        'create or import a wallet to see your real balances',
+        'Zero balances — no wallet yet.',
       );
       expect(mounted.div.querySelector('a[href="/create-wallet"]')?.textContent).toBe('Create a wallet');
       expect(mounted.div.querySelector('a[href="/import-wallet"]')?.textContent).toBe('Import a wallet');
@@ -636,10 +638,10 @@ describe('asset list screen', () => {
     }
   });
 
-  it('shows "0 BTC" with "Zero balance" as the subline on zero table rows', async () => {
+  it('shows "0 BTC" with no "Zero balance" subline on zero table rows', async () => {
     // P0-A double-zero (Lane A asset-list audit, Lane D #49): one
-    // balance line per row — "0 BTC" as the amount, "Zero balance"
-    // only as the subline, never both as the amount.
+    // balance line per row — "0 BTC" as the amount. Lane X drops the
+    // "Zero balance" subline entirely (Lane D #49).
     stubPriceFetch({
       ok: true,
       status: 200,
@@ -661,8 +663,7 @@ describe('asset list screen', () => {
       const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
       expect(btc).not.toBeUndefined();
       expect(btc?.textContent).toContain('0 BTC');
-      expect(btc?.textContent).toContain('Zero balance');
-      expect(btc?.textContent?.match(/Zero balance/g)).toHaveLength(1);
+      expect(btc?.textContent).not.toContain('Zero balance');
       expect(btc?.textContent).not.toContain('per BTC');
     } finally {
       await mounted.cleanup();

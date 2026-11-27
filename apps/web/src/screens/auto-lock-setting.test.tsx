@@ -92,13 +92,13 @@ describe('AutoLockSetting', () => {
     vi.clearAllMocks();
   });
 
-  it('explains that the wallet stays unlocked when auto-lock is disabled', () => {
+  it('explains that anyone with the device can open it when auto-lock is disabled', () => {
     setWallet();
     const { div, cleanup } = mount();
 
     try {
-      expect(div.textContent).toContain('Auto-lock is off');
-      expect(div.textContent).toContain('stays unlocked on this device');
+      // Lane X (Lane D #129): "Off — anyone with this device can open it."
+      expect(div.textContent).toContain('Off — anyone with this device can open it.');
     } finally {
       cleanup();
     }
@@ -181,9 +181,7 @@ describe('AutoLockSetting', () => {
     const { div, cleanup } = mount();
 
     try {
-      expect(div.textContent).toContain(
-        'No vault yet. Create or import a wallet first.',
-      );
+      expect(div.textContent).toContain('No vault yet.');
     } finally {
       cleanup();
     }

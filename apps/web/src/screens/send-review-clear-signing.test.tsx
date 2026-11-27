@@ -93,7 +93,9 @@ describe('SendReview contract call', () => {
     });
     try {
       expect(div.textContent).toContain('Contract call');
-      expect(div.textContent).toContain('No clear-signing information');
+      // Lane X (Lane D #80): "No clear-signing info — raw data below.
+      // Check carefully."
+      expect(div.textContent).toContain('No clear-signing info — raw data below. Check carefully.');
       expect(div.textContent).toContain(raw);
     } finally {
       await cleanup();

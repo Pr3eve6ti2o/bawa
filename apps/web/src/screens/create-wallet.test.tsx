@@ -542,10 +542,10 @@ describe('create wallet screen', () => {
     try {
       expect(mounted.div.textContent).toContain('A wallet already exists');
       expect(createWallet).not.toHaveBeenCalled();
-      // Item 17: no delete wall any more — another account comes from the
-      // same phrase, on the Wallets screen.
+      // Item 17 (Lane X, Lane D #31): no delete wall any more — another
+      // account comes from the Wallets screen.
       expect(mounted.div.textContent).toContain(
-        'add another account from the same phrase',
+        'Add an account from Wallets instead.',
       );
       expect(mounted.div.textContent).not.toContain(
         'To start over, delete the existing vault',

@@ -139,7 +139,7 @@ export function RecentActivity() {
               <div className="rounded-bawa border-2 border-ink bg-paper p-4">
                 <p className="text-base font-semibold text-panel-text">No activity yet</p>
                 <p className="mt-1 text-sm text-panel-text-soft">
-                  Your history will appear here after your first transaction.
+                  No transactions yet.
                 </p>
               </div>
             ) : null}

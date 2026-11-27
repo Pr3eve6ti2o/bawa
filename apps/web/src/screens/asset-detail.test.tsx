@@ -386,7 +386,9 @@ describe('asset detail screen', () => {
     try {
       expect(mounted.div.textContent).not.toContain('No wallet imported for this chain');
       expect(mounted.div.textContent).toContain('0x27Ef5cDBe01777D62438AfFeb695e33fC2335979');
-      expect(mounted.div.textContent).toContain('Vault address');
+      // Lane X (Lane D #56): the import-source card is a Derivation
+      // disclosure now — the vault address shows under "Address".
+      expect(mounted.div.textContent).toContain('Address');
     } finally {
       await mounted.cleanup();
     }

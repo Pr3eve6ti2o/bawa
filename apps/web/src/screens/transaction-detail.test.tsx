@@ -277,9 +277,9 @@ describe('transaction detail screen', () => {
     });
     const mounted = await mountScreen('/transactions/0xmissing');
     try {
-      expect(mounted.div.textContent).toContain('not in the loaded history');
+      // Lane X (Lane D #108): "Not in loaded history — status unknown."
+      expect(mounted.div.textContent).toContain('Not in loaded history — status unknown.');
       expect(mounted.div.textContent).toContain('0xmissing');
-      expect(mounted.div.textContent).toContain('Its status is unknown');
       expect(mounted.div.textContent).toContain('Checked at');
     } finally {
       await mounted.cleanup();
@@ -316,7 +316,8 @@ describe('transaction detail screen', () => {
     );
     const mounted = await mountScreen('/transactions/0xmissing');
     try {
-      expect(mounted.div.textContent).toContain('History could not be refreshed');
+      // Lane X (Lane D #107): "Couldn't refresh — showing loaded history."
+      expect(mounted.div.textContent).toContain("Couldn't refresh — showing loaded history.");
       expect(mounted.div.textContent).toContain('Checked at');
     } finally {
       await mounted.cleanup();
@@ -509,7 +510,8 @@ describe('transaction detail screen', () => {
     const mounted = await mountScreen(`/transactions/${genesisHash}`);
     try {
       await flushLookup();
-      expect(mounted.div.textContent).toContain('not in the loaded history');
+      // Lane X (Lane D #108): "Not in loaded history — status unknown."
+      expect(mounted.div.textContent).toContain('Not in loaded history — status unknown.');
       const trackLink = mounted.div.querySelector(
         `a[href="/track?chain=btc&hash=${genesisHash}"]`,
       );

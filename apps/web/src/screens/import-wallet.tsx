@@ -559,9 +559,7 @@ export function ImportWalletScreen() {
             <Badge variant="secondary">Watch-only can never sign or spend</Badge>
           </div>
           <CardDescription>
-            Restore a wallet from its recovery phrase, or track a wallet
-            watch-only from its public key. A watch-only account can never
-            sign or spend.
+            Restore from a phrase, or watch from a public key.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -582,10 +580,7 @@ export function ImportWalletScreen() {
       {mode === 'phrase' && vaultExists && (
         <Alert>
           <AlertDescription>
-            You already have a wallet on this device. If the phrase below
-            is the same as your current wallet&apos;s phrase, you can add a
-            new account from it instead of replacing anything. A different
-            phrase would replace the vault.
+            Same phrase? Add an account instead. A different phrase replaces the vault.
           </AlertDescription>
         </Alert>
       )}
@@ -595,8 +590,7 @@ export function ImportWalletScreen() {
           <CardHeader>
             <CardTitle>Restore from a recovery phrase</CardTitle>
             <CardDescription>
-              Enter the words of the wallet you want to restore, in order.
-              They are used once to derive your addresses, then cleared.
+              Enter the words in order. Used once, then cleared.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -642,14 +636,19 @@ export function ImportWalletScreen() {
                     </p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Only enter a recovery phrase on this screen, on this
-                    device. Never paste it into any other app or website.
-                    Press Tab to complete the word you are typing when it
-                    has only one possible completion. If your wallet uses an
-                    extra word (a 25th word), paste all 25 words here —
-                    the extra word is your recovery passphrase, used to
-                    derive the addresses below. It is never stored.
+                    Type words in order. Tab completes a word.
                   </p>
+                  <details>
+                    <summary className="cursor-pointer text-sm font-medium text-ink">
+                      About the 25th word
+                    </summary>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      If your wallet uses an extra word (a 25th word), paste
+                      all 25 words here — the extra word is your recovery
+                      passphrase, used to derive the addresses below. It is
+                      never stored.
+                    </p>
+                  </details>
                 </div>
                 {phraseError && (
                   <Alert variant="destructive" role="alert">
@@ -752,18 +751,11 @@ export function ImportWalletScreen() {
             <DerivedAddressesList derived={derived} copyable={false} />
             {compareUnavailable ? (
               <p className="text-base leading-6">
-                Unlock your wallet first, then restore this phrase again to
-                compare it. To use a different phrase instead, delete the
-                existing vault from security settings — make sure you have
-                its recovery phrase written down first.
+                Unlock first, then restore to compare.
               </p>
             ) : (
               <p className="text-base leading-6">
-                To use this phrase, delete the existing vault from security
-                settings first. Make sure you have its recovery phrase
-                written down — deleting a vault without its phrase loses
-                the wallet. Or keep your current wallet and add another
-                account from it on the Wallets screen.
+                Delete the vault first — only with your phrase written down.
               </p>
             )}
             <div className="flex flex-col gap-3">
@@ -802,9 +794,7 @@ export function ImportWalletScreen() {
           <CardHeader>
             <CardTitle>Check the restored addresses</CardTitle>
             <CardDescription>
-              These are the account addresses derived from your recovery
-              phrase, Ethereum first. If they are not the addresses you
-              expect, stop — the phrase or the recovery profile is wrong.
+              Check these are your addresses. If not, stop.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -934,8 +924,7 @@ export function ImportWalletScreen() {
               )}
               {chain === 'ton' && (
                 <p className="text-sm text-muted-foreground">
-                  Single public address. No child addresses are derived: the TON path is fully hardened.
-                  Watch-only only — this starter cannot send or withdraw TON.
+                  TON: this address only. No sending.
                 </p>
               )}
             </div>
@@ -949,7 +938,7 @@ export function ImportWalletScreen() {
                 placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
                 maxLength={40}
               />
-              <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser. Do not enter secrets.</p>
+              <p className="text-xs text-muted-foreground">Labels are plain text. No secrets.</p>
             </div>
 
             {error && (
@@ -1014,22 +1003,28 @@ export function ImportWalletScreen() {
             <div className="mt-3 space-y-3">
               <Alert>
                 <AlertDescription>
-                  Watch-only accounts cannot sign transactions. A public
-                  address watches every chain it belongs to — one 0x
-                  address covers all 59 EVM chains. An extended public
-                  key watches one chain.
+                  One 0x address watches all 59 EVM chains.
                 </AlertDescription>
               </Alert>
               <p id="watch-only-notice" className="text-sm leading-5 text-muted-foreground">
-                Only extended PUBLIC keys or public addresses are accepted. Private extended keys (xprv/zprv)
-                are rejected. Import the account-level key (depth 3, account 0) for the selected chain,
-                or paste a public address — an address watches every chain it belongs to.
-                Never paste a mnemonic, seed or private key here.
-                An extended public key lets its holder track this account&apos;s
-                derivable addresses, balances and transaction history. Imported
-                keys are stored in this browser (localStorage). They are readable by this site&apos;s
-                scripts and by extensions with access to this site.
+                Public keys or addresses only — never a private key.
               </p>
+              <details>
+                <summary className="cursor-pointer text-sm font-semibold text-ink">
+                  Which key?
+                </summary>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                  Import the account-level key (depth 3, account 0) for the
+                  selected chain, or paste a public address — an address
+                  watches every chain it belongs to. Private extended keys
+                  (xprv/zprv) are rejected. An extended public key lets its
+                  holder track this account&apos;s derivable addresses,
+                  balances and transaction history. Imported keys are stored
+                  in this browser (localStorage). They are readable by this
+                  site&apos;s scripts and by extensions with access to this
+                  site.
+                </p>
+              </details>
             </div>
           </details>
         </>

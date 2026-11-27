@@ -422,7 +422,9 @@ describe('SwapScreen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No quote yet');
+      // Lane X (Lane D #85): "Enter an amount for a quote. Free to
+      // check; signs nothing."
+      expect(mounted.div.textContent).toContain('Enter an amount for a quote.');
       expect(mounted.div.textContent).not.toContain('You receive');
       expect(mounted.div.textContent).not.toContain('Route');
       const getQuote = findButton(mounted.div, 'Get quote');
@@ -653,7 +655,7 @@ describe('SwapScreen', () => {
       await click(mounted.div, 'Get quote');
       await waitForText(mounted.div, 'You receive');
       await enterAmount(mounted.div, '0.2');
-      await waitForText(mounted.div, 'No quote yet');
+      await waitForText(mounted.div, 'Enter an amount for a quote.');
       expect(mounted.div.textContent).not.toContain('You receive');
     } finally {
       await mounted.cleanup();
@@ -699,9 +701,10 @@ describe('SwapScreen', () => {
     stubFetch(LIFI_OK_FIXTURE);
     const mounted = await mountScreen();
     try {
+      // Lane X (Lane D #83): "{N} networks have no swap provider yet."
       await waitForText(
         mounted.div,
-        'networks have no swap provider in this wallet yet',
+        'networks have no swap provider yet',
       );
       // P1 (Lane S4, item 10): To defaults to the from-chain with no
       // last-used chain — pick Polygon explicitly for this pair.
@@ -822,10 +825,12 @@ describe('SwapScreen', () => {
       await waitForText(mounted.div, 'Signed, not broadcast');
       expect(mounted.div.textContent).toContain(`signed from ${TON_ADDRESS}`);
       expect(mounted.div.textContent).toContain('Message hash aabbccddeeff');
+      // Lane X (Lane D #88): the idle line is "Signing returns a BoC
+      // only. Nothing is sent." — once signed, the signed line keeps
+      // "…broadcast authorisation — nothing was sent."
       expect(mounted.div.textContent).toContain('nothing was sent');
-      expect(mounted.div.textContent).toContain(
-        'held in memory for this session only',
-      );
+      // Lane X (Lane D #89): "Secret held in memory only."
+      expect(mounted.div.textContent).toContain('Secret held in memory only.');
     } finally {
       await mounted.cleanup();
     }
@@ -937,11 +942,14 @@ describe('SwapScreen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      // Lane X (Lane D #86/#87): "Out of gas? gas.zip sends a little
+      // native gas. $0.25–$50.00 per network." / "Swaps aren't executed
+      // yet — quotes only."
       expect(mounted.div.textContent).toContain(
-        'Out of gas on a new network? gas.zip sends a little native coin there — a refuel, not a swap.',
+        'Out of gas? gas.zip sends a little native gas.',
       );
       expect(mounted.div.textContent).toContain(
-        "Quotes only — swaps don't execute yet.",
+        "Swaps aren't executed yet — quotes only.",
       );
       expect(mounted.div.textContent).toContain('What happens next');
       expect(mounted.div.textContent).toContain(

@@ -161,8 +161,8 @@ export function NetworkSelectionScreen() {
         </h1>
         <p className="text-sm text-muted-foreground">
           {devnetEnabled
-            ? "Devnet test mode is on. This wallet connects to test networks with valueless test tokens."
-            : "Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. Devnet test mode is at the top of this screen."}
+            ? "Devnet on — test networks only. Removable anytime."
+            : "Mainnet by default. Disabled chains hide from Assets."}
         </p>
         <p className="text-sm text-muted-foreground">
           {enabled.size} of {SUPPORTED_CHAINS.length} chains enabled.
@@ -270,9 +270,6 @@ export function NetworkSelectionScreen() {
         </div>
       </details>
 
-      <p className="text-sm text-muted-foreground">
-        Your balances and history come from public blockchain networks.
-      </p>
     </section>
   );
 }
@@ -447,9 +444,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
   return (
     <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          When an RPC is down the wallet tries the next one automatically.
-          Add your own RPC, or switch a chain to its backup. Every change
-          refreshes balances straight away, so you can see it work.
+          If an RPC is down, the next one is tried automatically.
         </p>
 
         {/* Lane 6 redesign: the chain choice was a bare <select> of 83
@@ -463,8 +458,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
           id="rpc-chain"
         />
         <p className="text-sm text-muted-foreground">
-          Built-in failover: Dogecoin keeps its SoChain / BlockCypher pair
-          and takes no custom RPC.
+          Dogecoin: built-in failover, no custom RPC.
         </p>
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
@@ -736,7 +730,7 @@ function PriceSourcesCard() {
   }
   const liveLine =
     priced === 0
-      ? 'No prices fetched yet — open Assets and the wallet fetches them.'
+      ? 'No prices yet — open Assets.'
       : `Right now: ${PRICE_SOURCE_ORDER.filter((source) => (counts.get(source) ?? 0) > 0)
           .map(
             (source) =>
@@ -749,9 +743,7 @@ function PriceSourcesCard() {
   return (
     <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Prices come from CoinGecko first. If a price is stale or
-          missing, the wallet tries the next source in line — never a
-          guessed price.
+          Prices: CoinGecko first, then CoinLore, DexScreener, TonAPI, Coinbase. Never guessed.
         </p>
         <ol className="list-decimal space-y-1 pl-5 text-base">
           <li>

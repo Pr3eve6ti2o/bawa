@@ -1610,8 +1610,7 @@ export function SendScreen() {
         </div>
         {pendingLink !== null && (
           <p className="text-sm leading-5 text-muted-foreground">
-            This payment is kept — once your wallet is ready, open Send
-            and it will be filled in.
+            Saved — it will fill in when your wallet is ready.
           </p>
         )}
       </div>
@@ -1705,7 +1704,7 @@ export function SendScreen() {
             ? devnetName
               ? `Devnet test mode. This send broadcasts to the ${devnetName} test network only. Test tokens have no value.`
               : `Devnet test mode. ${config.displayName} has no test network — pick a chain with one.`
-            : 'Sending funds is switched off until it is separately approved. This flow signs offline only. Nothing here sends cryptocurrency anywhere.'}
+            : 'Sending is off until approved. Offline signing only.'}
         </p>
         )}
         {step === 'details' && devnetEnabled && entryStep === 'chain' && (
@@ -1797,7 +1796,7 @@ export function SendScreen() {
         <div className="min-w-0 flex-1">
           <p className="text-base font-semibold text-ink">Scan a QR code</p>
           <p className="text-sm text-muted-foreground">
-            Scan a payment QR and the network, token, amount and address fill in themselves.
+            Scan a payment QR — everything fills in.
           </p>
         </div>
       </div>
@@ -2049,7 +2048,7 @@ export function SendScreen() {
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Check the address — sent funds cannot be reversed.
+            Check the address. Sent funds can&apos;t come back.
           </p>
           {/* Lane 3 (UX-major): copycat warning — the selected token is
               unverified, but a verified token with the same name or
@@ -2225,7 +2224,7 @@ export function SendScreen() {
             )}
             {priceUnavailable && (
               <p className="text-sm text-muted-foreground">
-                Price unavailable — the amount shows without a dollar value.
+                Price unavailable.
               </p>
             )}
             {/* Lane 6 (UX-major programme): the fee line shows on
@@ -2396,7 +2395,7 @@ export function SendScreen() {
           {devnetEnabled && devnetBroadcast.status === 'submitted' && (
             <div className="space-y-2 text-base">
               <p className="text-ink">
-                Broadcast submitted — track it on the testnet explorer.
+                Sent — track it on the explorer.
               </p>
               <a
                 href={devnetBroadcast.explorerUrl}
@@ -2414,8 +2413,7 @@ export function SendScreen() {
                 {devnetBroadcast.reason}
               </p>
               <p className="text-muted-foreground">
-                The transaction is signed but was not broadcast. Check the
-                test network first before retrying — never resend blindly.
+                Signed, not sent. Check the network before retrying.
               </p>
             </div>
           )}
@@ -2442,9 +2440,7 @@ export function SendScreen() {
             </Button>
           </div>
           <p className="text-sm leading-5 text-muted-foreground">
-            If it is ever unclear whether a transaction was sent, it stays unresolved —
-            never resend it and never create a replacement without
-            checking the network first.
+            Unclear? Don&apos;t resend. Check the network first.
           </p>
           <Link
             to="/"

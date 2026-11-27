@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BawaIcon } from '../ui/components/icons';
-import { StepCard } from '../ui/components/step-card';
+import { Badge } from '../ui/components/badge';
 import { Link, useSearchParams } from 'react-router';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
@@ -77,8 +76,9 @@ const GENESIS_BTC_HASH =
 // Guidance below the lookup form, collapsed by default (Phase 2, Lane D):
 // the lookup is the job of this screen, so the tool comes first and the
 // help sits behind one tap — a native details/summary, so it stays
-// keyboard-accessible with no extra state. The content is unchanged:
-// three steps, what a result shows, and the genesis-coinbase example
+// keyboard-accessible with no extra state. Lane X (Lane D #98/#99):
+// the step cards and "what a result shows" list are gone — the form
+// labels already say it. Only the genesis-coinbase example stays,
 // with its live lookup button.
 function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
   return (
@@ -87,46 +87,13 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
         How tracking works
       </h2>
 
-      <div className="mt-5 grid gap-6 md:grid-cols-2">
-        <ol className="space-y-3">
-          <li>
-            <StepCard icon={<BawaIcon name="network" className="size-5" />} label="Search for the chain." state="pending" />
-          </li>
-          <li>
-            <StepCard icon={<BawaIcon name="search" className="size-5" />} label="Paste the transaction hash." state="pending" />
-          </li>
-          <li>
-            <StepCard icon={<BawaIcon name="clock" className="size-5" />} label="Look it up to see its status." state="pending" />
-          </li>
-        </ol>
-
-        <div>
-          <h3 className="font-semibold text-ink">What a result shows</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-base text-ink">
-            <li>Status and confirmations</li>
-            <li>Block</li>
-            <li>From and to addresses</li>
-            <li>Amount and fee</li>
-            <li>Time</li>
-            <li>The indexer it came from</li>
-            <li>A link to the explorer</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-2 text-base text-ink">
-        <p>Results come from public indexers and may lag behind the chain.</p>
-        <p>A TON lookup also needs the account address.</p>
-      </div>
 
       <div className="mt-6 rounded-bawa border-2 border-ink bg-paper p-4">
         <h3 className="font-semibold text-ink">
           Try the first Bitcoin transaction
         </h3>
         <p className="mt-2 text-base text-ink">
-          This is the coinbase transaction of the genesis block, a real
-          public Bitcoin transaction. Looking it up fetches the live result
-          from the indexer.
+          The first Bitcoin transaction. Try it.
         </p>
         <code className="mt-3 block break-all font-mono text-sm text-panel-text">
           {GENESIS_BTC_HASH}
@@ -165,7 +132,7 @@ export function TransactionDetails({ data, chain, checkedAt }: {
             : `${data.confirmations.toLocaleString('en-GB')} confirmations`}
         </p>
         <p className='text-sm text-muted-foreground'>
-          Included transactions are shown with their confirmation count. This is not a finality guarantee.
+          Confirmations shown — not a finality guarantee.
         </p>
         <dl className='space-y-2 text-base'>
           {rows.map(([label, value]) => (
@@ -284,7 +251,10 @@ export function TrackTransactionScreen() {
       <header className='space-y-2 lg:col-span-2'>
         <h1 className=' font-bold'>Track a transaction</h1>
         <p className='text-sm text-muted-foreground'>
-          Look up any transaction by its hash, or see recent activity for an address. Results come from public indexers and may lag behind the chain.
+          Look up a hash, or recent activity for an address.
+        </p>
+        <p>
+          <Badge>Indexers may lag</Badge>
         </p>
       </header>
 
@@ -331,7 +301,7 @@ export function TrackTransactionScreen() {
                 aria-describedby='ton-address-note'
               />
               <p id='ton-address-note' className='text-sm text-muted-foreground'>
-                TonCenter identifies a transaction by account, lt and hash, so a TON lookup needs the account address as well as the hash.
+                TON needs the account address too.
               </p>
             </div>
           )}
@@ -385,7 +355,7 @@ export function TrackTransactionScreen() {
         {/* The activity lookup reuses the chain picked above; name it
             here, because the picker is a screen away once scrolled. */}
         <p className='text-sm text-muted-foreground'>
-          On {chainConfig(chain).displayName} — change the chain above to look at another network.
+          On {chainConfig(chain).displayName}.
         </p>
         <form
           className='space-y-3'
@@ -440,7 +410,6 @@ export function TrackTransactionScreen() {
         {activity.kind === 'result' && activity.result.status === 'ok' && activity.result.data.length === 0 && (
           <div className='space-y-1 text-base'>
             <p>No transactions found for this address.</p>
-            <p className='text-muted-foreground'>Indexed results may lag behind the chain.</p>
           </div>
         )}
         {activity.kind === 'result' && activity.result.status === 'ok' && activity.result.data.length > 0 && (

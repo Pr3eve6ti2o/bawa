@@ -275,8 +275,7 @@ export function TransactionDetailScreen() {
           role="alert"
           className="mb-4 rounded-xl border border-warning-border bg-warning-surface p-4 text-base text-warning-text"
         >
-          History could not be refreshed. The information below is from the
-          loaded history; the check time marks the refresh attempt.
+          Couldn&apos;t refresh — showing loaded history.
         </p>
       )}
 
@@ -372,8 +371,7 @@ export function TransactionDetailScreen() {
         <section className="rounded-2xl border border-border bg-card p-5 lg:grid lg:grid-cols-2 lg:gap-6">
           <div>
             <p>
-              This transaction is not in the loaded history. Its status is
-              unknown.
+              Not in loaded history — status unknown.
             </p>
             <dl className="mt-3 space-y-1">
               <dt className="text-sm font-medium text-muted-foreground">

@@ -209,7 +209,9 @@ export function AddTokenDialog({
   const addableChains = availableFor('derive');
   const enabledChains = wallet.enabledChains ?? [...addableChains];
   const chainDisplayName = chainConfig(chain).displayName;
-  const filteredAddChains = filterChains(addableChains, chainQuery);
+  const filteredAddChains = filterChains(addableChains, chainQuery).filter(
+    (chainId) => !enabledChains.includes(chainId),
+  );
   // P1 (Lane S1): the Add Chain list reuses the shared picker's
   // family grouping, with the last-used chain first.
   const lastUsedAddChain = readLastUsedChain(addableChains);
@@ -539,7 +541,7 @@ export function AddTokenDialog({
         <DialogHeader>
           <DialogTitle>Add token</DialogTitle>
           <DialogDescription>
-            Add a chain to your wallet, or add a token by ticker or contract address.
+            Add a chain, or a token by ticker or contract.
           </DialogDescription>
         </DialogHeader>
 
@@ -617,7 +619,9 @@ export function AddTokenDialog({
             ))}
             {filteredAddChains.length === 0 && (
               <li className="px-3 py-2 text-base text-ink">
-                No chains match &ldquo;{chainQuery.trim()}&rdquo;.
+                {chainQuery.trim() === ''
+                  ? 'All chains are already enabled.'
+                  : `No chains match “${chainQuery.trim()}”.`}
               </li>
             )}
           </ul>
@@ -626,8 +630,7 @@ export function AddTokenDialog({
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             {wallet.devnetEnabled && (
               <p className="text-base font-medium text-ink">
-                Adding tokens is off in devnet test mode — switch back to
-                mainnet to add a token.
+                Adding tokens is off in devnet.
               </p>
             )}
             <div className="flex flex-col gap-2">
@@ -653,8 +656,7 @@ export function AddTokenDialog({
                 </Button>
               </div>
               <p className="text-xs text-ink/70">
-                Searching finds the token&apos;s chain and contract. If it is not found,
-                add it by contract address below.
+                Search finds chain + contract. Not found? Add by contract below.
               </p>
               {searchError !== null && (
                 <p role="alert" className="text-base font-medium text-ink">

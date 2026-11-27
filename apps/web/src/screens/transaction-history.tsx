@@ -72,20 +72,19 @@ export function TransactionHistoryScreen() {
       <h1 className="font-bold tracking-tight text-panel-text">Activity</h1>
       <p className="text-sm text-panel-text-muted">
         <Link to="/track" className="text-panel-accent underline underline-offset-4">
-          Look up a transaction by hash
+          Look up a hash
         </Link>{' '}
-        or check recent activity for any address.
+        or an address.
       </p>
 
       {chains.length === 0 ? (
         <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
           <h2 className="font-semibold text-panel-text">No transactions yet</h2>
           <p className="text-sm leading-5 text-panel-text-muted">
-            Transaction history isn't available on any chain yet.
+            No history on any chain yet.
           </p>
           <p className="text-sm leading-5 text-panel-text-muted">
-            Import a watch-only wallet to see its derived addresses, or open
-            Receive to share an address.
+            Import a watch-only wallet, or share an address from Receive.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Button type="button" size="sm" asChild>
@@ -133,10 +132,6 @@ export function TransactionHistoryScreen() {
               // with the way out.
               <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
                 <h2 className="font-semibold text-panel-text">No wallet yet</h2>
-                <p className="text-sm leading-5 text-panel-text-muted">
-                  No wallet on this device yet. Create or import one to
-                  see its transactions.
-                </p>
                 <div className="flex flex-wrap gap-3 pt-1">
                   <Button type="button" size="sm" asChild>
                     <Link to="/create-wallet">Create a wallet</Link>
@@ -152,9 +147,6 @@ export function TransactionHistoryScreen() {
               // old screen showed the bare line alone.
               <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
                 <h2 className="font-semibold text-panel-text">No transactions yet</h2>
-                <p className="text-sm leading-5 text-panel-text-muted">
-                  Your history will appear here after your first transaction.
-                </p>
                 <div className="flex flex-wrap gap-3 pt-1">
                   <Button type="button" size="sm" asChild>
                     <Link to="/receive">Receive</Link>

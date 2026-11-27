@@ -424,7 +424,8 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Sending funds is switched off');
+      // Lane X (Lane D #72): "Sending is off until approved."
+      expect(mounted.div.textContent).toContain('Sending is off until approved.');
       await reachReview(mounted.div);
       expect(mounted.div.textContent).toContain('Review your send');
       expect(mounted.div.textContent).toContain('0.5 ETH');

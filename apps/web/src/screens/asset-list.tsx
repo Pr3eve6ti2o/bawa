@@ -138,8 +138,7 @@ export function AssetListScreen() {
             <BawaIcon name="wallet" className="size-6" />
           </span>
           <p className="min-w-40 flex-1 text-base leading-6 font-medium text-ink">
-            No wallet yet — create or import a wallet to see your real
-            balances.
+            Zero balances — no wallet yet.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" size="lg" asChild>

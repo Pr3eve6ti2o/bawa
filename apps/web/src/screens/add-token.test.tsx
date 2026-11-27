@@ -201,13 +201,31 @@ afterEach(() => {
 });
 
 describe('AddTokenDialog — add chain mode', () => {
-  it('lists all 22 registry chains and adds a disabled one', async () => {
+  it('lists disabled registry chains only and adds one', async () => {
     const mounted = await mountDialog();
     try {
       clickButton(document, 'Add chain');
+      // Lane X (Lane D #151): the add-chain list shows disabled
+      // chains only — enabled ones (Ethereum, Dogecoin in this
+      // fixture) are already in the wallet and are not listed.
       expect(document.body.textContent).toContain('Solana');
-      expect(document.body.textContent).toContain('Dogecoin');
-      // Solana is disabled in the mock wallet; Ethereum is enabled.
+      const chainList = document.querySelector('ul[class*="max-h-[50vh]"]');
+      const addRows = [...(chainList?.querySelectorAll('li') ?? [])].filter((li) =>
+        [...li.querySelectorAll('button')].some(
+          (button) => button.textContent?.trim() === 'Add',
+        ),
+      );
+      // 87 registry chains minus the 12 enabled in this fixture.
+      expect(addRows).toHaveLength(75);
+      expect(
+        addRows.some(
+          (li) =>
+            li.textContent?.includes('Ethereum') &&
+            !li.textContent?.includes('Ethereum Classic'),
+        ),
+      ).toBe(false);
+      expect(addRows.some((li) => li.textContent?.includes('Dogecoin'))).toBe(false);
+      // Solana is disabled in the mock wallet.
       // P1 (Lane S1): the list is family-grouped now, so a 'Solana'
       // group heading precedes the row — match the row (the li with
       // the Add button), not the heading.
@@ -233,19 +251,28 @@ describe('AddTokenDialog — add chain mode', () => {
     }
   });
 
-  it('shows enabled chains as Enabled with no Add button', async () => {
+  it('hides enabled chains from the add-chain list', async () => {
     const mounted = await mountDialog();
     try {
       clickButton(document, 'Add chain');
-      const ethRow = [...document.querySelectorAll('li')].find((li) =>
-        li.textContent?.includes('Ethereum'),
-      );
-      expect(ethRow?.textContent).toContain('Enabled');
-      expect(
-        [...(ethRow?.querySelectorAll('button') ?? [])].some(
+      // Lane X (Lane D #151): an enabled chain is already in the
+      // wallet, so it is not listed at all — no "Enabled" row, no
+      // Add button for it. (Ethereum Classic is disabled in this
+      // fixture, so it still lists — exclude it from the check.)
+      const chainList = document.querySelector('ul[class*="max-h-[50vh]"]');
+      const addRows = [...(chainList?.querySelectorAll('li') ?? [])].filter((li) =>
+        [...li.querySelectorAll('button')].some(
           (button) => button.textContent?.trim() === 'Add',
         ),
+      );
+      expect(
+        addRows.some(
+          (li) =>
+            li.textContent?.includes('Ethereum') &&
+            !li.textContent?.includes('Ethereum Classic'),
+        ),
       ).toBe(false);
+      expect(addRows.some((li) => li.textContent?.includes('Dogecoin'))).toBe(false);
     } finally {
       await mounted.cleanup();
     }
@@ -1077,7 +1104,7 @@ describe('AddTokenDialog — devnet mode', () => {
     try {
       // DialogContent portals to document.body, not the mount div.
       expect(document.body.textContent).toContain(
-        'Adding tokens is off in devnet test mode',
+        'Adding tokens is off in devnet.',
       );
       const addButton = [...document.querySelectorAll('button')].find(
         (candidate) => candidate.textContent?.trim() === 'Add',

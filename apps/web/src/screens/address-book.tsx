@@ -135,13 +135,10 @@ export function AddressBookScreen() {
           Address book
         </h1>
         <p className="text-sm text-muted-foreground">
-          Save the addresses you send to often, with a label for each one.
-          Pick a label in Send instead of pasting the address again.
+          Save frequent addresses with a label. Pick one in Send.
         </p>
         <p className="text-sm text-muted-foreground">
-          Saved on this device only, and never sent anywhere. Addresses are
-          only added when you type them here — nothing is added from your
-          history or from a payment without being asked.
+          Saved on this device only.
         </p>
       </header>
 
@@ -174,7 +171,12 @@ export function AddressBookScreen() {
               <Input
                 id="address-book-address"
                 type="text"
-                placeholder={'Enter a ' + chainConfig(chain).displayName + ' address'}
+                placeholder={
+                  'Enter ' +
+                  (/^[AEIOU]/i.test(chainConfig(chain).displayName) ? 'an ' : 'a ') +
+                  chainConfig(chain).displayName +
+                  ' address'
+                }
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
                 autoComplete="off"
@@ -182,8 +184,7 @@ export function AddressBookScreen() {
                 aria-describedby={error !== null ? 'address-book-error' : undefined}
               />
               <p className="text-sm text-muted-foreground">
-                The address is checked for {chainConfig(chain).displayName}{' '}
-                before it is saved.
+                Checked before saving.
               </p>
             </div>
             {error !== null && (
@@ -218,8 +219,7 @@ export function AddressBookScreen() {
           <Card radius="xl">
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                No saved addresses yet. Add the first one above — a label,
-                a network, and the address.
+                No addresses yet.
               </p>
               <Link
                 to="/send"

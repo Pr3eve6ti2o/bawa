@@ -371,8 +371,10 @@ describe('TrackTransactionScreen', () => {
     const { div } = mounted;
 
     expect(div.textContent).toContain('How tracking works');
-    expect(div.textContent).toContain('What a result shows');
-    expect(div.textContent).toContain('may lag behind the chain');
+    // Lane X (Lane D #98/#99/#103): the step cards and "what a result
+    // shows" are gone; the lag note is the "Indexers may lag" badge.
+    expect(div.textContent).toContain('Try the first Bitcoin transaction');
+    expect(div.textContent).toContain('Indexers may lag');
     expect(div.textContent).toContain(btcHash);
 
     await clickButton(div, 'Look up this example');
@@ -382,16 +384,19 @@ describe('TrackTransactionScreen', () => {
     expect(div.textContent).toContain('50 BTC');
   });
 
-  it('shows the guide expanded by default as step cards', () => {
+  it('shows the guide with the example only, no step cards', () => {
+    // Lane X (Lane D #98/#99): the step cards and "what a result
+    // shows" list are gone — the form labels already say it. Only the
+    // genesis example stays.
     mounted = mount();
     const { div } = mounted;
     expect(div.querySelector('details')).toBeNull();
     const guide = div.querySelector('[aria-labelledby="track-guide-heading"]');
     expect(guide).not.toBeNull();
-    expect(guide?.textContent).toContain('Search for the chain.');
-    expect(guide?.textContent).toContain('Paste the transaction hash.');
-    expect(guide?.textContent).toContain('Look it up to see its status.');
-    expect(guide?.textContent).toContain('What a result shows');
+    expect(guide?.textContent).toContain('Try the first Bitcoin transaction');
+    expect(guide?.textContent).toContain('The first Bitcoin transaction. Try it.');
+    expect(guide?.textContent).not.toContain('Search for the chain.');
+    expect(guide?.textContent).not.toContain('What a result shows');
     const grey = guide?.querySelectorAll('[class*="text-muted-foreground"], [class*="text-gray"]');
     expect(grey?.length).toBe(0);
   });

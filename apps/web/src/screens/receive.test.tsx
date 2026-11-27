@@ -145,6 +145,21 @@ async function fillInput(input: HTMLInputElement, value: string): Promise<void> 
   });
 }
 
+// Lane X (Lane D #70): the Buy panel is one select bar now — pick a
+// provider from it before asserting that provider's copy or button.
+async function selectBuyProvider(div: HTMLDivElement, id: string): Promise<void> {
+  const select = div.querySelector('#buy-provider') as HTMLSelectElement | null;
+  expect(select).not.toBeNull();
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )?.set;
+    setter?.call(select as HTMLSelectElement, id);
+    select?.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
 const ALL_CHAINS: ChainKey[] = [
   'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base',
   'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll',
@@ -238,6 +253,8 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');
     try {
+      // Lane X (Lane D #70): Coinbase's copy shows once it is picked.
+      await selectBuyProvider(mounted.div, 'coinbase');
       expect(mounted.div.textContent).toContain('Buy crypto');
       expect(mounted.div.textContent).toContain("Buy isn't set up yet");
       expect(mounted.div.textContent).toContain(
@@ -266,6 +283,8 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');
     try {
+      // Lane X (Lane D #70): pick Coinbase from the select bar first.
+      await selectBuyProvider(mounted.div, 'coinbase');
       const button = [...mounted.div.querySelectorAll('button')].find(
         (candidate) => candidate.textContent === 'Buy with Coinbase',
       );
@@ -304,6 +323,8 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');
     try {
+      // Lane X (Lane D #70): pick Coinbase from the select bar first.
+      await selectBuyProvider(mounted.div, 'coinbase');
       const button = [...mounted.div.querySelectorAll('button')].find(
         (candidate) => candidate.textContent === 'Buy with Coinbase',
       );
@@ -338,34 +359,54 @@ describe('receive screen', () => {
   });
 
   // Lane B (providers Phase 2): the Buy provider picker.
+  // Lane X (Lane D #70): the panel is one select bar now — the seven
+  // providers are the select's options in rank order, and each
+  // provider's setup copy shows only when it is selected.
   it('shows all seven providers in rank order, none offering a fake Buy', async () => {
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');
     try {
-      const text = mounted.div.textContent ?? '';
-      const order = [
-        'Ramp',
-        'MoonPay',
-        'Onramper',
-        'Banxa',
-        'Transak',
-        'Mercuryo',
-        'Coinbase',
-      ];
-      let lastIndex = -1;
-      for (const name of order) {
-        const index = text.indexOf(name, lastIndex + 1);
-        expect(index).toBeGreaterThan(lastIndex);
-        lastIndex = index;
-      }
-      expect(text).toContain('Not set up yet');
-      expect(text).toContain('Needs a backend');
-      expect(text).toContain('hostApiKey');
-      expect(text).toContain('sk_live_');
-      expect(text).toContain('partnerRef');
-      expect(text).toContain('widget_id');
-      expect(text).toContain(
-        'Fees are indicative only — the quote at purchase time is authoritative.',
+      const select = mounted.div.querySelector(
+        '#buy-provider',
+      ) as HTMLSelectElement | null;
+      expect(select).not.toBeNull();
+      const options = [...(select?.querySelectorAll('option') ?? [])].map(
+        (option) => option.textContent?.trim(),
+      );
+      expect(options).toEqual([
+        '1. Ramp',
+        '2. MoonPay',
+        '3. Onramper',
+        '4. Banxa',
+        '5. Transak',
+        '6. Mercuryo',
+        '7. Coinbase',
+      ]);
+      // The default (Ramp) row carries its own setup copy, and no
+      // provider offers a Buy button while nothing is configured.
+      expect(mounted.div.textContent).toContain('Not set up yet');
+      expect(mounted.div.textContent).toContain('hostApiKey');
+      expect(mounted.div.textContent).toContain('Fees are indicative.');
+      expect(
+        [...mounted.div.querySelectorAll('button')].find((candidate) =>
+          candidate.textContent?.startsWith('Buy with'),
+        ),
+      ).toBeUndefined();
+      // Each other provider's setup copy appears when it is selected.
+      await selectBuyProvider(mounted.div, 'moonpay');
+      expect(mounted.div.textContent).toContain('sk_live_');
+      await selectBuyProvider(mounted.div, 'banxa');
+      expect(mounted.div.textContent).toContain('partnerRef');
+      await selectBuyProvider(mounted.div, 'transak');
+      expect(mounted.div.textContent).toContain('Needs a backend');
+      expect(mounted.div.textContent).toContain(
+        'API key plus an API secret that must stay server-side.',
+      );
+      await selectBuyProvider(mounted.div, 'mercuryo');
+      expect(mounted.div.textContent).toContain('widget_id');
+      await selectBuyProvider(mounted.div, 'coinbase');
+      expect(mounted.div.textContent).toContain(
+        'Coinbase Onramp onboarding and API keys',
       );
       expect(
         [...mounted.div.querySelectorAll('button')].find((candidate) =>
@@ -429,6 +470,8 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');
     try {
+      // Lane X (Lane D #70): pick MoonPay from the select bar first.
+      await selectBuyProvider(mounted.div, 'moonpay');
       expect(mounted.div.textContent).toContain(
         'paste your own address inside MoonPay',
       );
@@ -462,6 +505,8 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');
     try {
+      // Lane X (Lane D #70): pick Banxa from the select bar first.
+      await selectBuyProvider(mounted.div, 'banxa');
       expect(mounted.div.textContent).toContain(
         'A plain redirect — no quote in Bawa',
       );
@@ -496,6 +541,8 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen('/receive?buy=1');
     try {
+      // Lane X (Lane D #70): pick Coinbase from the select bar first.
+      await selectBuyProvider(mounted.div, 'coinbase');
       expect(mounted.div.textContent).toContain(
         'No address on a network Coinbase delivers to.',
       );
@@ -504,6 +551,8 @@ describe('receive screen', () => {
           (candidate) => candidate.textContent === 'Buy with Coinbase',
         ),
       ).toBeUndefined();
+      // Lane X (Lane D #70): Ramp's button shows once Ramp is picked.
+      await selectBuyProvider(mounted.div, 'ramp');
       await clickButton(mounted.div, 'Buy with Ramp');
       const url = new URL(popup.location.href);
       expect(url.searchParams.get('userAddress')).toBe(TON_ADDRESS);
@@ -587,8 +636,9 @@ describe('receive screen', () => {
     try {
       await reachDetails(mounted.div);
       expect(mounted.div.textContent).toContain('0xWatchOnlyEthAddress0000000000000000000');
+      // Lane X (Lane D #61): "Watch-only: can receive, can't send."
       expect(mounted.div.textContent).toContain(
-        'Watch-only account — this address can receive, but this wallet cannot sign or send from it.',
+        "Watch-only: can receive, can't send.",
       );
     } finally {
       await mounted.cleanup();
@@ -1032,12 +1082,12 @@ describe('receive screen', () => {
       await clickButton(mounted.div, 'USD Coin');
       const mainBefore = mounted.div.querySelector('svg title')?.textContent;
       expect(mainBefore).toBe(VAULT_ETH);
-      // Lane 7: the heading names the shown template, and the
+      // Lane 7 (Lane X, Lane D #69): the heading is just "QR type"
+      // now — the shown template is the marked segment below, and the
       // unavailable payment template says why instead of sitting
       // there as a dead box. Lane 4: the segments are compact labels
       // now — the 64 px mini-QR thumbnails are gone (all three looked
       // identical at that size and no 64 px code is scannable).
-      expect(mounted.div.textContent).toContain('QR type: Address');
       // Lane H (COSS Segmented Control): the switcher is one control
       // with all three templates as segments — the active one is
       // marked, not missing from the row.
@@ -1093,7 +1143,8 @@ describe('receive screen', () => {
       const mainAfter = mounted.div.querySelector('svg title')?.textContent;
       expect(mainAfter).not.toBe(mainBefore);
       expect(mainAfter).toContain('chain=eth');
-      expect(mounted.div.textContent).toContain('QR type: Share link');
+      // Lane X (Lane D #69): the active template is the marked segment.
+      expect(linkQr?.getAttribute('aria-pressed')).toBe('true');
       const addressQr = [...mounted.div.querySelectorAll('button')].find(
         (button) =>
           button.getAttribute('aria-label') === 'Show address QR',
@@ -1146,7 +1197,7 @@ describe('receive screen', () => {
       expect(mounted.div.textContent).not.toContain(
         'Payment request needs an amount',
       );
-      expect(mounted.div.textContent).toContain('QR type: Payment request');
+      // Lane X (Lane D #69): the active template is the marked segment above.
       const paymentTitle = mounted.div.querySelector('svg title');
       expect(paymentTitle?.textContent).toBe(
         'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@1/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=25000000',
@@ -1157,14 +1208,16 @@ describe('receive screen', () => {
       await act(async () => {
         addressQr?.click();
       });
-      expect(mounted.div.textContent).toContain('QR type: Address');
+      // Lane X (Lane D #69): the active template is the marked segment.
+      expect(addressQr?.getAttribute('aria-pressed')).toBe('true');
       const paymentQrAgain = findSmall('Show payment request QR');
       expect(paymentQrAgain).not.toBeUndefined();
       expect((paymentQrAgain as HTMLButtonElement).disabled).toBe(false);
       await act(async () => {
         paymentQrAgain?.click();
       });
-      expect(mounted.div.textContent).toContain('QR type: Payment request');
+      // Lane X (Lane D #69): the active template is the marked segment.
+      expect(paymentQrAgain?.getAttribute('aria-pressed')).toBe('true');
       const title = mounted.div.querySelector('svg title');
       expect(title?.textContent).toBe(
         'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@1/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=25000000',
@@ -1230,9 +1283,8 @@ describe('receive screen', () => {
       expect(qrTitle).not.toContain(VAULT_ETH);
       const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
       expect(link?.textContent).toContain(`to=${HD_ETH}`);
-      expect(mounted.div.textContent).toContain(
-        'Receiving address 3 of this account',
-      );
+      // Lane X (Lane D #67): "Address 3."
+      expect(mounted.div.textContent).toContain('Address 3.');
       const button = [...mounted.div.querySelectorAll('button')].find(
         (candidate) => candidate.textContent === 'New address',
       );
@@ -1288,9 +1340,8 @@ describe('receive screen', () => {
       // receivable chain — Solana is one search away, no toggle.
       await pickChain(mounted.div, 'sol');
       await clickButton(mounted.div, 'Solana · SOL');
-      expect(mounted.div.textContent).toContain(
-        'Receiving address 1 of this account.',
-      );
+      // Lane X (Lane D #67): "Address 1."
+      expect(mounted.div.textContent).toContain('Address 1.');
       expect(
         [...mounted.div.querySelectorAll('button')].some(
           (candidate) => candidate.textContent === 'New address',
@@ -1312,8 +1363,9 @@ describe('receive screen', () => {
     const mounted = await mountScreen();
     try {
       await reachDetails(mounted.div);
+      // Lane X (Lane D #61): "Watch-only: can receive, can't send."
       expect(mounted.div.textContent).toContain(
-        'Watch-only account — this address can receive',
+        "Watch-only: can receive, can't send.",
       );
       expect(
         [...mounted.div.querySelectorAll('button')].some(
@@ -1861,13 +1913,15 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
         );
       const mainTitle = () => mounted.div.querySelector('#receive-qr svg title')?.textContent;
       // No amount yet: the plain address.
-      expect(mounted.div.textContent).toContain('QR type: Address');
+      // Lane X (Lane D #69): the active template is the marked segment.
+      expect(findSmall('Show address QR')?.getAttribute('aria-pressed')).toBe('true');
       expect(mainTitle()).toBe(VAULT_ETH);
       await act(async () => {
         setAmountInput(mounted.div, '25');
       });
       // An amount makes the payment request the main QR.
-      expect(mounted.div.textContent).toContain('QR type: Payment request');
+      // Lane X (Lane D #69): the active template is the marked segment.
+      expect(findSmall('Show payment request QR')?.getAttribute('aria-pressed')).toBe('true');
       expect(mainTitle()).toBe(
         'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@1/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=25000000',
       );
@@ -1875,13 +1929,15 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
       await act(async () => {
         findSmall('Show address QR')?.click();
       });
-      expect(mounted.div.textContent).toContain('QR type: Address');
+      // Lane X (Lane D #69): the active template is the marked segment.
+      expect(findSmall('Show address QR')?.getAttribute('aria-pressed')).toBe('true');
       expect(mainTitle()).toBe(VAULT_ETH);
       // Tapping Share link swaps the Bawa link in.
       await act(async () => {
         findSmall('Show share link QR')?.click();
       });
-      expect(mounted.div.textContent).toContain('QR type: Share link');
+      // Lane X (Lane D #69): the active template is the marked segment.
+      expect(findSmall('Show share link QR')?.getAttribute('aria-pressed')).toBe('true');
       expect(mainTitle()).toContain('chain=eth');
       expect(mainTitle()).toContain(`to=${VAULT_ETH}`);
       expect(mainTitle()).toContain('amount=25');

@@ -451,7 +451,6 @@ export function DashboardScreen() {
             stops the digits jittering while the ticker counts; normal
             totals render exactly as before. */}
         <p className="break-words tabular-nums text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker"><NumberTicker text={heroText} /></span></p>
-        <p className="font-display text-xl text-ink">Total value in US dollars.</p>
         {primaryAddress !== undefined && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="font-mono text-sm break-all text-ink" title={primaryAddress}>
@@ -480,13 +479,18 @@ export function DashboardScreen() {
           </p>
         )}
         {hero.partialNote && (
-          <p className="text-xs leading-4 text-panel-text-muted">Partial total. Some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
+          <p className="text-xs leading-4 text-panel-text-muted">Partial total — some prices missing.</p>
         )}
         {hero.quietNote && (
-          <p className="text-xs leading-4 text-panel-text-muted">Some balances or prices couldn&apos;t be checked just now.</p>
+          <p className="text-xs leading-4 text-panel-text-muted">Some balances couldn&apos;t be checked.</p>
         )}
         {hero.freshZeroNote && (
-          <p className="text-xs leading-4 text-panel-text-muted">Nothing here yet — receive on any chain to get started.</p>
+          <div className="space-y-2">
+            <p className="text-xs leading-4 text-panel-text-muted">Nothing here yet.</p>
+            <Button type="button" variant="secondary" size="sm" asChild>
+              <Link to="/receive">Receive</Link>
+            </Button>
+          </div>
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-4 text-panel-text-muted">
@@ -619,10 +623,7 @@ export function DashboardScreen() {
             <Card className="mt-4">
               {devnetEnabled && (
                 <p className="border-b px-4 pt-4 text-base text-ink">
-                  Devnet test mode — only the four test networks show
-                  balances. Prices below are live market prices; test
-                  tokens have no market value, so there is no portfolio
-                  total.
+                  Devnet: 4 test networks only. No total — test tokens have no value.
                 </p>
               )}
               <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />

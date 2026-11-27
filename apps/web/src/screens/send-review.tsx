@@ -236,8 +236,7 @@ export function SendReview({
           {clearSigning === null ? (
             <>
               <p className="text-sm text-muted-foreground">
-                No clear-signing information for this call — showing the raw
-                data. Check it carefully before signing.
+                No clear-signing info — raw data below. Check carefully.
               </p>
               <p className="break-all font-mono text-xs">
                 {contractCall.data}

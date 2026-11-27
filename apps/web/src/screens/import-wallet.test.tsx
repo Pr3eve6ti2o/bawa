@@ -148,7 +148,8 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
       expect(
         div.querySelector('label[for="wallet-xpub"]')?.textContent?.trim(),
       ).toBe('TON public address');
-      expect(div.textContent).toContain('No child addresses are derived');
+      // Lane X (Lane D #37): "TON: this address only. No sending."
+      expect(div.textContent).toContain('TON: this address only. No sending.');
     } finally {
       await cleanup();
     }
@@ -421,8 +422,9 @@ describe.sequential('ImportWalletScreen (T41)', () => {
         );
         watchOnlyTab!.click();
       });
-      expect(div.textContent).toContain('Labels are stored in plain text in this browser');
-      expect(div.textContent).toContain('Do not enter secrets');
+      // Lane X (Lane D #42): "Labels are plain text. No secrets."
+      expect(div.textContent).toContain('Labels are plain text.');
+      expect(div.textContent).toContain('No secrets.');
     } finally {
       try {
         await act(async () => {
@@ -754,7 +756,9 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
       await waitFor(second.div, () =>
         (second.div.textContent ?? '').includes('This is a different recovery phrase'),
       );
-      expect(second.div.textContent).toContain('delete the existing vault');
+      // Lane X (Lane D #41): "Delete the vault first — only with your
+      // phrase written down."
+      expect(second.div.textContent).toContain('Delete the vault first');
       expect(second.div.textContent).toContain('Add an account from your current phrase');
     } finally {
       await second.cleanup();

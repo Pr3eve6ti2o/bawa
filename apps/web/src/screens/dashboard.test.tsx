@@ -192,7 +192,7 @@ describe('dashboard screen', () => {
     );
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Zero balance');
+      expect(mounted.div.textContent).toContain('0 BTC');
       expect(mounted.div.textContent).toContain('1.5 ETH');
       const toggle = [...mounted.div.querySelectorAll('button')].find(
         (candidate) => candidate.textContent === 'Hide zero balances',
@@ -243,7 +243,7 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).not.toContain('(Partial)');
       expect(mounted.div.textContent).not.toContain('Nothing here yet');
       expect(mounted.div.textContent).not.toContain('Partial total. Some balances or prices are missing');
-      expect(mounted.div.textContent).toContain("Some balances or prices couldn't be checked just now.");
+      expect(mounted.div.textContent).toContain("Some balances couldn't be checked.");
     } finally {
       await mounted.cleanup();
     }
@@ -266,7 +266,7 @@ describe('dashboard screen', () => {
     try {
       expect(heroAmount(mounted)).toBe('$0.00');
       expect(mounted.div.textContent).not.toContain('(Partial)');
-      expect(mounted.div.textContent).toContain('Nothing here yet — receive on any chain to get started.');
+      expect(mounted.div.textContent).toContain('Nothing here yet.');
     } finally {
       await mounted.cleanup();
     }
@@ -472,11 +472,11 @@ describe('dashboard screen', () => {
       // The portfolio total is honestly $0.00 (every balance is zero),
       // but each row still shows the live market price per unit.
       expect(mounted.div.textContent).toContain('$0.00');
-      expect(mounted.div.textContent).toContain('Zero balance');
+      expect(mounted.div.textContent).not.toContain('Zero balance');
       expect(mounted.div.textContent).toContain('$62,683.00');
-      expect(mounted.div.textContent).toContain('per BTC');
+      expect(mounted.div.textContent).not.toContain('per BTC');
       expect(mounted.div.textContent).toContain('$1,774.93');
-      expect(mounted.div.textContent).toContain('per ETH');
+      expect(mounted.div.textContent).not.toContain('per ETH');
       expect(mounted.div.textContent).toContain('Updated just now');
     } finally {
       vi.unstubAllGlobals();
@@ -544,7 +544,7 @@ describe('dashboard screen', () => {
       expect(btcRow?.textContent).toContain('0.5 BTC');
       expect(btcRow?.textContent).toContain('$31,341.50');
       expect(btcRow?.textContent).toContain('$62,683.00');
-      expect(btcRow?.textContent).toContain('per BTC');
+      expect(btcRow?.textContent).not.toContain('per BTC');
       expect(btcRow?.textContent).toContain('Bitcoin');
     } finally {
       vi.unstubAllGlobals();
@@ -616,7 +616,9 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).toContain('$62,683.00');
       expect(mounted.div.textContent).toContain('Powered by CoinGecko');
       expect(mounted.div.textContent).toContain('Updated just now');
-      expect(mounted.div.textContent).toContain('· CoinGecko');
+      // Lane X (Lane D #50): the sources sit behind a "Price sources"
+      // disclosure now; the line itself is just the freshness label.
+      expect(mounted.div.textContent).toContain('Price sources');
       expect(mounted.div.textContent).not.toContain('(Partial)');
     } finally {
       vi.unstubAllGlobals();
@@ -1043,7 +1045,7 @@ describe('dashboard screen', () => {
       const text = mounted.div.textContent ?? '';
       // Real balances from the context, formatted from base units.
       expect(text).toContain('1.5 ETH');
-      expect(text).toContain('Zero balance');
+      expect(text).toContain('0 BTC');
       // Real actions exist: Send / Receive / Swap / Copy (P1 item 6).
       // No Buy tile — no on-ramp provider is configured.
       expect(text).toContain('Send');
@@ -1307,12 +1309,12 @@ describe('dashboard screen', () => {
       const text = mounted.div.textContent ?? '';
       // Real balances from the context, formatted from base units.
       expect(text).toContain('1.5 ETH');
-      expect(text).toContain('Zero balance');
+      expect(text).toContain('0 BTC');
       // The feed IS hit in devnet mode now, and the live per-unit
       // price shows on the row and the strip.
       expect(fetchMock).toHaveBeenCalled();
       expect(text).toContain('$1,774.93');
-      expect(text).toContain('per ETH');
+      expect(text).not.toContain('per ETH');
       // ...but the test balance is never valued: no fiat value for the
       // 1.5 ETH row, and no dollar total in the hero.
       expect(text).not.toContain('$2,662.40');
@@ -1379,14 +1381,14 @@ describe('dashboard screen', () => {
       const text = mounted.div.textContent ?? '';
       expect(text).toContain('25 USDC');
       expect(text).toContain('$1.00');
-      expect(text).toContain('per USDC');
+      expect(text).not.toContain('per USDC');
       expect(text).not.toContain('$25.00');
       // All-zero natives + a valueless test token: the hero is a clean
       // $0.00 (the same rule as the natives in devnet — zero values to
       // $0.00, only a nonzero test balance reads Unavailable), with the
       // fresh-wallet note, never a $25.00 valuation of the test token.
       expect(heroAmount(mounted)).toBe('$0.00');
-      expect(text).toContain('Nothing here yet — receive on any chain to get started.');
+      expect(text).toContain('Nothing here yet.');
     } finally {
       await mounted.cleanup();
     }
@@ -1554,17 +1556,17 @@ describe('dashboard screen', () => {
       const rows = [...mounted.div.querySelectorAll('[data-slot="asset-row"]')];
       const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
       expect(btc).not.toBeUndefined();
-      expect(btc?.textContent).toContain('$62,683.00 per BTC · 24h +2.50%');
+      expect(btc?.textContent).toContain('$62,683.00 · 24h +2.50%');
       const eth = rows.find((row) => row.textContent?.includes('Ethereum'));
       expect(eth).not.toBeUndefined();
-      expect(eth?.textContent).toContain('$1,774.93 per ETH · 24h -1.00%');
+      expect(eth?.textContent).toContain('$1,774.93 · 24h -1.00%');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();
     }
   });
 
-  it('shows "0 BTC" as the amount with "Zero balance" only as the subline', async () => {
+  it('shows "0 BTC" as the amount with no "Zero balance" subline', async () => {
     // P0-A double-zero (Lane A asset-list audit, Lane D #49): one
     // balance line per row — the list variant matches the table.
     setWallet(
@@ -1587,10 +1589,9 @@ describe('dashboard screen', () => {
       const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
       expect(btc).not.toBeUndefined();
       expect(btc?.textContent).toContain('0 BTC');
-      expect(btc?.textContent).toContain('Zero balance');
-      // "Zero balance" appears exactly once — as the subline, never
-      // also as the amount.
-      expect(btc?.textContent?.match(/Zero balance/g)).toHaveLength(1);
+      // Lane X (Lane D #49): no "Zero balance" subline any more —
+      // the amount line ("0 BTC") is the only balance line.
+      expect(btc?.textContent).not.toContain('Zero balance');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();

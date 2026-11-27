@@ -88,7 +88,9 @@ describe('security settings screen', () => {
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).toContain('Auto-lock is off');
+      // Lane X (Lane D #129): the embedded AutoLockSetting now reads
+      // "Off — anyone with this device can open it."
+      expect(text).toContain('Off — anyone with this device can open it.');
       expect(text).not.toContain('Vault stays unlocked');
       expect(mounted.div.querySelector('select#auto-lock')).toBeNull();
     } finally {

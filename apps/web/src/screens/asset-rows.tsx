@@ -221,9 +221,10 @@ function noWalletBalance(balance: BalanceState): BalanceState {
  * (0 x any price is $0.00, even with a stale feed), the computed fiat
  * value for a funded row, nothing when the value is genuinely unknown
  * (failed balance, stale price on a funded row, valueless devnet
- * balance). The DETAIL is always the per-unit price line ("$61,706.00
- * per BTC") when the feed is fresh, or the price state label ("Price
- * expired" / "Price unavailable" / "Price error") when it is not.
+ * balance). The DETAIL is always the bare per-unit price ("$61,706.00",
+ * Lane D #49: no "per <symbol>" label) when the feed is fresh, or
+ * the price state label ("Price expired" / "Price unavailable" /
+ * "Price error") when it is not.
  * The old shape put the per-unit price in the value slot for zero rows
  * (so a zero BTC row headlined $59,090.00 on the dashboard while the
  * asset table headlined $0.00 for the same row) and repeated the
@@ -238,7 +239,6 @@ function fiatDetail(
   initialDetail: string,
   fiat: FiatValueResult,
   displayUnit: UnitPrice,
-  symbol: string,
   devnet: boolean,
   isGenuineZero: boolean,
 ): { fiatText: string | undefined; detail: string } {
@@ -247,7 +247,7 @@ function fiatDetail(
   // The per-unit price line, or the price state when the feed is not fresh.
   const priceLine =
     displayUnit.kind === 'fresh'
-      ? `${displayUnit.text} per ${symbol}`
+      ? displayUnit.text
       : displayUnit.kind === 'expired'
         ? 'Price expired'
         : displayUnit.kind === 'unavailable'
@@ -377,13 +377,12 @@ function getNativeRowModel(
       detail,
       fiat,
       displayUnit,
-      config.symbol,
       devnet,
       balance.status === 'zero',
     ));
     // P0-A: the 24 h movement rides on the existing detail line — no
-    // extra row height. The price line already says "per BTC", so the
-    // movement appends to it ("$61,706.00 per BTC · 24h +1.23%").
+    // extra row height. The price line is the bare per-unit price, so
+    // the movement appends to it ("$61,706.00 · 24h +1.23%").
     detail += changeSuffix(change24h);
   }
 
@@ -514,7 +513,6 @@ function getTokenRowModel(
       detail,
       fiat,
       displayUnit,
-      token.symbol,
       devnet,
       balance.status === 'zero',
     ));
@@ -612,18 +610,11 @@ function ListRow({ model }: { model: AssetRowModel }) {
           {...(model.valueText === undefined ? {} : { value: model.valueText })}
           detail={model.detail}
           {...(model.isToken ? { verified: model.verified === true } : {})}
-          // P0-A (double-zero): a zero native row carries "Zero
-          // balance" only as the subline — the amount line is the
-          // figure ("0 BTC"), as in the table variant. A token row
+          // Lane X (Lane D #49): no "Zero balance" subline — the
+          // amount ("0 BTC") + $0.00 already say it. A token row
           // keeps its contract subtitle here (the copycat check), so
           // its zero state reads from the "0 USDC" amount + $0.00.
-          subline={
-            model.isToken
-              ? model.subtitle
-              : model.balanceStatus === 'zero'
-                ? 'Zero balance'
-                : undefined
-          }
+          subline={model.isToken ? model.subtitle : undefined}
         />
       </Link>
     </li>
@@ -638,6 +629,11 @@ function ListRow({ model }: { model: AssetRowModel }) {
 // (e.g. a collapsed sidebar) and the list when it is narrow.
 const TABLE_GRID =
   'grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 px-4 py-3 @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] @md:items-center';
+
+// Lane X (Lane D #49): the Value column is $0.00 on every row while
+// no row has a real value — the grid drops to three columns then.
+const TABLE_GRID_NO_VALUE =
+  'grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 px-4 py-3 @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)] @md:items-center';
 
 function TablePriceCell({ price, change }: { price: PriceCell; change?: RowChange24h }) {
   // No alignment here: the parent cell aligns the price (right in the
@@ -664,7 +660,7 @@ function TablePriceCell({ price, change }: { price: PriceCell; change?: RowChang
   return <span className="text-xs text-muted-foreground">—</span>;
 }
 
-function TableRow({ model }: { model: AssetRowModel }) {
+function TableRow({ model, hideValue }: { model: AssetRowModel; hideValue?: boolean }) {
   if (model.kind === 'loading') {
     return <RowLoadingStatus title={model.title} />;
   }
@@ -672,7 +668,7 @@ function TableRow({ model }: { model: AssetRowModel }) {
   if (model.kind === 'unavailable') {
     return (
       <li>
-        <div className={TABLE_GRID}>
+        <div className={hideValue === true ? TABLE_GRID_NO_VALUE : TABLE_GRID}>
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
             <RowLogo model={model} />
             <span className="min-w-0">
@@ -730,7 +726,7 @@ function TableRow({ model }: { model: AssetRowModel }) {
         to={model.link}
         className="block"
       >
-        <div className={TABLE_GRID}>
+        <div className={hideValue === true ? TABLE_GRID_NO_VALUE : TABLE_GRID}>
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
             <RowLogo model={model} />
             <span className="min-w-0">
@@ -754,29 +750,22 @@ function TableRow({ model }: { model: AssetRowModel }) {
             </span>
           </span>
           <span className="col-start-1 row-start-2 truncate text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:text-right @md:text-base @md:font-semibold @md:text-foreground">
-            {model.balanceStatus === 'zero' ? (
-              <>
-                <span className="block">{`0 ${model.symbol}`}</span>
-                <span className="block text-xs font-normal text-muted-foreground">
-                  Zero balance
-                </span>
-              </>
-            ) : (
-              model.amount
-            )}
+            {model.balanceStatus === 'zero' ? `0 ${model.symbol}` : model.amount}
           </span>
           <span className="col-start-2 row-start-2 text-right @md:col-start-auto @md:row-start-auto">
             <TablePriceCell price={model.price} change={model.change24h} />
           </span>
-          <span className="col-start-2 row-start-1 min-w-0 text-right @md:col-start-auto @md:row-start-auto">
-            {valueText === undefined ? (
-              <span className="text-base font-semibold text-muted-foreground">—</span>
-            ) : (
-              <span className="text-base font-bold text-foreground">
-                {valueText}
-              </span>
-            )}
-          </span>
+          {hideValue === true ? null : (
+            <span className="col-start-2 row-start-1 min-w-0 text-right @md:col-start-auto @md:row-start-auto">
+              {valueText === undefined ? (
+                <span className="text-base font-semibold text-muted-foreground">—</span>
+              ) : (
+                <span className="text-base font-bold text-foreground">
+                  {valueText}
+                </span>
+              )}
+            </span>
+          )}
         </div>
       </Link>
     </li>
@@ -795,7 +784,7 @@ function priceProvenanceLine(
   prices: PriceMap | undefined,
   tokenPrices: TokenPriceMap | undefined,
   nowMs: number,
-): string | null {
+): { label: string; sources: string } | null {
   const fresh = [
     ...Object.values(prices ?? {}),
     ...Object.values(tokenPrices ?? {}),
@@ -808,7 +797,7 @@ function priceProvenanceLine(
     b.quote.fetchedAtMs > a.quote.fetchedAtMs ? b : a,
   );
   const sources = [...new Set(fresh.map((entry) => entry.quote.source))];
-  return `${quoteFreshnessLabel(newest.quote, nowMs)} · ${sources.join(', ')}`;
+  return { label: quoteFreshnessLabel(newest.quote, nowMs), sources: sources.join(', ') };
 }
 
 interface AssetRowsProps {
@@ -839,11 +828,12 @@ interface AssetRowsProps {
  * (the 7 defaults, then user-added tokens). Lane 2: one meaning per
  * column — the value is always the holding's fiat value ($0.00 for a
  * zero balance, the computed fiat value for a funded row), and the
- * per-unit price ("$61,706.00", labelled "per BTC") sits beside it:
- * under the value in the list variant, in its own Price column in the
- * table variant. A zero row never headlines the per-unit price. The
- * price freshness + source ("Updated just now · CoinGecko") is stated
- * once above the list, not repeated on 43 rows; a failed feed still
+ * bare per-unit price ("$61,706.00") sits beside it: under the value
+ * in the list variant, in its own Price column in the table variant.
+ * A zero row never headlines the per-unit price. The price freshness
+ * ("Updated just now") is stated once above the list, with the
+ * sources behind a "Price sources" disclosure, not repeated on 43
+ * rows; a failed feed still
  * says so per row ("Price unavailable" / "Price error" / "Price
  * expired"), never a silent empty and never a fabricated number.
  * While the first fetch is still in flight, idle entries read as
@@ -954,6 +944,13 @@ export function AssetRows({
         .includes(normalizedQuery),
     );
   }
+  // Lane X (Lane D #49): hide the Value column while every visible
+  // row is worth $0.00 — the column adds nothing then.
+  const allZeroValue =
+    visible.length > 0 &&
+    visible.every(
+      (model) => model.kind === 'ready' && model.valueText === '$0.00',
+    );
   const provenance = priceProvenanceLine(prices, tokenPrices, nowMs);
   // Lane 4 (UX-major, data): the match count, next to the provenance
   // line — both counts are real (visible rows of all rows), so a
@@ -991,7 +988,7 @@ export function AssetRows({
 
     return (
       <p className="p-4 text-sm text-muted-foreground">
-        All balances are zero — turn off “Hide zero balances” to see them.
+        All zero — turn off Hide zero balances.
       </p>
     );
   }
@@ -1023,22 +1020,30 @@ export function AssetRows({
         <div className="@container">
         {searchCount}
         {provenance !== null ? (
-          <p className="px-4 pt-3 pb-1 text-right text-xs text-muted-foreground">
-            {provenance}
-          </p>
+          <div className="px-4 pt-3 pb-1 text-right">
+            <p className="text-xs text-muted-foreground">{provenance.label}</p>
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer">Price sources</summary>
+              <p>{provenance.sources}</p>
+            </details>
+          </div>
         ) : null}
         <div
           aria-hidden="true"
-          className="hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]"
+          className={
+            allZeroValue
+              ? 'hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)]'
+              : 'hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]'
+          }
         >
           <span>Asset</span>
           <span className="text-right">Balance</span>
           <span className="text-right">Price</span>
-          <span className="text-right">Value</span>
+          {allZeroValue ? null : <span className="text-right">Value</span>}
         </div>
         <ul className="divide-y divide-border">
           {visible.map((model) => (
-            <TableRow key={model.key} model={model} />
+            <TableRow key={model.key} model={model} hideValue={allZeroValue} />
           ))}
         </ul>
         </div>
@@ -1051,9 +1056,13 @@ export function AssetRows({
       {lockedNotice}
       {searchCount}
       {provenance !== null ? (
-        <p className="px-4 pt-3 pb-1 text-right text-xs text-muted-foreground">
-          {provenance}
-        </p>
+        <div className="px-4 pt-3 pb-1 text-right">
+          <p className="text-xs text-muted-foreground">{provenance.label}</p>
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer">Price sources</summary>
+            <p>{provenance.sources}</p>
+          </details>
+        </div>
       ) : null}
       <ul className="divide-y divide-border">
         {visible.map((model) => (

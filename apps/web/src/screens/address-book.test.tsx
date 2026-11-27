@@ -164,7 +164,7 @@ describe('AddressBookScreen', () => {
   it('shows the empty state and saves a valid address', async () => {
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No saved addresses yet');
+      expect(mounted.div.textContent).toContain('No addresses yet.');
       const label = mounted.div.querySelector(
         '#address-book-label',
       ) as HTMLInputElement;
@@ -253,7 +253,7 @@ describe('AddressBookScreen', () => {
         findButton(mounted.div, 'Tap again to remove').click();
       });
       expect(readAddressBook()).toEqual([]);
-      expect(mounted.div.textContent).toContain('No saved addresses yet');
+      expect(mounted.div.textContent).toContain('No addresses yet.');
     } finally {
       await mounted.cleanup();
     }

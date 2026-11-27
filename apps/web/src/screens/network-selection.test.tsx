@@ -282,8 +282,10 @@ describe('NetworkSelectionScreen', () => {
       // network." was false — the devnet switch sits on this very
       // screen. The copy must say mainnet is the default, not the
       // only mode.
+      // Lane X (Lane D #132): "Mainnet by default. Disabled chains hide
+      // from Assets."
       expect(mounted.div.textContent).toContain(
-        'Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. Devnet test mode is at the top of this screen.',
+        'Mainnet by default. Disabled chains hide from Assets.',
       );
       expect(mounted.div.textContent).not.toContain(
         'Mainnet only. This wallet never connects to a test network.',
@@ -299,8 +301,11 @@ describe('NetworkSelectionScreen', () => {
     setWallet([...SUPPORTED_CHAINS], { devnetEnabled: true });
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Devnet test mode is on.');
-      expect(mounted.div.textContent).toContain('valueless test tokens');
+      // Lane X (Lane D #139): "Devnet on — test networks only.
+      // Removable anytime."
+      expect(mounted.div.textContent).toContain(
+        'Devnet on — test networks only. Removable anytime.',
+      );
       expect(mounted.div.textContent).not.toContain(
         'Mainnet only. This wallet never connects to a test network.',
       );
@@ -355,7 +360,10 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       expect(btc.textContent).toContain('mempool.space');
       expect(btc.textContent).toContain('blockstream.info');
       // Dogecoin keeps its built-in pair and takes no custom RPC.
-      expect(mounted.div.textContent).toContain('Built-in failover');
+      // Lane X (Lane D #135): "Dogecoin: built-in failover, no custom RPC."
+      expect(mounted.div.textContent).toContain(
+        'Dogecoin: built-in failover, no custom RPC.',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -733,8 +741,10 @@ describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
     setWallet([...SUPPORTED_CHAINS]);
     const mounted = await mountScreen();
     try {
+      // Lane X (Lane D #137): "Prices: CoinGecko first, then CoinLore,
+      // DexScreener, TonAPI, Coinbase. Never guessed."
       expect(mounted.div.textContent).toContain(
-        'Prices come from CoinGecko first.',
+        'Prices: CoinGecko first, then CoinLore, DexScreener, TonAPI, Coinbase. Never guessed.',
       );
       expect(mounted.div.textContent).toContain('CoinLore');
       expect(mounted.div.textContent).toContain('DexScreener');
@@ -746,7 +756,8 @@ describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
       expect(mounted.div.textContent).toContain(
         'Every other chain has a second source.',
       );
-      expect(mounted.div.textContent).toContain('No prices fetched yet');
+      // Lane X (Lane D #138): "No prices yet — open Assets."
+      expect(mounted.div.textContent).toContain('No prices yet — open Assets.');
     } finally {
       await mounted.cleanup();
     }

@@ -51,8 +51,8 @@ function yieldFrame(): Promise<void> {
 const MIN_PASSWORD_LENGTH = 8;
 const RISK_CHECKS: readonly string[] = [
   'My recovery phrase is the only way to recover this wallet. If I lose it, no one can recover it for me. Bawa cannot reset it.',
-  'I will write the 24 words down on paper, in order, and keep them somewhere safe and private.',
-  'I will never photograph, share or store these words digitally, and never type them into any other app or website.',
+  'I\'ll write them on paper, in order.',
+  'I\'ll never photo, share or paste them.',
 ];
 const CONFIRM_WORD_COUNT = 3;
 const DISPLAY_ORDER = ['eth', 'btc', 'trx', 'ton'] as const;
@@ -215,9 +215,7 @@ export function CreateWalletScreen() {
           <CardHeader>
             <CardTitle id="create-wallet-title">A wallet already exists</CardTitle>
             <CardDescription>
-              This browser already has an encrypted vault. You can add
-              another account from the same phrase — there is no need to
-              delete anything.
+              Vault exists. Add an account from Wallets instead.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -251,8 +249,7 @@ export function CreateWalletScreen() {
         <CardHeader>
           <CardTitle id="create-wallet-title">Create a wallet</CardTitle>
           <CardDescription>
-            Your recovery phrase is generated in this browser and encrypted
-            with your vault password. Nothing leaves this device.
+            Made on this device, encrypted. Nothing leaves it.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -317,9 +314,7 @@ export function CreateWalletScreen() {
               What happens next
             </summary>
             <p className="mt-2 text-base leading-6 text-ink">
-              Set a vault password, write down 24 words, confirm 3 of
-              them, and your wallet is ready. Your phrase is shown
-              once, after a short risk check.
+              Password → 24 words → confirm 3. Done.
             </p>
           </details>
           <ol aria-label="Wallet creation steps" className="hidden space-y-5 lg:block">
@@ -371,9 +366,7 @@ export function CreateWalletScreen() {
           <CardHeader>
             <CardTitle>Vault password</CardTitle>
             <CardDescription>
-              This password encrypts your wallet on this device. It cannot be
-              recovered if you forget it — your recovery phrase is the only
-              way back.
+              Forgot it? Only your phrase brings it back.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -411,10 +404,7 @@ export function CreateWalletScreen() {
                     onChange={(event) => setPassphrase(event.target.value)}
                   />
                   <p className="text-base text-ink">
-                    Optional BIP-39 passphrase (25th word). It is never
-                    stored — you will need it again if you restore this wallet
-                    elsewhere. It is
-                    not your vault password.
+                    Optional 25th word. Never stored; you&apos;ll need it to restore.
                   </p>
                 </div>
                 <Button type="submit" size="lg">
@@ -423,11 +413,10 @@ export function CreateWalletScreen() {
               </fieldset>
             </form>
             <p className="mt-4 text-base leading-6">
-              To track an existing wallet without its recovery words,{' '}
+              No phrase?{' '}
               <Link to="/import-wallet" className="underline">
-                import its public key instead
+                Import a public key.
               </Link>
-              . Never paste a mnemonic, seed or private key into this app.
             </p>
           </CardContent>
         </Card>
@@ -439,8 +428,7 @@ export function CreateWalletScreen() {
           <CardHeader>
             <CardTitle>Check the risks first</CardTitle>
             <CardDescription>
-              Your recovery phrase is shown once, on this screen only. Before
-              it appears, confirm you understand these three things.
+              Shown once. Confirm these three things first.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -533,8 +521,7 @@ export function CreateWalletScreen() {
             <div className="space-y-2">
               <CopyButton value={mnemonic} label="Copy recovery phrase" />
               <p className="text-sm text-muted-foreground">
-                Copying puts the words on your clipboard. Paper is still
-                the safest place for them.
+                Paper beats clipboard.
               </p>
             </div>
             <Button
@@ -622,8 +609,7 @@ export function CreateWalletScreen() {
               phrase.
             </p>
             <p className="text-base leading-6">
-              Keep your written recovery phrase safe. If you lose this device,
-              it is the only way to recover your wallet.
+              Lose this device? The paper is the only way back.
             </p>
             <WalletReadyActions />
           </CardContent>

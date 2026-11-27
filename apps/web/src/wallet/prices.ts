@@ -943,8 +943,8 @@ export function usdPriceToMinorUnitsPerWhole(usdPrice: string): string {
 // row regardless of balance, so the feed is observable even on a
 // zero-balance or locked wallet — previously no surface rendered a
 // per-unit price at all, and a working feed looked identical to a dead
-// one. Never a balance value: it is labelled "per <symbol>" at the call
-// site, and it is never used in totals.
+// one. Never a balance value: it is shown bare at the call site
+// (Lane D #49: no "per <symbol>" label), and it is never used in totals.
 export type UnitPrice =
   | { kind: 'fresh'; text: string }
   | { kind: 'expired' }

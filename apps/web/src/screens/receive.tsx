@@ -186,12 +186,7 @@ function BuyProviderRow({
                 No address on a network {provider.name} delivers to.
               </p>
             ) : provider.id === 'coinbase' ? (
-              <>
-                <p className="text-base font-semibold text-ink">
-                  Buy isn&apos;t set up yet
-                </p>
-                <p className="text-base text-ink">{provider.setupCopy}</p>
-              </>
+              <p className="text-base text-ink">{provider.setupCopy}</p>
             ) : (
               <p className="text-base text-ink">
                 Not set up yet — {provider.setupCopy}
@@ -326,6 +321,11 @@ export function ReceiveScreen() {
   const buyMode = searchParams.get('buy') === '1';
   const [buyStatus, setBuyStatus] = useState<BuyStatus>('idle');
   const [buyProvider, setBuyProvider] = useState<BuyProviderId | null>(null);
+  // Lane X (Lane D #70): the Buy provider picker is one select bar.
+  // The 7 provider rows were all "Not set up yet" with owner-facing
+  // setup copy; the selected provider's row carries its setup copy.
+  const [selectedBuyProvider, setSelectedBuyProvider] =
+    useState<BuyProviderId>('ramp');
   const buyAppId = coinbaseOnrampAppId();
   // The destinations are cheap to recompute (ten entries at most),
   // so no memo: each provider row shows the first destination on a
@@ -715,9 +715,6 @@ export function ReceiveScreen() {
       ?.value != null
       ? requestedTemplate
       : 'address';
-  const effectiveLabel =
-    qrTemplates.find((candidate) => candidate.id === effectiveTemplate)
-      ?.label ?? 'Address';
   // Why the payment template is unavailable, when it is: a token
   // payment needs an amount first; TRON has no payment-request
   // standard at all (its QR stays the plain address and the share
@@ -947,31 +944,61 @@ export function ReceiveScreen() {
           <>
             {devnetEnabled === true && (
               <p className="text-base text-ink">
-                Devnet test mode is on — buying delivers real mainnet
-                crypto, so it stays off.
+                Buying is off in devnet.
               </p>
             )}
-            {buyProviders().map((provider) => {
-              const row = buyRowFor(provider);
-              return (
-                <BuyProviderRow
-                  key={provider.id}
-                  provider={provider}
-                  destination={row.destination}
-                  buttonLabel={row.buttonLabel}
-                  note={row.note}
-                  onBuy={() => handleBuyProvider(provider.id)}
-                  buyDisabled={
-                    devnetEnabled === true || buyStatus === 'opening'
-                  }
-                  isActive={buyProvider === provider.id}
-                  buyStatus={buyStatus}
-                />
+            {(() => {
+              const providers = buyProviders();
+              const anyUsable = providers.some(
+                (provider) => buyRowFor(provider).buttonLabel !== null,
               );
-            })}
+              const selected =
+                providers.find((provider) => provider.id === selectedBuyProvider) ??
+                providers[0];
+              if (selected === undefined) return null;
+              const row = buyRowFor(selected);
+              return (
+                <>
+                  {!anyUsable && (
+                    <p className="text-base font-semibold text-ink">
+                      Buy isn&apos;t set up yet
+                    </p>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="buy-provider">Provider</Label>
+                    <select
+                      id="buy-provider"
+                      aria-label="Buy provider"
+                      className="h-12 w-full rounded-bawa-sm border-2 border-ink bg-paper px-4 text-base text-ink"
+                      value={selected.id}
+                      onChange={(event) =>
+                        setSelectedBuyProvider(event.target.value as BuyProviderId)
+                      }
+                    >
+                      {providers.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.rank}. {provider.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <BuyProviderRow
+                    provider={selected}
+                    destination={row.destination}
+                    buttonLabel={row.buttonLabel}
+                    note={row.note}
+                    onBuy={() => handleBuyProvider(selected.id)}
+                    buyDisabled={
+                      devnetEnabled === true || buyStatus === 'opening'
+                    }
+                    isActive={buyProvider === selected.id}
+                    buyStatus={buyStatus}
+                  />
+                </>
+              );
+            })()}
             <p className="text-base text-ink">
-              Fees are indicative only — the quote at purchase time is
-              authoritative.
+              Fees are indicative.
             </p>
           </>
         )}
@@ -1268,7 +1295,7 @@ export function ReceiveScreen() {
                 contract: role group, aria-pressed, active = sun,
                 accessible names "Show {label} card style". */}
             <p className="mt-2 w-full text-center text-base font-semibold text-ink">
-              Card style — tap to switch
+              Card style
             </p>
             <div
               role="group"
@@ -1303,7 +1330,7 @@ export function ReceiveScreen() {
                 (12 px, 44 px hit area); the unavailable segment still
                 stays disabled with its reason, never a dead box. */}
             <p className="w-full text-center text-base font-semibold text-ink">
-              {`QR type: ${effectiveLabel} — tap to switch`}
+              QR type
             </p>
             <div
               role="group"
@@ -1351,7 +1378,7 @@ export function ReceiveScreen() {
                 address management, not sharing. */}
             {vaultAddress !== undefined && !isWatchOnly && (
               <p className="w-full text-center text-xs text-ink">
-                {`Receiving address ${receiveIndex + 1} of this account.`}
+                {`Address ${receiveIndex + 1}.`}
               </p>
             )}
             {canRotate && (
@@ -1365,16 +1392,14 @@ export function ReceiveScreen() {
                   {isRotating ? 'Making address…' : 'New address'}
                 </Button>
                 <p className="w-full text-center text-xs leading-4 text-muted-foreground">
-                  New addresses come from the same phrase. Funds sent to an
-                  earlier address still belong to this wallet, but the
-                  dashboard only shows your main address on each chain.
+                  Old addresses still work. The dashboard shows your main one.
                 </p>
               </div>
             )}
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-foreground">No receiving address available for this chain.</p>
+            <p className="text-foreground">No address for this chain.</p>
             <Button asChild variant="secondary" size="md">
               <Link to="/import-wallet">Import a wallet</Link>
             </Button>
@@ -1386,13 +1411,10 @@ export function ReceiveScreen() {
           details step, where the address it names is shown. P1 (Lane
           S4, item 11): it sits below the card now, so the QR is first
           and its Copy sits above the fold. */}
-      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
-
       {isWatchOnly && (
         <Alert>
           <AlertDescription>
-            Watch-only account — this address can receive, but this wallet
-            cannot sign or send from it.
+            Watch-only: can receive, can&apos;t send.
           </AlertDescription>
         </Alert>
       )}
@@ -1407,14 +1429,14 @@ export function ReceiveScreen() {
             ? devnetChainConfigOrUndefined(chain)
             : undefined;
           return devnetConfig
-            ? `Devnet — this address is for the ${devnetConfig.devnetName} test network. Test tokens have no value. Funds sent on another network cannot be recovered — only share this address to receive funds, and check it carefully before accepting funds.`
-            : `Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered — only share this address to receive funds, and check it carefully before accepting funds.`;
+            ? `Devnet — ${devnetConfig.devnetName} test network only. Funds on another network can't be recovered.`
+            : `Mainnet only. Funds on another network can't be recovered.`;
         })()}
       </p>
 
       {chain === 'ton' && (
         <p className="text-base text-ink">
-          This address can only receive TON. To send or withdraw TON, you need an external wallet.
+          Receives TON only. Send from another wallet.
         </p>
       )}
       </div>

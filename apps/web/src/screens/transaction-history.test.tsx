@@ -243,7 +243,8 @@ describe('transaction history screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('No transactions yet');
-      expect(mounted.div.textContent).toContain('Your history will appear here after your first transaction.');
+      // Lane X (Lane D #111): the repeat line under the heading is gone
+      // — the heading already says it.
       expect(mounted.div.querySelector('a[href="/receive"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
@@ -267,7 +268,8 @@ describe('transaction history screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('No wallet yet');
-      expect(mounted.div.textContent).toContain('No wallet on this device yet');
+      // Lane X (Lane D #106): the repeat line under the heading is gone
+      // — the heading already says it.
       expect(mounted.div.querySelector('a[href="/create-wallet"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
@@ -400,7 +402,8 @@ describe('transaction history screen', () => {
     setWallet(perChainEmpty());
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain("Transaction history isn't available on any chain yet.");
+      // Lane X (Lane D #109): "No history on any chain yet."
+      expect(mounted.div.textContent).toContain('No history on any chain yet.');
     } finally {
       await mounted.cleanup();
     }

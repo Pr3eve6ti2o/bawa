@@ -927,26 +927,24 @@ export function SwapScreen() {
     });
   }
   const bestProvider: SwapProviderId | null = selectBestRoute(comparableQuotes);
-  const uncoveredNames = UNCOVERED_CHAINS.slice(0, 5)
-    .map((chain) => chainConfig(chain).displayName)
-    .join(', ');
-  const uncoveredRest = UNCOVERED_CHAINS.length - 5;
-
   return (
     <div className="space-y-3">
       <header className="space-y-2">
         <h1 className="font-bold tracking-tight">Swap</h1>
         <p className="text-sm leading-5 text-muted-foreground">
-          Swap and bridge across networks. Quotes come live from LI.FI,
-          compared with Relay and STON.fi where they cover the pair —
-          no quote here is ever a guess.
+          Live quotes from LI.FI, Relay and STON.fi.
         </p>
         <p className="text-sm leading-5 text-muted-foreground">
-          No provider covers every network — {UNCOVERED_CHAINS.length}{' '}
-          networks have no swap provider in this wallet yet, including{' '}
-          {uncoveredNames}
-          {uncoveredRest > 0 ? ` and ${uncoveredRest} more` : ''}.
+          {UNCOVERED_CHAINS.length} networks have no swap provider yet.
         </p>
+        <details>
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
+            Which {UNCOVERED_CHAINS.length}
+          </summary>
+          <p className="mt-2 text-sm leading-5 text-muted-foreground">
+            {UNCOVERED_CHAINS.map((chain) => chainConfig(chain).displayName).join(', ')}.
+          </p>
+        </details>
       </header>
 
       <section aria-labelledby="swap-from-heading" className="space-y-2">
@@ -1041,8 +1039,7 @@ export function SwapScreen() {
             </p>
           )}
           <p className="text-sm text-muted-foreground">
-            Defaults to your address on {toConfig.displayName}. The swap
-            would send there — change it only if you mean to.
+            Sends to your {toConfig.displayName} address.
           </p>
         </div>
       </section>
@@ -1063,9 +1060,7 @@ export function SwapScreen() {
 
       {quoteState.status === 'idle' && (
         <p className="text-sm text-muted-foreground">
-          No quote yet — enter an amount and the quote appears
-          automatically. Quotes are live from LI.FI and free to check;
-          getting one signs nothing and moves no funds.
+          Enter an amount for a quote. Free to check; signs nothing.
         </p>
       )}
       {quoteState.status === 'loading' && (
@@ -1075,8 +1070,7 @@ export function SwapScreen() {
       )}
       {quoteState.status === 'no-route' && (
         <p role="alert" className="text-base text-ink">
-          LI.FI found no route for this pair right now. Try a different
-          token or network.
+          No route for this pair.
         </p>
       )}
       {quoteState.status === 'unavailable' && (
@@ -1284,10 +1278,7 @@ export function SwapScreen() {
                     {stonfiSignState.status === 'idle' && (
                       <>
                         <p>
-                          Signing the order returns a signed BoC only —
-                          nothing is sent, registered or broadcast.
-                          Execution still needs the owner&apos;s separate
-                          broadcast authorisation.
+                          Signing returns a BoC only. Nothing is sent.
                         </p>
                         <Button
                           type="button"
@@ -1319,10 +1310,7 @@ export function SwapScreen() {
                           Message hash {stonfiSignState.messageHash}
                         </p>
                         <p>
-                          The order&apos;s HTLC secret is held in memory
-                          for this session only — it is never shown or
-                          stored. Execution and secret disclosure are not
-                          wired yet.
+                          Secret held in memory only.
                         </p>
                       </>
                     )}
@@ -1344,8 +1332,7 @@ export function SwapScreen() {
               </>
             ) : stonfiState.status === 'no-quote' ? (
               <p>
-                STON.fi has no quote for this pair right now. Try a
-                different token or network.
+                STON.fi: no quote for this pair.
               </p>
             ) : (
               <p>{stonfiState.reason}</p>
@@ -1366,14 +1353,15 @@ export function SwapScreen() {
           Refuel gas
         </h2>
         <p className="text-sm leading-5 text-muted-foreground">
-          Out of gas on a new network? gas.zip sends a little native
-          coin there — a refuel, not a swap.
+          Out of gas? gas.zip sends a little native gas. $
+          {GASZIP_MIN_USD_PER_CHAIN.toFixed(2)}–$
+          {GASZIP_MAX_USD_PER_CHAIN.toFixed(2)} per network.
         </p>
         {/* P1 (Lane S4, item 10): the Refuel essay is a one-line
             disclosure now — the limits and fee note live behind it. */}
         <details>
           <summary className="cursor-pointer text-sm font-medium text-foreground">
-            About refuel
+            How refuel works
           </summary>
           <p className="mt-2 leading-relaxed text-muted-foreground">
             It moves no tokens, only native gas, between
@@ -1416,8 +1404,7 @@ export function SwapScreen() {
         {refuelOpen && refuelChainsState.status === 'ok' && (
           <>
             <p className="text-sm text-muted-foreground">
-              Solana is listed by gas.zip but live quotes fail there right
-              now, so it is not offered as a destination.
+              Solana: no live quotes right now.
             </p>
             <div className="space-y-2">
               <p className="text-base font-medium">From network</p>
@@ -1493,8 +1480,7 @@ export function SwapScreen() {
             </div>
             {refuelQuoteState.status === 'idle' && (
               <p className="text-sm text-muted-foreground">
-                No refuel quote yet — enter an amount and get one. Getting
-                one signs nothing and moves no funds.
+                Enter an amount for a refuel quote.
               </p>
             )}
             {refuelQuoteState.status === 'loading' && (
@@ -1572,7 +1558,7 @@ export function SwapScreen() {
                 </p>
                 {isGasZipQuoteStale(refuelQuoteState.quote) && (
                   <p role="alert" className="text-base text-ink">
-                    This quote is stale — fetch a fresh one.
+                    Quote expired — refresh.
                   </p>
                 )}
                 <Button
@@ -1598,7 +1584,7 @@ export function SwapScreen() {
           What happens next
         </h2>
         <p className="text-sm leading-5 text-muted-foreground">
-          Quotes only — swaps don&apos;t execute yet.
+          Swaps aren&apos;t executed yet — quotes only.
         </p>
         {/* P1 (Lane S4, item 10): the "What happens next" essay is a
             one-line disclosure now — the provider setup and

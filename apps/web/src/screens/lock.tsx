@@ -367,8 +367,10 @@ export function LockScreen() {
               textAlign: "center",
             }}
           >
-            Auto-lock affects signing access, not watch-only use. Configure it in
-            Security settings.
+            Auto-lock affects signing only.{' '}
+            <Link to="/security" className="text-ink underline underline-offset-4">
+              Security settings
+            </Link>
           </p>
           )}
         </CardContent>

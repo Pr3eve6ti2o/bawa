@@ -136,7 +136,6 @@ export function AssetDetailScreen() {
   // is a valid registry chain; chainId carries that assertion once.
   const chainId = chain as ChainId;
   const {
-    xpubs,
     addresses,
     vaultAddresses,
     hydrating,
@@ -235,7 +234,6 @@ export function AssetDetailScreen() {
     );
   }
 
-  const xpub = xpubs[chainId]?.xpub;
   const state = uiState[chainId];
   // Token routes show the token balance; native routes show the chain
   // balance. A missing token entry (before the first refresh) reads as
@@ -519,7 +517,7 @@ export function AssetDetailScreen() {
         ) : null}
         {(effectiveBalance.status === 'available' || effectiveBalance.status === 'zero') && effectiveBalance.stale === true ? (
           <p className="text-sm text-panel-text-muted">
-            Showing the last loaded balance — it may be out of date.
+            Last loaded balance — may be out of date.
           </p>
         ) : null}
       </div>
@@ -714,7 +712,7 @@ export function AssetDetailScreen() {
       */}
       {isToken ? (
         <p className="rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-muted-foreground">
-          Transaction history is not connected for this token yet.
+          No history for this token yet.
         </p>
       ) : chainHistory.status === 'loading' && recentTxs.length === 0 ? (
           // P0-6: the history wait was a wordless bordered box. The
@@ -815,42 +813,28 @@ export function AssetDetailScreen() {
       </section>
 
       {/*
-        Import source, last: the xpub / derivation behind the addresses
-        above. Moved after the addresses (it documented the import
-        before the addresses it describes were shown).
+        Derivation, last: the path behind the addresses above, behind
+        a disclosure (Lane D #56) — the import-source card
+        duplicated the address already shown above.
       */}
-      <Card radius="xl">
-        <CardContent className="pt-6">
-          <dl className="space-y-4">
-            <div>
-              <dt className="text-sm text-muted-foreground">{xpub ? (chain === 'ton' ? 'Imported TON address' : 'Imported xpub') : hasVaultAddress ? 'Vault address' : (chain === 'ton' ? 'Imported TON address' : 'Imported xpub')}</dt>
-              <dd className="break-all font-mono text-sm">
-                {xpub
-                  ? `${xpub.slice(0, 12)}…${xpub.slice(-8)}`
-                  : hasVaultAddress && firstVaultAddress !== undefined
-                    ? `${firstVaultAddress.slice(0, 12)}…${firstVaultAddress.slice(-8)}`
-                    : 'Not imported'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-muted-foreground">Derivation</dt>
-              <dd className="break-all text-base">
-                {chain === 'ton' ? (
-                  'Single imported address, no derivation. TON path m/44\'/607\'/0\' is fully hardened.'
-                ) : (
-                  // The three documented templates first; every other
-                  // chain falls back to its registry path (account 0,
-                  // index 0) so the row is never blank.
-                  <code>
-                    {(DERIVATION_PATHS as Partial<Record<ChainId, string>>)[chainId]
-                      ?? config.pathFor(0, 0)}
-                  </code>
-                )}
-              </dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
+      <details className="rounded-bawa border-2 border-ink bg-paper">
+        <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">Derivation</summary>
+        <div className="px-4 pb-4">
+          <p className="break-all text-base">
+            {chain === 'ton' ? (
+              'Single imported address, no derivation. TON path m/44\'/607\'/0\' is fully hardened.'
+            ) : (
+              // The three documented templates first; every other
+              // chain falls back to its registry path (account 0,
+              // index 0) so the row is never blank.
+              <code>
+                {(DERIVATION_PATHS as Partial<Record<ChainId, string>>)[chainId]
+                  ?? config.pathFor(0, 0)}
+              </code>
+            )}
+          </p>
+        </div>
+      </details>
         </div>
       </div>
     </div>

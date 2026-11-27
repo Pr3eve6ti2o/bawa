@@ -106,14 +106,13 @@ export function AutoLockSetting() {
 
         {!hasVault && (
           <p className="text-base text-ink">
-            No vault yet. Create or import a wallet first.
+            No vault yet.
           </p>
         )}
 
         {hasVault && !autoLockEnabled && (
           <p className="text-base text-ink">
-            Auto-lock is off. Your wallet stays unlocked on this device.
-            Anyone with access to this device can open it.
+            Off — anyone with this device can open it.
           </p>
         )}
 
@@ -150,7 +149,7 @@ export function AutoLockSetting() {
         {vaultState === 'unlocked' && (
           <div className="space-y-2">
             <p className="text-base text-ink">
-              Lock the vault now instead of waiting for the timer.
+              Lock now.
             </p>
             <Button type="button" variant="secondary" onClick={() => lockVault()}>
               Lock now
