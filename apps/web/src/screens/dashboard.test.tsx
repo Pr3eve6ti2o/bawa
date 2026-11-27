@@ -1070,11 +1070,14 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('shows no per-row Retry for a failed asset row; the hero Refresh re-fetches', async () => {
+  it('shows no per-row Retry for a failed asset row; the list-level Retry re-fetches', async () => {
     // Lane J: the failed ETH row shows "Could not load balance" with
-    // no Retry button — the hero's "Refresh balances" is the one retry
-    // path on the page (the hero is a Partial total here, so its button
-    // reads "Refresh balances", never "Retry").
+    // no Retry button on the row itself. P1 (Lane S4, P0-C follow-up):
+    // the retry lives one level up — one line above the list naming
+    // the failed balance, with a Retry that re-fetches. The hero's
+    // "Refresh balances" is the same refetch by another name (the
+    // hero is a Partial total here, so its button reads "Refresh
+    // balances", never "Retry").
     setWallet(
       balancesFor({
         btc: { status: 'available', value: '100000000' },
@@ -1086,10 +1089,17 @@ describe('dashboard screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('Could not load balance');
+      // One list-level Retry for the one failed balance — and the
+      // line sits in the Assets section, above the rows.
+      expect(mounted.div.textContent).toContain('1 balance failed');
       const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
         (candidate) => candidate.textContent === 'Retry',
       );
-      expect(retryButtons).toHaveLength(0);
+      expect(retryButtons).toHaveLength(1);
+      const assetsSection = mounted.div.querySelector(
+        'section[aria-label="Assets"]',
+      );
+      expect(assetsSection?.textContent).toContain('1 balance failed');
       const refresh = [...mounted.div.querySelectorAll('button')].find(
         (candidate) => candidate.textContent === 'Refresh balances',
       ) as HTMLButtonElement;
@@ -1097,7 +1107,12 @@ describe('dashboard screen', () => {
       await act(async () => {
         refresh.click();
       });
-      expect(mockRefreshBalances).toHaveBeenCalled();
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(1);
+      // The list-level Retry re-fetches too.
+      await act(async () => {
+        retryButtons[0]?.click();
+      });
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(2);
     } finally {
       await mounted.cleanup();
     }

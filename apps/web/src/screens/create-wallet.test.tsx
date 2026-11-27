@@ -258,6 +258,11 @@ describe('create wallet screen', () => {
       // The mnemonic is cleared: no recovery word is shown any more.
       expect(mounted.div.textContent).not.toContain('abandon');
       expect(mounted.div.textContent).toContain('Your wallet is ready');
+      // P1 (Lane S4, P0-B follow-up): the /create hub's honest-limit
+      // line lives here now, where the addresses are shown.
+      expect(mounted.div.textContent).toContain(
+        'There is no single address that works on every chain',
+      );
       // Ethereum first.
       const text = mounted.div.textContent as string;
       expect(text.indexOf('Ethereum')).toBeLessThan(text.indexOf('Bitcoin'));

@@ -48,6 +48,9 @@ export const SEND_RECENT_CHAINS_KEY = 'bawa:send-recent-chains';
 /** localStorage key for the recently picked Swap chains. Kept apart
     from the send/watch-only recents (same reason as above). */
 export const SWAP_RECENT_CHAINS_KEY = 'bawa:swap-recent-chains';
+/** localStorage key for the recently picked Receive chains. Kept apart
+    from the send/swap/watch-only recents (same reason as above). */
+export const RECEIVE_RECENT_CHAINS_KEY = 'bawa:receive-recent-chains';
 /** How many picked chains the Recent row keeps. */
 export const MAX_RECENT_CHAINS = 5;
 /** localStorage key for the last chain picked anywhere (P1 Lane S1):

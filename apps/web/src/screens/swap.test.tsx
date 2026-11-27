@@ -381,6 +381,9 @@ async function pickChain(
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  // P1 (Lane S4): the screen reads the shared last-used chain on
+  // entry — clear it so every test starts from the same defaults.
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -434,6 +437,10 @@ describe('SwapScreen', () => {
     const seen = stubFetch(LIFI_OK_FIXTURE);
     const mounted = await mountScreen();
     try {
+      // P1 (Lane S4, item 10): with no last-used chain the To side
+      // defaults to the from-chain, not an unasked Polygon — pick
+      // Polygon explicitly for the fixture pair.
+      await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       // The fixture quotes ETH -> a 6-decimal USDC on Polygon, so pick
       // the app's own Polygon USDC first: the request must match the
       // token the screen will format the quote in.
@@ -498,6 +505,9 @@ describe('SwapScreen', () => {
     stubFetch({ message: 'Rate limit exceeded', code: 1005 }, 429);
     const mounted = await mountScreen();
     try {
+      // P1 (Lane S4, item 10): To defaults to the from-chain with no
+      // last-used chain — pick Polygon explicitly for this pair.
+      await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       await pickToken(mounted.div, 'Token on Polygon', 'USDC');
       await enterAmount(mounted.div, '0.1');
       await click(mounted.div, 'Get quote');
@@ -562,6 +572,10 @@ describe('SwapScreen', () => {
     });
     const mounted = await mountScreen();
     try {
+      // P1 (Lane S4, item 10): To defaults to the from-chain with no
+      // last-used chain — pick Polygon explicitly for this pair, or
+      // the fixture's POL amounts never render.
+      await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       await enterAmount(mounted.div, '0.1');
       await click(mounted.div, 'Get quote');
       await waitForText(mounted.div, 'You receive');
@@ -612,6 +626,10 @@ describe('SwapScreen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      // P1 (Lane S4, item 10): the recipient is validated against the
+      // To chain, which now defaults to the from-chain — pick Polygon
+      // explicitly for this pair.
+      await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       const input = mounted.div.querySelector(
         '#swap-recipient',
       ) as HTMLInputElement | null;
@@ -646,6 +664,10 @@ describe('SwapScreen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      // P1 (Lane S4, item 10): To defaults to the from-chain with no
+      // last-used chain, so pick Polygon as the To side first — the
+      // flip is only observable with two different sides.
+      await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       const flip = mounted.div.querySelector(
         'button[aria-label="Switch direction"]',
       ) as HTMLButtonElement | null;
@@ -681,6 +703,9 @@ describe('SwapScreen', () => {
         mounted.div,
         'networks have no swap provider in this wallet yet',
       );
+      // P1 (Lane S4, item 10): To defaults to the from-chain with no
+      // last-used chain — pick Polygon explicitly for this pair.
+      await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       await pickToken(mounted.div, 'Token on Polygon', 'USDC');
       await enterAmount(mounted.div, '0.1');
       await click(mounted.div, 'Get quote');
@@ -829,6 +854,104 @@ describe('SwapScreen', () => {
       expect(mounted.div.textContent).not.toContain(
         'TON signing for STON.fi orders is wired',
       );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('auto-fires the quote on amount entry, without tapping Get quote', async () => {
+    // P1 (Lane S4, item 10): typing an amount is the quote request —
+    // no manual Get-quote tap exists in the top-tier flow.
+    setWallet();
+    stubFetch(LIFI_OK_FIXTURE);
+    const mounted = await mountScreen();
+    try {
+      await enterAmount(mounted.div, '0.1');
+      await waitForText(mounted.div, 'You receive');
+      expect(mounted.div.textContent).toContain('layerswap via LI.FI');
+      expect(mounted.div.textContent).toContain('($167.74)');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('keeps Get quote a real primary button, never dashed', async () => {
+    // P1 (Lane S4, item 10): the button is the Lane T primary
+    // (coral), enabled once an amount is typed — never a dashed
+    // outline that reads as disabled.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await enterAmount(mounted.div, '0.1');
+      const getQuote = findButton(mounted.div, 'Get quote');
+      expect(getQuote.disabled).toBe(false);
+      expect(getQuote.className).toContain('bg-coral');
+      expect(getQuote.className).not.toContain('border-dashed');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('defaults To to the last-used chain, or to the from-chain', async () => {
+    // P1 (Lane S4, item 10): a recorded last-used chain is the To
+    // default; with nothing recorded the To side follows From.
+    localStorage.setItem('bawa:last-used-chain', JSON.stringify('base'));
+    setWallet({
+      vaultAddresses: { eth: [FROM], base: [RECIPIENT], matic: [RECIPIENT] },
+      balances: {
+        eth: { status: 'available', value: '1000000000000000000' },
+        base: { status: 'available', value: '1000000000000000000' },
+        matic: { status: 'available', value: '10000000000000000000' },
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      const fromInput = mounted.div.querySelector(
+        '#swap-from-chain',
+      ) as HTMLInputElement;
+      const toInput = mounted.div.querySelector(
+        '#swap-to-chain',
+      ) as HTMLInputElement;
+      expect(fromInput.value).toBe('Base');
+      expect(toInput.value).toBe('Base');
+    } finally {
+      await mounted.cleanup();
+    }
+    // Nothing recorded: To follows From (Ethereum).
+    localStorage.clear();
+    setWallet();
+    const second = await mountScreen();
+    try {
+      const toInput = second.div.querySelector(
+        '#swap-to-chain',
+      ) as HTMLInputElement;
+      expect(toInput.value).toBe('Ethereum');
+    } finally {
+      await second.cleanup();
+    }
+  });
+
+  it('collapses the Refuel essay and What happens next into one-line disclosures', async () => {
+    // P1 (Lane S4, item 10): one line each on screen; the essays
+    // live behind disclosures, still in the DOM.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Out of gas on a new network? gas.zip sends a little native coin there — a refuel, not a swap.',
+      );
+      expect(mounted.div.textContent).toContain(
+        "Quotes only — swaps don't execute yet.",
+      );
+      expect(mounted.div.textContent).toContain('What happens next');
+      expect(mounted.div.textContent).toContain(
+        'Swaps are not executed in this wallet yet',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Getting a quote sends your from and to addresses to LI.FI',
+      );
+      const disclosures = mounted.div.querySelectorAll('details');
+      expect(disclosures.length).toBeGreaterThanOrEqual(2);
     } finally {
       await mounted.cleanup();
     }

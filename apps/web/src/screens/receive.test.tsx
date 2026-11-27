@@ -99,7 +99,12 @@ type ChainKey = keyof typeof CHAINS;
 
 const VAULT_ETH = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
 
+// The current setWallet mock's setSelectedChain, so a test can assert
+// a pick landed on it (the mock never updates selectedChain itself).
+let mockSetSelectedChain: ReturnType<typeof vi.fn> = vi.fn();
+
 function setWallet(overrides: Record<string, unknown> = {}): void {
+  mockSetSelectedChain = vi.fn();
   vi.mocked(useWallet).mockReturnValue({
     addresses: {
       btc: [],
@@ -114,7 +119,7 @@ function setWallet(overrides: Record<string, unknown> = {}): void {
       ton: [],
     },
     selectedChain: 'eth',
-    setSelectedChain: vi.fn(),
+    setSelectedChain: mockSetSelectedChain,
     ...overrides,
   } as unknown as ReturnType<typeof useWallet>);
 }
@@ -146,10 +151,28 @@ const ALL_CHAINS: ChainKey[] = [
   'opbnb', 'metis', 'aurora', 'fantom',
 ];
 
+// P1 (Lane S4, item 11): pick a chain in the shared picker —
+// click the search field to open it, then the option row. The
+// picker records the pick as last-used, like the real flow.
+async function pickChain(div: HTMLDivElement, chain: string): Promise<void> {
+  const input = div.querySelector('#receive-chain') as HTMLInputElement | null;
+  expect(input).not.toBeNull();
+  await act(async () => {
+    input?.click();
+  });
+  const option = div.querySelector(
+    `#receive-chain-option-${chain}`,
+  ) as HTMLElement | null;
+  expect(option).not.toBeNull();
+  await act(async () => {
+    (option as HTMLElement).click();
+  });
+}
+
 // Item 20: drive the stepped flow to the details step — pick the
 // Ethereum chain, then its native asset.
 async function reachDetails(div: HTMLDivElement): Promise<void> {
-  await clickButton(div, 'Ethereum');
+  await pickChain(div, 'eth');
   await clickButton(div, 'Ethereum · ETH');
 }
 
@@ -187,6 +210,9 @@ async function mountScreen(entry = '/receive') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // P1 (Lane S4): the screen reads the shared last-used chain on
+  // entry — clear it so every test starts on the chain step.
+  localStorage.clear();
   vi.mocked(availableFor).mockReturnValue(['btc', 'eth', 'trx', 'ton']);
   vi.mocked(chainConfig).mockImplementation(
     (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
@@ -574,6 +600,15 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      // P1 (Lane S4, item 11): the chain step is the shared picker —
+      // its options render only once it is opened.
+      const input = mounted.div.querySelector(
+        '#receive-chain',
+      ) as HTMLInputElement;
+      expect(input).not.toBeNull();
+      await act(async () => {
+        input.click();
+      });
       expect(mounted.div.textContent).toContain('ETH');
       expect(mounted.div.textContent).toContain('TON');
       // 'Bitcoin' (not 'BTC' — the token list's WBTC contains those letters).
@@ -622,7 +657,7 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       // Defaults on eth + trx (the mocked receive chains) are listed.
       expect(mounted.div.textContent).toContain('USD Coin');
       expect(mounted.div.textContent).toContain('Tether USD');
@@ -655,7 +690,7 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       const row = [...mounted.div.querySelectorAll('li')].find((li) =>
         li.textContent?.includes('Unlisted Token'),
       );
@@ -700,7 +735,7 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       const input = mounted.div.querySelector('#receive-token-filter') as HTMLInputElement;
       expect(input).not.toBeNull();
       await act(async () => {
@@ -722,7 +757,7 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       const input = mounted.div.querySelector('#receive-token-filter') as HTMLInputElement;
       await act(async () => {
         const setter = Object.getOwnPropertyDescriptor(
@@ -742,7 +777,7 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
         button.textContent?.includes('USD Coin'),
       );
@@ -800,8 +835,7 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'All networks (18)');
-      await clickButton(mounted.div, 'Solana');
+      await pickChain(mounted.div, 'sol');
       await clickButton(mounted.div, 'USD Coin');
       const amountInput = mounted.div.querySelector('#receive-amount') as HTMLInputElement;
       expect(amountInput.placeholder).toContain('USDC');
@@ -852,7 +886,7 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'TON');
+      await pickChain(mounted.div, 'ton');
       await clickButton(mounted.div, 'Tether USD');
       const amountInput = mounted.div.querySelector('#receive-amount') as HTMLInputElement;
       expect(amountInput.placeholder).toContain('USD₮');
@@ -905,7 +939,7 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'TRON');
+      await pickChain(mounted.div, 'trx');
       await clickButton(mounted.div, 'Tether USD');
       const amountInput = mounted.div.querySelector('#receive-amount') as HTMLInputElement;
       expect(amountInput.placeholder).toContain('USDT');
@@ -932,10 +966,15 @@ describe('receive screen', () => {
     const mounted = await mountScreen();
     try {
       // Item 20, step 1: chains only — no amount input, no QR yet.
+      // The shared picker shows the current chain (Ethereum) in its
+      // search field; the QR appears only on the details step.
       expect(mounted.div.querySelector('#receive-amount')).toBeNull();
       expect(mounted.div.querySelector('#receive-qr')).toBeNull();
-      expect(mounted.div.textContent).toContain('Ethereum');
-      await clickButton(mounted.div, 'Ethereum');
+      expect(
+        (mounted.div.querySelector('#receive-chain') as HTMLInputElement)
+          .value,
+      ).toBe('Ethereum');
+      await pickChain(mounted.div, 'eth');
       // Step 2: tokens for that chain — still no amount or QR.
       expect(mounted.div.textContent).toContain('USD Coin');
       expect(mounted.div.querySelector('#receive-amount')).toBeNull();
@@ -951,18 +990,17 @@ describe('receive screen', () => {
   });
 
   it('keeps every step compact: searchable picker, 216 px full QR card, truncated share link', async () => {
-    // Lane H: the chain step is a searchable picker (Popular first,
-    // the rest behind All networks), not a 22-button grid; the QR
-    // card's code is 216 px, and the long share link shows as one
-    // truncated line. Layout heights are asserted in CDP.
+    // P1 (Lane S4, item 11): the chain step is the shared searchable
+    // picker, not a 22-button grid; the QR card's code is 216 px, and
+    // the long share link shows as one truncated line. Layout heights
+    // are asserted in CDP.
     //
     // Lane 5 (2026-11-24): the 136 px value was Lane E's fold fix
     // (the template row sat 55 px below the fold at 192) — the
     // owner has since ordered the full card with a large QR, so
     // 216 is the size now (UX-major Lane 1 grew the B code 200 -> 216
-    // toward Bitget's 62%-of-card share) and
-    // the template row is reached with
-    // one short scroll at 390 px instead of sitting above the fold.
+    // toward Bitget's 62%-of-card share) and the template picker
+    // sits behind the Customise disclosure instead of below the card.
     setWallet();
     const mounted = await mountScreen();
     try {
@@ -970,8 +1008,7 @@ describe('receive screen', () => {
         'section[aria-labelledby="receive-addresses-heading"]',
       );
       expect(chainSection).not.toBeNull();
-      expect(chainSection?.querySelector('#receive-chain-search')).not.toBeNull();
-      expect(chainSection?.textContent).toContain('Popular');
+      expect(chainSection?.querySelector('#receive-chain')).not.toBeNull();
       await reachDetails(mounted.div);
       const qrSvg = mounted.div.querySelector('#receive-qr svg');
       expect(qrSvg).not.toBeNull();
@@ -991,7 +1028,7 @@ describe('receive screen', () => {
     try {
       // A token with no amount has no payment request, so the main QR
       // starts as the plain address.
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       await clickButton(mounted.div, 'USD Coin');
       const mainBefore = mounted.div.querySelector('svg title')?.textContent;
       expect(mainBefore).toBe(VAULT_ETH);
@@ -1077,7 +1114,7 @@ describe('receive screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       await clickButton(mounted.div, 'USD Coin');
       const findSmall = (label: string) =>
         [...mounted.div.querySelectorAll('button')].find(
@@ -1153,7 +1190,7 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       const list = mounted.div.querySelector(
         'section[aria-labelledby="receive-tokens-heading"] ul',
       );
@@ -1247,10 +1284,9 @@ describe('receive screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      // Lane H: Solana is not a popular chain, so it sits behind
-      // "All networks" in the picker.
-      await clickButton(mounted.div, 'All networks (1)');
-      await clickButton(mounted.div, 'Solana');
+      // P1 (Lane S4, item 11): the shared picker lists every
+      // receivable chain — Solana is one search away, no toggle.
+      await pickChain(mounted.div, 'sol');
       await clickButton(mounted.div, 'Solana · SOL');
       expect(mounted.div.textContent).toContain(
         'Receiving address 1 of this account.',
@@ -1290,25 +1326,29 @@ describe('receive screen', () => {
   });
 });
 
-describe('receive screen — network picker (Lane H)', () => {
-  it('shows the popular chains first, with the rest behind All networks', async () => {
+describe('receive screen — network picker (shared picker, P1 Lane S4)', () => {
+  it('uses the shared picker: every receivable chain listed, grouped, no second picker', async () => {
+    // P1 (Lane S4, item 11): the chain step is the one shared
+    // ChainSearchSelect — search, family grouping, logos, Recent —
+    // not the old Popular / All-networks picker.
     vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
     setWallet();
     const mounted = await mountScreen();
     try {
-      // Popular first, reachable without scrolling through all 22.
-      expect(mounted.div.textContent).toContain('Popular');
-      expect(mounted.div.textContent).toContain('Bitcoin');
-      expect(mounted.div.textContent).toContain('Ethereum');
-      expect(mounted.div.textContent).toContain('TRON');
-      expect(mounted.div.textContent).toContain('TON');
-      // The rest are grouped, not listed: Fantom is behind the toggle.
-      expect(mounted.div.textContent).not.toContain('Fantom');
-      expect(mounted.div.textContent).toContain('All networks (18)');
-      await clickButton(mounted.div, 'All networks (18)');
+      const input = mounted.div.querySelector(
+        '#receive-chain',
+      ) as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.value).toBe('Ethereum');
+      await act(async () => {
+        input.click();
+      });
+      // All 22 chains are one search away — Fantom is listed, not
+      // behind a toggle.
       expect(mounted.div.textContent).toContain('Fantom');
-      // Picking a grouped chain still advances the flow.
-      await clickButton(mounted.div, 'Fantom');
+      expect(mounted.div.querySelector('#receive-chain-listbox')).not.toBeNull();
+      // Picking a chain still advances the flow.
+      await pickChain(mounted.div, 'fantom');
       expect(mounted.div.textContent).toContain('Step 2 of 3: Token');
     } finally {
       await mounted.cleanup();
@@ -1321,62 +1361,48 @@ describe('receive screen — network picker (Lane H)', () => {
     const mounted = await mountScreen();
     try {
       const input = mounted.div.querySelector(
-        '#receive-chain-search',
+        '#receive-chain',
       ) as HTMLInputElement;
       expect(input).not.toBeNull();
       await fillInput(input, 'sol');
       expect(mounted.div.textContent).toContain('Solana');
       expect(mounted.div.textContent).not.toContain('Bitcoin');
       await fillInput(input, 'zzz-no-such-chain');
-      expect(mounted.div.textContent).toContain('No networks match');
-      // Clearing the search brings the Popular section back.
+      expect(mounted.div.textContent).toContain('No chains match');
+      // Clearing the search lists every chain again.
       await fillInput(input, '');
-      expect(mounted.div.textContent).toContain('Popular');
-      expect(mounted.div.textContent).not.toContain('Fantom');
+      expect(mounted.div.textContent).toContain('Fantom');
+      expect(mounted.div.textContent).toContain('Bitcoin');
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('hides the All networks toggle when every chain is popular', async () => {
-    vi.mocked(availableFor).mockReturnValue(['btc', 'eth', 'trx', 'ton']);
-    setWallet();
-    const mounted = await mountScreen();
-    try {
-      expect(mounted.div.textContent).toContain('Popular');
-      expect(mounted.div.textContent).not.toContain('All networks');
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('moves focus to the first chain with ArrowDown and picks the first match with Enter', async () => {
-    // Lane H (COSS Combobox): the search is a combobox — ArrowDown
-    // moves focus into the results, Enter picks the first match.
+  it('picks the first match with Enter', async () => {
+    // The shared picker's combobox keys: typing filters, Enter picks
+    // the first match (keyboard behaviour is covered in depth in
+    // chain-search-select.test.tsx; this proves it is wired here).
     vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
     setWallet();
     const mounted = await mountScreen();
     try {
       const input = mounted.div.querySelector(
-        '#receive-chain-search',
+        '#receive-chain',
       ) as HTMLInputElement;
       await fillInput(input, 'sol');
-      await act(async () => {
-        input.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
-        );
-      });
-      const solanaButton = [...mounted.div.querySelectorAll('button')].find(
-        (button) => button.textContent?.includes('Solana'),
-      );
-      expect(document.activeElement).toBe(solanaButton);
-      input.focus();
       await act(async () => {
         input.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
         );
       });
       expect(mounted.div.textContent).toContain('Step 2 of 3: Token');
+      // The pick landed on Solana: the screen's chain derives from
+      // the context selection, and this mock's setSelectedChain is a
+      // no-op (its selectedChain stays 'eth'), so the token heading
+      // still says Ethereum here — the call is the proof the pick
+      // landed. The live preview shows the heading following the
+      // pick, where the real context updates.
+      expect(mockSetSelectedChain).toHaveBeenCalledWith('sol');
     } finally {
       await mounted.cleanup();
     }
@@ -1388,23 +1414,49 @@ describe('receive screen — network picker (Lane H)', () => {
     const mounted = await mountScreen();
     try {
       const input = mounted.div.querySelector(
-        '#receive-chain-search',
+        '#receive-chain',
       ) as HTMLInputElement;
       await fillInput(input, 'sol');
-      expect(mounted.div.textContent).not.toContain('Popular');
+      expect(mounted.div.querySelector('#receive-chain-listbox')).not.toBeNull();
       await act(async () => {
         input.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
         );
       });
-      expect(input.value).toBe('');
-      expect(mounted.div.textContent).toContain('Popular');
+      // Closed, the field shows the selected chain again.
+      expect(mounted.div.querySelector('#receive-chain-listbox')).toBeNull();
+      expect(input.value).toBe('Ethereum');
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('uses SVG chevrons on the picker rows, never a text glyph', async () => {
+  it('keeps the picked chain in Recent on the next visit to the picker', async () => {
+    // The shared picker records every pick — the chain just used is
+    // one tap away when the user comes back to change networks.
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'sol');
+      await clickButton(mounted.div, 'Back');
+      const input = mounted.div.querySelector(
+        '#receive-chain',
+      ) as HTMLInputElement;
+      await act(async () => {
+        input.click();
+      });
+      expect(mounted.div.textContent).toContain('Recent');
+      const recent = mounted.div.querySelector(
+        '[aria-labelledby="receive-chain-recent-label"]',
+      );
+      expect(recent?.textContent).toContain('Solana');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('uses SVG chevrons on the picker, never a text glyph', async () => {
     // Lane H (ui-ux-pro-max checklist): SVG icons only — the old
     // '›' text chevron is an inline SVG now.
     vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
@@ -1416,10 +1468,81 @@ describe('receive screen — network picker (Lane H)', () => {
       );
       expect(chainSection).not.toBeNull();
       expect(chainSection?.textContent).not.toContain('›');
-      const rowButton = [...mounted.div.querySelectorAll('button')].find(
-        (button) => button.textContent?.includes('Ethereum'),
+      expect(chainSection?.querySelector('svg')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('receive screen — open on the last-used QR (P1 Lane S4, item 11)', () => {
+  it('opens straight on the QR for the last-used chain, with no chain step', async () => {
+    // Item 11: the common case needs no chain step — Receive opens
+    // on the QR for the chain the wallet last used.
+    localStorage.setItem('bawa:last-used-chain', JSON.stringify('eth'));
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.querySelector('#receive-qr')).not.toBeNull();
+      expect(mounted.div.querySelector('#receive-amount')).not.toBeNull();
+      expect(mounted.div.querySelector('#receive-chain')).toBeNull();
+      expect(mounted.div.textContent).toContain(VAULT_ETH);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('falls back to the chain step with no last-used chain', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.querySelector('#receive-qr')).toBeNull();
+      expect(mounted.div.querySelector('#receive-chain')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('says the network warning once', async () => {
+    // Item 11: one warning line — the alert above the card is gone,
+    // the paragraph below the card carries it.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      expect(mounted.div.textContent).not.toContain('Send only on');
+      const warnings = (mounted.div.textContent ?? '').split('Mainnet only')
+        .length - 1;
+      expect(warnings).toBe(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('keeps the template picker behind a Customise disclosure', async () => {
+    // Item 11: the 7 card styles and 3 QR types sit behind Share —
+    // one tap to customise, zero scroll to the QR.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      const summary = [...mounted.div.querySelectorAll('summary')].find(
+        (candidate) => candidate.textContent === 'Customise card',
       );
-      expect(rowButton?.querySelector('svg')).not.toBeNull();
+      expect(summary).not.toBeUndefined();
+      // The pickers are in the DOM (behind the disclosure), and still
+      // switch the card when picked.
+      const group = mounted.div.querySelector('[aria-label="Card style"]');
+      expect(group).not.toBeNull();
+      const buttons = [...group!.querySelectorAll('button')];
+      await act(async () => {
+        buttons[1]?.click();
+      });
+      expect(
+        mounted.div
+          .querySelector('[data-testid="qr-card"]')
+          ?.getAttribute('data-template'),
+      ).toBe('a');
     } finally {
       await mounted.cleanup();
     }
@@ -1658,7 +1781,7 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
         button.textContent?.includes('USD Coin'),
       );
@@ -1730,7 +1853,7 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      await clickButton(mounted.div, 'Ethereum');
+      await pickChain(mounted.div, 'eth');
       await clickButton(mounted.div, 'USD Coin');
       const findSmall = (label: string) =>
         [...mounted.div.querySelectorAll('button')].find(

@@ -1,13 +1,85 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
 import { Input } from '../ui/components/input';
-import { useWallet } from '../state/wallet-context';
+import { useWallet, type BalanceState } from '../state/wallet-context';
 import { Card } from '../ui/components/card';
 import { BawaIcon } from '../ui/components/icons';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { useLivePrices } from './use-live-prices';
+
+/** A balance failure a refetch could fix: status 'error', or
+    'unavailable' for a reason that is not a permanent never-fetch
+    state (no adapter, no address, disabled chain, a devnet token
+    with no contract). A row still loading is not a failure, and a
+    permanent state never shows a retry — retrying those could only
+    fail again. */
+function isFailedBalance(balance: BalanceState | undefined): boolean {
+  if (balance === undefined) return false;
+  if (balance.status === 'error') return true;
+  if (balance.status !== 'unavailable') return false;
+  return (
+    balance.reason !== undefined &&
+    balance.reason !== 'no-adapter' &&
+    balance.reason !== 'no-address' &&
+    balance.reason !== 'disabled' &&
+    balance.reason !== 'devnet-no-tokens'
+  );
+}
+
+/**
+ * P1 (Lane S4, P0-C follow-up): the list-level retry, shared by the
+ * Assets screen and the dashboard — the dashboard renders AssetRows
+ * directly, so the line has to live in both places or the main
+ * surface never shows it. One line naming how many balances failed,
+ * with a Retry that re-fetches them (the same refetch the Refresh
+ * button runs). The per-row Retry stays gone (Lane J); this is the
+ * list's one retry path. Locked and no-wallet states never see it: a
+ * locked vault's balances cannot load by definition, and the
+ * no-wallet branch hides the list entirely.
+ */
+export function FailedBalancesRetry(): ReactNode {
+  const { vaultState, refreshBalances, refreshTokenBalances, balances, tokenBalances } =
+    useWallet();
+  const [refreshing, setRefreshing] = useState(false);
+  async function handleRefresh(): Promise<void> {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshBalances();
+      await refreshTokenBalances?.();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+  const failedBalanceCount =
+    vaultState === 'unlocked'
+      ? Object.values(balances ?? {}).filter(isFailedBalance).length +
+        Object.values(tokenBalances ?? {}).filter(isFailedBalance).length
+      : 0;
+  if (failedBalanceCount === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2" role="status">
+      <p className="text-base text-ink">
+        {failedBalanceCount === 1
+          ? '1 balance failed'
+          : `${failedBalanceCount} balances failed`}
+      </p>
+      <Button
+        type="button"
+        onClick={() => {
+          void handleRefresh();
+        }}
+        disabled={refreshing}
+        variant="secondary"
+        size="sm"
+      >
+        {refreshing ? 'Refreshing…' : 'Retry'}
+      </Button>
+    </div>
+  );
+}
 
 /**
  * Full asset list — the same real-balance rows as the dashboard, with the
@@ -148,6 +220,8 @@ export function AssetListScreen() {
           </Button>
         </div>
       </div>
+
+      <FailedBalancesRetry />
 
       <Card>
         <AssetRows variant="table" hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} query={query} onClearQuery={() => setQuery('')} />

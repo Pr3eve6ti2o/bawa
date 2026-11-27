@@ -3,8 +3,9 @@
 // Phase 2, 2026-11-26).
 //
 // Swap and bridge assets across networks with minimal manual steps:
-// pick a from chain/token and a to chain/token, enter an amount, get
-// a real quote, see the route, the fee and the recipient. One swaps
+// pick a from chain/token and a to chain/token, enter an amount and
+// the quote auto-fires (debounced; the Get quote button stays as the
+// explicit re-fetch), see the route, the fee and the recipient. One swaps
 // button, one screen: the quote is compared across the providers
 // that cover the pair (LI.FI live today, Relay, STON.fi), with the
 // cheapest/best pre-selected, and gas.zip appears as a separate
@@ -71,6 +72,7 @@ import {
 import { DEFAULT_TOKENS, tokenKey } from '../wallet/tokens';
 import {
   ChainSearchSelect,
+  readLastUsedChain,
   SWAP_RECENT_CHAINS_KEY,
 } from './chain-search-select';
 import { ChainLogo, TokenLogo } from './token-logo';
@@ -338,13 +340,20 @@ type RefuelQuoteState =
 export function SwapScreen() {
   const { vaultState, vaultAddresses, vaultAccount, balances, tokenBalances, devnetEnabled } =
     useWallet();
-  const [fromChain, setFromChain] = useState<ChainId>('eth');
-  const [toChain, setToChain] = useState<ChainId>('matic');
+  // P1 (Lane S4, item 10): both sides start on the last-used chain —
+  // the shared last-used pick the picker records on every selection.
+  // To defaults to that chain too, or to the from-chain when nothing
+  // was recorded yet — never to an unasked Polygon (the old default).
+  const swapLastUsedChain = readLastUsedChain(COMPARE_CHAINS);
+  const initialFromChain: ChainId = swapLastUsedChain ?? 'eth';
+  const initialToChain: ChainId = swapLastUsedChain ?? initialFromChain;
+  const [fromChain, setFromChain] = useState<ChainId>(initialFromChain);
+  const [toChain, setToChain] = useState<ChainId>(initialToChain);
   const [fromToken, setFromToken] = useState<SwapTokenChoice>(() =>
-    nativeChoice('eth'),
+    nativeChoice(initialFromChain),
   );
   const [toToken, setToToken] = useState<SwapTokenChoice>(() =>
-    nativeChoice('matic'),
+    nativeChoice(initialToChain),
   );
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
@@ -363,6 +372,10 @@ export function SwapScreen() {
     useState<RefuelQuoteState>({ status: 'idle' });
   const requestId = useRef(0);
   const refuelRequestId = useRef(0);
+  // P1 (Lane S4, item 10): the request the auto-quote last fetched
+  // for — a manual Get quote sets it too, so the auto-quote never
+  // re-fires for a request that already has its quote.
+  const lastAutoQuoteKey = useRef<string | null>(null);
   const lastAutoRecipient = useRef<string | null>(null);
 
   const fromChoices = useMemo(() => tokenChoicesFor(fromChain), [fromChain]);
@@ -468,6 +481,14 @@ export function SwapScreen() {
   async function handleGetQuote(): Promise<void> {
     if (quoteDisabledReason !== null || quoteBusy) return;
     if (amountBaseUnits === null || fromAddress === null) return;
+    lastAutoQuoteKey.current = [
+      fromChain,
+      toChain,
+      choiceKey(fromToken),
+      choiceKey(toToken),
+      amount,
+      recipient,
+    ].join('|');
     const id = ++requestId.current;
     setQuoteState({ status: 'loading' });
     const result: SwapQuoteResult = await fetchSwapQuote({
@@ -513,6 +534,40 @@ export function SwapScreen() {
       setQuoteState({ status: 'unavailable', reason: result.reason });
     }
   }
+
+  // P1 (Lane S4, item 10): the quote auto-fires on amount entry —
+  // debounced 600 ms, so typing does not fire a request per keystroke
+  // (Uniswap / Phantom / OKX quote live as you type; no Get-quote tap
+  // exists there). The manual Get quote button stays as the explicit
+  // re-fetch — it is a real primary button (Lane T system), never
+  // dashed, never looking disabled. The key guard stops the effect
+  // re-firing on the loading→done transition: only a new request (a
+  // new chain, token, amount or recipient) arms a fresh fetch.
+  useEffect(() => {
+    if (quoteDisabledReason !== null || quoteBusy) return;
+    const key = [
+      fromChain,
+      toChain,
+      choiceKey(fromToken),
+      choiceKey(toToken),
+      amount,
+      recipient,
+    ].join('|');
+    if (lastAutoQuoteKey.current === key) return;
+    const timer = setTimeout(() => {
+      void handleGetQuote();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [
+    fromChain,
+    toChain,
+    fromToken,
+    toToken,
+    amount,
+    recipient,
+    quoteDisabledReason,
+    quoteBusy,
+  ]);
 
   /**
    * Sign a STON.fi TON-source order offline (Lane D, 2026-11-27):
@@ -1008,8 +1063,9 @@ export function SwapScreen() {
 
       {quoteState.status === 'idle' && (
         <p className="text-sm text-muted-foreground">
-          No quote yet — enter an amount and get a quote. Quotes are live
-          from LI.FI and free to check; getting one signs nothing and moves no funds.
+          No quote yet — enter an amount and the quote appears
+          automatically. Quotes are live from LI.FI and free to check;
+          getting one signs nothing and moves no funds.
         </p>
       )}
       {quoteState.status === 'loading' && (
@@ -1309,16 +1365,25 @@ export function SwapScreen() {
         <h2 id="refuel-heading" className="font-semibold">
           Refuel gas
         </h2>
-        <p className="leading-relaxed text-muted-foreground">
-          Out of gas on a new network? gas.zip sends a little of that
-          network&apos;s native coin to it, so you can transact there.
-          This is a refuel, not a swap — it moves no tokens, only
-          native gas, between ${GASZIP_MIN_USD_PER_CHAIN.toFixed(2)} and
-          ${GASZIP_MAX_USD_PER_CHAIN.toFixed(2)} per network. Quotes are
-          live from gas.zip; the fee lives only in the quote, so the
-          expected amount is shown before anything is signed. Nothing
-          here signs or sends anything.
+        <p className="text-sm leading-5 text-muted-foreground">
+          Out of gas on a new network? gas.zip sends a little native
+          coin there — a refuel, not a swap.
         </p>
+        {/* P1 (Lane S4, item 10): the Refuel essay is a one-line
+            disclosure now — the limits and fee note live behind it. */}
+        <details>
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
+            About refuel
+          </summary>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            It moves no tokens, only native gas, between
+            ${GASZIP_MIN_USD_PER_CHAIN.toFixed(2)} and
+            ${GASZIP_MAX_USD_PER_CHAIN.toFixed(2)} per network. Quotes
+            are live from gas.zip; the fee lives only in the quote, so
+            the expected amount is shown before anything is signed.
+            Nothing here signs or sends anything.
+          </p>
+        </details>
         <Button
           type="button"
           variant="secondary"
@@ -1532,33 +1597,45 @@ export function SwapScreen() {
         <h2 id="swap-next-heading" className="font-semibold">
           What happens next
         </h2>
-        <p className="leading-relaxed text-muted-foreground">
-          Swaps are not executed in this wallet yet. A quote shows what a
-          swap would cost — to run one, the wallet needs a swap provider
-          set up, your approval to sign, and broadcast switched on. A
-          free LI.FI API key (from the LI.FI Partner Portal) would raise
-          the quote rate limit. Relay quotes need a proxy or
-          access-token endpoint — not set up yet. Live STON.fi quotes
-          come from version {STONFI_SDK_EXACT_VERSION} of its SDK,
-          installed for the TON corridor, and TON order signing is
-          wired. Executing a quote needs the owner&apos;s separate
-          broadcast authorisation, which stays switched off until
-          approved. A STON.fi order whose source is TON can be signed
-          offline here — the signed BoC is shown and nothing is sent.
-          Nothing else on this screen signs or sends anything.
+        <p className="text-sm leading-5 text-muted-foreground">
+          Quotes only — swaps don&apos;t execute yet.
         </p>
-        <p className="leading-relaxed text-muted-foreground">
-          Getting a quote sends your from and to addresses to LI.FI so it
-          can price the pair — and to gas.zip for a refuel quote. STON.fi
-          receives no wallet address, and Relay receives none today
-          because no proxy is set up.
-        </p>
-        <Link
-          to="/send"
-          className="inline-block text-base font-medium text-primary underline underline-offset-4"
-        >
-          Send on the same network instead
-        </Link>
+        {/* P1 (Lane S4, item 10): the "What happens next" essay is a
+            one-line disclosure now — the provider setup and
+            data-sharing notes live behind it. */}
+        <details>
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
+            Why quotes only
+          </summary>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            Swaps are not executed in this wallet yet. A quote shows what
+            a swap would cost — to run one, the wallet needs a swap
+            provider set up, your approval to sign, and broadcast
+            switched on. A free LI.FI API key (from the LI.FI Partner
+            Portal) would raise the quote rate limit. Relay quotes need
+            a proxy or access-token endpoint — not set up yet. Live
+            STON.fi quotes come from version{' '}
+            {STONFI_SDK_EXACT_VERSION} of its SDK, installed for the TON
+            corridor, and TON order signing is wired. Executing a quote
+            needs the owner&apos;s separate broadcast authorisation,
+            which stays switched off until approved. A STON.fi order
+            whose source is TON can be signed offline here — the signed
+            BoC is shown and nothing is sent. Nothing else on this screen
+            signs or sends anything.
+          </p>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            Getting a quote sends your from and to addresses to LI.FI so it
+            can price the pair — and to gas.zip for a refuel quote. STON.fi
+            receives no wallet address, and Relay receives none today
+            because no proxy is set up.
+          </p>
+          <Link
+            to="/send"
+            className="mt-2 inline-block text-base font-medium text-primary underline underline-offset-4"
+          >
+            Send on the same network instead
+          </Link>
+        </details>
       </section>
     </div>
   );

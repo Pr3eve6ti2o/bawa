@@ -612,6 +612,15 @@ export function CreateWalletScreen() {
                 </li>
               ))}
             </ul>
+            {/* P1 (Lane S4, P0-B follow-up): the /create hub's
+                honest-limit line has its home here, where the addresses
+                are shown — one phrase, one account, a different address
+                per network. */}
+            <p className="text-base leading-6">
+              There is no single address that works on every chain — each
+              network has its own address, all from the same recovery
+              phrase.
+            </p>
             <p className="text-base leading-6">
               Keep your written recovery phrase safe. If you lose this device,
               it is the only way to recover your wallet.

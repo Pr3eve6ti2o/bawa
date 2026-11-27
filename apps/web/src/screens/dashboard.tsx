@@ -17,6 +17,7 @@ import { tokenKey } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
 import { NumberTicker } from '../ui/components/number-ticker';
 import { AssetRows } from './asset-rows';
+import { FailedBalancesRetry } from './asset-list';
 import { AddTokenDialog } from './add-token';
 import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
@@ -608,6 +609,12 @@ export function DashboardScreen() {
                   <Link to="/transactions">Activity</Link>
                 </Button>
               </div>
+            </div>
+            {/* P1 (Lane S4, P0-C follow-up): the list-level retry —
+                the dashboard renders AssetRows directly, so the line
+                lives here as well as on the Assets screen. */}
+            <div className="mt-4">
+              <FailedBalancesRetry />
             </div>
             <Card className="mt-4">
               {devnetEnabled && (

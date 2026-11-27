@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
@@ -44,7 +44,11 @@ import {
   type TokenRecord,
 } from '../wallet/tokens';
 import { AddTokenDialog } from './add-token';
-import { filterChains } from './chain-search-select';
+import {
+  ChainSearchSelect,
+  readLastUsedChain,
+  RECEIVE_RECENT_CHAINS_KEY,
+} from './chain-search-select';
 import { QrCard, qrCardSubtitle, qrCardTitle, qrCardTokenLabel, qrCardTokenSubline } from './qr-card';
 import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
 import { TokenPickerRow } from './token-picker-row';
@@ -59,78 +63,6 @@ import { Label } from '../ui/components/label';
 // Item 20: the three QR templates — plain address, payment request,
 // Bawa web link.
 type QrTemplate = 'address' | 'payment' | 'link';
-
-// Lane H: the popular networks — the same four the dashboard's
-// PopularChainsStrip uses (the four original adapter chains). They
-// are the picker's first section, so the chains people actually
-// receive on are one tap away without scrolling through all 87.
-export const POPULAR_RECEIVE_CHAINS: readonly ChainId[] = [
-  'btc',
-  'eth',
-  'trx',
-  'ton',
-];
-
-/**
- * A chain's real mark: the bundled Trust Wallet logo where the repo
- * has one, and the deliberate link mark where it has none (ChainLogo,
- * screens/token-logo.tsx). Lane B (token-verify, 2026-11-24): this
- * used to fall back to the symbol's token logo — the Ethereum logo
- * on the eleven icon-less ETH-symbol chains — and then to a yellow
- * ticker badge with the symbol text, the badge the owner ordered
- * removed on 2026-11-23. Both fallbacks are gone; the shared
- * ChainLogo is the only mark path now, so the picker can never drift
- * from the asset rows again.
- */
-function ChainMark({ chain }: { chain: ChainId }) {
-  return <ChainLogo chain={chain} size={32} />;
-}
-
-/**
- * One network row in the picker: mark, name + symbol, chevron.
- * A full-width row, not a grid cell — the name is never truncated
- * ("BNB Smart Chain …", "Avalanche C-Chai…" in the old 2-column
- * grid) and the selected row reads as the current choice.
- *
- * Row anatomy follows Ivy Wallet's account rows (icon + name + one
- * action, no second control) and the OJO 8-state model: default
- * (paper), hover (sun — the repo's established row hover),
- * selected (sun), focus (coral ring). The chevron is an inline SVG,
- * not a text glyph (ui-ux-pro-max checklist: SVG icons only).
- */
-function ChainRow({
-  chain,
-  selected,
-  onSelect,
-}: {
-  chain: ChainId;
-  selected: boolean;
-  onSelect: (chain: ChainId) => void;
-}) {
-  const config = chainConfig(chain);
-  return (
-    <li
-      className={`rounded-bawa-sm border-2 border-ink ${
-        selected ? 'bg-sun' : 'bg-paper'
-      }`}
-    >
-      <button
-        type="button"
-        aria-pressed={selected}
-        title={config.displayName}
-        onClick={() => onSelect(chain)}
-        className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-bawa-sm p-2 text-left text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-      >
-        <ChainMark chain={chain} />
-        <span className="min-w-0 flex-1 truncate text-base font-semibold">
-          {config.displayName}{' '}
-          <span className="font-normal">{config.symbol}</span>
-        </span>
-        <BawaIcon name="chevron-down" className="size-4 shrink-0 -rotate-90" />
-      </button>
-    </li>
-  );
-}
 
 // Lane D (usable-install): the Buy panel's wallet states. Each
 // impossible state gets its own explanation and the next step, never
@@ -336,19 +268,53 @@ export function ReceiveScreen() {
   const [tokenFilter, setTokenFilter] = useState('');
   const [addTokenOpen, setAddTokenOpen] = useState(false);
   // Item 20: stepped flow — network, then token, then amount + QR.
-  const [step, setStep] = useState<'chain' | 'token' | 'details'>('chain');
+  // P1 (Lane S4, item 11): Receive opens on the QR for the last-used
+  // chain when this wallet has an address on it — the common case
+  // needs no chain step at all. Otherwise it opens on the chain step,
+  // as before. The entry chain is the shared last-used pick the
+  // picker records on every selection (Send's pattern).
+  const entryReceiveChains = availableFor('receive');
+  const lastUsedReceiveChain = readLastUsedChain(entryReceiveChains);
+  const entryChain: ChainId | undefined = (() => {
+    if (
+      lastUsedReceiveChain !== null &&
+      ((vaultAddresses[lastUsedReceiveChain] ?? []).length > 0 ||
+        (addresses[lastUsedReceiveChain] ?? []).some(
+          (entry) => entry.index === 0,
+        ))
+    ) {
+      return lastUsedReceiveChain;
+    }
+    if (entryReceiveChains.includes(selectedChain)) return selectedChain;
+    return entryReceiveChains[0];
+  })();
+  const initialStep: 'chain' | 'token' | 'details' =
+    lastUsedReceiveChain !== null && entryChain === lastUsedReceiveChain
+      ? 'details'
+      : 'chain';
+  const [step, setStep] = useState<'chain' | 'token' | 'details'>(initialStep);
+  // The step the flow entered on (Send's pattern): the shared
+  // selection is synced to the entry chain before paint, so the QR
+  // the screen opens on is the chain the picker shows — never a
+  // flash of another chain's QR first. A layout effect, not an
+  // effect, for exactly that reason; it is a no-op unless the entry
+  // chain differs from the context selection.
+  const [entryStep] = useState(initialStep);
+  useLayoutEffect(() => {
+    if (
+      entryStep === 'details' &&
+      entryChain !== undefined &&
+      entryChain !== selectedChain &&
+      typeof setSelectedChain === 'function'
+    ) {
+      setSelectedChain(entryChain);
+    }
+  }, [entryStep, entryChain, selectedChain, setSelectedChain]);
   const [template, setTemplate] = useState<QrTemplate | null>(null);
   // QR-cards programme, Lane E: which of the four card templates
   // the card renders in — and which one Share/Download draw to PNG.
   // Default B (Paper), Bawa's own system.
   const [cardTemplate, setCardTemplate] = useState<QrCardTemplate>(DEFAULT_QR_CARD_TEMPLATE);
-  // Lane H: the network picker — a search query, and whether the
-  // grouped "All networks" list is open. Both reset when a network
-  // is picked (selectChain below), so the next visit starts clean.
-  const [chainQuery, setChainQuery] = useState('');
-  const [allNetworksOpen, setAllNetworksOpen] = useState(false);
-  // The picker's section, for the search keyboard nav below.
-  const pickerRef = useRef<HTMLElement | null>(null);
   const [isRotating, setIsRotating] = useState(false);
   const qrRef = useRef<HTMLDivElement | null>(null);
 
@@ -633,46 +599,7 @@ export function ReceiveScreen() {
     setSelectedToken(null);
     setSelectedChain(next);
     setTemplate(null);
-    setChainQuery('');
-    setAllNetworksOpen(false);
     setStep('token');
-  }
-
-  // Lane H: the picker's sections. Popular first (only the ones this
-  // screen can receive on), the rest grouped behind "All networks".
-  // A search query replaces both sections with a flat filtered list
-  // across all 87 — the same filterChains the watch-only chain
-  // search uses (name, symbol or id, case-insensitive).
-  const popularChains = POPULAR_RECEIVE_CHAINS.filter((entry) =>
-    chains.includes(entry),
-  );
-  const otherChains = chains.filter(
-    (entry) => !POPULAR_RECEIVE_CHAINS.includes(entry),
-  );
-  const chainSearch = chainQuery.trim();
-  const searchedChains =
-    chainSearch === '' ? [] : filterChains(chains, chainSearch);
-
-  // Lane H (COSS Combobox): the search is a combobox, not a plain
-  // filter — ArrowDown moves focus into the results, Enter picks
-  // the first match, Escape clears the query. Tab still reaches
-  // every row (they are native buttons); these keys are the
-  // shortcut regulars expect from a search-over-list (Ivy Wallet's
-  // feature/search is the model).
-  function handleChainSearchKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      const firstRow = pickerRef.current?.querySelector('ul li button');
-      (firstRow as HTMLButtonElement | null)?.focus();
-    } else if (event.key === 'Enter') {
-      if (chainSearch !== '' && searchedChains.length > 0) {
-        event.preventDefault();
-        const first = searchedChains[0];
-        if (first !== undefined) selectChain(first);
-      }
-    } else if (event.key === 'Escape') {
-      setChainQuery('');
-    }
   }
 
   // A null token is the selected network's native coin.
@@ -1080,99 +1007,24 @@ export function ReceiveScreen() {
       )}
 
       {step === 'chain' && (
-      <section ref={pickerRef} aria-labelledby="receive-addresses-heading" className="space-y-3">
+      <section aria-labelledby="receive-addresses-heading" className="space-y-3">
         {/* Round 2, item 8: the step label above ("Step 1 of 3: Network")
             is the visible title; the heading stays for screen readers. */}
         <h2 id="receive-addresses-heading" className="sr-only">
           Choose a network
         </h2>
-        {/* Lane H: a sleek network picker, not the 87-button grid.
-            Search at the top; Popular first as full-width rows with
-            the real chain marks (names never truncated); the rest
-            grouped behind "All networks", collapsed by default, so
-            the popular chains are reachable without scrolling
-            through all 87. Searching replaces both sections with a
-            flat filtered list. Built on the watch-only chain search
-            (filterChains), not a second copy of it. */}
-        <div className="space-y-1">
-          <Label htmlFor="receive-chain-search" className="sr-only">
-            Search networks
-          </Label>
-          <Input
-            id="receive-chain-search"
-            type="text"
-            value={chainQuery}
-            onChange={(event) => setChainQuery(event.target.value)}
-            onKeyDown={handleChainSearchKeyDown}
-            placeholder="Search networks — e.g. Solana"
-            height="md"
-          />
-        </div>
-        {chainSearch !== '' ? (
-          <div className="space-y-3">
-            <p role="status" className="text-base text-ink">
-              {searchedChains.length === 0
-                ? `No networks match “${chainSearch}”.`
-                : `${searchedChains.length} ${
-                    searchedChains.length === 1 ? 'network' : 'networks'
-                  } found`}
-            </p>
-            <ul className="space-y-2">
-              {searchedChains.map((available) => (
-                <ChainRow
-                  key={available}
-                  chain={available}
-                  selected={available === chain}
-                  onSelect={selectChain}
-                />
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-ink">Popular</h3>
-            <ul className="space-y-2">
-              {popularChains.map((available) => (
-                <ChainRow
-                  key={available}
-                  chain={available}
-                  selected={available === chain}
-                  onSelect={selectChain}
-                />
-              ))}
-            </ul>
-            {otherChains.length > 0 && (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  aria-expanded={allNetworksOpen}
-                  onClick={() => setAllNetworksOpen((open) => !open)}
-                  className="flex min-h-11 w-full cursor-pointer items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper p-2 text-left text-sm font-semibold text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                >
-                  <span>
-                    All networks ({otherChains.length})
-                  </span>
-                  <BawaIcon
-                    name="chevron-down"
-                    className={`size-4 shrink-0 motion-safe:transition-transform ${allNetworksOpen ? 'motion-safe:rotate-180' : ''}`}
-                  />
-                </button>
-                {allNetworksOpen && (
-                  <ul className="space-y-2">
-                    {otherChains.map((available) => (
-                      <ChainRow
-                        key={available}
-                        chain={available}
-                        selected={available === chain}
-                        onSelect={selectChain}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* P1 (Lane S4, item 11): the network picker is the one shared
+            searchable chain picker — search, family grouping, logos,
+            Recent + last-used first — not a second picker. Picking a
+            network records it as last-used, so the next visit opens
+            straight on its QR. */}
+        <ChainSearchSelect
+          chains={chains}
+          value={chain}
+          onChange={selectChain}
+          id="receive-chain"
+          recentKey={RECEIVE_RECENT_CHAINS_KEY}
+        />
       </section>
       )}
 
@@ -1301,26 +1153,6 @@ export function ReceiveScreen() {
         </Button>
       </p>
 
-      {/* Fix-all Lane H, item 5: the Receive tagline, removed in Round 2
-          item 8 to make the steps fit — restored on the details step,
-          where the address it names is shown. */}
-      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
-
-      <Alert>
-        <AlertDescription>
-          {`Send only on ${devnetEnabled ? (devnetChainConfigOrUndefined(chain)?.devnetName ?? config.displayName) : config.displayName} — the sender must use this network.`}
-        </AlertDescription>
-      </Alert>
-
-      {isWatchOnly && (
-        <Alert>
-          <AlertDescription>
-            Watch-only account — this address can receive, but this wallet
-            cannot sign or send from it.
-          </AlertDescription>
-        </Alert>
-      )}
-
       </div>
       <div className="space-y-2 lg:sticky lg:top-6">
       <Card radius="xl" tone="card" borderTone="border">
@@ -1411,6 +1243,23 @@ export function ReceiveScreen() {
                 {copyStatus}
               </p>
             )}
+            {paymentUriUnavailable && (
+              <p className="text-base text-ink">
+                Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
+                standard payment-request link, so the QR encodes the address only. The share
+                link below still carries the amount.)
+              </p>
+            )}
+            {/* P1 (Lane S4, item 11): the template picker lives behind
+                Share now — the 7 card styles and the 3 QR types sit in
+                one "Customise card" disclosure, so the QR + Copy sit
+                above the fold and customisation costs one tap. The
+                templates themselves are untouched (QR-cards
+                programme). */}
+            <details className="w-full">
+              <summary className="cursor-pointer text-center text-base font-semibold text-ink">
+                Customise card
+              </summary>
                         {/* Lane 4 (redesign): the card-style picker is a 2-row grid
                 of label-only buttons — seven templates cannot fit the old
                 4-segment row with a hint each (hints wrapped to 3 lines).
@@ -1418,7 +1267,7 @@ export function ReceiveScreen() {
                 template's hint shows as one line under the grid. Same
                 contract: role group, aria-pressed, active = sun,
                 accessible names "Show {label} card style". */}
-            <p className="w-full text-center text-base font-semibold text-ink">
+            <p className="mt-2 w-full text-center text-base font-semibold text-ink">
               Card style — tap to switch
             </p>
             <div
@@ -1446,13 +1295,6 @@ export function ReceiveScreen() {
             <p className="w-full text-center text-xs text-ink">
               {QR_CARD_TEMPLATES.find((candidate) => candidate.id === cardTemplate)?.hint}
             </p>
-            {paymentUriUnavailable && (
-              <p className="text-base text-ink">
-                Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
-                standard payment-request link, so the QR encodes the address only. The share
-                link below still carries the amount.)
-              </p>
-            )}
                         {/* Lane 4 (redesign): the three QR templates stay one control
                 with three segments (Lane H's idiom) — but the 64 px mini
                 QR thumbnails are gone: all three looked identical at that
@@ -1497,6 +1339,7 @@ export function ReceiveScreen() {
             {paymentHint !== null && (
               <p className="w-full text-center text-xs text-ink">{paymentHint}</p>
             )}
+            </details>
                         
             {/* The share link is long; the row shows one truncated line
                 (the full link stays in the DOM and copies whole). */}
@@ -1539,9 +1382,25 @@ export function ReceiveScreen() {
         )}
       </Card>
 
-      {/* Lane 4 (redesign): the network warning was said three times
-          (alert above the card + these two paragraphs). One paragraph
-          now carries it, below the card. */}
+      {/* Fix-all Lane H, item 5: the Receive tagline, restored on the
+          details step, where the address it names is shown. P1 (Lane
+          S4, item 11): it sits below the card now, so the QR is first
+          and its Copy sits above the fold. */}
+      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
+
+      {isWatchOnly && (
+        <Alert>
+          <AlertDescription>
+            Watch-only account — this address can receive, but this wallet
+            cannot sign or send from it.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* P1 (Lane S4, item 11): the network warning is said once —
+          this paragraph, below the card. The alert that said it above
+          the card is gone (it pushed the QR down); the card subtitle
+          still names the network on the card itself. */}
       <p className="text-base text-ink">
         {(() => {
           const devnetConfig = devnetEnabled

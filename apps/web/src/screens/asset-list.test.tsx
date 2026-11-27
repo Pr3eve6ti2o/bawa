@@ -388,6 +388,52 @@ describe('asset list screen', () => {
     }
   });
 
+  it('shows a list-level N balances failed — Retry for real failures', async () => {
+    // P1 (Lane S4, P0-C follow-up): the deferred list-level retry —
+    // one line naming how many balances failed, with a Retry that
+    // re-fetches them. Only real fetch failures count: a chain with
+    // no adapter is never a failure (its rows stay 'Balance
+    // unavailable' with no retry, as in the test above).
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mockRefreshBalances = vi.fn().mockResolvedValue(undefined);
+    const mockRefreshTokens = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({
+        eth: { status: 'error', reason: 'timeout' },
+        btc: { status: 'unavailable', reason: 'rate-limited' },
+      }),
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'error',
+          reason: 'timeout',
+        },
+      },
+      refreshBalances: mockRefreshBalances,
+      refreshTokenBalances: mockRefreshTokens,
+      vaultState: 'unlocked',
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      expect(mounted.div.textContent).toContain('3 balances failed');
+      const retry = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Retry',
+      ) as HTMLButtonElement;
+      expect(retry).not.toBeUndefined();
+      await act(async () => {
+        retry.click();
+      });
+      expect(mockRefreshBalances).toHaveBeenCalled();
+      expect(mockRefreshTokens).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows a busy Refresh while the refetch is in flight', async () => {
     // Aceternity Stateful Button pattern (structure only): an async
     // action shows its loading state, then settles — no fake success,
