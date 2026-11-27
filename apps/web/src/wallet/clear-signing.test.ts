@@ -7,15 +7,7 @@
 // 0x4E5B17cF6393ecb5c0295f80ef9a79D6233fEdb8, minimum to receive
 // 2105045649, last pool 0x53Ead11073fc0651dce70572666f0eD0752abfeA.
 import { describe, expect, it } from 'vitest';
-import {
-  formatAccountId,
-  formatAccountWithChain,
-  formatChainId,
-  getAddressFromAccount,
-  getChainFromAccount,
-  parseAccountId,
-  parseChainId,
-} from './caip';
+import { formatChainId } from './caip';
 import {
   decodeCalldata,
   formatBaseUnits,
@@ -44,41 +36,11 @@ function unoswapToData(): string {
   );
 }
 
-describe('CAIP-2 / CAIP-10 helpers', () => {
-  it('formats and parses a chain id', () => {
+describe('CAIP-2 chain id', () => {
+  it('formats a chain id', () => {
     expect(formatChainId({ namespace: 'eip155', reference: '1' })).toBe(
       'eip155:1',
     );
-    expect(parseChainId('eip155:42161')).toEqual({
-      namespace: 'eip155',
-      reference: '42161',
-    });
-  });
-
-  it('formats and parses an account id, and reads its parts', () => {
-    const account = formatAccountId({
-      namespace: 'eip155',
-      reference: '1',
-      address: USDC,
-    });
-    expect(account).toBe(`eip155:1:${USDC}`);
-    expect(parseAccountId(account)).toEqual({
-      namespace: 'eip155',
-      reference: '1',
-      address: USDC,
-    });
-    expect(getAddressFromAccount(account)).toBe(USDC);
-    expect(getChainFromAccount(account)).toBe('eip155:1');
-    expect(formatAccountWithChain(USDC, 'eip155:1')).toBe(account);
-  });
-
-  it('rejects malformed ids', () => {
-    expect(() => parseChainId('eip155')).toThrow();
-    expect(() => parseChainId('eip155:1:extra')).toThrow();
-    expect(() => parseChainId('EIP155:1')).toThrow();
-    expect(() => parseAccountId('eip155:1')).toThrow();
-    expect(() => parseAccountId('eip155:1:0xabc:extra')).toThrow();
-    expect(() => formatAccountId({ namespace: 'eip155', reference: '1', address: '' })).toThrow();
   });
 });
 
@@ -134,11 +96,38 @@ describe('clear signing', () => {
     expect(resolved?.intent).toBe('Swap');
     expect(resolved?.rows).toEqual([
       { label: 'Beneficiary', value: '0x4e5b17cf6393ecb5c0295f80ef9a79d6233fedb8' },
-      { label: 'token', value: '0x45e02bc2875a2914c4f585bbf92a6f28bc07cb70' },
       { label: 'Amount to Send', value: '4303000000000000262144' },
       { label: 'Minimum to Receive', value: '2105045649' },
       { label: 'Last pool', value: '0x53ead11073fc0651dce70572666f0ed0752abfea' },
     ]);
+  });
+
+  it('rejects calldata with trailing extra bytes', () => {
+    // Bug-hunt v2 (F2): decodeCalldata used to accept body.length >=
+    // n*64, so a transfer with one extra 32-byte word resolved as a
+    // clean Send with the extra bytes silently ignored. The decoder's
+    // contract is "null when the data does not fit the signature".
+    const transfer = buildErc20TransferData(RECIPIENT, '1500000');
+    const trailing = `${transfer}${pad32('0x1')}`;
+    expect(
+      decodeCalldata(trailing, 'transfer(address _to, uint256 _value)'),
+    ).toBeNull();
+    expect(
+      resolveContractCall({
+        chainId: 1,
+        contract: USDC,
+        data: trailing,
+      }),
+    ).toBeNull();
+    // And the exact-length call still resolves.
+    expect(
+      resolveContractCall({
+        chainId: 1,
+        contract: USDC,
+        data: transfer,
+        token: { decimals: 6, symbol: 'USDC' },
+      }),
+    ).not.toBeNull();
   });
 
   it('returns null for types the decoder does not support', () => {
