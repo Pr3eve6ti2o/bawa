@@ -35,7 +35,7 @@ function Toaster({ className }: { className?: string }) {
           key={item.id}
           role="status"
           className={cn(
-            'toast rounded-bawa border-2 px-4 py-3 text-sm shadow-none',
+            'toast rounded-bawa border-2 px-4 py-3 text-base shadow-none',
             KIND_CLASSES[item.kind],
           )}
         >

@@ -15,6 +15,7 @@ export const BAWA_ICON_NAMES = [
   "shield",
   "network",
   "key",
+  "book",
   "door",
   "collapse",
   "expand",
@@ -27,8 +28,13 @@ export const BAWA_ICON_NAMES = [
   "alert",
   "arrow-up-right",
   "arrow-down",
+  "arrow-left",
+  "arrow-down-left",
+  "arrow-left-right",
   "swap",
   "copy",
+  "card",
+  "link",
   "clock",
 ] as const;
 
@@ -98,6 +104,13 @@ const ICON_PATHS: Record<BawaIconName, readonly string[]> = {
     "M12.1 7.8 C12.4 10.2 10.4 12.3 8 12.1 C5.5 12.4 3.5 10.4 3.7 7.9 C3.5 5.5 5.5 3.6 8 3.8 C10.4 3.5 12.3 5.4 12.1 7.8 Z",
     "M11.1 11.2 Q15.3 15.8 20.2 20.1 M15.2 15.5 Q16.7 14.3 17.9 12.8 M18 18.2 Q19.5 17 20.8 15.5",
   ],
+  // Lane T (P1, item 4): book replaces the copy icon on Address
+  // book (a copy glyph reads as "copy", not an address book).
+  book: [
+    "M4.8 4.6 Q12 3.1 19.2 4.6 Q19.5 12.1 19.1 19.4 Q12 18 4.9 19.4 Q4.6 12 4.8 4.6 Z",
+    "M12 3.3 Q11.7 11.2 12 19.3",
+    "M7 8.2 Q8.8 7.8 10.2 8 M7 12.2 Q8.8 11.8 10.2 12",
+  ],
   door: [
     "M5.9 20.5 Q6.2 12.2 5.9 3.4 Q12.9 3.1 19.4 3.5 Q19.7 12.1 19.3 20.5",
     "M6.1 3.5 Q9.8 4.5 13.1 5.7 Q13.4 13.5 13 21 Q9.6 19.9 6.1 18.9",
@@ -146,6 +159,23 @@ const ICON_PATHS: Record<BawaIconName, readonly string[]> = {
     "M12.1 4 Q11.7 11.4 12 19.8",
     "M6.6 14.1 Q9.4 17.3 12 19.9 Q14.9 17.1 17.4 14.2",
   ],
+  // Lane T (P1, item 4): arrow-left replaces lucide ArrowLeft
+  // (asset-detail back link); arrow-down-left / arrow-left-right
+  // replace lucide ArrowDownLeft / ArrowLeftRight (tx-row direction
+  // tile). Same hand-drawn quadratic strokes, same 24x24 box.
+  "arrow-left": [
+    "M19.9 12.1 Q11.5 11.7 4.1 12.1",
+    "M9.8 6.5 Q6.6 9.3 4 12.1 Q6.8 14.9 9.9 17.5",
+  ],
+  "arrow-down-left": [
+    "M19 4.9 C14.6 9.6 9.7 14 5 18.9",
+    "M14 18.8 Q9.5 19.2 4.9 18.9 Q4.6 14.1 5.1 10",
+  ],
+  "arrow-left-right": [
+    "M4 12.1 Q12 11.7 20 12.1",
+    "M8 8.1 Q5.5 10.3 4 12.1 Q5.6 14.3 8 16",
+    "M16 8.1 Q18.5 10.3 20 12.1 Q18.4 14.3 16 16",
+  ],
   // Lane 6 (UX-major programme): two opposing arrows — the Swap
   // direction flip and the Swap nav entry. Same hand-drawn quadratic
   // strokes as the other glyphs, same 24x24 box.
@@ -158,6 +188,18 @@ const ICON_PATHS: Record<BawaIconName, readonly string[]> = {
   copy: [
     "M8.1 7.4 Q7.8 5.4 8.2 3.4 Q14.4 3.1 20.5 3.6 Q20.8 10.2 20.4 16.8 Q18.5 17.1 16.6 16.8",
     "M3.6 7.6 Q10 7.2 16.6 7.7 Q16.9 14.2 16.4 20.5 Q10.1 20.9 3.5 20.4 Q3.2 14 3.6 7.6 Z",
+  ],
+  // Lane T (P1, item 4): card is the Buy tile glyph (plus means
+  // "add", not "buy"); link is the token-logo fallback mark, moved
+  // in from its one-off inline SVG (same two chain-link paths).
+  card: [
+    "M3.5 6.2 Q12 5.8 20.5 6.2 Q20.8 12 20.4 17.8 Q12.1 18.2 3.6 17.8 Q3.2 12 3.5 6.2 Z",
+    "M3.5 9.8 Q12 9.4 20.5 9.8",
+    "M6.5 14.2 Q8.5 13.9 10.5 14.1",
+  ],
+  link: [
+    "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71",
+    "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71",
   ],
   clock: [
     "M21 12 C21.2 17.2 17 21.2 11.8 20.9 C6.8 21.1 2.8 16.9 3.1 11.9 C2.9 6.8 7.2 2.8 12.1 3.1 C17.2 2.9 21.3 7 21 12 Z",

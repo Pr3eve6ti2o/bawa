@@ -19,7 +19,7 @@ const badgeVariants = cva(
         positive: "bg-sun",
       },
       size: {
-        sm: "gap-1 px-2 py-0.5 text-xs [&>svg]:size-3",
+        sm: "gap-1 px-2 py-0.5 text-xs [&>svg]:size-4",
         md: "gap-1.5 px-3 py-1 text-sm [&>svg]:size-4",
         lg: "gap-2 px-4 py-1.5 text-base [&>svg]:size-5",
       },

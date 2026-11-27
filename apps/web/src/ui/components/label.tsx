@@ -14,7 +14,7 @@ function Label({
   weight = "medium",
   ...props
 }: React.ComponentProps<typeof LabelPrimitive.Root> & {
-  /** "medium" is the default (font-medium, leading-none); "normal" is the long-form label (font-normal, leading-relaxed). */
+  /** "medium" is the default (font-semibold, leading-5 — the Label role, 14px/600/20px); "normal" is the long-form label (font-normal, leading-5). */
   weight?: "medium" | "normal"
 }) {
   return (
@@ -22,7 +22,7 @@ function Label({
       data-slot="label"
       className={cn(
         "flex items-center gap-2 text-sm text-ink select-none group-data-[disabled=true]:pointer-events-none peer-disabled:cursor-not-allowed",
-        weight === "normal" ? "font-normal leading-relaxed" : "font-medium leading-none",
+        weight === "normal" ? "font-normal leading-5" : "font-semibold leading-5",
         className
       )}
       {...props}

@@ -56,7 +56,7 @@ function StepCard({
       </div>
       {' '}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-ink">
+        <p className="text-base font-bold text-ink">
           {state === "active" ? (
             <span className="bawa-marker">{label}</span>
           ) : (
@@ -65,7 +65,7 @@ function StepCard({
         </p>
         {' '}
         {detail != null && (
-          <p className="mt-1 text-sm text-ink">{detail}</p>
+          <p className="mt-1 text-base text-ink">{detail}</p>
         )}
       </div>
     </div>

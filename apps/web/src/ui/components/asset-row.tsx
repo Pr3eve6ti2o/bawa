@@ -1,4 +1,6 @@
 import { cn } from '../lib/utils'
+import { Badge } from "./badge";
+import { BawaIcon } from "./icons";
 import type { ReactNode } from 'react'
 
 interface AssetRowProps extends React.ComponentProps<'div'> {
@@ -43,7 +45,7 @@ function AssetRow({
             {symbol}
             {verified === true && (
               // Lane 4: the tick never splits from its label.
-              <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+              <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
             )}
             {/* Lane 1: an unverified token says so — the mark shows
                 whether the token is verified or not, never silence. */}
@@ -55,7 +57,7 @@ function AssetRow({
           {subline !== undefined && (
             <div className="text-xs text-ink">{subline}</div>
           )}
-          <div className="text-sm text-ink">{amount}</div>
+          <div className="text-base text-ink">{amount}</div>
         </div>
       </div>
       {' '}

@@ -204,7 +204,7 @@ function DialogTitle({
       id={ctx?.titleId}
       data-slot="dialog-title"
       className={cn(
-        "font-display text-lg leading-none font-semibold text-ink",
+        "font-display text-xl font-semibold leading-7 text-ink",
         className
       )}
       {...props}
@@ -221,7 +221,7 @@ function DialogDescription({
     <p
       id={ctx?.descriptionId}
       data-slot="dialog-description"
-      className={cn("text-sm text-ink", className)}
+      className={cn("text-base text-ink", className)}
       {...props}
     />
   )

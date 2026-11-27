@@ -35,7 +35,7 @@ export function CopyButton({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="secondary"
       aria-label={label}
       onClick={() => void copy()}
       className={className}

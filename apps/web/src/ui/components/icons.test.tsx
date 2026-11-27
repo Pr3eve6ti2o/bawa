@@ -21,6 +21,7 @@ const EXPECTED_ICON_NAMES: readonly BawaIconName[] = [
   "shield",
   "network",
   "key",
+  "book",
   "door",
   "collapse",
   "expand",
@@ -33,8 +34,13 @@ const EXPECTED_ICON_NAMES: readonly BawaIconName[] = [
   "alert",
   "arrow-up-right",
   "arrow-down",
+  "arrow-left",
+  "arrow-down-left",
+  "arrow-left-right",
   "swap",
   "copy",
+  "card",
+  "link",
   "clock",
 ];
 

@@ -21,6 +21,7 @@
 @import "@fontsource/noto-sans-sc/latin-600.css";
 @import "@fontsource/noto-sans-sc/latin-700.css";
 @import "@fontsource-variable/baloo-2/index.css";
+@import "@fontsource/jetbrains-mono/400.css";
 
 @import "tw-animate-css";
 
@@ -221,15 +222,8 @@
 :root {
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-
-  --density-compact-y: 8px;
-  --density-compact-x: 12px;
-  --density-comfortable-y: 16px;
-  --density-comfortable-x: 24px;
-  --density-spacious-y: 24px;
-  --density-spacious-x: 32px;
-  --density-airy-y: 32px;
-  --density-airy-x: 48px;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 150ms;
@@ -408,8 +402,14 @@
   --font-prototype-sans: var(--font-sans);
   --font-chinese: "Noto Sans SC", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --text-display-lg: 2.5rem;
-  --text-display-lg--line-height: 3rem;
+  /* Lane T (P1, item 3): ONE type scale, one line-height each.
+     * Display 36/600/40 Baloo 2 (hero numbers only), Title h1
+     * 28/700/36, H2 24/600/32, H3 20/600/28, Body 16/400/24,
+     * Body small 14/400/20 (secondary only), Caption 12/500/16
+     * (floor, never below), Label/button 14/600/20, Mono 14/400/20.
+     * The 11px / 13px / 15px sizes are deleted. */
+  --text-display-lg: 2.25rem;
+  --text-display-lg--line-height: 2.5rem;
   --text-title-lg: 1.75rem;
   --text-title-lg--line-height: 2.25rem;
   --text-title-md: 1.5rem;
@@ -420,13 +420,8 @@
   --text-body-lg--line-height: 1.5rem;
   --text-body-md: 0.875rem;
   --text-body-md--line-height: 1.25rem;
-  --text-body-sm: 0.8125rem;
-  --text-body-sm--line-height: 1.25rem;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
-  --text-2xs: 0.6875rem;
-  --text-xs-plus: 0.8125rem;
-  --text-sm-plus: 0.9375rem;
 
   --tracking-tight: -0.4px;
   --tracking-snug: -0.2px;
@@ -435,14 +430,6 @@
   --tracking-wider: 0.8px;
 
   --spacing: 0.25rem;
-  --spacing-density-compact-y: var(--density-compact-y);
-  --spacing-density-compact-x: var(--density-compact-x);
-  --spacing-density-comfortable-y: var(--density-comfortable-y);
-  --spacing-density-comfortable-x: var(--density-comfortable-x);
-  --spacing-density-spacious-y: var(--density-spacious-y);
-  --spacing-density-spacious-x: var(--density-spacious-x);
-  --spacing-density-airy-y: var(--density-airy-y);
-  --spacing-density-airy-x: var(--density-airy-x);
 }
 
 /*
@@ -468,6 +455,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -515,19 +504,20 @@
   }
 
   h1 {
-    font-size: calc(var(--text-title-lg) * 1.25);
+    font-size: var(--text-title-lg);
     line-height: var(--text-title-lg--line-height);
+    font-weight: 700;
     letter-spacing: var(--tracking-tight);
   }
 
   h2 {
-    font-size: calc(var(--text-title-md) * 1.25);
+    font-size: var(--text-title-md);
     line-height: var(--text-title-md--line-height);
     letter-spacing: var(--tracking-snug);
   }
 
   h3 {
-    font-size: calc(var(--text-title-sm) * 1.25);
+    font-size: var(--text-title-sm);
     line-height: var(--text-title-sm--line-height);
     letter-spacing: var(--tracking-normal);
   }
@@ -538,33 +528,24 @@
     font-weight: 600;
   }
 
-  label,
-  button,
-  input {
-    font-size: var(--text-body-md);
-    line-height: var(--text-body-md--line-height);
-  }
-
+  /* Lane T (P1, item 3): labels and buttons are the Label role
+     * (14px/600/20px); inputs, textareas and selects are body text
+     * (16px/400/24px). The 16px input size used to apply only on
+     * coarse pointers (the iOS zoom guard) — it is now the size
+     * everywhere, so the coarse-pointer override below is retired. */
   label,
   button {
-    font-weight: var(--font-weight-medium);
+    font-size: var(--text-body-md);
+    line-height: var(--text-body-md--line-height);
+    font-weight: var(--font-weight-semibold);
   }
 
-  input {
+  input,
+  textarea,
+  select {
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
     font-weight: var(--font-weight-normal);
-  }
-
-  /* Round 2, item 7 (mobile-native §4): iOS Safari zooms the page when
-     focus lands on an input under 16px, and does not zoom back out on
-     blur. Coarse pointers (touch) get 16px inputs; desktop keeps the
-     14px design size. Never disable zoom instead. */
-  @media (pointer: coarse) {
-    input,
-    textarea,
-    select {
-      font-size: 1rem;
-      line-height: 1.5rem;
-    }
   }
 
   :focus-visible {
