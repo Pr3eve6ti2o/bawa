@@ -185,6 +185,12 @@ describe('AddressBookScreen', () => {
         expect.objectContaining({ label: 'Maya', address: MAYA.address, chain: 'eth' }),
       ]);
       expect(vi.mocked(validateRecipient)).toHaveBeenCalledWith('eth', MAYA.address);
+      // Lane P2-C (M6): the saved entry pairs its address with the
+      // identicon — one per entry, beside the address.
+      const identicons = mounted.div.querySelectorAll(
+        'svg[data-testid="address-identicon"]',
+      );
+      expect(identicons).toHaveLength(1);
     } finally {
       await mounted.cleanup();
     }

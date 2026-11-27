@@ -10,6 +10,7 @@
 // `from` is optional so existing callers keep working unchanged.
 import { Button } from '../ui/components/button';
 import { CopyButton } from '../ui/components/copy-button';
+import { AddressIdenticon } from '../ui/components/address-identicon';
 import {
   isSameAddress,
   shortenAddress,
@@ -155,8 +156,9 @@ export function SendReview({
           {from && (
             <div className="flex items-start justify-between gap-4 py-3">
               <dt className="shrink-0 text-sm text-muted-foreground">From</dt>
-              <dd className="min-w-0 break-all text-right font-mono text-sm">
-                {from}
+              <dd className="flex min-w-0 items-center justify-end gap-2 text-right font-mono text-sm">
+                <AddressIdenticon address={from} size={24} />
+                <span className="min-w-0 break-all">{from}</span>
               </dd>
             </div>
           )}
@@ -167,9 +169,12 @@ export function SendReview({
               {/* Lane 3 (UX-major): shortened, full on tap — the signer
                   checks the short form at a glance and the whole
                   address, with Copy, before signing. The full value is
-                  never lost: a shortened address is never the only copy. */}
+                  never lost: a shortened address is never the only copy.
+                  Lane P2-C (M6): the identicon pairs the short form —
+                  the check happens at a glance, before expanding. */}
               <details>
-                <summary className="cursor-pointer font-mono">
+                <summary className="flex cursor-pointer items-center justify-end gap-2 font-mono">
+                  <AddressIdenticon address={recipient} size={24} />
                   {shortenAddress(recipient)}
                 </summary>
                 <p className="mt-1 break-all font-mono">{recipient}</p>

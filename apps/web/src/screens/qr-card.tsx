@@ -81,6 +81,7 @@ import {
   type QrCardTemplate,
 } from '../wallet/payment-links';
 import { chainLogoFor, FallbackMark, tokenLogoFor } from './token-logo';
+import { AddressIdenticon } from '../ui/components/address-identicon';
 
 export { QR_CARD_FOOTER };
 
@@ -577,6 +578,10 @@ export function QrCard({
             </p>
           </div>
           <div className="flex items-center gap-3 bg-qr-teal-band p-5">
+            {/* Lane P2-C (M6): the identicon pairs the receiving
+                address — the receiver checks the picture, not just
+                the hex. Same addition in all seven templates. */}
+            <AddressIdenticon address={address} size={32} />
             <div className="min-w-0 flex-1 space-y-1.5">
               <span className="text-sm text-qr-muted">Receiving address</span>
               <p
@@ -647,12 +652,15 @@ export function QrCard({
         <p className="text-center text-base font-bold text-qr-nearblack">
           {amountText ?? 'Any amount'}
         </p>
-        <p
-          data-testid="qr-card-address"
-          className="w-full break-all text-center font-mono text-[13px] text-qr-grey"
-        >
-          {address}
-        </p>
+        <div className="flex w-full items-center justify-center gap-2">
+          <AddressIdenticon address={address} size={24} />
+          <p
+            data-testid="qr-card-address"
+            className="min-w-0 flex-1 break-all text-center font-mono text-[13px] text-qr-grey"
+          >
+            {address}
+          </p>
+        </div>
         <button
           type="button"
           onClick={onCopyAddress}
@@ -714,6 +722,7 @@ export function QrCard({
           <span className="block h-1 w-12 bg-sun" aria-hidden="true" />
         </div>
         <div className="-mx-6 flex w-[calc(100%+3rem)] items-center gap-3 bg-ink px-6 py-4">
+          <AddressIdenticon address={address} size={28} />
           <p
             data-testid="qr-card-address"
             className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-white"
@@ -752,6 +761,7 @@ export function QrCard({
         underlineClassName="bg-coral"
         strip={
           <div className="-mx-6 flex w-[calc(100%+3rem)] items-center gap-3 bg-ink px-6 py-4">
+            <AddressIdenticon address={address} size={28} />
             <p
               data-testid="qr-card-address"
               className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-white"
@@ -801,6 +811,7 @@ export function QrCard({
         underlineClassName="bg-sun"
         strip={
           <div className="flex w-full items-center gap-3 rounded-xl bg-paper px-4 py-4">
+            <AddressIdenticon address={address} size={28} />
             <p
               data-testid="qr-card-address"
               className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-ink"
@@ -892,12 +903,15 @@ export function QrCard({
           <p className="text-center font-display text-[22px] font-bold text-ink">
             {amountText ?? 'Any amount'}
           </p>
-          <p
-            data-testid="qr-card-address"
-            className="w-full break-all text-center font-mono text-[13px] text-ink"
-          >
-            {address}
-          </p>
+          <div className="flex w-full items-center justify-center gap-2">
+            <AddressIdenticon address={address} size={24} />
+            <p
+              data-testid="qr-card-address"
+              className="min-w-0 flex-1 break-all text-center font-mono text-[13px] text-ink"
+            >
+              {address}
+            </p>
+          </div>
           <button
             type="button"
             onClick={onCopyAddress}
@@ -998,12 +1012,15 @@ export function QrCard({
             Copy
           </button>
         </div>
-        <p
-          data-testid="qr-card-address"
-          className="w-full break-all rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1.5 text-center font-mono text-[13px] text-ink"
-        >
-          {address}
-        </p>
+        <div className="flex w-full items-start gap-2">
+          <AddressIdenticon address={address} size={24} />
+          <p
+            data-testid="qr-card-address"
+            className="min-w-0 flex-1 break-all rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1.5 text-center font-mono text-[13px] text-ink"
+          >
+            {address}
+          </p>
+        </div>
       </div>
       {/* The token's full name and network — only for tokens, where
           the symbol alone does not say which coin this is. A native

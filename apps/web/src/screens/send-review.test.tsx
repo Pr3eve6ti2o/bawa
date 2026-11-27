@@ -62,6 +62,25 @@ describe('SendReview transparency (Lane 3)', () => {
     ).not.toBeNull();
   });
 
+  it('pairs the From and Recipient addresses with their identicons', () => {
+    // Lane P2-C (M6): the signer checks the picture at a glance —
+    // the From identicon sits in the From row, the Recipient one in
+    // the (always visible) summary, before the disclosure is opened.
+    render(baseProps());
+    const identicons = container?.querySelectorAll(
+      'svg[data-testid="address-identicon"]',
+    );
+    expect(identicons).toHaveLength(2);
+    const fromTerm = [...(container?.querySelectorAll('dt') ?? [])].find(
+      (dt) => dt.textContent === 'From',
+    );
+    const fromRow = fromTerm?.closest('div');
+    expect(fromRow?.querySelector('svg[data-testid="address-identicon"]')).not.toBeNull();
+    const summary = container?.querySelector('summary');
+    expect(summary?.querySelector('svg[data-testid="address-identicon"]')).not.toBeNull();
+    expect(summary?.textContent).toBe('0x742d…f44e');
+  });
+
   it('notes a send to your own address, and stays silent otherwise', () => {
     render(baseProps({ from: RECIPIENT }));
     expect(container?.textContent).toContain(

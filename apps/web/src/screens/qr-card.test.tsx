@@ -525,5 +525,28 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       }
     }
   });
+
+  it('pairs the receiving address with its identicon in every template', async () => {
+    // Lane P2-C (M6): the address line carries the deterministic
+    // identicon, so the receiver checks the picture, not just the
+    // hex. The address text itself is untouched — same string, same
+    // testid — and the identicon is the only new svg besides the QR.
+    for (const template of ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as const) {
+      const mounted = await mountCard({ ...baseProps, template });
+      try {
+        const card = mounted.div.querySelector('[data-testid="qr-card"]');
+        expect(card?.querySelector('[data-testid="qr-card-address"]')?.textContent).toBe(
+          baseProps.address,
+        );
+        const identicons = card?.querySelectorAll(
+          'svg[data-testid="address-identicon"]',
+        );
+        expect(identicons).toHaveLength(1);
+        expect(identicons?.[0]?.getAttribute('aria-hidden')).toBe('true');
+      } finally {
+        await mounted.cleanup();
+      }
+    }
+  });
 });
 });
