@@ -3,9 +3,9 @@
   "generator": "node apps/web/scripts/generate-android-registry.mjs",
   "registry": "chains",
   "version": 1,
-  "generatedAt": "2026-11-26T23:18:11.316Z",
-  "sourceCommit": "2a0fa7574fc221ea32f4d337ae8a8b100a502c6d",
-  "sourceDirty": true,
+  "generatedAt": "2026-11-27T00:44:31.809Z",
+  "sourceCommit": "7efba143e2ba1238ba0f3a4f4ac06e0a21fd4168",
+  "sourceDirty": false,
   "chainCount": 87,
   "chains": [
     {
