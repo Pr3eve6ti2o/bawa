@@ -174,10 +174,10 @@ export function WalletManagementScreen() {
   // They are public data, but they reveal every address, balance and
   // transaction — so they are never rendered unprompted and never stored.
   const [shownKeys, setShownKeys] = useState<Record<string, string>>({});
-  // Lane 6 redesign: the export list below covers all 84 chains, so it
+  // Lane 6 redesign: the export list below covers all 87 chains, so it
   // gets the same name/symbol/id search the Networks list uses.
   // Merge (Lane 5 + Lane 6): the search lives inside Lane 5's
-  // disclosure below, so the 84-row list stays collapsed until asked
+  // disclosure below, so the 87-row list stays collapsed until asked
   // for and searchable once opened.
   const [exportQuery, setExportQuery] = useState("");
   const exportNeedle = exportQuery.trim();
@@ -596,6 +596,20 @@ export function WalletManagementScreen() {
                 </Link>
                 .
               </p>
+              {/* Bug-hunt v2 (V2): the address book had no entry point
+                  on mobile — only the desktop sidebar linked it. This
+                  is the one-tap path: header "Account 1 ›" → Wallets →
+                  Address book. */}
+              <p className="text-sm text-muted-foreground">
+                Saved recipient addresses live in your{' '}
+                <Link
+                  to="/address-book"
+                  className="font-medium text-primary underline underline-offset-4"
+                >
+                  address book
+                </Link>
+                .
+              </p>
 
               <div className="space-y-3">
                 <h2 className="font-semibold">
@@ -610,7 +624,7 @@ export function WalletManagementScreen() {
                   no extended public key — their paths are fully hardened
                   — so use the address itself.
                 </p>
-                {/* Lane 5: the 84-row key list used to render in full
+                {/* Lane 5: the 87-row key list used to render in full
                     and make this page ~18,000 px tall on a phone,
                     burying the watch-only section below it. The keys
                     are a bot power feature; they collapse into a
@@ -620,7 +634,7 @@ export function WalletManagementScreen() {
                     Show the extended public keys
                   </summary>
                   {/* Merge (Lane 5 + Lane 6): Lane 6's search lives
-                      inside Lane 5's disclosure, so the 84-row list is
+                      inside Lane 5's disclosure, so the 87-row list is
                       collapsed until asked for and searchable once open. */}
                   <div className="mt-3 space-y-2">
                     <Label htmlFor="export-chain-search">
@@ -853,13 +867,7 @@ export function WalletManagementScreen() {
       )}
 
       <p className="text-sm text-muted-foreground">
-        What is stored here: only extended public keys and TON public
-        addresses, kept in this browser. No recovery phrase or private key
-        is stored anywhere in this wallet. An extended public key lets
-        anyone who has it see this account&apos;s addresses, balances and
-        transaction history — that is all it can do. Forgetting a key
-        removes it from this browser, but it cannot take back a copy
-        someone already made.
+        What is stored here: only extended public keys and TON public addresses, kept in this browser. No recovery phrase or private key is stored anywhere in this wallet. An extended public key lets its holder track this account&apos;s addresses, balances and transaction history — that is all it can do. Forgetting a key removes it from this browser, but it cannot revoke a copy someone already took.
       </p>
 
       {hasWallets && (

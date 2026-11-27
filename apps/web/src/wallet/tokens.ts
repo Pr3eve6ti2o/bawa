@@ -777,8 +777,8 @@ function defaultStore(): TokenStore | null {
 
 /**
  * The curated default view (Lane 80-APP, 2026-11-24): the 22 chains the
- * wallet shipped with, in registry order. The registry now holds 84
- * chains, but the default view stays curated — the 62 new chains are
+ * wallet shipped with, in registry order. The registry now holds 87
+ * chains, but the default view stays curated — the 65 new chains are
  * reachable via Add Token / chain management, never dumped into the
  * default dashboard (which stays 43 rows: 22 natives + 21 default
  * tokens). A stored enabled-chains list still wins over this default.

@@ -9,8 +9,8 @@
  *   balance. Bad input gets a specific inline error (role="alert"),
  *   nothing is persisted, nothing is added, the input stays intact and
  *   keeps focus.
- * - "Add chain": enable one of the 84 registry chains. No free-text
- *   chain field — an 85th chain is impossible by design. Lane E
+ * - "Add chain": enable one of the 87 registry chains. No free-text
+ *   chain field — an 88th chain is impossible by design. Lane E
  *   (2026-11-24): each row shows the chain's real logo (ChainLogo)
  *   — the 28 chains that used to have no logo now have one.
  *
@@ -169,7 +169,7 @@ export function AddTokenDialog({
   const [searchCandidates, setSearchCandidates] = useState<
     TokenSearchCandidate[] | null
   >(null);
-  // Lane 5: the Add-chain list is 84 rows with no way to find one.
+  // Lane 5: the Add-chain list is 87 rows with no way to find one.
   // Same filter helper as the watch-only chain picker.
   const [chainQuery, setChainQuery] = useState('');
   const [searching, setSearching] = useState(false);

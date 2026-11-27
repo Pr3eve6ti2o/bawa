@@ -49,11 +49,15 @@ export function TransactionHistoryScreen() {
   );
   // Lane C: "No transactions yet" is earned only by a chain that
   // actually loaded (loaded/empty) with zero transactions. A failed
-  // history is not an empty history — when every shown chain
-  // failed, the unavailable state below wins and the empty message
-  // must not show beside it. When some chains loaded empty and
-  // others failed, both statements are true (about different
-  // chains) and both show.
+  // history is not an empty history — the two states are mutually
+  // exclusive on this screen by construction: with no rows, either
+  // the empty state shows (some chain loaded empty) or the
+  // unavailable state shows (every shown chain failed and the
+  // wallet has activity on another chain), never both — and when
+  // no chain loaded and the wallet has no activity at all, nothing
+  // renders below the filter. When rows exist, a failed chain is
+  // disclosed in the block below the rows instead. ("Both states
+  // together" is a Recent Activity behaviour, not this screen's.)
   const anyLoaded = shownChains.some(
     (chain) =>
       history[chain].status === 'loaded' || history[chain].status === 'empty',

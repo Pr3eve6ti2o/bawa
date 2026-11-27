@@ -136,6 +136,7 @@ const BANXA_LIMITS =
 function BuyProviderRow({
   provider,
   destination,
+  destinations,
   buttonLabel,
   note,
   onBuy,
@@ -145,6 +146,12 @@ function BuyProviderRow({
 }: {
   provider: BuyProviderInfo;
   destination: string | null;
+  // Every delivery address, grouped by address with its networks
+  // (null for providers that pre-fill a single address or none).
+  // When present the row lists them instead of presenting the first
+  // one as THE delivery address — the widget lets the buyer switch
+  // network, and the purchase lands on that network's address.
+  destinations?: Array<{ address: string; networks: string }> | null;
   buttonLabel: string | null;
   note: string | null;
   onBuy: () => void;
@@ -196,7 +203,23 @@ function BuyProviderRow({
           </>
         ) : (
           <>
-            {destination !== null && (
+            {destinations !== null && destinations !== undefined ? (
+              <>
+                <p className="text-base font-semibold text-ink">
+                  Deliver to
+                </p>
+                <ul className="w-full space-y-1">
+                  {destinations.map((entry) => (
+                    <li
+                      key={entry.address}
+                      className="w-full break-all font-mono text-xs text-ink"
+                    >
+                      {entry.address} — {entry.networks}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : destination !== null ? (
               <>
                 <p className="text-base font-semibold text-ink">
                   Deliver to
@@ -205,7 +228,7 @@ function BuyProviderRow({
                   {destination}
                 </p>
               </>
-            )}
+            ) : null}
             {note !== null && <p className="text-base text-ink">{note}</p>}
             <Button
               type="button"
@@ -219,13 +242,14 @@ function BuyProviderRow({
         )}
         {isActive && buyStatus === 'opened' && (
           <p role="status" className="text-base text-ink">
-            {provider.name} opened in a pop-up — complete your purchase
-            there.
+            Pop-up opened — complete your purchase in the {provider.name}{' '}
+            window.
           </p>
         )}
         {isActive && buyStatus === 'load-failed' && (
           <p role="alert" className="text-base text-ink">
-            {provider.name} couldn&apos;t be loaded. Check your connection.
+            {provider.name} couldn&apos;t be opened — the purchase link
+            couldn&apos;t be built.
           </p>
         )}
         {isActive && buyStatus === 'blocked' && (
@@ -328,17 +352,19 @@ export function ReceiveScreen() {
     useState<BuyProviderId>('ramp');
   const buyAppId = coinbaseOnrampAppId();
   // The destinations are cheap to recompute (ten entries at most),
-  // so no memo: each provider row shows the first destination on a
-  // network it delivers to, and the widget itself is the picker for
-  // the rest.
+  // so no memo: each provider row shows the destinations on the
+  // networks it delivers to, and the widget itself is the picker
+  // for the rest.
   const buyDestinations = onrampDestinations({
     receiveAddresses,
     vaultAddresses,
     watchAddresses: addresses,
   });
-  // The panel's address: the first destination. The widget is
-  // the picker — the panel shows the one address the purchase
-  // lands on by default, and every destination goes in the URL.
+  // The panel's default address: the first destination (Bitcoin
+  // first in map order), which is also the widget's default
+  // network. The Coinbase row lists every destination — the panel
+  // never presents the first one as the only delivery address —
+  // and every destination goes in the URL.
   const buyDestination: OnrampDestination | null =
     buyDestinations[0] ?? null;
   // Lane B: the same address resolution, per provider map. Ramp and
@@ -470,9 +496,13 @@ export function ReceiveScreen() {
 
   // Lane B: what one provider row shows. destination is the address
   // the purchase is delivered to (null when the row pre-fills
-  // nothing); buttonLabel null means no button — the row states why.
+  // nothing); destinations lists every delivery address grouped by
+  // address with its networks (Coinbase only — the other rows
+  // pre-fill one address or none); buttonLabel null means no
+  // button — the row states why.
   function buyRowFor(provider: BuyProviderInfo): {
     destination: string | null;
+    destinations: Array<{ address: string; networks: string }> | null;
     buttonLabel: string | null;
     note: string | null;
   } {
@@ -481,6 +511,7 @@ export function ReceiveScreen() {
         if (provider.readiness !== 'ready') {
           return {
             destination: null,
+            destinations: null,
             buttonLabel: null,
             note: RAMP_RESTRICTIONS,
           };
@@ -489,32 +520,46 @@ export function ReceiveScreen() {
         if (dest === undefined) {
           return {
             destination: null,
+            destinations: null,
             buttonLabel: null,
             note: RAMP_RESTRICTIONS,
           };
         }
         return {
           destination: dest.address,
+          destinations: null,
           buttonLabel: 'Buy with Ramp',
           note: RAMP_RESTRICTIONS,
         };
       }
       case 'moonpay': {
         if (provider.readiness !== 'ready-no-prefill') {
-          return { destination: null, buttonLabel: null, note: null };
+          return {
+            destination: null,
+            destinations: null,
+            buttonLabel: null,
+            note: null,
+          };
         }
         return {
           destination: null,
+          destinations: null,
           buttonLabel: 'Buy with MoonPay',
           note: 'Your address can’t be pre-filled yet — address pre-fill needs a signing backend. You’ll paste your own address inside MoonPay.',
         };
       }
       case 'onramper': {
         if (provider.readiness !== 'ready-no-prefill') {
-          return { destination: null, buttonLabel: null, note: null };
+          return {
+            destination: null,
+            destinations: null,
+            buttonLabel: null,
+            note: null,
+          };
         }
         return {
           destination: null,
+          destinations: null,
           buttonLabel: 'Buy with Onramper',
           note: 'Your address can’t be pre-filled yet — passing wallet addresses needs a server-signed URL. You’ll paste your own address inside Onramper.',
         };
@@ -523,6 +568,7 @@ export function ReceiveScreen() {
         if (provider.readiness !== 'ready') {
           return {
             destination: null,
+            destinations: null,
             buttonLabel: null,
             note: BANXA_LIMITS,
           };
@@ -530,33 +576,71 @@ export function ReceiveScreen() {
         const dest = banxaDestinationList[0];
         return {
           destination: dest?.address ?? null,
+          destinations: null,
           buttonLabel: 'Buy with Banxa',
           note: BANXA_LIMITS,
         };
       }
       case 'transak':
-        return { destination: null, buttonLabel: null, note: null };
+        return {
+          destination: null,
+          destinations: null,
+          buttonLabel: null,
+          note: null,
+        };
       case 'mercuryo': {
         if (provider.readiness !== 'ready-no-prefill') {
-          return { destination: null, buttonLabel: null, note: null };
+          return {
+            destination: null,
+            destinations: null,
+            buttonLabel: null,
+            note: null,
+          };
         }
         return {
           destination: null,
+          destinations: null,
           buttonLabel: 'Buy with Mercuryo',
           note: 'Your address can’t be pre-filled yet — you’ll paste your own address inside Mercuryo.',
         };
       }
       case 'coinbase': {
         if (provider.readiness !== 'ready') {
-          return { destination: null, buttonLabel: null, note: null };
+          return {
+            destination: null,
+            destinations: null,
+            buttonLabel: null,
+            note: null,
+          };
         }
         if (buyDestination === null) {
-          return { destination: null, buttonLabel: null, note: null };
+          return {
+            destination: null,
+            destinations: null,
+            buttonLabel: null,
+            note: null,
+          };
+        }
+        // The row lists every destination, grouped by address:
+        // EVM chains share one address, so the list is short (one
+        // line per address, with its networks). The first address
+        // stays the default the widget opens on.
+        const grouped = new Map<string, string[]>();
+        for (const dest of buyDestinations) {
+          const names = grouped.get(dest.address) ?? [];
+          names.push(chainConfig(dest.chain).displayName);
+          grouped.set(dest.address, names);
         }
         return {
           destination: buyDestination.address,
+          destinations: [...grouped.entries()].map(
+            ([address, names]) => ({
+              address,
+              networks: names.join(', '),
+            }),
+          ),
           buttonLabel: 'Buy with Coinbase',
-          note: 'Change the network and asset in Coinbase.',
+          note: 'Change the network and asset in Coinbase — the purchase lands on the address for the network you pick.',
         };
       }
     }
@@ -985,11 +1069,17 @@ export function ReceiveScreen() {
                   <BuyProviderRow
                     provider={selected}
                     destination={row.destination}
+                    destinations={row.destinations}
                     buttonLabel={row.buttonLabel}
                     note={row.note}
                     onBuy={() => handleBuyProvider(selected.id)}
                     buyDisabled={
-                      devnetEnabled === true || buyStatus === 'opening'
+                      // Disabled while a pop-up is opening or already
+                      // open — a second click would open a duplicate
+                      // pop-up for the same purchase.
+                      devnetEnabled === true ||
+                      buyStatus === 'opening' ||
+                      buyStatus === 'opened'
                     }
                     isActive={buyProvider === selected.id}
                     buyStatus={buyStatus}
@@ -1411,6 +1501,7 @@ export function ReceiveScreen() {
           details step, where the address it names is shown. P1 (Lane
           S4, item 11): it sits below the card now, so the QR is first
           and its Copy sits above the fold. */}
+      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
       {isWatchOnly && (
         <Alert>
           <AlertDescription>
@@ -1437,6 +1528,14 @@ export function ReceiveScreen() {
       {chain === 'ton' && (
         <p className="text-base text-ink">
           Receives TON only. Send from another wallet.
+        </p>
+      )}
+      {chain === 'starknet' && (
+        <p className="text-base text-ink">
+          This Starknet address is a counterfactual Argent account.
+          Funds sent here can only be recovered by deploying that
+          exact Argent account, and this wallet cannot deploy it
+          yet — so this address is receive-only.
         </p>
       )}
       </div>
