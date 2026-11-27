@@ -650,6 +650,9 @@ describe('dashboard screen', () => {
       await clickRefreshPrices(mounted);
       expect(mounted.div.textContent).toContain('$62,683.00 (Partial)');
       expect(mounted.div.textContent).toContain('Partial total');
+      // Bug-hunt v2 (C2): the disclosure survives the shortening —
+      // a failed balance counts as 0, so the total may understate.
+      expect(mounted.div.textContent).toContain('Failed balances count as 0');
       expect(mounted.div.textContent).toContain('Powered by CoinGecko');
       // Only the failed chain is marked; the hero itself is a total.
       expect(mounted.div.textContent).toContain('Could not load balance');
@@ -1320,6 +1323,9 @@ describe('dashboard screen', () => {
       expect(text).not.toContain('$2,662.40');
       expect(heroAmount(mounted)).toBe('Unavailable');
       expect(text).toContain('test tokens have no market value');
+      // Bug-hunt v2 (C3): the devnet banner says the prices below
+      // are live market prices.
+      expect(text).toContain('Prices below are live market prices');
       // The dashboard itself never invents a testnet label; the only
       // devnet marker is the app header pill.
       expect(text).not.toContain('Testnet');

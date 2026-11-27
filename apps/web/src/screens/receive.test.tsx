@@ -295,12 +295,17 @@ describe('receive screen', () => {
       await act(async () => {
         button?.click();
       });
+      // The URL is built first and the pop-up opens directly onto it
+      // (no blank-then-navigate): the opened URL is the call's first
+      // argument, not a location assigned afterwards.
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      const openedUrl = openSpy.mock.calls[0]?.[0] as string;
       expect(openSpy).toHaveBeenCalledWith(
-        'about:blank',
+        openedUrl,
         '_blank',
-        'width=430,height=600,noopener',
+        'noopener,width=430,height=600',
       );
-      const url = new URL(popup.location.href);
+      const url = new URL(openedUrl);
       expect(url.origin).toBe('https://pay.coinbase.com');
       expect(url.pathname).toBe('/buy/select-asset');
       expect(url.searchParams.get('appId')).toBe('test-app-id');
@@ -308,7 +313,7 @@ describe('receive screen', () => {
         `{"${VAULT_ETH}":["ethereum"]}`,
       );
       expect(mounted.div.textContent).toContain(
-        'Coinbase opened in a pop-up',
+        'Pop-up opened — complete your purchase in the Coinbase window.',
       );
     } finally {
       openSpy.mockRestore();
@@ -317,9 +322,21 @@ describe('receive screen', () => {
     }
   });
 
-  it('reports a blocked pop-up from the Buy panel', async () => {
+  it('disables the Buy button once a pop-up is open, so a repeat click cannot open a duplicate', async () => {
+    // The old "reports a blocked pop-up" test is gone on purpose:
+    // with noopener, window.open returns null even when the pop-up
+    // opened, so the Coinbase path can no longer report "blocked"
+    // (see onramp.test.ts). What the panel can still promise is
+    // that one click opens exactly one pop-up.
     vi.stubEnv('VITE_COINBASE_ONRAMP_APP_ID', 'test-app-id');
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    const popup = {
+      location: { href: '' },
+      close: vi.fn(),
+      closed: false,
+    };
+    const openSpy = vi
+      .spyOn(window, 'open')
+      .mockReturnValue(popup as unknown as WindowProxy);
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');
     try {
@@ -329,17 +346,47 @@ describe('receive screen', () => {
         (candidate) => candidate.textContent === 'Buy with Coinbase',
       );
       expect(button).not.toBeUndefined();
-      // The panel shows the first destination: the vault address,
-      // which wins over the watch-only one.
-      expect(mounted.div.textContent).toContain(VAULT_ETH);
+      expect(button?.disabled).toBe(false);
       await act(async () => {
         button?.click();
       });
-      expect(mounted.div.textContent).toContain(
-        'Pop-up blocked. Allow pop-ups and try again.',
-      );
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(button?.disabled).toBe(true);
+      await act(async () => {
+        button?.click();
+      });
+      expect(openSpy).toHaveBeenCalledTimes(1);
     } finally {
       openSpy.mockRestore();
+      vi.unstubAllEnvs();
+      await mounted.cleanup();
+    }
+  });
+
+  it('lists every Buy destination, not just the first one', async () => {
+    // Bug-hunt v2 (H V5): the panel showed only the first (Bitcoin)
+    // destination as THE delivery address while the URL carried up
+    // to ten. The row now lists each address with its networks.
+    vi.stubEnv('VITE_COINBASE_ONRAMP_APP_ID', 'test-app-id');
+    const VAULT_BTC = 'bc1qtestbtcaddress0000000000000000000000000';
+    setWallet({
+      vaultAddresses: {
+        btc: [VAULT_BTC],
+        eth: [VAULT_ETH],
+        trx: [],
+        ton: [],
+      },
+    });
+    const mounted = await mountScreen('/receive?buy=1');
+    try {
+      // Lane X (Lane D #70): pick Coinbase from the select bar first.
+      await selectBuyProvider(mounted.div, 'coinbase');
+      expect(mounted.div.textContent).toContain('Deliver to');
+      expect(mounted.div.textContent).toContain(VAULT_BTC);
+      expect(mounted.div.textContent).toContain(VAULT_ETH);
+      expect(mounted.div.textContent).toContain('Bitcoin');
+      expect(mounted.div.textContent).toContain('Ethereum');
+    } finally {
       vi.unstubAllEnvs();
       await mounted.cleanup();
     }
@@ -448,7 +495,7 @@ describe('receive screen', () => {
       expect(url.searchParams.get('variant')).toBe('hosted-auto');
       expect(url.searchParams.get('defaultFlow')).toBe('ONRAMP');
       expect(mounted.div.textContent).toContain(
-        'Ramp opened in a pop-up',
+        'Pop-up opened — complete your purchase in the Ramp window.',
       );
     } finally {
       openSpy.mockRestore();
@@ -483,7 +530,7 @@ describe('receive screen', () => {
       expect(url.searchParams.has('walletAddress')).toBe(false);
       expect(url.searchParams.has('signature')).toBe(false);
       expect(mounted.div.textContent).toContain(
-        'MoonPay opened in a pop-up',
+        'Pop-up opened — complete your purchase in the MoonPay window.',
       );
     } finally {
       openSpy.mockRestore();

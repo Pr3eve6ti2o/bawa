@@ -15,6 +15,7 @@
 //   plugin (moduleSideEffects: false, verified firing) both left
 //   the chunk byte-identical, because Vite's resolver sets the
 //   per-module value from package.json itself.
+
 // - So the one function Bawa needs, generateOnRampURL, is
 //   reimplemented here as buildOnrampUrl — same host, same
 //   /buy/select-asset path, same validation, same scalar-vs-JSON
@@ -30,16 +31,19 @@
 // widget's success/exit events: the listener plus its outcome
 // states cost ~1 KB against ~5 KB of headroom, and the purchase is
 // completed and confirmed inside the Coinbase pop-up itself —
-// Bawa reports opened / blocked / load-failed, and the delivery
-// shows up as a normal incoming transaction. The SDK's protocol
+// Bawa reports opened / load-failed (a blocked pop-up cannot be
+// told apart from an opened one once noopener is set — see
+// openCoinbaseOnramp), and the delivery shows up as a normal
+// incoming transaction. The SDK's protocol
 // (cbpay-js src/utils/postMessage.ts + src/types/events.ts) is
 // documented here so a listener can be added later if the budget
 // ever allows it.
 //
-// How it works, once configured: the Buy click opens a blank pop-up
-// synchronously (so the browser cannot mistake it for unprompted)
-// and navigates it to the built URL. Coinbase owns the price, fees,
-// payment methods, supported regions and settlement; Bawa only
+// How it works, once configured: the Buy click builds the widget URL
+// first, then opens a pop-up directly onto it, synchronously (so the
+// browser cannot mistake it for unprompted), with noopener.
+// Coinbase owns the price, fees, payment methods, supported regions
+// and settlement; Bawa only
 // hands it the destination addresses and the app ID. No payment
 // details ever touch Bawa, and no purchase is ever initiated
 // without a user click.
@@ -246,12 +250,19 @@ type OpenCoinbaseOnrampOptions = {
 
 /**
  * Open the Coinbase Onramp widget as a pop-up for these
- * destinations. The pop-up opens blank synchronously, inside the
- * click, and is then navigated to the built URL — a pop-up opened
- * after an await risks being blocked as unprompted. 'opened' means
- * the widget opened; 'load-failed' means the URL could not be
- * built; 'blocked' means the browser blocked the pop-up. The
- * purchase itself is completed inside the pop-up; there is no
+ * destinations. The URL is built first, then the pop-up opens
+ * directly onto it, synchronously inside the click — a pop-up
+ * opened after an await risks being blocked as unprompted, and
+ * opening blank-then-navigating flashed a blank pop-up that had
+ * to be closed again when the URL could not be built. The pop-up
+ * opens with noopener, so the widget keeps no window.opener back
+ * to the wallet tab. 'opened' means the pop-up was requested;
+ * 'load-failed' means the URL could not be built, so nothing
+ * opened. 'blocked' is never returned here: with noopener set,
+ * window.open returns null even when the pop-up opened (verified
+ * first-hand in Chromium — noopener => null, plain => WindowProxy),
+ * so a blocked pop-up is indistinguishable from an opened one.
+ * The purchase itself is completed inside the pop-up; there is no
  * listener for its outcome (see the module header).
  */
 export function openCoinbaseOnramp({
@@ -259,15 +270,12 @@ export function openCoinbaseOnramp({
   addresses,
   defaultNetwork,
 }: OpenCoinbaseOnrampOptions): OnrampOpenOutcome {
-  const popup = window.open('about:blank', '_blank', 'width=430,height=600,noopener');
-  if (popup === null) return 'blocked';
   let url: string;
   try {
     url = buildOnrampUrl({ appId, addresses, defaultNetwork });
   } catch {
-    popup.close();
     return 'load-failed';
   }
-  popup.location.href = url;
+  window.open(url, '_blank', 'noopener,width=430,height=600');
   return 'opened';
 }

@@ -1,4 +1,4 @@
-// Chains in the registry (Lane 80-APP, 2026-11-24: 84 chains): xpub
+// Chains in the registry (Lane 80-APP, 2026-11-24: 84 chains; Lane B, 2026-11-25: 87 chains): xpub
 // derivation for btc/eth/trx, the sixty EVM chains, ltc and doge, and
 // the secp256k1 non-EVM chains (Filecoin, Cosmos-family, XRP,
 // Injective); public-address import only for TON, SOL and the seven

@@ -33,11 +33,6 @@
 //   font subsets if any.
 // - connect-src 'self' plus the two hundred and four pinned provider origins: the
 //   same-origin wallet-core.wasm fetch plus the read-only balance/history
-//   Lane B (OKX chains, 2026-11-25): four more origins, each live-probed
-//   before pinning — Cardano https://api.koios.rest (Koios tip + blocks),
-//   Kaspa https://api.kaspa.org (blockdag + network), Starknet
-//   https://starknet-mainnet.drpc.org + https://starknet.drpc.org (dRPC
-//   public gateways; chainId SN_MAIN verified live, other methods -32601).
 //   adapter endpoints — BTC https://mempool.space, ETH
 //   https://ethereum-rpc.publicnode.com (RPC) and https://eth.blockscout.com
 //   (history), TRX https://api.trongrid.io, TON https://toncenter.com, and
@@ -58,6 +53,11 @@
 //   Scroll https://scrollscan.com. api.mainnet-beta.solana.com
 //   was retired by the token-gaps programme (2026-11-22): it 403s browser
 //   requests. Price feed: CoinGecko https://api.coingecko.com (keyless public API, on-demand quotes only; the optional free Demo key is sent as a header, never as a URL) and DexScreener https://api.dexscreener.com (keyless public API, the fallback price source for tokens CoinGecko does not list — README showcase + Add Token, item D, 2026-11-23; TonAPI rates for TON Jettons need no new origin, https://tonapi.io is already pinned). Lane C (FINISH THE PRODUCT, 2026-11-23): the CoinGecko fallback chain — CoinLore https://api.coinlore.net (keyless batched native-asset quotes, verified live) and Coinbase https://api.exchange.coinbase.com (keyless, LTC only, verified live); both fetch through price-fallbacks.ts when a CoinGecko quote is stale or missing. Lane 6 (UX-major programme, 2026-11-26): LI.FI https://li.quest (keyless public routing API — swap quotes for the Swap screen; verified live + CORS * before pinning). Lane C (providers programme, Phase 2, 2026-11-26): gas.zip https://backend.gas.zip (keyless public refuel API — Refuel gas on the Swap screen; verified live before pinning) and STON.fi wss://omni-ws.ston.fi (Omniston RFQ WebSocket — pinned for the SDK add; the socket accepts connections, verified live). Relay goes through a deploy-time proxy whose origin must be added here when VITE_RELAY_PROXY_URL is set — the CSP cannot learn a host at runtime.
+//   Lane B (OKX chains, 2026-11-25): four more origins, each live-probed
+//   before pinning — Cardano https://api.koios.rest (Koios tip + blocks),
+//   Kaspa https://api.kaspa.org (blockdag + network), Starknet
+//   https://starknet-mainnet.drpc.org + https://starknet.drpc.org (dRPC
+//   public gateways; chainId SN_MAIN verified live, other methods -32601).
 //   UI/UX fixes, item 19 (2026-11-23): the backup RPCs — ETH
 //   https://eth.drpc.org (dRPC public gateway; 1RPC was the backup
 //   until 2026-11-24, when its shared free tier hit its usage limit

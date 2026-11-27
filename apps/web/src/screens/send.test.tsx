@@ -1015,7 +1015,7 @@ describe('send screen', () => {
     const mounted = await mountScreen();
     try {
       // Step 1 is chains only (Round 2, item 8). Redesign Lane 3: the
-      // 84 chains live in the search picker's listbox now, not a chip
+      // 87 chains live in the search picker's listbox now, not a chip
       // wall — open it and all 87 are there, with no token list yet.
       await openChainPicker(mounted.div);
       const names = chainOptionNames(mounted.div);

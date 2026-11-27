@@ -15,6 +15,8 @@ import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import { decodeBase58, encodeBase58 } from '../engine/address-codecs';
 import { COIN_TYPE_KEY_FOR_CHAIN } from '../engine/coin-type-keys';
+import { isValidKaspaAddress } from './kaspa-address';
+import { isValidStarknetAddress } from './starknet-derive';
 import { isEvmTxChain } from './watch-only-families';
 import {
   createPartialSigner,
@@ -247,7 +249,21 @@ export async function validateRecipient(
             if (key === undefined) return undefined;
             return core.CoinType[key];
           })();
-    if (coin === undefined) return invalid;
+    if (coin === undefined) {
+      // Kaspa and Starknet have no Wallet Core coin (their derivation
+      // lives in wallet/kaspa-address.ts and wallet/starknet-derive.ts),
+      // so Wallet Core cannot validate them — the in-app validators
+      // decide instead. A valid address passes here and the send flow
+      // then says plainly that sending on the chain isn't available
+      // yet (the Cardano shape); a malformed one is still invalid.
+      if (chain === 'kaspa') {
+        return isValidKaspaAddress(recipient) ? { ok: true } : invalid;
+      }
+      if (chain === 'starknet') {
+        return isValidStarknetAddress(recipient) ? { ok: true } : invalid;
+      }
+      return invalid;
+    }
 
     return core.CoinTypeExt.validate(coin, recipient)
       ? { ok: true }
