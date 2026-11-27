@@ -22,7 +22,7 @@
 // against mainnet observations or vice versa.
 import type { ChainId } from '@bawa/contracts';
 
-export interface PendingBroadcast {
+interface PendingBroadcast {
   txHash: string;
   chain: ChainId;
   nonce?: number;
@@ -181,7 +181,7 @@ export function removePendingBroadcastDevnet(
   );
 }
 
-export type BroadcastResolution = 'confirmed' | 'not-found' | 'unknown';
+type BroadcastResolution = 'confirmed' | 'not-found' | 'unknown';
 
 /**
  * Reconcile every pending broadcast against a read-only resolver.

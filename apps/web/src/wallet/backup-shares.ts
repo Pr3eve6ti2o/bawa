@@ -36,7 +36,7 @@ import { verifyReconstructedKey } from './vault';
 export const BACKUP_SHARE_PREFIX = 'bawa-share-v1:';
 
 /** The vault key is AES-GCM-256: 32 bytes. */
-export const VAULT_KEY_BYTES = 32;
+const VAULT_KEY_BYTES = 32;
 
 /** A share is the 32 secret bytes plus one share-number byte. */
 const SHARE_BYTES = VAULT_KEY_BYTES + 1;
@@ -209,7 +209,7 @@ export async function reconstructKeyBytes(
   return reconstructed;
 }
 
-export type BackupShareCheck = { ok: true } | { ok: false; reason: string };
+type BackupShareCheck = { ok: true } | { ok: false; reason: string };
 
 /**
  * Checks a set of pasted shares against THIS vault: rebuilds the key and

@@ -99,7 +99,7 @@ export function tokenPriceRequests(tokens: readonly TokenRecord[]): TokenPriceRe
 }
 
 /** The provider id a request is priced by (CoinGecko id, or the contract for the fallback). */
-export function tokenPriceRequestKey(request: TokenPriceRequest): string {
+function tokenPriceRequestKey(request: TokenPriceRequest): string {
   return request.kind === 'coingecko'
     ? `${request.key}=coingecko:${request.coingeckoId}`
     : `${request.key}=${request.kind}:${request.contract}`;
@@ -276,7 +276,7 @@ export function fiatValueForTokenBalance(
   return fiatValueForPricedBalance(balance, decimals, entry, nowMs);
 }
 
-export type TokenPriceCacheStore = {
+type TokenPriceCacheStore = {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
 };
@@ -387,7 +387,7 @@ export function loadCachedTokenPrices(
   }
 }
 
-export type TokenPricesState = {
+type TokenPricesState = {
   status: 'idle' | 'loading' | 'ready';
   entries: TokenPriceMap;
   lastFetchedAtMs: number | null;

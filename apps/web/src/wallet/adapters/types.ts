@@ -26,7 +26,7 @@ export interface AdapterBalance {
   fetchedAt: number;
 }
 
-export type TxDirection = 'in' | 'out' | 'self';
+type TxDirection = 'in' | 'out' | 'self';
 export type TxStatus = 'confirmed' | 'pending' | 'failed';
 
 export interface AdapterTx {

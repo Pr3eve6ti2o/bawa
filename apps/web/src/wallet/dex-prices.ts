@@ -60,7 +60,7 @@ import {
 } from './prices';
 
 export const DEXSCREENER_BASE_URL = 'https://api.dexscreener.com';
-export const TONAPI_RATES_BASE_URL = 'https://tonapi.io';
+const TONAPI_RATES_BASE_URL = 'https://tonapi.io';
 
 /** DexScreener chainId per wallet chain (see the module note for the two omissions). */
 export const DEXSCREENER_CHAIN_FOR_CHAIN: Partial<Record<ChainId, string>> = {
@@ -98,13 +98,13 @@ export const DEXSCREENER_CHAIN_FOR_CHAIN: Partial<Record<ChainId, string>> = {
 /** DexScreener only accepts 30 token addresses per tokens/v1 call. */
 const DEXSCREENER_MAX_ADDRESSES_PER_CALL = 30;
 
-export interface DexPriceRequest {
+interface DexPriceRequest {
   key: string;
   chain: ChainId;
   contract: string;
 }
 
-export interface TonPriceRequest {
+interface TonPriceRequest {
   key: string;
   contract: string;
 }

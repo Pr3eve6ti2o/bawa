@@ -187,7 +187,7 @@ function numberToVarBytesBE(n: bigint): Uint8Array {
  * micro-starknet grindKey: sha256(seed || i) until the value is below
  * the limit, then reduce mod the curve order.
  */
-export function starkGrindKey(seed: Uint8Array): bigint {
+function starkGrindKey(seed: Uint8Array): bigint {
   const mask = 2n ** 256n;
   const limit = mask - (mask % CURVE_ORDER);
   for (let i = 0n; ; i++) {
@@ -403,7 +403,7 @@ function pedersenSingle(
 }
 
 /** Pedersen hash; returns the x-coordinate as a 0x hex string. */
-export function starkPedersen(x: bigint | string, y: bigint | string): string {
+function starkPedersen(x: bigint | string, y: bigint | string): string {
   let point: AffinePoint = {
     x: PEDERSEN_POINTS[0]![0],
     y: PEDERSEN_POINTS[0]![1],
@@ -415,7 +415,7 @@ export function starkPedersen(x: bigint | string, y: bigint | string): string {
 }
 
 /** computeHashOnElements: [0, ...data, data.length] folded with Pedersen. */
-export function starkComputeHashOnElements(data: Array<bigint | string>): string {
+function starkComputeHashOnElements(data: Array<bigint | string>): string {
   // Array.reduce with no initial value: the accumulator starts at the
   // leading 0 and folds over [...data, data.length].
   let acc: bigint | string = 0n;

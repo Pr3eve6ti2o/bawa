@@ -151,8 +151,9 @@ PulseChain, Chiliz, Flare, Hemi, BOB, dYdX), CoinGecko coin images (5:
 Astar, Songbird, Velas, World Chain via the Worldcoin mark, Celestia
 via the TIA mark) and the Tatum chain-logo CDN (1: Flow EVM, SVG
 rendered to PNG). Each was viewed by eye before bundling; the
-per-chain source is recorded in `chains-expanded.ts` (iconPath /
-iconUrl). Same convention as the rest: original PNG plus 96 px WebP at
+per-chain source is recorded in the canonical dataset
+`chains-expanded.ts` (iconPath / iconUrl); the production chain data
+lives in `chains.ts`. Same convention as the rest: original PNG plus 96 px WebP at
 quality 85 (28 logos, 56 files, 1,146,342 bytes PNG, 50,208 bytes
 WebP). All 87 registry chains now have a real logo. The Flare source
 had a checkerboard baked into its corners; the bundled PNG has those

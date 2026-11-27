@@ -89,7 +89,7 @@ function label(key, field) {
 // supported entries (status supported, bawaChainId non-null) in registry
 // order. Collects every violation and throws one error naming each entry
 // and field, instead of stopping at the first.
-export function validateCoins(registry) {
+function validateCoins(registry) {
   const errors = [];
   const coins = registry?.coins;
   if (!isPlainObject(coins)) {
@@ -315,7 +315,7 @@ function tsValue(field, value) {
 // The full generated block, markers included, ending with a newline.
 // Deterministic: same registry input emits byte-identical output (registry
 // order, fixed field order, fixed formatting).
-export function generateBlock(supported) {
+function generateBlock(supported) {
   // The key type is the supported-chain union from the registry (coins with
   // a non-null bawaChainId), not ChainId: the other listed chains have no
   // generated facts, so Record<ChainId, ...> would demand entries that do
@@ -364,7 +364,7 @@ export function generateBlock(supported) {
 // from the BEGIN marker line through the END marker line (trailing
 // newline included). Fails loudly naming the missing marker(s) instead
 // of inventing a placement.
-export function findBlock(chainsText) {
+function findBlock(chainsText) {
   const beginCount = chainsText.split(BEGIN_MARKER).length - 1;
   const endCount = chainsText.split(END_MARKER).length - 1;
   if (beginCount === 0 || endCount === 0) {
@@ -395,7 +395,7 @@ export function findBlock(chainsText) {
   return { start: beginIndex, end, current: chainsText.slice(beginIndex, end) };
 }
 
-export function replaceBlock(chainsText, block) {
+function replaceBlock(chainsText, block) {
   const found = findBlock(chainsText);
   return (
     chainsText.slice(0, found.start) + block + chainsText.slice(found.end)

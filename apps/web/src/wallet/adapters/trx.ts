@@ -39,7 +39,7 @@ const BASE_URL = 'https://api.trongrid.io';
 const TRONSCAN_BASE_URL = 'https://apilist.tronscanapi.com';
 const TRONSCAN_SOURCE = 'tronscan';
 const DECIMALS = 6;
-export interface TronAdapterOverrides {
+interface TronAdapterOverrides {
   baseUrl?: string;
   /**
    * Ordered Trongrid-shaped base URLs, or a resolver re-read on every
@@ -80,7 +80,7 @@ function isTronAddress(address: string): boolean {
 }
 
 /** Latest-block header fields a TRON offline signature needs. */
-export interface TronBlockHeader {
+interface TronBlockHeader {
   /** Unix epoch milliseconds of the latest block. */
   timestamp: number;
   /** Block number. */

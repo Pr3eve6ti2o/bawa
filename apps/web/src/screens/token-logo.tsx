@@ -113,7 +113,7 @@ import type { ChainId } from '../engine/boundary';
 // WETH) and USDT0 is blockchains/arbitrum/assets/
 // 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9/logo.png (upstream name
 // Tether USD, symbol USDT — the USDT0 contract on Arbitrum).
-export const TOKEN_LOGOS: Record<string, string> = {
+const TOKEN_LOGOS: Record<string, string> = {
   BTC: bitcoinLogo,
   ETH: ethereumLogo,
   TRX: tronLogo,
@@ -179,8 +179,9 @@ const TOKEN_SYMBOL_ALIASES: Record<string, string> = {
  * CoinGecko coin images (5: Astar, Songbird, Velas, World Chain via
  * the Worldcoin mark, Celestia via the TIA mark) and the Tatum
  * chain-logo CDN (1: Flow EVM, SVG). Each was viewed by eye before
- * bundling; the per-chain source is recorded in
- * chains-expanded.ts (iconPath / iconUrl) and apps/web/README.md.
+ * bundling; the per-chain source is recorded in the canonical
+ * dataset chains-expanded.ts (iconPath / iconUrl) and
+ * apps/web/README.md; the production chain data lives in chains.ts.
  * Every registry chain now has a real logo.
  */
 export const CHAIN_LOGOS: Record<string, string> = {

@@ -47,7 +47,7 @@ export interface TokenSearchCandidate {
   iconSource?: TokenIconSource | null;
 }
 
-export type TokenSearchResult =
+type TokenSearchResult =
   | { status: 'found'; candidates: TokenSearchCandidate[] }
   | { status: 'not-found' }
   | { status: 'error'; reason: string };

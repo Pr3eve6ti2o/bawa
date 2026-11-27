@@ -21,9 +21,9 @@ export const AUTO_LOCK_LABELS: Record<number, string> = {
   1440: '1 day',
 };
 
-export const AUTO_LOCK_DEFAULT_MINUTES = 5;
+const AUTO_LOCK_DEFAULT_MINUTES = 5;
 
-export const AUTO_LOCK_ENABLED_KEY = 'bawa-auto-lock-enabled';
+const AUTO_LOCK_ENABLED_KEY = 'bawa-auto-lock-enabled';
 export const AUTO_LOCK_MINUTES_KEY = 'bawa-auto-lock-minutes';
 
 export function readAutoLockEnabled(): boolean {

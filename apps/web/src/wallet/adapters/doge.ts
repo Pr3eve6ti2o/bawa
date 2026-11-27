@@ -68,7 +68,7 @@ const SOCHAIN_SOURCE = 'sochain';
 const BLOCKCYPHER_SOURCE = 'blockcypher';
 const DECIMALS = 8;
 
-export interface DogeAdapterOverrides {
+interface DogeAdapterOverrides {
   /** BlockCypher base URL (fallback). */
   baseUrl?: string;
   /** SoChain base URL (primary). */

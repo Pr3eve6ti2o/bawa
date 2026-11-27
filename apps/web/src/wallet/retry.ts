@@ -9,7 +9,7 @@ export interface RetryEvent {
   delayMs: number;
 }
 
-export interface RetryOptions {
+interface RetryOptions {
   operation: string;
   maxAttempts?: number;
   totalBudgetMs?: number;
@@ -24,7 +24,7 @@ export interface RetryOptions {
 
 let defaultRetryEventListener: ((event: RetryEvent) => void) | undefined;
 
-export function setDefaultRetryEventListener(
+function setDefaultRetryEventListener(
   listener: ((event: RetryEvent) => void) | undefined,
 ): void {
   defaultRetryEventListener = listener;
@@ -223,7 +223,7 @@ export function fetchJsonWithRetry(
   });
 }
 
-export type RetryMetrics = {
+type RetryMetrics = {
   calls: number;
   retries: number;
   successes: number;

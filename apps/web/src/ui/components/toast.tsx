@@ -11,14 +11,14 @@ import { useSyncExternalStore } from 'react';
 
 export type ToastKind = 'success' | 'error' | 'info' | 'warning' | 'normal';
 
-export type ToastItem = {
+type ToastItem = {
   id: number;
   message: string;
   kind: ToastKind;
 };
 
 /** Auto-dismiss delay in ms (sonner's default). */
-export const TOAST_DURATION_MS = 4000;
+const TOAST_DURATION_MS = 4000;
 
 let nextId = 1;
 let items: ToastItem[] = [];

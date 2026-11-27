@@ -5,7 +5,7 @@ import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import type { AdapterTx } from '../wallet/adapters/types';
 
-export function formatDate(timestamp: number): string {
+function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',

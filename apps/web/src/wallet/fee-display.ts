@@ -19,7 +19,7 @@
 // This helper sorts those into amount / rate / unknown so the screen
 // never formats a rate as an amount. It invents nothing: every figure
 // comes from the adapter quote the caller passes in.
-export type FeeDisplay =
+type FeeDisplay =
   | { kind: 'amount'; feeBaseUnits: string }
   | { kind: 'rate'; rateText: string }
   | { kind: 'unknown' };

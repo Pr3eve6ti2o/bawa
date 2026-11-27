@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 
-export interface ErrorBoundaryProps {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallbackTitle?: string;
   onError?: (error: { message: string }) => void;

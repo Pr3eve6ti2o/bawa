@@ -13,7 +13,7 @@ function loadJsQR(): Promise<JsQR> {
   return jsQRPromise;
 }
 
-export interface QrScannerProps {
+interface QrScannerProps {
   /** Called exactly once, with the decoded QR payload. */
   onScan: (value: string) => void;
   onCancel: () => void;
@@ -85,7 +85,7 @@ export async function decodeQrImageFile(file: File): Promise<string | null> {
  * A permission denial names the denial; a missing camera names that;
  * anything else falls back to the generic wording.
  */
-export function cameraErrorMessage(error: unknown): string {
+function cameraErrorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
     return 'Camera access was denied. Allow the camera, or upload a QR image instead.';
   }

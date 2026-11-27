@@ -101,9 +101,9 @@ import type { TokenIconSource, VerifiedSource } from './tokens';
  * Trust Wallet Assets commit pin — the SAME pin as
  * TRUST_WALLET_ASSETS_PIN in chains-expanded.ts (verified 2026-11-24,
  * commit e8f61783, "Mark FAKE Anthropic as FAKE (#38836)"). It is
- * spelled out here instead of imported: chains-expanded.ts also
- * carries the 62-chain data table, and importing it would pull that
- * table into the eager bundle for one string. The unit test asserts
+ * spelled out here instead of imported: chains-expanded.ts is the
+ * canonical 65-chain dataset, and importing it would pull that table
+ * into the eager bundle for one string. The unit test asserts
  * the two pins stay equal.
  */
 export const TRUST_WALLET_ASSETS_PIN = 'e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e';
@@ -164,7 +164,7 @@ export const BITGET_CHAIN_FOR_CHAIN: Partial<Record<ChainId, string>> = {
  * The xlayer directory (okxchain) is deliberately absent: it is the
  * old OKC chain, not X Layer.
  */
-export const TRUST_WALLET_ASSET_DIR_FOR_CHAIN: Partial<Record<ChainId, string>> = {
+const TRUST_WALLET_ASSET_DIR_FOR_CHAIN: Partial<Record<ChainId, string>> = {
   eth: 'ethereum',
   bsc: 'smartchain',
   matic: 'polygon',
@@ -226,7 +226,7 @@ export function trustWalletIconUrl(chain: ChainId, contract: string): string | n
   return `https://raw.githubusercontent.com/trustwallet/assets/${TRUST_WALLET_ASSETS_PIN}/blockchains/${dir}/assets/${contract}/logo.png`;
 }
 
-export interface ListVerificationResult {
+interface ListVerificationResult {
   /** True when a trusted list holds this exact chain + contract. */
   verified: boolean;
   /** Which list verified it, or null. */
@@ -235,7 +235,7 @@ export interface ListVerificationResult {
   logoUri: string | null;
 }
 
-export interface TokenIconResult {
+interface TokenIconResult {
   iconUrl: string | null;
   iconSource: TokenIconSource | null;
 }

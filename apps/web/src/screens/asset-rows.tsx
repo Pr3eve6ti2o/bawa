@@ -728,7 +728,7 @@ function priceProvenanceLine(
   return `${quoteFreshnessLabel(newest.quote, nowMs)} · ${sources.join(', ')}`;
 }
 
-export interface AssetRowsProps {
+interface AssetRowsProps {
   hideZero: boolean;
   onShowAll?: () => void;
   prices?: PriceMap;

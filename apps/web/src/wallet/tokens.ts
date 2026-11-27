@@ -503,7 +503,7 @@ export function tokenSlug(record: TokenRecord): string {
 /** Chains that can hold an ERC-20 token by contract address — the sixty EVM-transaction chains (Lane 80-APP: the 44 new adapter chains join the 16 existing; Filecoin's f1 address cannot hold an ERC-20). */
 export const EVM_TOKEN_CHAINS: readonly ChainId[] = EVM_TX_CHAINS;
 
-export type TokenStandard =
+type TokenStandard =
   | { standard: 'erc20' }
   | { standard: 'trc20' }
   | { standard: 'spl' }
@@ -920,7 +920,7 @@ export function writeCustomTokens(tokens: readonly TokenRecord[], store?: TokenS
  * Send/Receive load no price feed, so fiatMinorUnits is null there and
  * the order is hasBalance, then registry order.
  */
-export interface BalanceSortKey {
+interface BalanceSortKey {
   hasBalance: boolean;
   fiatMinorUnits: number | null;
 }

@@ -55,8 +55,8 @@ import { isRecord, ownValue } from './guards';
 import type { ChainId } from '../engine/boundary';
 
 /** gas.zip public API base. Keyless; see the module note. */
-export const GASZIP_BASE_URL = 'https://backend.gas.zip/v2';
-export const GASZIP_CHAINS_URL = `${GASZIP_BASE_URL}/chains`;
+const GASZIP_BASE_URL = 'https://backend.gas.zip/v2';
+const GASZIP_CHAINS_URL = `${GASZIP_BASE_URL}/chains`;
 /** Minimum refuel per destination chain, USD (docs overview). */
 export const GASZIP_MIN_USD_PER_CHAIN = 0.25;
 /** Maximum refuel per destination chain, USD (docs overview). */
@@ -64,11 +64,11 @@ export const GASZIP_MAX_USD_PER_CHAIN = 50;
 /** gas.zip chain id for Solana (listed, but live quotes fail — see note). */
 export const GASZIP_SOLANA_CHAIN_ID = 501474;
 /** Quotes go stale quickly — the screen shows the age and re-quotes. */
-export const GASZIP_QUOTE_STALE_MS = 60_000;
+const GASZIP_QUOTE_STALE_MS = 60_000;
 /** One quote attempt gets 15 s; a hung provider must not hang the form. */
-export const GASZIP_QUOTE_TIMEOUT_MS = 15_000;
+const GASZIP_QUOTE_TIMEOUT_MS = 15_000;
 
-export const GASZIP_NOT_COVERED_SOLANA_MESSAGE =
+const GASZIP_NOT_COVERED_SOLANA_MESSAGE =
   'Solana is listed by gas.zip but live quotes fail there right now ' +
   '(“Chain Limit Exceeded”), so it is not offered as a refuel destination.';
 const GASZIP_UNAVAILABLE_MESSAGE =
@@ -95,7 +95,7 @@ export interface GasZipChain {
 }
 
 /** One destination line of a live gas.zip quote. */
-export interface GasZipQuoteLine {
+interface GasZipQuoteLine {
   chainId: number;
   /** Delivered amount, in the destination chain's smallest units. */
   expectedBaseUnits: string;
@@ -124,16 +124,16 @@ export interface GasZipQuote {
   fetchedAtMs: number;
 }
 
-export type GasZipChainsResult =
+type GasZipChainsResult =
   | { status: 'ok'; chains: GasZipChain[] }
   | { status: 'unavailable'; reason: string };
 
-export type GasZipQuoteResult =
+type GasZipQuoteResult =
   | { status: 'ok'; quote: GasZipQuote }
   | { status: 'no-route'; reason: string }
   | { status: 'unavailable'; reason: string };
 
-export interface GasZipDeps {
+interface GasZipDeps {
   fetchFn?: typeof fetch;
 }
 

@@ -5,8 +5,8 @@
  * chain lists, so the owner sees which ones actually answer — from
  * their own browser, not from a report. A registry entry that has
  * gone dead (Aurora's 1rpc.io backup answers -32001 "usage limit"
- * since 2026-11-24; Solana's Vibe Station refuses plain curl but
- * answers the browser) shows up here honestly instead of hiding
+ * since 2026-11-24; Solana's Vibe Station backup went connection-refused and was
+ * replaced by solana.publicnode.com on 2026-11-27) shows up here honestly instead of hiding
  * behind a Primary/Backup badge.
  *
  * Each probe is the smallest call that proves the endpoint serves the
@@ -26,7 +26,9 @@
  * address-free liveness check wired here, so they report unchecked
  * with the reason — never a failed 'Not an EVM chain'. Their RPC
  * endpoints were verified live when the chain data was recorded
- * (chains-expanded.ts rpcEvidence); the in-app probe only covers the
+ * (chains-expanded.ts rpcEvidence — the canonical dataset; the
+ * production chain data lives in chains.ts); the in-app probe only
+ * covers the
  * chains above.
  */
 import type { ChainId } from '../engine/boundary';

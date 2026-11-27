@@ -108,11 +108,11 @@ const VAULT_ADDRESSES_KEY_DEVNET = 'bawa-vault-addresses-devnet:v1';
 // balance values with the address they belong to, so a boot never shows
 // another account's balance. Entries older than this are ignored.
 const BALANCE_CACHE_KEY = 'bawa:balances-cache:v1';
-export const BALANCE_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
+const BALANCE_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
 
 // BalanceState / BalanceStatus live in ../wallet/balance-state (see above).
 
-export type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
+type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
 export interface HistoryState {
   status: HistoryStatus;
   txs: AdapterTx[];
@@ -454,7 +454,7 @@ async function fetchWithRetry<T>(
  * unaffected. The cap is deliberately small; raise it only with a live
  * 429 measurement behind the change.
  */
-export interface RefreshLimiter {
+interface RefreshLimiter {
   run<T>(task: () => Promise<T>): Promise<T>;
 }
 
@@ -557,7 +557,7 @@ function persistVaultAddresses(
 // belong to the current vault's phrase: they reset when a vault is
 // created or deleted (see resetReceiveRotation, called by the screens
 // that create or delete a vault), and on account switch.
-export type ReceiveIndices = Partial<Record<ChainId, number>>;
+type ReceiveIndices = Partial<Record<ChainId, number>>;
 
 export const RECEIVE_INDEX_KEY = 'bawa-receive-index:v1';
 

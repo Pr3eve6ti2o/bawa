@@ -30,7 +30,7 @@ test('E2E-03 home shows honest zero balances', async ({ page }) => {
   // test retries failed rows once through the UI's own Retry buttons.
   // Token gaps, item 1 (2026-11-22): Solana now reads from the free
   // publicnode RPC (solana-rpc.publicnode.com, fallback
-  // public.rpc.solanavibestation.com) and Dogecoin from SoChain
+  // solana.publicnode.com) and Dogecoin from SoChain
   // (sochain.com, fallback BlockCypher) — both verified in-page
   // 200 by Lane 1 and wired in by Lane 2, so both rows are expected
   // to settle to zero like the rest. The old mainnet-beta pin

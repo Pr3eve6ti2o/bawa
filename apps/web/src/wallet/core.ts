@@ -32,7 +32,7 @@ async function loadCore(): Promise<WalletCore> {
   return load();
 }
 export type WalletAddresses = Record<ChainId, string>;
-export type WalletCoin = Parameters<
+type WalletCoin = Parameters<
   WalletCore['HDWallet']['getPublicKeyFromExtended']
 >[1];
 

@@ -167,7 +167,7 @@ available for an operation only when `availableFor(capability)` in
 
 <!-- END GENERATED: capabilities from apps/web/src/wallet/chains.ts. -->
 
-**Note on the table above (2026-11-26, guide-update pass):** the generated table covers only the 22 curated chains in `apps/web/src/wallet/chains.ts`. The 65 expansion chains live in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAINS`, `EXPANDED_CHAIN_COUNT = 65`), including the 3 OKX-reference chains (Cardano, Starknet, Kaspa — see `docs/CREATE-THIS-SPEC.md` §2.5) — 87 chains in total. Do not read the 22-row table as the chain count. See `docs/CREATE-THIS-SPEC.md` §2 for the full 87-chain specification and the per-operation availability rule (`availableFor`).
+**Note on the table above (2026-11-26, guide-update pass):** the generated table covers only the 22 curated chains in `apps/web/src/wallet/chains.ts`. The 65 expansion chains live in production in `apps/web/src/wallet/chains.ts`, ported from the canonical dataset in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAINS`, `EXPANDED_CHAIN_COUNT = 65`), including the 3 OKX-reference chains (Cardano, Starknet, Kaspa — see `docs/CREATE-THIS-SPEC.md` §2.5) — 87 chains in total. Do not read the 22-row table as the chain count. See `docs/CREATE-THIS-SPEC.md` §2 for the full 87-chain specification and the per-operation availability rule (`availableFor`).
 
 If you want to use a wallet to hold funds, see the product-user route
 in [README.md](README.md) ("If you want a wallet to use"). This

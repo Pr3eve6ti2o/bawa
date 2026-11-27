@@ -39,7 +39,7 @@ const BASE_URL = 'https://mempool.space/api';
 const FALLBACK_URL = 'https://blockstream.info/api';
 const DECIMALS = 8;
 
-export interface BtcAdapterOverrides {
+interface BtcAdapterOverrides {
   baseUrl?: string;
   /**
    * Ordered Esplora-shaped base URLs, or a resolver re-read on every

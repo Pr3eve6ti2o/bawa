@@ -43,19 +43,19 @@ import snapshotJson from './clear-signing-snapshot.json';
 
 // Compact snapshot schema (see the generator): function {s,i,p},
 // param {t,l,m?}, contract {n,a,c,f}. Display types: address | uint.
-export type ClearSigningParam = {
+type ClearSigningParam = {
   readonly t: 'address' | 'uint';
   readonly l: string;
   readonly m?: boolean;
 };
 
-export type ClearSigningFunction = {
+type ClearSigningFunction = {
   readonly s: string;
   readonly i: string;
   readonly p: readonly ClearSigningParam[];
 };
 
-export type ClearSigningContract = {
+type ClearSigningContract = {
   readonly n: string;
   readonly a: string;
   readonly c: readonly number[];
@@ -69,7 +69,7 @@ type ClearSigningSnapshot = {
 
 const SNAPSHOT = snapshotJson as unknown as ClearSigningSnapshot;
 
-export type ClearSigningToken = {
+type ClearSigningToken = {
   readonly decimals: number;
   readonly symbol: string;
 };
@@ -81,12 +81,12 @@ export type ClearSigningInput = {
   readonly token?: ClearSigningToken;
 };
 
-export type ClearSigningRow = {
+type ClearSigningRow = {
   readonly label: string;
   readonly value: string;
 };
 
-export type ClearSigningResult = {
+type ClearSigningResult = {
   /** Per-contract name, or null for a generic (standard) descriptor. */
   readonly contractName: string | null;
   readonly intent: string;

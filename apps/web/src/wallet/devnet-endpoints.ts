@@ -27,9 +27,9 @@ import type {
   FetchTransport,
 } from './adapters/types';
 
-export type DevnetChainId = 'btc' | 'eth' | 'trx' | 'ton';
+type DevnetChainId = 'btc' | 'eth' | 'trx' | 'ton';
 
-export interface DevnetChainConfig {
+interface DevnetChainConfig {
   id: DevnetChainId;
   displayName: string;
   /** Short devnet name shown in the UI (e.g. 'Bitcoin testnet4'). */

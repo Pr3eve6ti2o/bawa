@@ -50,7 +50,7 @@ export function writeDevnetEnabled(enabled: boolean): void {
   }
 }
 
-export interface BtcBech32Decoded {
+interface BtcBech32Decoded {
   hrp: 'bc' | 'tb';
   witnessVersion: number;
   program: number[];
@@ -174,7 +174,7 @@ function doubleSha256(bytes: Uint8Array): Uint8Array {
   return hexToBytes(sha256(hexToBytes(sha256(bytes))));
 }
 
-export interface Base58CheckDecoded {
+interface Base58CheckDecoded {
   version: number;
   payload: Uint8Array;
 }

@@ -81,7 +81,7 @@ export const SOL_ASSOCIATED_TOKEN_PROGRAM_ID = new SolPublicKey(
   'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
 );
 
-export type SolInstructionKey = {
+type SolInstructionKey = {
   pubkey: SolPublicKey;
   isSigner: boolean;
   isWritable: boolean;
@@ -193,7 +193,7 @@ type SolCompiledMessage = {
  * within each rank, first-seen order); program ids appended last as
  * readonly non-signers.
  */
-export function solCompileMessage(
+function solCompileMessage(
   feePayer: SolPublicKey,
   recentBlockhash: string,
   instructions: SolInstruction[],

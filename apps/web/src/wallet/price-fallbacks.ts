@@ -123,8 +123,8 @@ import {
   type PriceSource,
 } from './prices';
 
-export const COINLORE_BASE_URL = 'https://api.coinlore.net';
-export const COINBASE_BASE_URL = 'https://api.exchange.coinbase.com';
+const COINLORE_BASE_URL = 'https://api.coinlore.net';
+const COINBASE_BASE_URL = 'https://api.exchange.coinbase.com';
 
 /**
  * Native asset -> CoinLore coin id. ETH-native chains (Arbitrum,

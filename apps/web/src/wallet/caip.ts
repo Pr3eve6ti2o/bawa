@@ -22,12 +22,12 @@
  * chain list instead, so the snapshot stays small.
  */
 
-export type CaipChainId = {
+type CaipChainId = {
   readonly namespace: string;
   readonly reference: string;
 };
 
-export type CaipAccountId = CaipChainId & {
+type CaipAccountId = CaipChainId & {
   readonly address: string;
 };
 

@@ -1,4 +1,4 @@
-export type SquiggleDividerProps = {
+type SquiggleDividerProps = {
   orientation?: "horizontal" | "vertical";
   className?: string;
 };

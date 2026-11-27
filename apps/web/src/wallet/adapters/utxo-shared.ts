@@ -26,7 +26,7 @@ import {
 import { isRecord } from '../guards';
 import { withRetry } from '../retry';
 
-export type MempoolReader = (
+type MempoolReader = (
   urlFor: (base: string) => string,
   operation: string,
 ) => Promise<{ raw: unknown; endpoint: string }>;
@@ -83,7 +83,7 @@ export function verifyGenesisBlock(
   return null;
 }
 
-export type ChainStatsBalance =
+type ChainStatsBalance =
   | { ok: true; balance: bigint }
   | { ok: false; reason: string };
 
@@ -144,7 +144,7 @@ export function balanceResult(
   };
 }
 
-export interface MempoolHistoryOptions {
+interface MempoolHistoryOptions {
   chain: ChainId;
   networkId: string;
   explorerBaseUrl: string;
@@ -160,7 +160,7 @@ export interface MempoolHistoryOptions {
  * list; the caller reports 'Invalid response: expected a transaction
  * list'.
  */
-export function parseMempoolHistory(
+function parseMempoolHistory(
   raw: unknown,
   options: MempoolHistoryOptions,
 ): AdapterTx[] | null {
@@ -244,7 +244,7 @@ export function parseMempoolHistory(
  * Returns null when the payload is not a list; the caller reports
  * 'Invalid response: expected a UTXO list'.
  */
-export function parseUtxoEntries(
+function parseUtxoEntries(
   raw: unknown,
 ): { txid: string; vout: number; valueBaseUnits: string }[] | null {
   if (!Array.isArray(raw)) return null;
@@ -269,7 +269,7 @@ export function parseUtxoEntries(
  * converted: a mempool failure there falls through to the BlockCypher
  * fallback instead of returning an error.
  */
-export type AddressJsonRead =
+type AddressJsonRead =
   | { ok: true; raw: unknown; endpoint: string }
   | { ok: false; result: AdapterResult<never> };
 

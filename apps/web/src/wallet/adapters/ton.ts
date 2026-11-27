@@ -33,7 +33,7 @@ const TONAPI_BASE_URL = 'https://tonapi.io';
 const TONAPI_SOURCE = 'tonapi';
 const DECIMALS = 9;
 
-export interface TonAdapterOverrides {
+interface TonAdapterOverrides {
   baseUrl?: string;
   /**
    * Ordered TonCenter-compatible base URLs, or a resolver re-read on

@@ -46,7 +46,7 @@ const BLOCKCYPHER_BASE = 'https://api.blockcypher.com/v1/ltc/main';
 const BLOCKCYPHER_SOURCE = 'blockcypher';
 const DECIMALS = 8;
 
-export interface LtcAdapterOverrides {
+interface LtcAdapterOverrides {
   baseUrl?: string;
   /**
    * Ordered mempool-shaped base URLs, or a resolver re-read on every

@@ -2,7 +2,7 @@
 
 This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `7a170f4`, 2026-11-26). Read it alongside `README.md` and `CONTRIBUTING.md`.
 
-Branch state described here: `panel-rebuild/token-gaps`. The web wallet wires **87 chains** — 22 curated chains in `apps/web/src/wallet/chains.ts` plus 65 expansion chains in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAIN_COUNT = 65`; 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference: Cardano, Starknet, Kaspa). The registry lives in-tree at `registry/` (`capabilities.json` v4, 87 `chainSupport` keys) — see the chain diagram in `docs/12-chain-registry-and-assets/README.md` and the full 87-chain specification in `docs/CREATE-THIS-SPEC.md` §2.
+Branch state described here: `panel-rebuild/token-gaps`. The web wallet wires **87 chains** — 22 curated chains plus 65 expansion chains, all in `apps/web/src/wallet/chains.ts` in production; the 65-chain dataset is kept canonically in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAIN_COUNT = 65`; 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference: Cardano, Starknet, Kaspa). The registry lives in-tree at `registry/` (`capabilities.json` v4, 87 `chainSupport` keys) — see the chain diagram in `docs/12-chain-registry-and-assets/README.md` and the full 87-chain specification in `docs/CREATE-THIS-SPEC.md` §2.
 
 The builder routes requests through `ai/` and selects from `registry/`. Build and check entry points live in `scripts/`. The starters under `apps/` are deployables; wallet generation and recovery are separate offline tools under `tools/`.
 

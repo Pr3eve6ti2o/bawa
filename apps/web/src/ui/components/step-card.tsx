@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/utils";
 import { BawaIcon } from "./icons";
 
-export type StepState = "pending" | "active" | "completed";
+type StepState = "pending" | "active" | "completed";
 
 type StepCardProps = ComponentProps<"div"> & {
   icon: ReactNode;

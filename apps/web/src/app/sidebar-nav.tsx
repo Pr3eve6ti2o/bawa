@@ -4,14 +4,14 @@ import { NavLink } from "react-router";
 import { BawaIcon, type BawaIconName } from "../ui/components/icons";
 import { SquiggleDivider } from "../ui/components/squiggle-divider";
 
-export type NavItem = {
+type NavItem = {
   to: string;
   label: string;
   icon: BawaIconName;
   end?: boolean;
 };
 
-export type SidebarNavProps = {
+type SidebarNavProps = {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onPreloadRoute?: (to: string) => void;

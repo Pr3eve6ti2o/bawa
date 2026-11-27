@@ -14,7 +14,7 @@ import type {
   FetchTransport,
 } from './types';
 
-export interface EthAdapterOverrides {
+interface EthAdapterOverrides {
   client?: PublicClient;
   historyBaseUrl?: string;
   rpcUrl?: string;

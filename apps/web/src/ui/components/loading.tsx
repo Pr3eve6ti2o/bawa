@@ -1,4 +1,4 @@
-export type BawaLoadingProps = {
+type BawaLoadingProps = {
   label?: string;
   className?: string;
 };

@@ -341,7 +341,7 @@ function BrandMark({
   );
 }
 
-export interface QrCardProps {
+interface QrCardProps {
   /** The QR payload: the payment request when one exists, else the address. */
   qrValue: string;
   /** e.g. '25 USDC' — null when no amount is set, shown as 'Any amount'. */

@@ -63,7 +63,7 @@ export function generateBip39Mnemonic(
 // a valid count splits at the longest valid prefix (a 12-word prefix
 // passes its 4-bit checksum one time in sixteen, so trying it inside an
 // exact-count input could restore the wrong wallet).
-export interface SplitMnemonic {
+interface SplitMnemonic {
   mnemonic: string;
   passphrase: string;
 }
