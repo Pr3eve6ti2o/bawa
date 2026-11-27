@@ -14,6 +14,7 @@ import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/components/card';
 import { CopyButton } from '../ui/components/copy-button';
+import { AddressIdenticon } from '../ui/components/address-identicon';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { ChainSearchSelect, readLastUsedChain } from './chain-search-select';
@@ -256,9 +257,15 @@ export function AddressBookScreen() {
                       </span>
                       <CopyButton value={entry.address} label={'Copy ' + entry.label + ' address'} />
                     </span>
-                    <code className="block break-all rounded-md bg-muted p-3 text-sm">
-                      {entry.address}
-                    </code>
+                    <span className="flex items-center gap-2 rounded-md bg-muted p-3">
+                      {/* Lane P2-C (M6): the identicon pairs the saved
+                          address — the entry is recognisable at a
+                          glance, not just by reading hex. */}
+                      <AddressIdenticon address={entry.address} size={24} />
+                      <code className="min-w-0 flex-1 break-all text-sm">
+                        {entry.address}
+                      </code>
+                    </span>
                     <span className="flex flex-wrap gap-2">
                       <Button type="button" variant="secondary" onClick={() => handleEdit(entry)}>
                         Edit

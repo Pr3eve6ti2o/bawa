@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
@@ -41,6 +41,7 @@ import {
   resolveTokenByTickerOrName,
   shortContract,
   tokenKeyOf,
+  tokenSlug,
   type TokenRecord,
 } from '../wallet/tokens';
 import { AddTokenDialog } from './add-token';
@@ -259,7 +260,40 @@ export function ReceiveScreen() {
   const receiveIndices = receiveIndicesRaw ?? {};
   const [copyStatus, setCopyStatus] = useState('');
   const [amount, setAmount] = useState('');
-  const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(null);
+  // Full token list (token gaps, item 2): the defaults plus user-added
+  // tokens, on the networks this screen can receive on. Moved up: the
+  // asset shortcut below resolves its token against this list before
+  // the entry chain is picked.
+  const allTokens = [...DEFAULT_TOKENS, ...(customTokens ?? [])];
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const entryReceiveChains = availableFor('receive');
+  // Lane P2-C (F7): the asset-detail shortcut — /receive?chain=&token=
+  // — pre-selects the asset and lands on its QR (details). The token
+  // is the detail route's slug (tokenSlug, or a contract address); an
+  // unknown slug is ignored, never an error — the chain still
+  // pre-selects and the native coin is the fallback.
+  const assetChainParam = searchParams.get('chain');
+  const assetChain: ChainId | null =
+    assetChainParam !== null &&
+    (entryReceiveChains as readonly string[]).includes(assetChainParam)
+      ? (assetChainParam as ChainId)
+      : null;
+  const assetTokenParam = searchParams.get('token');
+  const assetToken: TokenRecord | null =
+    assetChain === null || assetTokenParam === null
+      ? null
+      : (allTokens.find(
+          (token) =>
+            token.chain === assetChain &&
+            (tokenSlug(token) === assetTokenParam.toLowerCase() ||
+              token.contract.toLowerCase() === assetTokenParam.toLowerCase()),
+        ) ?? null);
+  // The asset prefill came from this screen's own URL. A manual
+  // chain/token change abandons it: the params leave the URL, or a
+  // later mount would resurrect the prefilled asset (Send's pattern).
+  const assetPrefillRef = useRef(assetChain !== null);
+  const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(assetToken);
   const [tokenFilter, setTokenFilter] = useState('');
   const [addTokenOpen, setAddTokenOpen] = useState(false);
   // Item 20: stepped flow — network, then token, then amount + QR.
@@ -267,10 +301,12 @@ export function ReceiveScreen() {
   // chain when this wallet has an address on it — the common case
   // needs no chain step at all. Otherwise it opens on the chain step,
   // as before. The entry chain is the shared last-used pick the
-  // picker records on every selection (Send's pattern).
-  const entryReceiveChains = availableFor('receive');
+  // picker records on every selection (Send's pattern). The asset
+  // shortcut's chain leads them all: the user tapped Receive on that
+  // asset's detail, so that asset's QR is the starting point.
   const lastUsedReceiveChain = readLastUsedChain(entryReceiveChains);
   const entryChain: ChainId | undefined = (() => {
+    if (assetChain !== null) return assetChain;
     if (
       lastUsedReceiveChain !== null &&
       ((vaultAddresses[lastUsedReceiveChain] ?? []).length > 0 ||
@@ -283,8 +319,15 @@ export function ReceiveScreen() {
     if (entryReceiveChains.includes(selectedChain)) return selectedChain;
     return entryReceiveChains[0];
   })();
+  const entryChainHasAddress =
+    entryChain !== undefined &&
+    ((vaultAddresses[entryChain] ?? []).length > 0 ||
+      (addresses[entryChain] ?? []).some((entry) => entry.index === 0));
   const initialStep: 'chain' | 'token' | 'details' =
-    lastUsedReceiveChain !== null && entryChain === lastUsedReceiveChain
+    entryChain !== undefined &&
+    entryChainHasAddress &&
+    (assetChain !== null ||
+      (lastUsedReceiveChain !== null && entryChain === lastUsedReceiveChain))
       ? 'details'
       : 'chain';
   const [step, setStep] = useState<'chain' | 'token' | 'details'>(initialStep);
@@ -317,7 +360,6 @@ export function ReceiveScreen() {
   // panel (?buy=1) — a provider picker, not one provider. Its state
   // lives here with the rest of the screen's state so the panel can
   // early-return below.
-  const [searchParams] = useSearchParams();
   const buyMode = searchParams.get('buy') === '1';
   const [buyStatus, setBuyStatus] = useState<BuyStatus>('idle');
   const [buyProvider, setBuyProvider] = useState<BuyProviderId | null>(null);
@@ -565,10 +607,9 @@ export function ReceiveScreen() {
   const chains = availableFor('receive');
   const chain = chains.includes(selectedChain) ? selectedChain : chains[0];
 
-  // Full token list (token gaps, item 2): the defaults plus user-added
-  // tokens, on the networks this screen can receive on. Native coins
-  // are the network list above; this list is the tokens.
-  const allTokens = [...DEFAULT_TOKENS, ...(customTokens ?? [])];
+  // The tokens on the networks this screen can receive on (allTokens
+  // is declared above, with the asset shortcut). Native coins are the
+  // network list above; this list is the tokens.
   const visibleTokens = allTokens.filter((token) => chains.includes(token.chain));
   // Item 20: the token step lists only the selected network's tokens.
   const chainTokens = visibleTokens.filter((token) => token.chain === chain);
@@ -600,6 +641,13 @@ export function ReceiveScreen() {
     setSelectedChain(next);
     setTemplate(null);
     setStep('token');
+    // A manual chain change abandons the asset shortcut, when one
+    // brought the user here: its params leave the URL, or a later
+    // mount would resurrect the prefilled asset (Send's pattern).
+    if (assetPrefillRef.current) {
+      assetPrefillRef.current = false;
+      navigate('/receive', { replace: true });
+    }
   }
 
   // A null token is the selected network's native coin.
@@ -610,6 +658,12 @@ export function ReceiveScreen() {
     if (token !== null) setSelectedChain(token.chain);
     setTemplate(null);
     setStep('details');
+    // A manual token change abandons the asset shortcut, same as a
+    // chain change above.
+    if (assetPrefillRef.current) {
+      assetPrefillRef.current = false;
+      navigate('/receive', { replace: true });
+    }
   }
 
   const vaultAddress = chain ? vaultAddresses[chain][0] : undefined;

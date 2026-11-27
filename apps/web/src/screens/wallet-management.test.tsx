@@ -735,3 +735,102 @@ describe('wallet management — backup-completion state (S3-A, F28)', () => {
     }
   });
 });
+
+describe('wallet management — address identicons (Lane P2-C, M6)', () => {
+  function setWalletWithXpubs(xpubs: Record<string, unknown>): void {
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs,
+      removeXpub: vi.fn(),
+      vaultAccount: { account: 0, index: 0 },
+      setVaultAccount: vi.fn(async () => {}),
+      vaultAddresses: TEST_ADDRESSES,
+      vaultAccounts: [0],
+      vaultPassphraseNeeded: false,
+      createVaultAccounts: vi.fn(async () => []),
+      selectVaultAccount: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof useWallet>);
+  }
+
+  // The watch-only rail, scoped so the vault card's own identicons
+  // (the TON/SOL export rows below) never leak into the count.
+  function watchOnlyRail(div: HTMLDivElement): Element | null {
+    return div.querySelector(
+      '[class~="lg:col-start-2"][class~="lg:row-start-3"]',
+    );
+  }
+
+  it('pairs a watch-only address import with its identicon', async () => {
+    // SOL's stored value is always the address itself — it gets an
+    // identicon beside the truncated value.
+    setWalletWithXpubs({
+      btc: null,
+      eth: null,
+      trx: null,
+      ton: null,
+      sol: {
+        chain: 'sol',
+        xpub: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+        label: '',
+        derivedCount: 1,
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      const rail = watchOnlyRail(mounted.div);
+      expect(rail?.textContent).toContain('Watch-only wallets');
+      expect(rail?.textContent).toContain('4uQeVj5tqViQ');
+      expect(
+        rail?.querySelectorAll('svg[data-testid="address-identicon"]'),
+      ).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('gives no identicon to a stored extended public key', async () => {
+    // An xpub is a key, not an address — the identicon belongs on
+    // address displays only.
+    setWalletWithXpubs({
+      btc: {
+        chain: 'btc',
+        xpub: 'xpub6TestBtc1234567890abcdef',
+        label: '',
+        derivedCount: 1,
+      },
+      eth: null,
+      trx: null,
+      ton: null,
+    });
+    const mounted = await mountScreen();
+    try {
+      const rail = watchOnlyRail(mounted.div);
+      // The card shows the truncated key (shortXpub), not the full one.
+      expect(rail?.textContent).toContain('xpub6TestBtc');
+      expect(
+        rail?.querySelectorAll('svg[data-testid="address-identicon"]'),
+      ).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('pairs the TON vault address in the export list with its identicon', async () => {
+    setWallet(vi.fn(async () => {}));
+    const mounted = await mountScreen();
+    try {
+      const disclosure = [...mounted.div.querySelectorAll('details')].find(
+        (details) =>
+          details.textContent?.includes('Show the extended public keys'),
+      );
+      expect(disclosure).not.toBeUndefined();
+      expect(disclosure?.textContent).toContain('UQTestTonAddress');
+      // TON has a vault address here; SOL has none (TEST_ADDRESSES
+      // has no sol entry), so exactly one identicon in the list.
+      expect(
+        disclosure?.querySelectorAll('svg[data-testid="address-identicon"]'),
+      ).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});

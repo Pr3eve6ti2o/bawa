@@ -11,6 +11,7 @@ import {
   groupChainsByFamily,
   LAST_USED_CHAIN_KEY,
   MAX_RECENT_CHAINS,
+  pickerFamilyTabs,
   readLastUsedChain,
   readRecentChains,
   RECENT_CHAINS_KEY,
@@ -455,5 +456,141 @@ describe('ChainSearchSelect', () => {
       (solana as HTMLElement).click();
     });
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('counts family tabs from the offered chains, omitting empty families', () => {
+    expect(pickerFamilyTabs(CHAINS)).toEqual([
+      { id: 'all', label: 'All', count: 22 },
+      { id: 'evm', label: 'EVM', count: 16 },
+      { id: 'solana', label: 'Solana', count: 1 },
+      { id: 'bitcoin', label: 'Bitcoin', count: 3 },
+      { id: 'tron', label: 'TRON', count: 1 },
+      { id: 'ton', label: 'TON', count: 1 },
+    ]);
+    expect(pickerFamilyTabs(['eth', 'base'])).toEqual([
+      { id: 'all', label: 'All', count: 2 },
+      { id: 'evm', label: 'EVM', count: 2 },
+    ]);
+  });
+
+  it('shows family tabs with counts, All selected, when the list opens', () => {
+    renderSelect();
+    openList();
+    const tablist = container.querySelector('[role="tablist"]');
+    expect(tablist).not.toBeNull();
+    expect(tablist?.getAttribute('aria-label')).toBe('Filter chains by family');
+    const tabs = [...container.querySelectorAll('[role="tab"]')].map(
+      (tab) => tab.textContent,
+    );
+    expect(tabs).toEqual([
+      'All (22)',
+      'EVM (16)',
+      'Solana (1)',
+      'Bitcoin (3)',
+      'TRON (1)',
+      'TON (1)',
+    ]);
+    const selected = container.querySelector('[role="tab"][aria-selected="true"]');
+    expect(selected?.textContent).toBe('All (22)');
+    // Roving tabindex: only the selected tab is in the tab order.
+    expect(
+      [...container.querySelectorAll('[role="tab"]')].map((tab) =>
+        tab.getAttribute('tabindex'),
+      ),
+    ).toEqual(['0', '-1', '-1', '-1', '-1', '-1']);
+  });
+
+  it('filters the list to one family on tab click, and back on All', () => {
+    renderSelect();
+    openList();
+    const evmTab = [...container.querySelectorAll('[role="tab"]')].find(
+      (tab) => tab.textContent === 'EVM (16)',
+    );
+    expect(evmTab).not.toBeUndefined();
+    act(() => {
+      evmTab!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (evmTab as HTMLButtonElement).click();
+    });
+    // Still open, EVM only — the EVM rows are the sub-chain selector.
+    expect(container.querySelector('[role="listbox"]')).not.toBeNull();
+    expect(options()).toHaveLength(16);
+    expect(options().map((option) => option.textContent)).not.toContain('Solana SOL');
+    expect(options().map((option) => option.textContent)).not.toContain('Bitcoin BTC');
+    expect(options().map((option) => option.textContent)).toContain('Ethereum ETH');
+    // The tab already names the family, so the group headings are gone.
+    expect(container.querySelectorAll('[role="presentation"]')).toHaveLength(0);
+    const allTab = [...container.querySelectorAll('[role="tab"]')].find(
+      (tab) => tab.textContent === 'All (22)',
+    );
+    act(() => {
+      allTab!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (allTab as HTMLButtonElement).click();
+    });
+    expect(options()).toHaveLength(CHAINS.length);
+    expect(container.querySelectorAll('[role="presentation"]').length).toBeGreaterThan(0);
+  });
+
+  it('searches inside the active family, not the whole list', () => {
+    renderSelect();
+    openList();
+    const bitcoinTab = [...container.querySelectorAll('[role="tab"]')].find(
+      (tab) => tab.textContent === 'Bitcoin (3)',
+    );
+    act(() => {
+      bitcoinTab!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (bitcoinTab as HTMLButtonElement).click();
+    });
+    // 'bit' matches Bitcoin and Arbitrum in the whole list — under the
+    // Bitcoin tab only Bitcoin stays. (The row also carries the
+    // 'Selected' marker: the fixture's current chain is Bitcoin.)
+    setInputValue('bit');
+    expect(options()).toHaveLength(1);
+    expect(options()[0]?.textContent).toContain('Bitcoin BTC');
+    expect(options().map((option) => option.textContent)).not.toContain(
+      'Arbitrum One ETH',
+    );
+  });
+
+  it('moves between family tabs with arrow keys', () => {
+    renderSelect();
+    openList();
+    const allTab = container.querySelector(
+      '[role="tab"][aria-selected="true"]',
+    ) as HTMLButtonElement;
+    act(() => {
+      allTab.focus();
+      allTab.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+      );
+    });
+    const evmTab = document.getElementById('test-chain-search-family-evm-tab');
+    expect(document.activeElement).toBe(evmTab);
+    expect(evmTab?.getAttribute('aria-selected')).toBe('true');
+    expect(options()).toHaveLength(16);
+    act(() => {
+      evmTab!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Home', bubbles: true }),
+      );
+    });
+    expect(document.activeElement?.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement?.textContent).toBe('All (22)');
+    expect(options()).toHaveLength(CHAINS.length);
+  });
+
+  it('hides the tab row when the offered chains span one family', () => {
+    const onChange = vi.fn();
+    act(() => {
+      root.render(
+        <ChainSearchSelect
+          chains={['eth', 'base']}
+          value="eth"
+          onChange={onChange}
+          id="test-chain-search"
+        />,
+      );
+    });
+    openList();
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(options()).toHaveLength(2);
   });
 });

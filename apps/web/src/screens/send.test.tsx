@@ -1423,6 +1423,67 @@ describe('send screen', () => {
     }
   });
 
+  it('pre-selects the asset from the asset-detail shortcut (?chain=&token=)', async () => {
+    // Lane P2-C (F7/F8): the asset-detail Send link lands on the
+    // amount form with the asset pre-selected — one tap to the form,
+    // not three taps back to the chain step with the native coin.
+    setWallet({
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'available',
+          value: '100000000',
+        },
+      },
+    });
+    const mounted = await mountScreen(['/send?chain=eth&token=usdc']);
+    try {
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(mounted.div.querySelector('#send-recipient')).not.toBeNull();
+      expect(mounted.div.querySelector('#send-amount')).not.toBeNull();
+      expect(mounted.div.textContent).toContain('USD Coin · USDC');
+      expect(mounted.div.textContent).toContain('Amount (USDC)');
+      // Lane P2-C (M6): the From address on the amount form pairs
+      // with its identicon.
+      expect(
+        mounted.div.querySelectorAll('svg[data-testid="address-identicon"]'),
+      ).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('pre-selects the asset by contract, and falls back to native on an unknown slug', async () => {
+    // The shortcut accepts the contract as well as the slug — and an
+    // unknown slug never errors: the chain still pre-selects and the
+    // native coin is the fallback.
+    setWallet({
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'available',
+          value: '100000000',
+        },
+      },
+    });
+    const byContract = await mountScreen([
+      '/send?chain=eth&token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    ]);
+    try {
+      expect(byContract.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(byContract.div.textContent).toContain('USD Coin · USDC');
+    } finally {
+      await byContract.cleanup();
+    }
+    setWallet();
+    const unknown = await mountScreen(['/send?chain=eth&token=nope']);
+    try {
+      expect(unknown.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(unknown.div.textContent).toContain('Ethereum · ETH');
+      expect(unknown.div.textContent).not.toContain('USD Coin');
+    } finally {
+      await unknown.cleanup();
+    }
+  });
+
   it('falls back to the wallet-context chain when the last-used chain has no wallet here', async () => {
     // The last-used pick was Bitcoin, but the mock wallet holds ETH
     // only — Send opens on Ethereum (the context selection) instead.

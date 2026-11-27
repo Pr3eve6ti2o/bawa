@@ -9,6 +9,8 @@ import {
 } from "../wallet/chain-amount-format";
 import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
 import { readBackupDone } from "../wallet/backup-state";
+import { watchOnlyValueKind } from "../wallet/watch-only-families";
+import { AddressIdenticon } from "../ui/components/address-identicon";
 import { ChainLogo } from "./token-logo";
 import { Badge } from "../ui/components/badge";
 import { Button } from "../ui/components/button";
@@ -648,6 +650,10 @@ export function WalletManagementScreen() {
                   {exportVisible.map(({ id, name }) => {
                     const isSingleAddress = id === "ton" || id === "sol";
                     const shown = shownKeys[id];
+                    // TON/SOL have no xpub: the vault address itself
+                    // is what the bot uses (and what gets the
+                    // identicon, Lane P2-C M6).
+                    const singleAddress = vaultAddresses[id]?.[0];
                     return (
                       <li
                         key={id}
@@ -692,9 +698,24 @@ export function WalletManagementScreen() {
                             : " — your bot derives receiving addresses as this path plus /0/0, /0/1, /0/2…"}
                         </p>
                         {isSingleAddress ? (
-                          <code className="block break-all rounded-md bg-muted p-3 text-sm">
-                            {vaultAddresses[id]?.[0] ?? "—"}
-                          </code>
+                          singleAddress !== undefined ? (
+                            <span className="flex items-center gap-2 rounded-md bg-muted p-3">
+                              {/* Lane P2-C (M6): TON/SOL have no xpub —
+                                  the address itself is what the bot
+                                  uses, so it gets its identicon. */}
+                              <AddressIdenticon
+                                address={singleAddress}
+                                size={24}
+                              />
+                              <code className="min-w-0 flex-1 break-all text-sm">
+                                {singleAddress}
+                              </code>
+                            </span>
+                          ) : (
+                            <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                              —
+                            </code>
+                          )
                         ) : shown ? (
                           <code className="block break-all rounded-md bg-muted p-3 text-sm">
                             {shown}
@@ -776,9 +797,24 @@ export function WalletManagementScreen() {
                       <span className="sr-only">
                         Stored public key or address:{' '}
                       </span>
-                      <code className="block break-all text-sm">
-                        {shortXpub}
-                      </code>
+                      {/* Lane P2-C (M6): the identicon pairs the stored
+                          value — but only when it IS an address (a
+                          plain-address import, or TON/SOL, whose
+                          stored value is always the address). An
+                          extended public key is not an address and
+                          gets no identicon. */}
+                      {watchOnlyValueKind(first.id, value) === 'address' ? (
+                        <span className="flex items-start gap-2">
+                          <AddressIdenticon address={value} size={24} />
+                          <code className="min-w-0 flex-1 break-all text-sm">
+                            {shortXpub}
+                          </code>
+                        </span>
+                      ) : (
+                        <code className="block break-all text-sm">
+                          {shortXpub}
+                        </code>
+                      )}
                       <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
                         {entries.map(({ id, name, wallet }) => {
                           // The watched address is the first derived
