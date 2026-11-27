@@ -660,7 +660,7 @@ describe('receive screen', () => {
         li.textContent?.includes('Unlisted Token'),
       );
       expect(row?.textContent).toContain('Unverified');
-      expect(row?.textContent).not.toContain('✓ Verified');
+      expect(row?.querySelector('[aria-label="Verified token"]')).toBeNull();
     } finally {
       await mounted.cleanup();
     }

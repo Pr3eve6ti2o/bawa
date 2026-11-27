@@ -85,12 +85,12 @@ function NetworkChainRow({
       <span className="flex items-center gap-2">
         {isEnabled ? (
           <>
-            <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[11px] font-bold text-panel-success-pill-text">
+            <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-xs font-bold text-panel-success-pill-text">
               ACTIVE
             </span>
             <button
               type="button"
-              className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+              className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
               onClick={() => onToggle(chain, false)}
             >
               Disable
@@ -98,12 +98,12 @@ function NetworkChainRow({
           </>
         ) : (
           <>
-            <span className="flex h-6 items-center rounded-[12px] border px-3 text-[11px] font-bold text-muted-foreground">
+            <span className="flex h-6 items-center rounded-[12px] border px-3 text-xs font-bold text-muted-foreground">
               DISABLED
             </span>
             <button
               type="button"
-              className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+              className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
               onClick={() => onToggle(chain, true)}
             >
               Enable
@@ -112,7 +112,7 @@ function NetworkChainRow({
         )}
         <Link
           to={`/assets/${chain}`}
-          className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+          className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
         >
           View
         </Link>
@@ -179,7 +179,7 @@ export function NetworkSelectionScreen() {
   return (
     <section className="space-y-6" aria-labelledby="networks-heading">
       <header className="space-y-2">
-        <h1 id="networks-heading" className="text-2xl font-semibold">
+        <h1 id="networks-heading" className="font-bold">
           Networks
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -227,9 +227,9 @@ export function NetworkSelectionScreen() {
             )
           ) : (
             <>
-              <h3 className="text-sm font-semibold">Popular</h3>
+              <h3 className="font-semibold">Popular</h3>
               <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{popular.map(rowFor)}</ul>
-              <h3 className="text-sm font-semibold">All chains</h3>
+              <h3 className="font-semibold">All chains</h3>
               <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{others.map(rowFor)}</ul>
             </>
           )}
@@ -449,12 +449,12 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
               placeholder="https://your-rpc.example"
               value={customUrl}
               onChange={(event) => setCustomUrl(event.target.value)}
-              className="min-w-0 rounded-[12px] border bg-card px-3 py-2 text-sm"
+              className="min-w-0 rounded-bawa-sm border bg-card px-3 py-2 text-base"
             />
           </label>
           <button
             type="button"
-            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
             onClick={addCustom}
           >
             Add RPC
@@ -469,7 +469,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
               <button
                 key={suggestion.url}
                 type="button"
-                className="mr-2 rounded-[22px] border px-3 py-2 text-sm font-medium"
+                className="mr-2 rounded-bawa-sm border px-3 py-2 text-base font-medium"
                 onClick={() => addSuggestion(suggestion.url)}
               >
                 Add {suggestion.label}
@@ -486,14 +486,14 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
             onClick={switchAll}
           >
             Switch all to backup
           </button>
           <button
             type="button"
-            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
             onClick={() => {
               resetAllRpcEndpoints();
               void applyAndRefresh('All RPC endpoints reset to the defaults.');
@@ -503,7 +503,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
           </button>
           <button
             type="button"
-            className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
             disabled={checking.length > 0}
             onClick={() => void checkAll()}
           >
@@ -555,7 +555,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
                     {managed && endpoints.length >= 2 && (
                       <button
                         type="button"
-                        className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+                        className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
                         onClick={() => {
                           promoteBackupEndpoint(chain);
                           void applyAndRefresh(
@@ -568,7 +568,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
                     )}
                     <button
                       type="button"
-                      className="min-h-11 rounded-[22px] border px-3 py-2 text-sm font-medium"
+                      className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
                       disabled={isChecking}
                       onClick={() => void checkChain(chain)}
                     >
@@ -590,7 +590,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
                     return (
                       <span
                         key={url}
-                        className="flex flex-wrap items-center gap-2 rounded-[12px] border px-2 py-1 text-sm"
+                        className="flex flex-wrap items-center gap-2 rounded-bawa-sm border px-2 py-1 text-base"
                       >
                         <span>{rpcEndpointHost(url)}</span><span className="text-xs font-bold text-muted-foreground">{badge}</span>
                         {isCustom && (
@@ -728,7 +728,7 @@ function PriceSourcesCard() {
           missing, the wallet tries the next source in line — never a
           guessed price.
         </p>
-        <ol className="list-decimal space-y-1 pl-5 text-sm">
+        <ol className="list-decimal space-y-1 pl-5 text-base">
           <li>
             <span className="font-medium">CoinGecko</span> — first for
             every chain.

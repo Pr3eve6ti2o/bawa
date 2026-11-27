@@ -68,7 +68,7 @@ export function TransactionHistoryScreen() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight text-panel-text">Transactions</h1>
+      <h1 className="font-bold tracking-tight text-panel-text">Transactions</h1>
       <p className="text-sm text-panel-text-muted">
         <Link to="/track" className="text-panel-accent underline underline-offset-4">
           Look up a transaction by hash
@@ -78,20 +78,20 @@ export function TransactionHistoryScreen() {
 
       {chains.length === 0 ? (
         <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
-          <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
-          <p className="text-sm leading-relaxed text-panel-text-muted">
+          <h2 className="font-semibold text-panel-text">No transactions yet</h2>
+          <p className="text-sm leading-5 text-panel-text-muted">
             Transaction history isn't available on any chain yet.
           </p>
-          <p className="text-sm leading-relaxed text-panel-text-muted">
+          <p className="text-sm leading-5 text-panel-text-muted">
             Import a watch-only wallet to see its derived addresses, or open
             Receive to share an address.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
-            <Button type="button" size="pill" asChild>
+            <Button type="button" size="sm" asChild>
               <Link to="/receive">Receive</Link>
             </Button>
-            <Button type="button" size="pill" variant="outline" asChild>
-              <Link to="/import-wallet">Import wallet</Link>
+            <Button type="button" size="sm" variant="secondary" asChild>
+              <Link to="/import-wallet">Import a wallet</Link>
             </Button>
           </div>
         </div>
@@ -111,7 +111,7 @@ export function TransactionHistoryScreen() {
           <div className="flex items-center gap-3">
             <label
               htmlFor="history-chain-filter"
-              className="shrink-0 text-sm font-medium"
+              className="shrink-0 text-base font-medium"
             >
               Chain
             </label>
@@ -120,7 +120,7 @@ export function TransactionHistoryScreen() {
               aria-label="Filter by chain"
               value={filter}
               onChange={(event) => setFilter(event.target.value as Filter)}
-              className="h-11 min-w-0 flex-1 rounded-bawa-sm border-2 border-ink bg-paper px-3 text-sm font-medium sm:max-w-64"
+              className="h-11 min-w-0 flex-1 rounded-bawa-sm border-2 border-ink bg-paper px-3 text-base font-medium sm:max-w-64"
             >
               <option value="all">All chains</option>
               {chains.map((chain) => (
@@ -146,16 +146,16 @@ export function TransactionHistoryScreen() {
               // filter here (a blank void at every viewport). Say so,
               // with the way out.
               <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
-                <h2 className="text-lg font-bold text-panel-text">No wallet yet</h2>
-                <p className="text-sm leading-relaxed text-panel-text-muted">
+                <h2 className="font-semibold text-panel-text">No wallet yet</h2>
+                <p className="text-sm leading-5 text-panel-text-muted">
                   No wallet on this device yet. Create or import one to
                   see its transactions.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-1">
-                  <Button type="button" size="pill" asChild>
+                  <Button type="button" size="sm" asChild>
                     <Link to="/create-wallet">Create a wallet</Link>
                   </Button>
-                  <Button type="button" size="pill" variant="outline" asChild>
+                  <Button type="button" size="sm" variant="secondary" asChild>
                     <Link to="/import-wallet">Import wallet</Link>
                   </Button>
                 </div>
@@ -165,12 +165,12 @@ export function TransactionHistoryScreen() {
               // line, and the Receive action (DESIGN-SYSTEM §6). The
               // old screen showed the bare line alone.
               <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
-                <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
-                <p className="text-sm leading-relaxed text-panel-text-muted">
+                <h2 className="font-semibold text-panel-text">No transactions yet</h2>
+                <p className="text-sm leading-5 text-panel-text-muted">
                   Your history will appear here after your first transaction.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-1">
-                  <Button type="button" size="pill" asChild>
+                  <Button type="button" size="sm" asChild>
                     <Link to="/receive">Receive</Link>
                   </Button>
                 </div>
@@ -191,10 +191,10 @@ export function TransactionHistoryScreen() {
               // not repeated — the filter above already shows which
               // chain is selected.
               <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
-                <p className="text-sm">History unavailable.</p>
+                <p className="text-base">History unavailable.</p>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   asChild={vaultState === 'locked'}
                   onClick={
                     vaultState === 'locked'
@@ -215,8 +215,8 @@ export function TransactionHistoryScreen() {
               // through to null and the screen was blank below the
               // filter. Match recent-activity: say so, with Unlock.
               <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
-                <p className="text-sm">Locked. Unlock to see activity.</p>
-                <Button type="button" variant="outline" asChild>
+                <p className="text-base">Locked. Unlock to see activity.</p>
+                <Button type="button" variant="secondary" asChild>
                   <Link to="/lock">Unlock</Link>
                 </Button>
               </div>
@@ -237,7 +237,7 @@ export function TransactionHistoryScreen() {
               block — its rows make rows.length > 0. */}
           {rows.length > 0 && failedChains.length > 0 && (
             <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
-              <p className="text-sm">
+              <p className="text-base">
                 {`${failedChains
                   .map((chain) => chainConfig(chain).displayName)
                   .join(', ')} history unavailable${
@@ -257,7 +257,7 @@ export function TransactionHistoryScreen() {
                 );
               })}
               {retryableFailed.length > 0 && (
-                <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
+                <Button type="button" variant="secondary" onClick={() => void refreshHistory()}>
                   Retry
                 </Button>
               )}

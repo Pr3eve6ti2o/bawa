@@ -221,7 +221,7 @@ export function CreateWalletScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm leading-relaxed">
+            <p className="text-base leading-6">
               Your vault holds accounts made from one recovery phrase. To
               create another one, go to Wallets and choose how many
               accounts to create — each gets its own name, Account 2,
@@ -235,7 +235,7 @@ export function CreateWalletScreen() {
               <Button asChild size="wrap">
                 <Link to="/wallets">Go to Wallets</Link>
               </Button>
-              <Button asChild variant="outline" size="wrap">
+              <Button asChild variant="secondary" size="wrap">
                 <Link to="/security">Go to security settings</Link>
               </Button>
             </div>
@@ -264,7 +264,7 @@ export function CreateWalletScreen() {
                 className="flex flex-1 items-center last:flex-none"
               >
                 <span
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-body-md text-ink ${
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-base text-ink ${
                     progressStep < step
                       ? "bg-sun"
                       : progressStep === step
@@ -295,7 +295,7 @@ export function CreateWalletScreen() {
               which some text extraction reads back joined as "Step2of 4".
               A single template string keeps the spaces for copy-paste and
               screen readers. */}
-          <p className="mb-5 text-body-sm font-medium text-foreground">
+          <p className="mb-5 text-base font-medium text-foreground">
             {`Step ${step} of 4: ${
               {
                 1: 'Set a vault password',
@@ -313,10 +313,10 @@ export function CreateWalletScreen() {
               mobile and the full list on desktop. The list stays
               mounted either way — only its visibility changes. */}
           <details className="mb-5 lg:hidden">
-            <summary className="cursor-pointer text-body-sm font-medium text-foreground">
+            <summary className="cursor-pointer text-sm font-medium text-foreground">
               What happens next
             </summary>
-            <p className="mt-2 text-body-sm leading-relaxed text-ink">
+            <p className="mt-2 text-base leading-6 text-ink">
               Set a vault password, write down 24 words, confirm 3 of
               them, and your wallet is ready. Your phrase is shown
               once, after a short risk check.
@@ -410,19 +410,19 @@ export function CreateWalletScreen() {
                     value={passphrase}
                     onChange={(event) => setPassphrase(event.target.value)}
                   />
-                  <p className="text-sm text-ink">
+                  <p className="text-base text-ink">
                     Optional BIP-39 passphrase (25th word). It is never
                     stored — you will need it again if you restore this wallet
                     elsewhere. It is
                     not your vault password.
                   </p>
                 </div>
-                <Button type="submit" size="wrap">
+                <Button type="submit" size="lg">
                   {isBusy ? (progress ?? 'Generating…') : 'Generate recovery phrase'}
                 </Button>
               </fieldset>
             </form>
-            <p className="mt-4 text-sm leading-relaxed">
+            <p className="mt-4 text-base leading-6">
               To track an existing wallet without its recovery words,{' '}
               <Link to="/import-wallet" className="underline">
                 import its public key instead
@@ -470,7 +470,7 @@ export function CreateWalletScreen() {
               ))}
             </fieldset>
             {!allRisksChecked && (
-              <p className="text-sm text-ink">
+              <p className="text-base text-ink">
                 Tick all three boxes to continue.
               </p>
             )}
@@ -484,7 +484,7 @@ export function CreateWalletScreen() {
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="wrap"
               onClick={() => {
                 setMnemonic(null);
@@ -522,7 +522,7 @@ export function CreateWalletScreen() {
                   key={index}
                   className="flex h-12 min-w-0 items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-2"
                 >
-                  <span className="text-body-sm font-medium text-ink">
+                  <span className="text-base font-medium text-ink">
                     {index + 1}.
                   </span>
                   {' '}
@@ -577,7 +577,7 @@ export function CreateWalletScreen() {
                     />
                   </div>
                 ))}
-                <Button type="submit" size="wrap">
+                <Button type="submit" size="lg">
                   {isBusy ? (progress ?? 'Saving…') : 'Confirm and create wallet'}
                 </Button>
               </fieldset>
@@ -599,7 +599,7 @@ export function CreateWalletScreen() {
             <ul className="space-y-3">
               {DISPLAY_ORDER.map((chain) => (
                 <li key={chain} className="space-y-1">
-                  <div className="text-sm font-semibold">{CHAIN_LABELS[chain]}</div>
+                  <div className="text-base font-semibold">{CHAIN_LABELS[chain]}</div>
                   <code className="block break-all rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
                     {vaultAddresses[chain][0] ?? 'Address unavailable.'}
                   </code>
@@ -612,7 +612,7 @@ export function CreateWalletScreen() {
                 </li>
               ))}
             </ul>
-            <p className="text-sm leading-relaxed">
+            <p className="text-base leading-6">
               Keep your written recovery phrase safe. If you lose this device,
               it is the only way to recover your wallet.
             </p>

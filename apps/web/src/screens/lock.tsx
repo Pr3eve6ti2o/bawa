@@ -257,11 +257,11 @@ export function LockScreen() {
         <CardContent style={{ display: "grid", gap: "1.25rem" }}>
           {noVault ? (
             <div style={{ display: "grid", gap: "0.75rem" }}>
-              <Button asChild variant="sun">
-                <Link to="/create-wallet">Create wallet</Link>
+              <Button asChild variant="primary" size="lg">
+                <Link to="/create-wallet">Create a wallet</Link>
               </Button>
-              <Button asChild>
-                <Link to="/import-wallet">Import wallet</Link>
+              <Button asChild variant="secondary" size="md">
+                <Link to="/import-wallet">Import a wallet</Link>
               </Button>
             </div>
           ) : (
@@ -332,7 +332,8 @@ export function LockScreen() {
 
                 <Button
                   type="submit"
-                  variant="sun"
+                  variant="primary"
+                  size="md"
                   disabled={isUnlocking}
                 >
                   {isUnlocking ? "Unlocking…" : "Unlock"}

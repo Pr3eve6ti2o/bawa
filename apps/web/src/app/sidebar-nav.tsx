@@ -23,16 +23,16 @@ export const MORE_LINKS: NavItem[] = [
   // MORE_LINKS after Send, so it sits there too. Quotes only.
   { to: "/swap", label: "Swap", icon: "swap" },
   { to: "/wallets", label: "Wallets", icon: "wallet" },
-  { to: "/address-book", label: "Address book", icon: "copy" },
+  { to: "/address-book", label: "Address book", icon: "book" },
   { to: "/transactions", label: "Transactions", icon: "activity" },
   { to: "/track", label: "Track a transaction", icon: "search" },
   { to: "/import-wallet", label: "Import wallet", icon: "import" },
   // Token gaps, item 9: the duplicate 'create wallet' entry is gone.
   // The 'Create' entry was renamed to 'Create wallet' and keeps its
-  // place and its wrench icon — exactly one 'Create wallet' button
+  // place and its plus icon — exactly one 'Create wallet' button
   // remains, opening the create flow. P0 (plan P0-3): the /create hub
   // is deleted, so the entry points straight at /create-wallet.
-  { to: "/create-wallet", label: "Create wallet", icon: "wrench" },
+  { to: "/create-wallet", label: "Create wallet", icon: "plus" },
   { to: "/security", label: "Security", icon: "shield" },
   { to: "/networks", label: "Networks", icon: "network" },
   { to: "/mnemonic-backup", label: "Mnemonic backup", icon: "key" },
@@ -104,7 +104,7 @@ export function SidebarNav({
                   // UX-major Lane 2: py-3 (44 px row) — the old py-2
                   // rows were 36 px, below the DESIGN-SYSTEM §2.5
                   // touch rule for nav items.
-                  "flex w-full items-center gap-3 rounded-bawa px-3 py-3 text-sm transition-colors",
+                  "flex w-full items-center gap-3 rounded-bawa px-3 py-3 text-sm font-semibold transition-colors",
                   collapsed ? "justify-center" : "",
                   isActive
                     ? "bg-sun font-semibold text-ink"
@@ -160,7 +160,7 @@ export function SidebarNav({
           aria-expanded={!collapsed}
           title={collapseLabel}
           className={[
-            "flex w-full items-center gap-3 rounded-bawa bg-paper px-3 py-3 text-sm text-ink transition-colors hover:bg-sun",
+            "flex w-full items-center gap-3 rounded-bawa bg-paper px-3 py-3 text-sm font-semibold text-ink transition-colors hover:bg-sun",
             collapsed ? "justify-center" : "",
           ].join(" ")}
         >

@@ -363,7 +363,7 @@ function AppLayout() {
               to="/wallets"
               onMouseEnter={() => preloadRoute('/wallets')}
               onFocus={() => preloadRoute('/wallets')}
-              className="truncate text-sm font-medium text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
+              className="truncate text-sm font-semibold text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
             >
               {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
             </Link>
@@ -375,20 +375,20 @@ function AppLayout() {
               Dynamic Island — the header pads down by the safe-area
               inset (20 px where there is none, so non-notched phones
               render exactly as before). */}
-          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] desktop:hidden">
+          <header className="flex items-center justify-between gap-3 px-4 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] desktop:hidden">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                 <BawaIcon name="wallet" className="size-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <h1 className="truncate text-[15px] font-bold leading-tight text-ink">
+                <p className="truncate text-base font-bold leading-tight text-ink">
                   Bawa Web Wallet
-                </h1>
+                </p>
                 <Link
                   to="/wallets"
                   onMouseEnter={() => preloadRoute('/wallets')}
                   onFocus={() => preloadRoute('/wallets')}
-                  className="block truncate text-xs leading-tight text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
+                  className="block truncate text-xs leading-4 text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
                 >
                   {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
                 </Link>
@@ -415,7 +415,7 @@ function AppLayout() {
           <main
             id="main-content"
             tabIndex={-1}
-            className={`mx-auto w-full max-w-[1024px] flex-1 px-5 desktop:px-6 desktop:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px] ${
+            className={`mx-auto w-full max-w-[1024px] flex-1 px-4 desktop:px-6 desktop:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px] ${
               isFocusedFlow ? 'pb-0' : 'pb-24'
             }`}
           >
@@ -506,7 +506,7 @@ function AppLayout() {
                   onClick={() => setMoreOpen(false)}
                   onMouseEnter={() => preloadRoute(to)}
                   onFocus={() => preloadRoute(to)}
-                className="block rounded-bawa-sm px-3 py-3 text-sm font-medium text-ink hover:bg-sun"
+                className="block rounded-bawa-sm px-3 py-3 text-sm font-semibold text-ink hover:bg-sun"
               >
                 {label}
               </Link>
@@ -523,7 +523,7 @@ function AppLayout() {
 function NotFound() {
   return (
     <section className="space-y-3">
-      <h2 className="text-2xl font-semibold text-ink">Page not found</h2>
+      <h2 className="font-semibold text-ink">Page not found</h2>
       <Link to="/" className="text-ink bawa-squiggle-underline">
         Back to dashboard
       </Link>

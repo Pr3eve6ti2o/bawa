@@ -122,7 +122,7 @@ export function SendReview({
       className="mx-auto w-full max-w-lg space-y-4 p-6"
     >
       <header className="space-y-2">
-        <h1 id="send-review-heading" className="text-2xl font-semibold">
+        <h1 id="send-review-heading" className="font-bold">
           {heading}
         </h1>
         {/* Redesign Lane 3: one helper line, not two — the old static
@@ -134,7 +134,7 @@ export function SendReview({
       {/* Redesign Lane 3: the amount is the hero — the eye lands on
           the number first, then checks the rows. It is the same amount
           string as the Amount row below, not a second figure. */}
-      <p className="text-center font-display text-3xl font-semibold tabular-nums">
+      <p className="text-center font-display text-4xl font-semibold tabular-nums">
         {amount}
       </p>
       {fiatAmount && (
@@ -147,7 +147,7 @@ export function SendReview({
         <dl className="divide-y divide-border">
           <div className="flex items-start justify-between gap-4 pb-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Network</dt>
-            <dd className="min-w-0 break-words text-right text-sm">
+            <dd className="min-w-0 break-words text-right text-base">
               {chainName} · {symbol}
             </dd>
           </div>
@@ -163,7 +163,7 @@ export function SendReview({
 
           <div className="flex items-start justify-between gap-4 py-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Recipient</dt>
-            <dd className="min-w-0 text-right text-sm">
+            <dd className="min-w-0 text-right text-base">
               {/* Lane 3 (UX-major): shortened, full on tap — the signer
                   checks the short form at a glance and the whole
                   address, with Copy, before signing. The full value is
@@ -184,7 +184,7 @@ export function SendReview({
 
           <div className="flex items-start justify-between gap-4 py-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Amount</dt>
-            <dd className="min-w-0 break-words text-right text-sm tabular-nums">
+            <dd className="min-w-0 break-words text-right text-base tabular-nums">
               {amount}
             </dd>
           </div>
@@ -200,7 +200,7 @@ export function SendReview({
 
           <div className="flex items-start justify-between gap-4 py-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Estimated fee</dt>
-            <dd className="min-w-0 break-words text-right text-sm tabular-nums">
+            <dd className="min-w-0 break-words text-right text-base tabular-nums">
               {fee}
             </dd>
           </div>
@@ -215,7 +215,7 @@ export function SendReview({
       </div>
 
       {isSelfSend && (
-        <p role="note" className="text-sm text-ink">
+        <p role="note" className="text-base text-ink">
           You are sending to your own address.
         </p>
       )}
@@ -226,13 +226,13 @@ export function SendReview({
           className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-3 text-warning-text"
         >
           <p className="font-semibold">Check the token</p>
-          <p className="break-words text-sm">{tokenWarning}</p>
+          <p className="break-words text-base">{tokenWarning}</p>
         </div>
       )}
 
       {contractCall !== undefined && (
         <div className="space-y-2 rounded-xl border border-border p-4">
-          <h2 className="text-sm font-semibold">Contract call</h2>
+          <h2 className="font-semibold">Contract call</h2>
           {clearSigning === null ? (
             <>
               <p className="text-sm text-muted-foreground">
@@ -281,14 +281,14 @@ export function SendReview({
         {devnetNetworkName ? (
           <>
             <p className="font-semibold">Devnet test mode</p>
-            <p className="break-words text-sm">
+            <p className="break-words text-base">
               {`This send broadcasts to the ${devnetNetworkName} test network only. Test tokens have no value.`}
             </p>
           </>
         ) : (
           <>
             <p className="font-semibold">Sending is switched off</p>
-            <p className="break-words text-sm">{disabledReason}</p>
+            <p className="break-words text-base">{disabledReason}</p>
           </>
         )}
       </div>
@@ -304,12 +304,12 @@ export function SendReview({
           it. */}
       <div className="sticky bottom-0 -mx-6 -mb-6 border-t-2 border-ink bg-paper px-6 py-3">
         <div className="flex flex-wrap justify-between gap-3">
-          <Button type="button" variant="outline" size="lg" onClick={onBack}>
+          <Button type="button" variant="secondary" size="md" onClick={onBack}>
             Back
           </Button>
           <Button
             type="button"
-            size="lg"
+            size="md"
             onClick={onSign}
             disabled={stage !== 'review'}
           >

@@ -139,13 +139,13 @@ export function PriceChart({
       aria-label={`Price chart for ${label}`}
       className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-4"
     >
-      <h2 className="text-lg font-semibold text-ink">
+      <h2 className="font-semibold text-ink">
         Price · last 7 days
       </h2>
       {state.status === 'loading' ? (
         <Skeleton className="h-[120px] w-full" label="Loading price chart…" />
       ) : state.status === 'unavailable' ? (
-        <p className="text-sm text-ink">
+        <p className="text-base text-ink">
           No chart data for this asset yet.
         </p>
       ) : state.status === 'error' ? (
@@ -156,17 +156,17 @@ export function PriceChart({
         // above (no CoinGecko id) gets none: there is nothing to
         // refetch.
         <div className="space-y-2">
-          <p className="text-sm text-ink">{chartErrorText(state.reason)}</p>
+          <p className="text-base text-ink">{chartErrorText(state.reason)}</p>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => setReloadCount((count) => count + 1)}
           >
             Retry
           </Button>
         </div>
       ) : geometry === null || first === undefined || lastPoint === undefined ? (
-        <p className="text-sm text-ink">
+        <p className="text-base text-ink">
           No chart data for this asset yet.
         </p>
       ) : (
@@ -195,7 +195,7 @@ export function PriceChart({
               strokeWidth="1.5"
             />
           </svg>
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             {formatUnitPriceUsd(String(first.price))}
             {' → '}
             {formatUnitPriceUsd(String(lastPoint.price))}
@@ -203,7 +203,7 @@ export function PriceChart({
           </p>
         </>
       )}
-      <p className="text-xs leading-[18px] text-panel-text-muted">
+      <p className="text-xs leading-4 text-panel-text-muted">
         Prices from CoinGecko.
       </p>
     </section>

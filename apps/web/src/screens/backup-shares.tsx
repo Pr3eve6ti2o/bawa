@@ -164,16 +164,16 @@ export function BackupSharesScreen() {
         <CardContent className="space-y-3">
           {vaultState === 'no-vault' ? (
             <>
-              <p className="text-sm leading-relaxed">
+              <p className="text-base leading-6">
                 Create a wallet or restore one from its recovery phrase
                 first.
               </p>
-              <Button asChild size="wrap">
+              <Button asChild size="lg">
                 <Link to="/create-wallet">Create a wallet</Link>
               </Button>
             </>
           ) : (
-            <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
+            <ul className="list-disc space-y-1.5 pl-5 text-base leading-6">
               <li>
                 The shares split the vault key, not your 24 words. The
                 words stay private; the key is what unlocks the vault.
@@ -222,7 +222,7 @@ export function BackupSharesScreen() {
                   {BACKUP_SHARE_SCHEMES.map((option) => (
                     <label
                       key={option.label}
-                      className="flex items-center gap-2 text-sm"
+                      className="flex items-center gap-2 text-base"
                     >
                       <input
                         type="radio"
@@ -254,18 +254,18 @@ export function BackupSharesScreen() {
               </>
             )}
             {createError && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-base text-destructive">
                 {createError}
               </p>
             )}
             {shares !== null && (
               <div className="space-y-3">
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="text-sm leading-5 text-muted-foreground">
                   Save each share now, in a separate place. This screen
                   will not show them again after you leave.
                 </p>
                 {copyError && (
-                  <p role="alert" className="text-sm text-destructive">
+                  <p role="alert" className="text-base text-destructive">
                     {copyError}
                   </p>
                 )}
@@ -275,7 +275,7 @@ export function BackupSharesScreen() {
                       key={`${index}-${share.slice(0, 12)}`}
                       className="space-y-2 rounded-bawa-sm border-2 border-ink bg-paper p-3"
                     >
-                      <p className="text-sm font-semibold">
+                      <p className="text-base font-semibold">
                         Share {index + 1} of {shares.length}
                       </p>
                       <QRCodeSVG
@@ -302,7 +302,7 @@ export function BackupSharesScreen() {
                       />
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         size="wrap"
                         onClick={() => handleCopy(share, index)}
                       >
@@ -313,7 +313,7 @@ export function BackupSharesScreen() {
                     </li>
                   ))}
                 </ol>
-                <Button type="button" variant="outline" onClick={handleHideShares}>
+                <Button type="button" variant="secondary" onClick={handleHideShares}>
                   Hide shares
                 </Button>
               </div>
@@ -342,7 +342,7 @@ export function BackupSharesScreen() {
                     handleCheckThreshold(Number(event.target.value))
                   }
                   disabled={isChecking}
-                  className="w-full rounded-bawa-sm border-2 border-ink bg-paper px-3 py-2 text-sm"
+                  className="w-full rounded-bawa-sm border-2 border-ink bg-paper px-3 py-2 text-base"
                 >
                   <option value={2}>2 shares</option>
                   <option value={3}>3 shares</option>
@@ -357,7 +357,7 @@ export function BackupSharesScreen() {
                     {checkInputs.length > 2 && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         size="wrap"
                         onClick={() => handleRemoveCheckBox(index)}
                       >
@@ -381,7 +381,7 @@ export function BackupSharesScreen() {
               {checkInputs.length < MAX_CHECK_BOXES && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleAddCheckBox}
                   disabled={isChecking}
                 >
@@ -396,8 +396,8 @@ export function BackupSharesScreen() {
                   role={checkResult.ok ? 'status' : 'alert'}
                   className={
                     checkResult.ok
-                      ? 'text-sm text-ink'
-                      : 'text-sm text-destructive'
+                      ? 'text-base text-ink'
+                      : 'text-base text-destructive'
                   }
                 >
                   {checkResult.ok

@@ -19,7 +19,7 @@
  * is resolved as a ticker/name (local registry first, then CoinGecko)
  * — one match is filled in and added, several matches are shown for
  * the user to pick, none shows the format error. Search results carry
- * the verified mark (✓ Verified when the token is verified by the
+ * the verified mark (Verified badge when the token is verified by the
  * isVerifiedToken rule, "Unverified" otherwise), and the add result
  * says which one it is — a token found by ticker search keeps its
  * CoinGecko listing id when the second lookup is rate-limited, so the
@@ -32,10 +32,12 @@
  * The dialog content portals to document.body, as DialogContent does
  * for every dialog in this codebase.
  */
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ChainId } from '../engine/boundary';
 import { availableFor, chainConfig, filterChains } from '../wallet/chains';
 import { ChainLogo } from './token-logo';
+import { Badge } from '../ui/components/badge';
+import { BawaIcon } from '../ui/components/icons';
 import { useWallet } from '../state/wallet-context';
 import {
   DEFAULT_TOKENS,
@@ -151,7 +153,7 @@ export function AddTokenDialog({
   const [chain, setChain] = useState<ChainId>('eth');
   const [contract, setContract] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<ReactNode | null>(null);
   const [checking, setChecking] = useState(false);
   // Token gaps, item 2: find a token by ticker or name. The local
   // registry is tried first; only then CoinGecko. A query that
@@ -424,9 +426,16 @@ export function AddTokenDialog({
       // Lane 1: the add result says whether the token is verified —
       // and, when it is, which list verified it.
       setStatus(
-        isVerifiedToken(record) && verifiedSource !== null
-          ? `Token added — ✓ Verified (${verifiedSourceLabel(verifiedSource)})`
-          : 'Token added — Unverified',
+        isVerifiedToken(record) && verifiedSource !== null ? (
+          <>
+            Token added —{' '}
+            <Badge size="sm" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">
+              Verified ({verifiedSourceLabel(verifiedSource)})
+            </Badge>
+          </>
+        ) : (
+          'Token added — Unverified'
+        ),
       );
     } finally {
       setChecking(false);
@@ -520,14 +529,14 @@ export function AddTokenDialog({
         <div className="flex gap-2" role="group" aria-label="Add mode">
           <Button
             type="button"
-            variant={mode === 'token' ? 'default' : 'secondary'}
+            variant={mode === 'token' ? 'primary' : 'secondary'}
             onClick={() => switchMode('token')}
           >
             Add token
           </Button>
           <Button
             type="button"
-            variant={mode === 'chain' ? 'default' : 'secondary'}
+            variant={mode === 'chain' ? 'primary' : 'secondary'}
             onClick={() => switchMode('chain')}
           >
             Add chain
@@ -559,7 +568,7 @@ export function AddTokenDialog({
                 >
                   <ChainLogo chain={chainId} size={40} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink">
+                    <span className="block truncate text-base font-medium text-ink">
                       {config.displayName}
                     </span>
                     <span className="block text-xs text-ink/70">{config.symbol}</span>
@@ -580,7 +589,7 @@ export function AddTokenDialog({
               );
             })}
             {filteredAddChains.length === 0 && (
-              <li className="px-3 py-2 text-sm text-ink">
+              <li className="px-3 py-2 text-base text-ink">
                 No chains match &ldquo;{chainQuery.trim()}&rdquo;.
               </li>
             )}
@@ -589,7 +598,7 @@ export function AddTokenDialog({
         ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             {wallet.devnetEnabled && (
-              <p className="text-sm font-medium text-ink">
+              <p className="text-base font-medium text-ink">
                 Adding tokens is off in devnet test mode — switch back to
                 mainnet to add a token.
               </p>
@@ -621,7 +630,7 @@ export function AddTokenDialog({
                 add it by contract address below.
               </p>
               {searchError !== null && (
-                <p role="alert" className="text-sm font-medium text-ink">
+                <p role="alert" className="text-base font-medium text-ink">
                   {searchError}
                 </p>
               )}
@@ -655,14 +664,14 @@ export function AddTokenDialog({
                           })}
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-ink">
+                          <span className="block truncate text-base font-medium text-ink">
                             {candidate.name} ({candidate.symbol})
                             {/* Lane 1: the verified mark on the search
                                 result itself — a CoinGecko-confirmed
                                 match is verified, a registry token
                                 without a listing is not. */}
                             {candidate.verified ? (
-                              <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                              <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
                             ) : (
                               <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
                             )}
@@ -689,7 +698,7 @@ export function AddTokenDialog({
                   setChain(event.target.value as ChainId);
                   setError(null);
                 }}
-                className="h-11 rounded-bawa border-2 border-ink bg-paper px-3 text-sm font-medium text-ink"
+                className="h-11 rounded-bawa border-2 border-ink bg-paper px-3 text-base font-medium text-ink"
               >
                 {addableChains.map((chainId) => {
                   const config = chainConfig(chainId);
@@ -738,19 +747,19 @@ export function AddTokenDialog({
             </div>
 
             {error !== null && (
-              <p role="alert" className="text-sm font-medium text-ink">
+              <p role="alert" className="text-base font-medium text-ink">
                 {error}
               </p>
             )}
 
-            <Button type="submit" size="lg" disabled={checking || wallet.devnetEnabled}>
+            <Button type="submit" size="md" disabled={checking || wallet.devnetEnabled}>
               {checking ? 'Checking…' : 'Add'}
             </Button>
           </form>
         )}
 
         {status !== null && (
-          <p role="status" className="text-sm font-medium text-ink">
+          <p role="status" className="text-base font-medium text-ink">
             {status}
           </p>
         )}

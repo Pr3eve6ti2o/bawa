@@ -146,13 +146,13 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
   it('has exactly one Create wallet button, in the Create button’s place and layout', async () => {
     // Token gaps, item 9: the duplicate 'create wallet' entry is gone;
     // the 'Create' entry was renamed to 'Create wallet' and keeps its
-    // /create-wallet target and wrench icon.
+    // /create-wallet target and plus icon.
     expect(
       MORE_LINKS.filter(({ label }) => label === 'Create wallet'),
     ).toHaveLength(1);
     expect(
       MORE_LINKS.find(({ label }) => label === 'Create wallet'),
-    ).toEqual({ to: '/create-wallet', label: 'Create wallet', icon: 'wrench' });
+    ).toEqual({ to: '/create-wallet', label: 'Create wallet', icon: 'plus' });
     const mounted = await mountNav({});
     try {
       const links = [...mounted.div.querySelectorAll('nav a')].filter(

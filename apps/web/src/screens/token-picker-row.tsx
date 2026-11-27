@@ -48,7 +48,7 @@ export function TokenPickerRow({
       >
         {logo}
         <span className="block min-w-0 flex-1">
-          <span className="block text-sm font-semibold leading-snug">
+          <span className="block text-base font-semibold leading-6">
             {children}
           </span>
           {balanceText !== undefined && (

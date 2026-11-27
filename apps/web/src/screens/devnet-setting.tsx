@@ -52,20 +52,20 @@ export function DevnetSetting() {
         </div>
 
         {!hasVault && (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             No vault yet. Create or import a wallet first.
           </p>
         )}
 
         {hasVault && !devnetEnabled && (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             Devnet is off. The wallet uses mainnet.
           </p>
         )}
 
         {devnetEnabled && (
           <div className="space-y-3">
-            <p className="text-sm text-ink">
+            <p className="text-base text-ink">
               Devnet is on. Temporary test mode. The wallet connects to
               test networks only, with valueless test tokens. Devnet can be
               removed later without touching mainnet.
@@ -87,7 +87,7 @@ export function DevnetSetting() {
         )}
 
         {actionError && (
-          <p role="alert" className="text-sm text-ink">
+          <p role="alert" className="text-base text-ink">
             {actionError}
           </p>
         )}

@@ -130,7 +130,7 @@ export function AddressBookScreen() {
   return (
     <section className="space-y-6" aria-labelledby="address-book-heading">
       <header className="space-y-2">
-        <h1 id="address-book-heading" className="text-2xl font-semibold">
+        <h1 id="address-book-heading" className="font-bold">
           Address book
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -186,7 +186,7 @@ export function AddressBookScreen() {
               </p>
             </div>
             {error !== null && (
-              <p id="address-book-error" role="alert" className="text-sm text-destructive">
+              <p id="address-book-error" role="alert" className="text-base text-destructive">
                 {error}
               </p>
             )}
@@ -196,11 +196,11 @@ export function AddressBookScreen() {
               </p>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" size="lg" disabled={isSaving}>
+              <Button type="submit" size="md" disabled={isSaving}>
                 {isSaving ? 'Checking…' : editingId === null ? 'Save address' : 'Save changes'}
               </Button>
               {editingId !== null && (
-                <Button type="button" variant="outline" size="lg" onClick={resetForm}>
+                <Button type="button" variant="secondary" size="md" onClick={resetForm}>
                   Cancel
                 </Button>
               )}
@@ -210,7 +210,7 @@ export function AddressBookScreen() {
       </Card>
 
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">
+        <h2 className="font-semibold">
           Saved addresses {entries.length > 0 ? '(' + entries.length + ')' : ''}
         </h2>
         {entries.length === 0 ? (
@@ -222,7 +222,7 @@ export function AddressBookScreen() {
               </p>
               <Link
                 to="/send"
-                className="inline-block text-sm font-medium text-primary underline underline-offset-4"
+                className="inline-block text-base font-medium text-primary underline underline-offset-4"
               >
                 Go to Send
               </Link>
@@ -248,10 +248,10 @@ export function AddressBookScreen() {
                       {entry.address}
                     </code>
                     <span className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" onClick={() => handleEdit(entry)}>
+                      <Button type="button" variant="secondary" onClick={() => handleEdit(entry)}>
                         Edit
                       </Button>
-                      <Button type="button" variant="outline" onClick={() => handleDelete(entry)}>
+                      <Button type="button" variant="secondary" onClick={() => handleDelete(entry)}>
                         {confirmDeleteId === entry.id ? 'Tap again to remove' : 'Remove'}
                       </Button>
                     </span>

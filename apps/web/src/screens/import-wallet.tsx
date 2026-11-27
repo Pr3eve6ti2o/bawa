@@ -237,14 +237,14 @@ function DerivedAddressesList({
         <li key={chainId} className="space-y-1">
           {copyable ? (
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+              <div className="text-base font-semibold">{CHAIN_LABELS[chainId]}</div>
               <CopyButton
                 value={derived[chainId]}
                 label={`Copy ${CHAIN_LABELS[chainId]} address`}
               />
             </div>
           ) : (
-            <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+            <div className="text-base font-semibold">{CHAIN_LABELS[chainId]}</div>
           )}
           <code className="block break-all rounded-md bg-muted p-3 text-sm">
             {derived[chainId]}
@@ -655,7 +655,7 @@ export function ImportWalletScreen() {
                     <AlertDescription>{phraseError}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" size="lg" disabled={isRestoring}>
+                <Button type="submit" size="md" disabled={isRestoring}>
                   {isRestoring ? 'Restoring…' : 'Restore wallet'}
                 </Button>
               </fieldset>
@@ -678,7 +678,7 @@ export function ImportWalletScreen() {
             <DerivedAddressesList derived={derived} copyable={false} />
             {addedAccount !== null ? (
               <>
-                <p role="status" className="text-sm leading-relaxed">
+                <p role="status" className="text-base leading-6">
                   {accountName(addedAccount)} added. It is a new account
                   from the same recovery phrase, with its own addresses.
                 </p>
@@ -710,7 +710,7 @@ export function ImportWalletScreen() {
                     : `Add as ${accountName(vaultAccounts.length === 0 ? 0 : Math.max(...vaultAccounts) + 1)}`}
                 </Button>
                 {vaultPassphraseNeeded && splitPassphrase !== '' && (
-                  <Button asChild variant="outline" size="wrap">
+                  <Button asChild variant="secondary" size="wrap">
                     <Link to="/lock">Unlock with your recovery passphrase</Link>
                   </Button>
                 )}
@@ -718,7 +718,7 @@ export function ImportWalletScreen() {
             )}
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => {
                 setPhraseStep('enter');
                 setDerived(null);
@@ -750,14 +750,14 @@ export function ImportWalletScreen() {
           <CardContent className="space-y-4">
             <DerivedAddressesList derived={derived} copyable={false} />
             {compareUnavailable ? (
-              <p className="text-sm leading-relaxed">
+              <p className="text-base leading-6">
                 Unlock your wallet first, then restore this phrase again to
                 compare it. To use a different phrase instead, delete the
                 existing vault from security settings — make sure you have
                 its recovery phrase written down first.
               </p>
             ) : (
-              <p className="text-sm leading-relaxed">
+              <p className="text-base leading-6">
                 To use this phrase, delete the existing vault from security
                 settings first. Make sure you have its recovery phrase
                 written down — deleting a vault without its phrase loses
@@ -775,12 +775,12 @@ export function ImportWalletScreen() {
                   <Link to="/wallets">Add an account from your current phrase</Link>
                 </Button>
               )}
-              <Button asChild variant="outline" size="wrap">
+              <Button asChild variant="secondary" size="wrap">
                 <Link to="/security">Go to security settings</Link>
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   setPhraseStep('enter');
                   setDerived(null);
@@ -819,7 +819,7 @@ export function ImportWalletScreen() {
             <DerivedAddressesList derived={derived} copyable />
              <Button
                type="button"
-               variant="outline"
+               variant="secondary"
                onClick={() => {
                  setPhraseStep('enter');
                  setDerived(null);
@@ -924,7 +924,7 @@ export function ImportWalletScreen() {
                   unambiguous paste, so this line confirms what
                   happened instead of leaving the user to guess. */}
               {detectedChain !== null && (
-                <p className="text-sm font-medium text-ink">
+                <p className="text-base font-medium text-ink">
                   Detected: {chainConfig(detectedChain).displayName}
                   {detectedChain === 'eth'
                     ? ' — watches all 59 EVM chains.'
@@ -957,17 +957,17 @@ export function ImportWalletScreen() {
               </Alert>
             )}
             {notice && (
-              <p role="status" className="text-sm leading-relaxed">
+              <p role="status" className="text-base leading-6">
                 {notice}
               </p>
             )}
-            <Button type="submit" size="lg" disabled={isAdding}>
+            <Button type="submit" size="md" disabled={isAdding}>
               {isAdding ? 'Adding…' : 'Add'}
             </Button>
           </form>
 
           <section aria-labelledby="imported-wallets" className="space-y-3">
-            <h2 id="imported-wallets" className="text-lg font-semibold">Imported wallets</h2>
+            <h2 id="imported-wallets" className="font-semibold">Imported wallets</h2>
             {imported.length === 0 ? (
               <p className="text-sm text-muted-foreground">No wallets imported yet.</p>
             ) : (
@@ -1019,7 +1019,7 @@ export function ImportWalletScreen() {
                   key watches one chain.
                 </AlertDescription>
               </Alert>
-              <p id="watch-only-notice" className="text-sm leading-relaxed text-muted-foreground">
+              <p id="watch-only-notice" className="text-sm leading-5 text-muted-foreground">
                 Only extended PUBLIC keys or public addresses are accepted. Private extended keys (xprv/zprv)
                 are rejected. Import the account-level key (depth 3, account 0) for the selected chain,
                 or paste a public address — an address watches every chain it belongs to.

@@ -25,9 +25,10 @@ import {
   verifiedSourceLabel,
   type TokenRecord,
 } from '../wallet/tokens';
-import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
+import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
+import { BawaIcon } from '../ui/components/icons';
 import { Card, CardContent } from '../ui/components/card';
 import { CopyButton } from '../ui/components/copy-button';
 import { Skeleton } from '../ui/components/skeleton';
@@ -69,7 +70,7 @@ function DerivedAddressItems({
           <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             aria-label={`Copy address at index ${index}`}
             onClick={() => void copyAddress(address)}
           >
@@ -113,7 +114,7 @@ function LockedOrRetry({
     return (
       <>
         <p className="text-sm text-panel-text-muted">{lockedMessage}</p>
-        <Button type="button" variant="outline" asChild>
+        <Button type="button" variant="secondary" asChild>
           <Link to="/lock">Unlock</Link>
         </Button>
       </>
@@ -121,7 +122,7 @@ function LockedOrRetry({
   }
   if (hideRetry) return null;
   return (
-    <Button type="button" variant="outline" onClick={onRetry}>
+    <Button type="button" variant="secondary" onClick={onRetry}>
       Retry
     </Button>
   );
@@ -220,7 +221,7 @@ export function AssetDetailScreen() {
   if (config === undefined) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold">Unknown chain</h1>
+        <h1 className="font-bold">Unknown chain</h1>
       </div>
     );
   }
@@ -228,7 +229,7 @@ export function AssetDetailScreen() {
   if (tokenParam !== undefined && tokenRecord === undefined) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold">Unknown token</h1>
+        <h1 className="font-bold">Unknown token</h1>
       </div>
     );
   }
@@ -278,13 +279,13 @@ export function AssetDetailScreen() {
   const displayDecimals = tokenRecord !== undefined ? tokenRecord.decimals : CHAIN_DECIMALS[chainId];
   const displayTitle = tokenRecord !== undefined ? tokenRecord.symbol : config.displayName;
   // Lane A: the header tick names who verified the token, so a
-  // Verified tick is never a mystery ("✓ Verified (CoinGecko)").
+  // Verified tick is never a mystery ("Verified (CoinGecko)").
   const verifiedDetailSource =
     tokenRecord !== undefined ? verificationSourceOf(tokenRecord) : null;
   const verifiedDetailLabel =
     verifiedDetailSource !== null
-      ? `✓ Verified (${verifiedSourceLabel(verifiedDetailSource)})`
-      : '✓ Verified';
+      ? `Verified (${verifiedSourceLabel(verifiedDetailSource)})`
+      : 'Verified';
   // Round 2, item 6: in devnet mode the network is the test network, not
   // mainnet — the label must say so, now that live prices show here too.
   const devnetConfig = devnetEnabled
@@ -408,7 +409,7 @@ export function AssetDetailScreen() {
         aria-label="Back to assets"
         className="flex h-11 w-11 items-center justify-center rounded-full text-panel-text hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
       >
-        <ArrowLeft className="size-5" aria-hidden="true" />
+        <BawaIcon name="arrow-left" className="size-5" aria-hidden="true" />
       </Link>
 
       <div className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-4">
@@ -416,7 +417,7 @@ export function AssetDetailScreen() {
           {/* Lane G: the real chain/token mark — the hand-drawn blob
               with the ticker text inside rendered as a crossed-out
               logo. The bordered tile stays (the brand frame). */}
-          <span aria-hidden="true" className="inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+          <span aria-hidden="true" className="inline-flex size-12 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
             {isToken && tokenRecord !== undefined ? (
               <TokenLogo
                 symbol={displaySymbol}
@@ -429,20 +430,20 @@ export function AssetDetailScreen() {
             )}
           </span>
           <div>
-            <h1 className="text-2xl font-semibold text-ink">
+            <h1 className="font-bold text-ink">
               {displayTitle}
               {/* Lane 1: the verified mark on the token detail — the
                   token header says whether it is verified or not. */}
               {tokenRecord !== undefined &&
                 (isVerifiedToken(tokenRecord) ? (
-                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">
+                  <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">
                     {verifiedDetailLabel}
-                  </span>
+                  </Badge>
                 ) : (
                   <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
                 ))}
             </h1>
-            <p className="text-sm text-ink">{displaySubtitle}</p>
+            <p className="text-base text-ink">{displaySubtitle}</p>
           </div>
         </div>
         {effectiveBalance.status === 'loading' ? (
@@ -468,17 +469,17 @@ export function AssetDetailScreen() {
           <>
             {/* break-words (Lane 2): a long native amount wraps inside
                 the 390 px card instead of clipping past its edge. */}
-            <p className="break-words text-[32px] font-semibold leading-10 text-ink">
+            <p className="break-words text-4xl font-semibold leading-10 text-ink">
               {`0 ${displaySymbol}`}
             </p>
-            <p className="text-lg font-semibold text-ink">
+            <p className="text-base font-semibold text-ink">
               {heroFiatText}
             </p>
-            <p className="text-sm text-ink">Zero balance</p>
+            <p className="text-base text-ink">Zero balance</p>
           </>
         ) : effectiveBalance.status === 'available' ? (
           <>
-            <p className="break-words text-[32px] font-semibold leading-10 text-panel-text">
+            <p className="break-words text-4xl font-semibold leading-10 text-panel-text">
               {formatNativeWithSymbol(
                 effectiveBalance.value ?? '0',
                 displayDecimals,
@@ -486,14 +487,14 @@ export function AssetDetailScreen() {
               )}
             </p>
             {heroFiatText !== undefined ? (
-              <p className="text-lg font-semibold text-panel-text">
+              <p className="text-base font-semibold text-panel-text">
                 {heroFiatText}
               </p>
             ) : null}
           </>
         ) : (
           <>
-            <p className="text-lg font-semibold text-panel-text">Balance unavailable</p>
+            <p className="text-base font-semibold text-panel-text">Balance unavailable</p>
             <p className="text-sm text-panel-text-muted">
               {effectiveBalance.status === 'error'
                 ? 'Could not load the balance.'
@@ -511,7 +512,7 @@ export function AssetDetailScreen() {
             holding, from the same live feed as the per-unit price.
             Omitted when the feed did not send one — never 0.00%. */}
         {change24hPct !== undefined ? (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             {`24h ${formatChangePct(change24hPct)} · ${priceSource}`}
           </p>
         ) : null}
@@ -532,13 +533,13 @@ export function AssetDetailScreen() {
       <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-bawa border-2 border-ink bg-paper px-2 py-2">
         {/* No Send for tokens: no token send exists in this wallet. */}
         {!isToken && (
-          <Button asChild size="tall">
+          <Button asChild size="sm">
             <Link to="/send" onClick={() => setSelectedChain(chainId)}>
               Send
             </Link>
           </Button>
         )}
-        <Button asChild variant="outline" size="tall">
+        <Button asChild variant="secondary" size="sm">
           <Link to="/receive" onClick={() => setSelectedChain(chainId)}>
             Receive
           </Link>
@@ -549,16 +550,16 @@ export function AssetDetailScreen() {
           refetch the balance/history Retries already replace with Unlock.
         */}
         {vaultState === 'locked' ? (
-          <Button asChild variant="outline" size="tall">
+          <Button asChild variant="secondary" size="sm">
             <Link to="/lock">Unlock</Link>
           </Button>
         ) : (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={state === 'loading'}
             onClick={refreshAll}
-            size="tall"
+            size="sm"
           >
             Refresh
           </Button>
@@ -603,12 +604,12 @@ export function AssetDetailScreen() {
         (balance, network).
       */}
       <section aria-labelledby="asset-details-heading" className="space-y-3">
-        <h2 id="asset-details-heading" className="text-lg font-semibold">
+        <h2 id="asset-details-heading" className="font-semibold">
           Details
         </h2>
         <Card radius="xl">
           <CardContent className="pt-6">
-            <dl className="space-y-2 text-sm">
+            <dl className="space-y-2 text-base">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Balance</dt>
                 <dd className="font-semibold">
@@ -689,12 +690,12 @@ export function AssetDetailScreen() {
 
       <section aria-labelledby="recent-transactions-heading" className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="recent-transactions-heading" className="text-lg font-semibold">
+          <h2 id="recent-transactions-heading" className="font-semibold">
             Recent transactions
           </h2>
           <Link
             to={`/track?chain=${chain}`}
-            className="text-sm text-panel-accent underline underline-offset-4"
+            className="text-base text-panel-accent underline underline-offset-4"
           >
             Track a transaction
           </Link>
@@ -724,7 +725,7 @@ export function AssetDetailScreen() {
             </ul>
             <Link
               to="/transactions"
-              className="inline-block text-sm text-panel-accent underline underline-offset-4"
+              className="inline-block text-base text-panel-accent underline underline-offset-4"
             >
               View all transactions
             </Link>
@@ -742,7 +743,7 @@ export function AssetDetailScreen() {
           </p>
         ) : (
           <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
-            <p className="text-sm">
+            <p className="text-base">
               {chainHistory.status === 'error'
                 ? 'Could not load transactions.'
                 : 'Transaction history is unavailable for this chain.'}
@@ -759,7 +760,7 @@ export function AssetDetailScreen() {
         </div>
         <div className="space-y-6">
       <section aria-labelledby="derived-addresses-heading" className="space-y-3">
-        <h2 id="derived-addresses-heading" className="text-lg font-semibold">
+        <h2 id="derived-addresses-heading" className="font-semibold">
           {chain === 'ton' ? 'Imported address' : 'Derived addresses'}
         </h2>
         {hasWallet ? (
@@ -771,7 +772,7 @@ export function AssetDetailScreen() {
                 <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   aria-label="Copy vault address"
                   onClick={() => void copyAddress(address)}
                 >
@@ -788,9 +789,9 @@ export function AssetDetailScreen() {
         ) : state === 'empty' ? (
           <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
             <p>No wallet imported for this chain</p>
-            <Link to="/import-wallet" className="font-medium underline underline-offset-4">
-              Import wallet
-            </Link>
+            <Button asChild variant="secondary" size="md">
+              <Link to="/import-wallet">Import a wallet</Link>
+            </Button>
           </div>
         ) : state === 'error' ? (
           <Alert variant="destructive">
@@ -826,7 +827,7 @@ export function AssetDetailScreen() {
             </div>
             <div>
               <dt className="text-sm text-muted-foreground">Derivation</dt>
-              <dd className="break-all text-sm">
+              <dd className="break-all text-base">
                 {chain === 'ton' ? (
                   'Single imported address, no derivation. TON path m/44\'/607\'/0\' is fully hardened.'
                 ) : (

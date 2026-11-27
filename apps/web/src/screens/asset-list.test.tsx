@@ -642,7 +642,7 @@ describe('asset list screen', () => {
     try {
       await waitForText(mounted, 'USDC');
       expect(mounted.div.textContent).toContain('USDC');
-      expect(mounted.div.textContent).toContain('✓ Verified');
+      expect(mounted.div.querySelector('[aria-label="Verified token"]')).not.toBeNull();
       expect(mounted.div.textContent).toContain('0xA0b8…eB48');
     } finally {
       await mounted.cleanup();
@@ -681,7 +681,7 @@ describe('asset list screen', () => {
       await waitForText(mounted, 'USDC');
       const titles = [...mounted.div.querySelectorAll('span')].filter(
         (candidate) =>
-          candidate.className.includes('text-[15px]') &&
+          candidate.className.includes('text-base') &&
           candidate.className.includes('font-bold'),
       );
       const usdcTitle = titles.find((candidate) =>
@@ -741,11 +741,11 @@ describe('asset list screen', () => {
         li.textContent?.includes('UNL'),
       );
       expect(row?.textContent).toContain('Unverified');
-      expect(row?.textContent).not.toContain('✓ Verified');
+      expect(row?.querySelector('[aria-label="Verified token"]')).toBeNull();
       const usdcRow = [...mounted.div.querySelectorAll('li')].find((li) =>
         li.textContent?.includes('USDC'),
       );
-      expect(usdcRow?.textContent).toContain('✓ Verified');
+      expect(usdcRow?.querySelector('[aria-label="Verified token"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }
@@ -779,7 +779,7 @@ describe('asset list screen', () => {
         li.textContent?.includes('USDC'),
       );
       expect(row?.textContent).toContain('USDC');
-      expect(row?.textContent).toContain('✓ Verified');
+      expect(row?.querySelector('[aria-label="Verified token"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

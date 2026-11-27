@@ -100,7 +100,7 @@ function WatchOnlyBalance({
         <span>Could not load balance.</span>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => setAttempt((count) => count + 1)}
         >
@@ -110,7 +110,7 @@ function WatchOnlyBalance({
     );
   }
   return (
-    <p className="text-sm font-medium">
+    <p className="text-base font-medium">
       Balance:{' '}
       {formatNativeWithSymbol(
         balance.value,
@@ -308,7 +308,7 @@ export function WalletManagementScreen() {
     // narrow rail (the "About Wallets" disclosure used to take column 1
     // and the vault card flowed into column 2).
     <section className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:items-start lg:space-y-0" aria-labelledby="wallets-heading">
-      <h1 id="wallets-heading" className="text-2xl font-semibold lg:col-span-2">
+      <h1 id="wallets-heading" className="font-bold lg:col-span-2">
         Wallets
       </h1>
       {/* Lane B (Finish the Product, G10): the opening essay used to
@@ -350,7 +350,7 @@ export function WalletManagementScreen() {
                 <Button type="button" size="lg" asChild>
                   <Link to="/create-wallet">Create a wallet</Link>
                 </Button>
-                <Button type="button" variant="outline" size="lg" asChild>
+                <Button type="button" variant="secondary" size="md" asChild>
                   <Link to="/import-wallet">Import a wallet</Link>
                 </Button>
               </div>
@@ -405,7 +405,7 @@ export function WalletManagementScreen() {
           {hasVault && (
             <>
               <div className="space-y-3">
-                <h2 className="text-sm font-semibold">Create more accounts</h2>
+                <h2 className="font-semibold">Create more accounts</h2>
                 <div className="space-y-2">
                   <Label htmlFor="create-accounts-count">
                     How many new accounts would you like to create?
@@ -424,7 +424,7 @@ export function WalletManagementScreen() {
                     />
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       aria-label="Create 10 accounts"
                       onClick={() => void createAccounts(10)}
                       disabled={isCreating || !createVaultAccounts}
@@ -433,7 +433,7 @@ export function WalletManagementScreen() {
                     </Button>
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       aria-label="Create 50 accounts"
                       onClick={() => void createAccounts(50)}
                       disabled={isCreating || !createVaultAccounts}
@@ -450,7 +450,7 @@ export function WalletManagementScreen() {
                   </div>
                 </div>
                 {createError && (
-                  <p role="alert" className="text-sm text-destructive">
+                  <p role="alert" className="text-base text-destructive">
                     {createError}
                   </p>
                 )}
@@ -462,7 +462,7 @@ export function WalletManagementScreen() {
               </div>
 
               <div className="space-y-3">
-                <h2 className="text-sm font-semibold">Your accounts</h2>
+                <h2 className="font-semibold">Your accounts</h2>
                 <ul className="space-y-2">
                   {vaultAccounts.map((account) => {
                     const isCurrent = vaultAccount.account === account;
@@ -471,14 +471,14 @@ export function WalletManagementScreen() {
                         key={account}
                         className="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2"
                       >
-                        <span className="flex items-center gap-2 text-sm font-medium">
+                        <span className="flex items-center gap-2 text-base font-medium">
                           {accountName(account)}
                           {isCurrent && <Badge>Current</Badge>}
                         </span>
                         {!isCurrent && (
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="secondary"
                             onClick={() => void switchToAccount(account)}
                             disabled={
                               switchingAccount !== null || !selectVaultAccount
@@ -494,7 +494,7 @@ export function WalletManagementScreen() {
                   })}
                 </ul>
                 {switchError && (
-                  <p role="alert" className="text-sm text-destructive">
+                  <p role="alert" className="text-base text-destructive">
                     {switchError}
                   </p>
                 )}
@@ -538,11 +538,11 @@ export function WalletManagementScreen() {
                 </Button>
               </div>
               {accountError && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-base text-destructive">
                   {accountError}
                 </p>
               )}
-              <h2 className="text-sm font-semibold">Addresses for this account</h2>
+              <h2 className="font-semibold">Addresses for this account</h2>
               {/* Desktop layout (desktop-layout-v2): the four chain
                   address blocks lay out in two columns at lg. Below lg
                   they stay a single-column stack (space-y-3, no bare
@@ -576,7 +576,7 @@ export function WalletManagementScreen() {
               </p>
 
               <div className="space-y-3">
-                <h2 className="text-sm font-semibold">
+                <h2 className="font-semibold">
                   Account public keys for your bot
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -632,14 +632,14 @@ export function WalletManagementScreen() {
                         className="space-y-2 rounded-md border px-3 py-2"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <span className="flex items-center gap-2 text-sm font-medium">
+                          <span className="flex items-center gap-2 text-base font-medium">
                             <ChainLogo chain={id} />
                             {name}
                           </span>
                           {!isSingleAddress && !shown && (
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="secondary"
                               onClick={() => void showExtendedKey(id)}
                               disabled={
                                 loadingKey !== null ||
@@ -654,7 +654,7 @@ export function WalletManagementScreen() {
                           {!isSingleAddress && shown && (
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="secondary"
                               onClick={() => void copyExtendedKey(id)}
                             >
                               {copiedChain === id ? "Copied" : "Copy"}
@@ -684,7 +684,7 @@ export function WalletManagementScreen() {
                 </ul>
                 )}
                 {exportError && (
-                  <p role="alert" className="mt-3 text-sm text-destructive">
+                  <p role="alert" className="mt-3 text-base text-destructive">
                     {exportError}
                   </p>
                 )}
@@ -703,7 +703,7 @@ export function WalletManagementScreen() {
       <div className="space-y-6 lg:col-start-2 lg:row-start-3">
       {hasWallets ? (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Watch-only wallets</h2>
+          <h2 className="font-semibold">Watch-only wallets</h2>
           <p className="text-sm text-muted-foreground">
             These wallets were imported by public key or address. The app
             can show their balances and history, but it cannot sign or send
@@ -782,12 +782,12 @@ export function WalletManagementScreen() {
                                   row, so it reads on one line now. */}
                               <div className="flex items-start gap-3">
                                 <ChainLogo chain={id} size={32} />
-                                <p className="min-w-0 flex-1 text-sm font-semibold">
+                                <p className="min-w-0 flex-1 text-base font-semibold">
                                   {name}
                                 </p>
                                 <Button
                                   type="button"
-                                  variant="outline"
+                                  variant="secondary"
                                   onClick={() => removeXpub(id)}
                                   aria-label={`Forget stored ${name} key`}
                                 >
@@ -823,12 +823,9 @@ export function WalletManagementScreen() {
               here. Watching only shows what is already public on the
               network — it cannot send.
             </p>
-            <Link
-              to="/import-wallet"
-              className="inline-block text-sm font-medium text-primary underline underline-offset-4"
-            >
-              Import wallet
-            </Link>
+            <Button asChild variant="secondary" size="md">
+              <Link to="/import-wallet">Import a wallet</Link>
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -846,7 +843,7 @@ export function WalletManagementScreen() {
       {hasWallets && (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() => {
             if (!forgetAllArmed) {
               setForgetAllArmed(true);

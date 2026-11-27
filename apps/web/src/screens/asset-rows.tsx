@@ -27,7 +27,9 @@ import {
   type TokenPriceMap,
 } from '../wallet/token-prices';
 import { AssetRow } from '../ui/components/asset-row';
+import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
+import { BawaIcon } from '../ui/components/icons';
 import { Skeleton } from '../ui/components/skeleton';
 import type { ChainId } from '../engine/boundary';
 import { ChainLogo, TokenLogo } from './token-logo';
@@ -557,7 +559,7 @@ function ListRow({ model }: { model: AssetRowModel }) {
       <li className="flex items-center gap-3 px-4 py-3">
         <RowLogo model={model} />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-bold text-foreground">
+          <span className="block text-base font-bold text-foreground">
             {model.title}
             {/* Lane 4: the tick never splits from its label — "✓" on
                 one line and "Verified" on the next was the cramped
@@ -565,7 +567,7 @@ function ListRow({ model }: { model: AssetRowModel }) {
                 on a failed row too — a token that cannot load still
                 shows whether it is verified. */}
             {model.verified === true ? (
-              <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+              <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
             ) : model.verified === false ? (
               <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
             ) : null}
@@ -577,7 +579,7 @@ function ListRow({ model }: { model: AssetRowModel }) {
         </span>
         {model.price.kind === 'fresh' ? (
           <span className="text-right">
-            <span className="block text-[15px] font-bold text-foreground">
+            <span className="block text-base font-bold text-foreground">
               {model.price.text}
             </span>
             {/* P0-A: no "per <symbol>" label here — the price stands
@@ -646,7 +648,7 @@ function TablePriceCell({ price, change }: { price: PriceCell; change?: RowChang
   if (price.kind === 'fresh') {
     return (
       <span>
-        <span className="block text-[15px] font-bold text-foreground">{price.text}</span>
+        <span className="block text-base font-bold text-foreground">{price.text}</span>
         {change !== undefined ? (
           <span className="block text-xs text-muted-foreground">
             {change.text}
@@ -677,14 +679,14 @@ function TableRow({ model }: { model: AssetRowModel }) {
               {/* Lane 4: the name wraps instead of truncating — the
                   narrow table used to ellipsise chain names ("Ethere…")
                   and hide the rest of the name. */}
-              <span className="block text-[15px] font-bold text-foreground">
+              <span className="block text-base font-bold text-foreground">
                 {model.title}
                 {/* Lane 1: the wide table's failed row had no mark at
                     all — the list variant already showed it. Merge: the
                     tick never splits from its label, as on the other
                     rows. */}
                 {model.verified === true ? (
-                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                  <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
                 ) : model.verified === false ? (
                   <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
                 ) : null}
@@ -735,13 +737,13 @@ function TableRow({ model }: { model: AssetRowModel }) {
               {/* Lane 4: the name wraps instead of truncating — the
                   narrow table used to ellipsise chain names ("Ethere…")
                   and hide the rest of the name. */}
-              <span className="block text-[15px] font-bold text-foreground">
+              <span className="block text-base font-bold text-foreground">
                 {model.title}
                 {/* Lane 4: the tick never splits from its label (see
                     the list row above). Lane 1: an unverified token
                     reads "Unverified" instead of silence. */}
                 {model.verified === true ? (
-                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                  <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
                 ) : model.verified === false ? (
                   <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
                 ) : null}
@@ -751,7 +753,7 @@ function TableRow({ model }: { model: AssetRowModel }) {
               </span>
             </span>
           </span>
-          <span className="col-start-1 row-start-2 truncate text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:text-right @md:text-[15px] @md:font-semibold @md:text-foreground">
+          <span className="col-start-1 row-start-2 truncate text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:text-right @md:text-base @md:font-semibold @md:text-foreground">
             {model.balanceStatus === 'zero' ? (
               <>
                 <span className="block">{`0 ${model.symbol}`}</span>
@@ -768,9 +770,9 @@ function TableRow({ model }: { model: AssetRowModel }) {
           </span>
           <span className="col-start-2 row-start-1 min-w-0 text-right @md:col-start-auto @md:row-start-auto">
             {valueText === undefined ? (
-              <span className="text-[15px] font-semibold text-muted-foreground">—</span>
+              <span className="text-base font-semibold text-muted-foreground">—</span>
             ) : (
-              <span className="text-[15px] font-bold text-foreground">
+              <span className="text-base font-bold text-foreground">
                 {valueText}
               </span>
             )}
@@ -970,7 +972,7 @@ export function AssetRows({
           <p className="text-sm text-muted-foreground">
             {`No assets match “${query?.trim()}” — try Add token to search by name or contract address.`}
           </p>
-          <Button type="button" variant="outline" onClick={() => onClearQuery?.()}>
+          <Button type="button" variant="secondary" onClick={() => onClearQuery?.()}>
             Show all assets
           </Button>
         </div>
@@ -980,7 +982,7 @@ export function AssetRows({
       return (
         <div className="space-y-2 p-4">
           <p className="text-sm text-muted-foreground">No non-zero balances</p>
-          <Button type="button" variant="outline" onClick={() => onShowAll?.()}>
+          <Button type="button" variant="secondary" onClick={() => onShowAll?.()}>
             Show all
           </Button>
         </div>
@@ -1008,7 +1010,7 @@ export function AssetRows({
     isLocked && hasFailedRow ? (
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <p className="text-sm text-muted-foreground">Locked. Unlock to see balances.</p>
-        <Button type="button" variant="outline" asChild>
+        <Button type="button" variant="secondary" asChild>
           <Link to="/lock">Unlock</Link>
         </Button>
       </div>

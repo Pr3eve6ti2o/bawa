@@ -792,24 +792,18 @@ export function SwapScreen() {
   if (vaultState === 'no-vault') {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Swap</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <h1 className="font-bold tracking-tight">Swap</h1>
+        <p className="text-sm leading-5 text-muted-foreground">
           No wallet yet. Create or import a wallet first — a swap quote
           needs your address on the network you swap from.
         </p>
         <div className="flex flex-wrap gap-3">
-          <Link
-            to="/create-wallet"
-            className="text-sm font-medium text-primary underline underline-offset-4"
-          >
-            Create a wallet
-          </Link>
-          <Link
-            to="/import-wallet"
-            className="text-sm font-medium text-primary underline underline-offset-4"
-          >
-            Import a wallet
-          </Link>
+          <Button asChild size="lg">
+            <Link to="/create-wallet">Create a wallet</Link>
+          </Button>
+          <Button asChild variant="secondary" size="md">
+            <Link to="/import-wallet">Import a wallet</Link>
+          </Button>
         </div>
       </div>
     );
@@ -818,14 +812,14 @@ export function SwapScreen() {
   if (vaultState === 'locked') {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Swap</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <h1 className="font-bold tracking-tight">Swap</h1>
+        <p className="text-sm leading-5 text-muted-foreground">
           Your wallet is locked. Unlock it to get a swap quote.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link
             to="/lock"
-            className="text-sm font-medium text-primary underline underline-offset-4"
+            className="text-base font-medium text-primary underline underline-offset-4"
           >
             Unlock your wallet
           </Link>
@@ -886,13 +880,13 @@ export function SwapScreen() {
   return (
     <div className="space-y-3">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Swap</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <h1 className="font-bold tracking-tight">Swap</h1>
+        <p className="text-sm leading-5 text-muted-foreground">
           Swap and bridge across networks. Quotes come live from LI.FI,
           compared with Relay and STON.fi where they cover the pair —
           no quote here is ever a guess.
         </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-5 text-muted-foreground">
           No provider covers every network — {UNCOVERED_CHAINS.length}{' '}
           networks have no swap provider in this wallet yet, including{' '}
           {uncoveredNames}
@@ -901,7 +895,7 @@ export function SwapScreen() {
       </header>
 
       <section aria-labelledby="swap-from-heading" className="space-y-2">
-        <h2 id="swap-from-heading" className="text-lg font-semibold">
+        <h2 id="swap-from-heading" className="font-semibold">
           From
         </h2>
         <ChainSearchSelect
@@ -934,7 +928,7 @@ export function SwapScreen() {
             />
           </div>
           {amountError && (
-            <p id="swap-amount-error" role="alert" className="text-sm text-ink bawa-squiggle-underline">
+            <p id="swap-amount-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
               {amountError}
             </p>
           )}
@@ -956,7 +950,7 @@ export function SwapScreen() {
       </div>
 
       <section aria-labelledby="swap-to-heading" className="space-y-2">
-        <h2 id="swap-to-heading" className="text-lg font-semibold">
+        <h2 id="swap-to-heading" className="font-semibold">
           To
         </h2>
         <ChainSearchSelect
@@ -987,7 +981,7 @@ export function SwapScreen() {
             aria-describedby={recipientError !== null ? 'swap-recipient-error' : undefined}
           />
           {recipientError && (
-            <p id="swap-recipient-error" role="alert" className="text-sm text-ink bawa-squiggle-underline">
+            <p id="swap-recipient-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
               {recipientError}
             </p>
           )}
@@ -1001,7 +995,7 @@ export function SwapScreen() {
       <div className="space-y-2">
         <Button
           type="button"
-          size="lg"
+          size="md"
           disabled={quoteDisabledReason !== null || quoteBusy}
           onClick={() => void handleGetQuote()}
         >
@@ -1024,13 +1018,13 @@ export function SwapScreen() {
         </p>
       )}
       {quoteState.status === 'no-route' && (
-        <p role="alert" className="text-sm text-ink">
+        <p role="alert" className="text-base text-ink">
           LI.FI found no route for this pair right now. Try a different
           token or network.
         </p>
       )}
       {quoteState.status === 'unavailable' && (
-        <div role="alert" className="space-y-2 text-sm">
+        <div role="alert" className="space-y-2 text-base">
           <p className="text-ink">{quoteState.reason}</p>
           {/* P0-6: a failed quote said why and offered no way back —
               re-entering the amount was the only retry. The Retry
@@ -1041,7 +1035,7 @@ export function SwapScreen() {
           {quoteDisabledReason === null && (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => void handleGetQuote()}
             >
               Retry
@@ -1052,9 +1046,9 @@ export function SwapScreen() {
       {quoteState.status === 'ok' && (
         <section
           aria-labelledby="swap-quote-heading"
-          className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm"
+          className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
         >
-          <h2 id="swap-quote-heading" className="text-base font-semibold">
+          <h2 id="swap-quote-heading" className="font-semibold">
             Quote
           </h2>
           <div className="flex justify-between gap-3">
@@ -1113,8 +1107,8 @@ export function SwapScreen() {
           </p>
           <Button
             type="button"
-            variant="outline"
-            size="lg"
+            variant="secondary"
+            size="md"
             disabled={quoteBusy}
             onClick={() => void handleGetQuote()}
           >
@@ -1126,9 +1120,9 @@ export function SwapScreen() {
       {quoteState.status !== 'idle' && quoteState.status !== 'loading' && (
         <section
           aria-labelledby="swap-compare-heading"
-          className="space-y-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm"
+          className="space-y-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
         >
-          <h2 id="swap-compare-heading" className="text-base font-semibold">
+          <h2 id="swap-compare-heading" className="font-semibold">
             Compare providers
           </h2>
           <div className="space-y-1">
@@ -1241,8 +1235,8 @@ export function SwapScreen() {
                         </p>
                         <Button
                           type="button"
-                          variant="outline"
-                          size="lg"
+                          variant="secondary"
+                          size="md"
                           onClick={() => void handleSignStonfiOrder()}
                         >
                           Sign order
@@ -1281,8 +1275,8 @@ export function SwapScreen() {
                         <p role="alert">{stonfiSignState.reason}</p>
                         <Button
                           type="button"
-                          variant="outline"
-                          size="lg"
+                          variant="secondary"
+                          size="md"
                           onClick={() => void handleSignStonfiOrder()}
                         >
                           Try signing again
@@ -1310,9 +1304,9 @@ export function SwapScreen() {
 
       <section
         aria-labelledby="refuel-heading"
-        className="space-y-2 rounded-bawa-sm border-2 border-dashed border-ink bg-paper p-3 text-sm"
+        className="space-y-2 rounded-bawa-sm border-2 border-dashed border-ink bg-paper p-3 text-base"
       >
-        <h2 id="refuel-heading" className="text-base font-semibold">
+        <h2 id="refuel-heading" className="font-semibold">
           Refuel gas
         </h2>
         <p className="leading-relaxed text-muted-foreground">
@@ -1327,8 +1321,8 @@ export function SwapScreen() {
         </p>
         <Button
           type="button"
-          variant="outline"
-          size="lg"
+          variant="secondary"
+          size="md"
           aria-expanded={refuelOpen}
           onClick={handleToggleRefuel}
         >
@@ -1341,13 +1335,13 @@ export function SwapScreen() {
         )}
         {refuelOpen && refuelChainsState.status === 'unavailable' && (
           <>
-            <p role="alert" className="text-sm text-ink">
+            <p role="alert" className="text-base text-ink">
               {refuelChainsState.reason}
             </p>
             <Button
               type="button"
-              variant="outline"
-              size="lg"
+              variant="secondary"
+              size="md"
               onClick={() => void handleLoadRefuelChains()}
             >
               Try again
@@ -1361,7 +1355,7 @@ export function SwapScreen() {
               now, so it is not offered as a destination.
             </p>
             <div className="space-y-2">
-              <p className="text-sm font-medium">From network</p>
+              <p className="text-base font-medium">From network</p>
               <ChainSearchSelect
                 chains={refuelDepositChains}
                 value={refuelFromChain}
@@ -1371,7 +1365,7 @@ export function SwapScreen() {
               />
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium">To network</p>
+              <p className="text-base font-medium">To network</p>
               <ChainSearchSelect
                 chains={refuelDestinationChains}
                 value={refuelToChain}
@@ -1401,7 +1395,7 @@ export function SwapScreen() {
                 <p
                   id="refuel-amount-error"
                   role="alert"
-                  className="text-sm text-ink bawa-squiggle-underline"
+                  className="text-base text-ink bawa-squiggle-underline"
                 >
                   {refuelAmountError}
                 </p>
@@ -1412,7 +1406,7 @@ export function SwapScreen() {
                   : 'Enter an amount to see its dollar value.'}
               </p>
               {refuelLimitMessageText !== null && refuelAmount.trim() !== '' && (
-                <p role="alert" className="text-sm text-ink">
+                <p role="alert" className="text-base text-ink">
                   {refuelLimitMessageText}
                 </p>
               )}
@@ -1420,7 +1414,7 @@ export function SwapScreen() {
             <div className="space-y-2">
               <Button
                 type="button"
-                size="lg"
+                size="md"
                 disabled={refuelDisabledReason !== null || refuelBusy}
                 onClick={() => void handleGetRefuelQuote()}
               >
@@ -1444,12 +1438,12 @@ export function SwapScreen() {
               </p>
             )}
             {refuelQuoteState.status === 'no-route' && (
-              <p role="alert" className="text-sm text-ink">
+              <p role="alert" className="text-base text-ink">
                 {refuelQuoteState.reason}
               </p>
             )}
             {refuelQuoteState.status === 'unavailable' && (
-              <div role="alert" className="space-y-2 text-sm">
+              <div role="alert" className="space-y-2 text-base">
                 <p className="text-ink">{refuelQuoteState.reason}</p>
                 {/* P0-6: same pattern as the main quote — a failed
                     refuel quote gets a Retry that refetches it, gated
@@ -1457,7 +1451,7 @@ export function SwapScreen() {
                 {refuelDisabledReason === null && (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => void handleGetRefuelQuote()}
                   >
                     Retry
@@ -1468,11 +1462,11 @@ export function SwapScreen() {
             {refuelQuoteState.status === 'ok' && (
               <section
                 aria-labelledby="refuel-quote-heading"
-                className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm"
+                className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
               >
                 <h3
                   id="refuel-quote-heading"
-                  className="text-base font-semibold"
+                  className="font-semibold"
                 >
                   Refuel quote
                 </h3>
@@ -1512,14 +1506,14 @@ export function SwapScreen() {
                   it.
                 </p>
                 {isGasZipQuoteStale(refuelQuoteState.quote) && (
-                  <p role="alert" className="text-sm text-ink">
+                  <p role="alert" className="text-base text-ink">
                     This quote is stale — fetch a fresh one.
                   </p>
                 )}
                 <Button
                   type="button"
-                  variant="outline"
-                  size="lg"
+                  variant="secondary"
+                  size="md"
                   disabled={refuelBusy}
                   onClick={() => void handleGetRefuelQuote()}
                 >
@@ -1533,9 +1527,9 @@ export function SwapScreen() {
 
       <section
         aria-labelledby="swap-next-heading"
-        className="space-y-2 rounded-bawa-sm border-2 border-dashed border-ink bg-paper p-3 text-sm"
+        className="space-y-2 rounded-bawa-sm border-2 border-dashed border-ink bg-paper p-3 text-base"
       >
-        <h2 id="swap-next-heading" className="text-base font-semibold">
+        <h2 id="swap-next-heading" className="font-semibold">
           What happens next
         </h2>
         <p className="leading-relaxed text-muted-foreground">
@@ -1561,7 +1555,7 @@ export function SwapScreen() {
         </p>
         <Link
           to="/send"
-          className="inline-block text-sm font-medium text-primary underline underline-offset-4"
+          className="inline-block text-base font-medium text-primary underline underline-offset-4"
         >
           Send on the same network instead
         </Link>

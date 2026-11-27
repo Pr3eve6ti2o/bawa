@@ -244,10 +244,10 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
           : (cameraMessage ?? 'Point the camera at a QR code…')}
       </p>
       <div className="flex flex-wrap gap-3">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="button" variant="outline" asChild>
+        <Button type="button" variant="secondary" asChild>
           <label>
             Upload a QR image
             <input
@@ -262,7 +262,7 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
         </Button>
       </div>
       {uploadMessage && (
-        <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+        <p role="alert" className="text-base text-ink bawa-squiggle-underline">
           {uploadMessage}
         </p>
       )}

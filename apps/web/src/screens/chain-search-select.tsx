@@ -19,6 +19,7 @@ import type { ChainId } from '../engine/boundary';
 import { chainConfig, filterChains, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
+import { BawaIcon } from '../ui/components/icons';
 
 /** Re-exported from wallet/chains (Lane 5) so existing importers keep working. */
 export { filterChains };
@@ -206,19 +207,10 @@ export function ChainSearchSelect({
           aria-hidden="true"
           className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-ink"
         >
-          <svg
-            viewBox="0 0 16 16"
+          <BawaIcon
+            name="chevron-down"
             className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
-          >
-            <path
-              d="M3 6l5 5 5-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          />
         </span>
         {open && (
           <ul
@@ -254,7 +246,7 @@ export function ChainSearchSelect({
                       event.preventDefault();
                     }}
                     onClick={() => select(chain)}
-                    className={`flex w-full cursor-pointer items-center justify-between gap-2 px-4 py-3 text-sm ${
+                    className={`flex w-full cursor-pointer items-center justify-between gap-2 px-4 py-3 text-base ${
                       isActive ? 'bg-muted' : ''
                     } ${isSelected ? 'font-semibold' : ''}`}
                   >

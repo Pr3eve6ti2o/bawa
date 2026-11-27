@@ -401,7 +401,7 @@ describe('AddTokenDialog — add token mode', () => {
       const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
       expect(record.coingeckoId).toBeNull();
       expect(record.verifiedSource).toBe('one-inch');
-      expect(document.body.textContent).toContain('Token added — ✓ Verified (1inch)');
+      expect(document.body.textContent).toContain('Token added — Verified (1inch)');
     } finally {
       await mounted.cleanup();
     }
@@ -793,7 +793,7 @@ describe('AddTokenDialog — find by ticker or name', () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       });
       expect(document.body.textContent).toContain('Sushi (SUSHI)');
-      expect(document.body.textContent).toContain('✓ Verified');
+      expect(document.body.querySelector('[aria-label="Verified token"]')).not.toBeNull();
       expect(document.body.textContent).toContain('0x6b35…0fe2');
     } finally {
       await mounted.cleanup();
@@ -825,7 +825,7 @@ describe('AddTokenDialog — find by ticker or name', () => {
       });
       expect(document.body.textContent).toContain('Unlisted Token (UNL)');
       expect(document.body.textContent).toContain('Unverified');
-      expect(document.body.textContent).not.toContain('✓ Verified');
+      expect(document.body.querySelector('[aria-label="Verified token"]')).toBeNull();
     } finally {
       await mounted.cleanup();
     }
@@ -922,7 +922,7 @@ describe('AddTokenDialog — ticker in the contract field', () => {
         decimals: 18,
         coingeckoId: 'sushi',
       });
-      expect(document.body.textContent).toContain('Token added — ✓ Verified');
+      expect(document.body.textContent).toContain('Token added — Verified');
     } finally {
       await mounted.cleanup();
     }
@@ -1018,7 +1018,7 @@ describe('AddTokenDialog — ticker in the contract field', () => {
       expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
       const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
       expect(record.coingeckoId).toBe('sushi');
-      expect(document.body.textContent).toContain('Token added — ✓ Verified');
+      expect(document.body.textContent).toContain('Token added — Verified');
     } finally {
       await mounted.cleanup();
     }

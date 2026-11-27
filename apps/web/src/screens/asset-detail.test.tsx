@@ -576,7 +576,7 @@ describe('asset detail screen', () => {
 
   it('shows the verified tick on a token detail header', async () => {
     // Lane 1: the token detail header carries the mark — USDC is a
-    // curated default, so it reads ✓ Verified.
+    // curated default, so it reads Verified (Badge).
     vi.mocked(useWallet).mockReturnValue({
       xpubs: { eth: { xpub: 'xpub6TestWallet1234567890abcdef' } },
       addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
@@ -604,7 +604,7 @@ describe('asset detail screen', () => {
     try {
       const heading = mounted.div.querySelector('h1');
       expect(heading?.textContent).toContain('USDC');
-      expect(heading?.textContent).toContain('✓ Verified');
+      expect(heading?.querySelector('[aria-label="Verified token"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }
@@ -653,7 +653,7 @@ describe('asset detail screen', () => {
       const heading = mounted.div.querySelector('h1');
       expect(heading?.textContent).toContain('UNL');
       expect(heading?.textContent).toContain('Unverified');
-      expect(heading?.textContent).not.toContain('✓ Verified');
+      expect(heading?.querySelector('[aria-label="Verified token"]')).toBeNull();
     } finally {
       await mounted.cleanup();
     }

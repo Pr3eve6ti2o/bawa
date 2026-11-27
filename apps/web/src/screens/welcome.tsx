@@ -21,8 +21,8 @@ export function WelcomeScreen() {
     <section aria-labelledby="welcome-title" className="mx-auto flex w-full max-w-[480px] flex-col space-y-6 lg:grid lg:max-w-none lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
       <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <div aria-hidden="true" className="flex items-end gap-3 text-ink">
-          <BawaIcon name="wallet" className="size-16 -rotate-3" />
-          <BawaIcon name="coins" className="size-10 rotate-3" />
+          <BawaIcon name="wallet" className="size-16" />
+          <BawaIcon name="coins" className="size-10" />
         </div>
         <h1
           id="welcome-title"
@@ -30,7 +30,7 @@ export function WelcomeScreen() {
         >
           Welcome to <span className="bawa-marker">Bawa</span>
         </h1>
-        <p className="mt-2 max-w-xl text-body-md text-ink">
+        <p className="mt-2 max-w-xl text-base text-ink">
           One recovery phrase for 87 chains. Your keys never leave this device.
         </p>
       </div>
@@ -57,7 +57,7 @@ export function WelcomeScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild variant="outline" size="lg" className="w-full">
+            <Button asChild variant="secondary" size="md" className="w-full">
               <Link to="/import-wallet">Import a wallet</Link>
             </Button>
           </CardContent>
@@ -65,7 +65,7 @@ export function WelcomeScreen() {
         {/* Lane 5: Watch-only is the tertiary entry (DESIGN-SYSTEM §6).
             It opens Import straight on the Watch-only tab, so a user
             who only wants to look never has to find the tab. */}
-        <p className="px-2 text-center text-sm leading-relaxed text-ink">
+        <p className="px-2 text-center text-base leading-6 text-ink">
           Just want to look?{' '}
           <Link
             to="/import-wallet?mode=watch-only"

@@ -47,7 +47,7 @@ export function AssetListScreen() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-panel-text">Assets</h1>
+      <h1 className="font-bold text-panel-text">Assets</h1>
 
       {/*
         P0-A (no-wallet zeros): with no wallet the list is hidden
@@ -62,21 +62,21 @@ export function AssetListScreen() {
       */}
       {vaultState === 'no-vault' ? (
         <div className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-4 shadow-bawa">
-          <span className="flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
             <BawaIcon name="wallet" className="size-6" />
           </span>
-          <p className="min-w-40 flex-1 text-sm leading-5 font-medium text-ink">
+          <p className="min-w-40 flex-1 text-base leading-6 font-medium text-ink">
             No wallet yet — create or import a wallet to see your real
             balances.
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" asChild>
+            <Button type="button" size="lg" asChild>
               <Link to="/create-wallet">Create a wallet</Link>
             </Button>
-            <Button type="button" variant="outline" asChild>
+            <Button type="button" variant="secondary" size="md" asChild>
               <Link to="/import-wallet">Import a wallet</Link>
             </Button>
-            <Button type="button" variant="link" asChild>
+            <Button type="button" variant="ghost" asChild>
               <Link to="/assets/btc">See live prices</Link>
             </Button>
           </div>
@@ -113,7 +113,7 @@ export function AssetListScreen() {
             broken search. The verified mark stays on the token rows
             themselves; this line only states the scope. */}
         {query.trim() !== '' ? (
-          <p className="w-full px-2 text-xs leading-[18px] text-ink">
+          <p className="w-full px-2 text-xs leading-4 text-ink">
             Searching name, symbol, chain or contract address.
           </p>
         ) : null}
@@ -124,16 +124,16 @@ export function AssetListScreen() {
               void handleRefresh();
             }}
             disabled={refreshing}
-            variant="outline"
-            size="pill"
+            variant="secondary"
+            size="sm"
           >
             {refreshing ? 'Refreshing…' : 'Refresh balances'}
           </Button>
           <Button
             type="button"
             onClick={() => setAddTokenOpen(true)}
-            variant="outline"
-            size="pill"
+            variant="secondary"
+            size="sm"
           >
             Add token
           </Button>
@@ -141,8 +141,8 @@ export function AssetListScreen() {
             type="button"
             aria-pressed={hideZero}
             onClick={() => setHideZero((current) => !current)}
-            variant={hideZero ? 'default' : 'outline'}
-            size="pill"
+            variant={hideZero ? 'primary' : 'secondary'}
+            size="sm"
           >
             Hide zero balances
           </Button>

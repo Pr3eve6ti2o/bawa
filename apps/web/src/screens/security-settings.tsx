@@ -33,7 +33,7 @@ export function SecuritySettingsScreen() {
       className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0"
       aria-labelledby="security-heading"
     >
-      <h1 id="security-heading" className="text-2xl font-semibold lg:col-span-2">
+      <h1 id="security-heading" className="font-bold lg:col-span-2">
         Security &amp; backup
       </h1>
 
@@ -44,13 +44,13 @@ export function SecuritySettingsScreen() {
           <CardTitle>Connected wallets</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             Your vault accounts and any watch-only wallets live on the
             Wallets screen.
           </p>
           <Link
             to="/wallets"
-            className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
+            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
           >
             Open Wallets
           </Link>
@@ -62,7 +62,7 @@ export function SecuritySettingsScreen() {
           <CardTitle><span className="bawa-marker">Backup</span> procedure</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             Your recovery phrase is stored encrypted in this browser&apos;s vault. Write it down on paper and keep it somewhere only you can reach. Anyone with the phrase can take the funds.
           </p>
           {/* Lane C (C-2): no backup gate exists — receiving addresses
@@ -70,12 +70,12 @@ export function SecuritySettingsScreen() {
               promise one. A real gate (a backup flag, with receiving
               addresses held back until the phrase is confirmed written
               down) is a follow-up, not this fix. */}
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             Back up first. Receiving addresses show as soon as the wallet exists — nothing here stops you receiving funds before you back up. Write your recovery phrase down on paper now, while you still have it.
           </p>
           <Link
             to="/mnemonic-backup"
-            className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
+            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
           >
             View the backup procedure
           </Link>
@@ -87,14 +87,14 @@ export function SecuritySettingsScreen() {
           <CardTitle><span className="bawa-marker">Backup</span> shares</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             Split the vault key into shares and store each one in a
             separate place. Any 2 of 3 shares restore this vault — no
             single share can.
           </p>
           <Link
             to="/backup-shares"
-            className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
+            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
           >
             Create or check backup shares
           </Link>
@@ -106,7 +106,7 @@ export function SecuritySettingsScreen() {
           <CardTitle>Connections</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             Which network the wallet talks to, devnet test mode, which
             backup it uses, and where prices come from live on the
             Networks screen — they are connection settings, not vault
@@ -114,7 +114,7 @@ export function SecuritySettingsScreen() {
           </p>
           <Link
             to="/networks"
-            className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
+            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
           >
             Open Networks
           </Link>
@@ -126,12 +126,12 @@ export function SecuritySettingsScreen() {
           <CardTitle>WalletConnect</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             WalletConnect — connecting Bawa to dApps — is not available in
             this build. It needs a free Reown Cloud project ID, which has
             not been set up. No keys or funds are affected.
           </p>
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             To bring it back later: create a free account at{" "}
             <a
               href="https://cloud.reown.com"
@@ -151,15 +151,15 @@ export function SecuritySettingsScreen() {
           <CardTitle>About</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-sm text-ink">
+          <p className="max-w-[75ch] text-base text-ink">
             Bawa Web Wallet · Version {APP_VERSION}
           </p>
         </CardContent>
       </Card>
 
       <div className="rounded-bawa border-2 border-ink bg-paper p-6 lg:col-span-2">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-ink"><BawaIcon name="shield" className="size-6" /> What this wallet does</h2>
-        <ul className="mt-3 max-w-[75ch] list-disc space-y-2 pl-5 text-sm text-ink">
+        <h2 className="flex items-center gap-2 font-semibold text-ink"><BawaIcon name="shield" className="size-6" /> What this wallet does</h2>
+        <ul className="mt-3 max-w-[75ch] list-disc space-y-2 pl-5 text-base text-ink">
           <li>Your recovery phrase is created in this browser and kept encrypted in the vault on this device.</li>
           <li>Your private keys stay in memory on this device while the wallet is open. They are never saved unencrypted, written to logs or sent online.</li>
           <li>Signing happens offline on this device.</li>
@@ -182,7 +182,7 @@ export function SecuritySettingsScreen() {
             </p>
             <Button
               type="button"
-              variant="destructive"
+              variant="secondary"
               onClick={async () => {
                 if (!deleteArmed) {
                   setDeleteArmed(true);

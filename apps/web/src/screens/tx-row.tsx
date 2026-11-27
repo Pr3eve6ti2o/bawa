@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight } from 'lucide-react';
+import { BawaIcon, type BawaIconName } from '../ui/components/icons';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
@@ -68,12 +68,12 @@ export function TxRow({
   className?: string;
 }) {
   const symbol = chainConfig(chain).symbol;
-  const DirectionIcon =
+  const directionIcon: BawaIconName =
     tx.direction === 'in'
-      ? ArrowDownLeft
+      ? 'arrow-down-left'
       : tx.direction === 'out'
-        ? ArrowUpRight
-        : ArrowLeftRight;
+        ? 'arrow-up-right'
+        : 'arrow-left-right';
   const directionLabel =
     tx.direction === 'in'
       ? 'Received'
@@ -94,7 +94,7 @@ export function TxRow({
     // + wobble radius as every other card (the old rounded-lg + 1 px
     // border was the odd one out). The row stays >= 56 px tall via its
     // content + p-3; the direction tile is decorative inside the link.
-    <li className={className ?? 'rounded-bawa border-2 border-ink bg-paper p-3'}>
+    <li className={className ?? 'rounded-bawa border-2 border-ink bg-paper px-4 py-3'}>
       <Link
         to={`/transactions/${tx.hash}`}
         className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
@@ -103,10 +103,10 @@ export function TxRow({
           aria-hidden="true"
           className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-paper"
         >
-          <DirectionIcon className="size-4" />
+          <BawaIcon name={directionIcon} className="size-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">
+          <span className="block text-base font-medium">
             {directionLabel}
             {showChainSymbol ? (
               <>
@@ -120,7 +120,7 @@ export function TxRow({
           </span>
         </span>
         <span className="shrink-0 text-right">
-          <span className="block text-sm font-semibold">
+          <span className="block text-base font-semibold">
             {formatNativeWithSymbol(tx.amountBaseUnits, CHAIN_DECIMALS[chain], symbol)}
           </span>
           <span className="mt-0.5 block text-xs text-muted-foreground">

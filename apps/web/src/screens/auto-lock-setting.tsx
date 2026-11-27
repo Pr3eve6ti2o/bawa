@@ -105,13 +105,13 @@ export function AutoLockSetting() {
         </div>
 
         {!hasVault && (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             No vault yet. Create or import a wallet first.
           </p>
         )}
 
         {hasVault && !autoLockEnabled && (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             Auto-lock is off. Your wallet stays unlocked on this device.
             Anyone with access to this device can open it.
           </p>
@@ -123,7 +123,7 @@ export function AutoLockSetting() {
             <select
               id="auto-lock"
               aria-label="Lock after inactivity"
-              className="h-12 w-full rounded-bawa-sm border-2 border-ink bg-paper px-4 text-sm text-ink"
+              className="h-12 w-full rounded-bawa-sm border-2 border-ink bg-paper px-4 text-base text-ink"
               value={autoLockMinutes}
               disabled={controlsDisabled}
               onChange={(event) => {
@@ -138,7 +138,7 @@ export function AutoLockSetting() {
             </select>
 
             {hasVault && (
-              <p className="text-sm text-ink">
+              <p className="text-base text-ink">
                 {autoLockMinutes > 0
                   ? `Auto-lock is on. Your wallet locks after ${AUTO_LOCK_LABELS[autoLockMinutes]} without activity. You will need your vault password to unlock it.`
                   : 'Auto-lock is on. Your wallet locks immediately when you leave this page. You will need your vault password to unlock it.'}
@@ -149,7 +149,7 @@ export function AutoLockSetting() {
 
         {vaultState === 'unlocked' && (
           <div className="space-y-2">
-            <p className="text-sm text-ink">
+            <p className="text-base text-ink">
               Lock the vault now instead of waiting for the timer.
             </p>
             <Button type="button" variant="secondary" onClick={() => lockVault()}>
@@ -159,7 +159,7 @@ export function AutoLockSetting() {
         )}
 
         {isLocked && (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             Vault locked.{' '}
             <Link
               to="/lock"
@@ -206,7 +206,7 @@ export function AutoLockSetting() {
         )}
 
         {errorMessage && (
-          <p role="alert" className="text-sm text-ink">
+          <p role="alert" className="text-base text-ink">
             {errorMessage}
           </p>
         )}

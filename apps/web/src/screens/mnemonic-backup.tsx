@@ -204,21 +204,21 @@ export function MnemonicBackupScreen() {
         <CardContent className="space-y-3">
           {profiles === null ? (
             <>
-              <p className="text-sm leading-relaxed">
+              <p className="text-base leading-6">
                 Create a wallet or restore one from its recovery phrase
                 first.
               </p>
-              <Button asChild size="wrap">
+              <Button asChild size="lg">
                 <Link to="/create-wallet">Create a wallet</Link>
               </Button>
             </>
           ) : (
             <>
-            <p className="text-sm leading-relaxed">
+            <p className="text-base leading-6">
               Your 24 words are the only backup. The reveal below asks
               for your vault password and a short safety quiz first.
             </p>
-            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm leading-relaxed">
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-base leading-6">
               <li>Confirm your vault password.</li>
               <li>Answer three safety questions.</li>
               <li>Write down the 24 words, in order, on paper.</li>
@@ -242,7 +242,7 @@ export function MnemonicBackupScreen() {
       {profiles !== null && (
         <div className="order-3 space-y-4 lg:order-2">
           <section aria-labelledby="backup-profiles" className="space-y-2">
-            <h2 id="backup-profiles" className="text-lg font-semibold">
+            <h2 id="backup-profiles" className="font-semibold">
               Recovery profiles
             </h2>
             {/* Lane 5: the 24-row profile list used to sit between the
@@ -255,7 +255,7 @@ export function MnemonicBackupScreen() {
               <summary className="cursor-pointer text-sm font-semibold text-ink">
                 Show the derivation profiles
               </summary>
-              <p className="mt-2 text-sm leading-relaxed text-ink">
+              <p className="mt-2 text-base leading-6 text-ink">
                 This vault was created with the recovery profiles below. Restoring
                 with a different profile recovers different addresses — back up
                 the profile names with the words.
@@ -268,7 +268,7 @@ export function MnemonicBackupScreen() {
                     key={profileId}
                     className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2"
                   >
-                    <span className="text-sm font-semibold text-ink">
+                    <span className="text-base font-semibold text-ink">
                       {PROFILE_LABELS[profileId] ?? profileId}
                     </span>
                     <span className="text-xs leading-relaxed text-ink">
@@ -284,14 +284,14 @@ export function MnemonicBackupScreen() {
           </section>
 
           <section aria-label="Backup guidance" className="space-y-2">
-            <p className="text-sm text-ink">
+            <p className="text-base text-ink">
               These are reminders, not proof that the steps are done. This
               app cannot verify that you have followed them.
             </p>
             {/* Lane 5: the four safety facts, moved here from the top
                 card so the Reveal section comes first. Same four facts,
                 same words. */}
-            <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
+            <ul className="list-disc space-y-1.5 pl-5 text-base leading-6">
               <li>
                 The 24 words you wrote down when the wallet was created are
                 the only backup. Write them on paper and store the paper
@@ -317,7 +317,7 @@ export function MnemonicBackupScreen() {
               {guidanceItems.map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-baseline gap-2 px-3 py-2 text-sm text-ink"
+                  className="flex items-baseline gap-2 px-3 py-2 text-base text-ink"
                 >
                   <span aria-hidden="true" className="text-muted-foreground">–</span>
                   {item.label}
@@ -330,12 +330,12 @@ export function MnemonicBackupScreen() {
 
       {profiles !== null && (
         <section aria-labelledby="reveal-heading" className="order-2 space-y-3 lg:order-3">
-          <h2 id="reveal-heading" className="text-lg font-semibold">
+          <h2 id="reveal-heading" className="font-semibold">
             Reveal recovery phrase
           </h2>
           {stage === 'idle' && (
             <>
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-5 text-muted-foreground">
                 Anyone who learns these 24 words can spend from this wallet.
                 Showing them requires your vault password and a short safety
                 quiz first.
@@ -367,7 +367,7 @@ export function MnemonicBackupScreen() {
                 <p
                   id="reveal-error"
                   role="alert"
-                  className="text-sm text-destructive"
+                  className="text-base text-destructive"
                 >
                   {passwordError}
                 </p>
@@ -381,12 +381,12 @@ export function MnemonicBackupScreen() {
 
           {stage === 'quiz' && (
             <div className="space-y-4">
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-5 text-muted-foreground">
                 Answer all three questions correctly to show the phrase.
               </p>
               {REVEAL_QUIZ.map((item, questionIndex) => (
                 <div key={item.question} className="space-y-2">
-                  <p className="text-sm font-semibold">{item.question}</p>
+                  <p className="text-base font-semibold">{item.question}</p>
                   <div className="flex flex-col gap-2">
                     {item.options.map((option, optionIndex) => {
                       const picked = answers[questionIndex] === optionIndex;
@@ -396,7 +396,7 @@ export function MnemonicBackupScreen() {
                         <Button
                           key={option}
                           type="button"
-                          variant={correct ? 'default' : 'outline'}
+                          variant={correct ? 'primary' : 'secondary'}
                           onClick={() =>
                             handleQuizPick(questionIndex, optionIndex)
                           }
@@ -409,7 +409,7 @@ export function MnemonicBackupScreen() {
                     })}
                   </div>
                   {wrong[questionIndex] && (
-                    <p role="alert" className="text-sm text-destructive">
+                    <p role="alert" className="text-base text-destructive">
                       Not quite — try again.
                     </p>
                   )}
@@ -423,7 +423,7 @@ export function MnemonicBackupScreen() {
                 Show recovery phrase
               </Button>
               {revealError && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-base text-destructive">
                   {revealError}
                 </p>
               )}
@@ -432,7 +432,7 @@ export function MnemonicBackupScreen() {
 
           {stage === 'revealed' && words !== null && (
             <div className="space-y-4">
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-5 text-muted-foreground">
                 Write these words down in order, then hide them. Never
                 photograph, share, or paste them anywhere.
               </p>
@@ -440,7 +440,7 @@ export function MnemonicBackupScreen() {
                 {words.map((word, index) => (
                   <li
                     key={`${index}-${word}`}
-                    className="rounded-lg border border-border bg-card p-3 text-sm"
+                    className="rounded-lg border border-border bg-card p-3 text-base"
                   >
                     <span className="text-muted-foreground">{index + 1}. </span>
                     {word}

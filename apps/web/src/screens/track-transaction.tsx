@@ -83,7 +83,7 @@ const GENESIS_BTC_HASH =
 function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
   return (
     <section aria-labelledby="track-guide-heading" className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-6">
-      <h2 id="track-guide-heading" className="font-display text-2xl font-semibold text-ink">
+      <h2 id="track-guide-heading" className="font-display font-semibold text-ink">
         How tracking works
       </h2>
 
@@ -102,7 +102,7 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
 
         <div>
           <h3 className="font-semibold text-ink">What a result shows</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink">
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-base text-ink">
             <li>Status and confirmations</li>
             <li>Block</li>
             <li>From and to addresses</li>
@@ -114,7 +114,7 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
         </div>
       </div>
 
-      <div className="mt-6 space-y-2 text-sm text-ink">
+      <div className="mt-6 space-y-2 text-base text-ink">
         <p>Results come from public indexers and may lag behind the chain.</p>
         <p>A TON lookup also needs the account address.</p>
       </div>
@@ -123,7 +123,7 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
         <h3 className="font-semibold text-ink">
           Try the first Bitcoin transaction
         </h3>
-        <p className="mt-2 text-sm text-ink">
+        <p className="mt-2 text-base text-ink">
           This is the coinbase transaction of the genesis block, a real
           public Bitcoin transaction. Looking it up fetches the live result
           from the indexer.
@@ -131,7 +131,7 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
         <code className="mt-3 block break-all font-mono text-sm text-panel-text">
           {GENESIS_BTC_HASH}
         </code>
-        <Button type="button" variant="outline" className="mt-4" onClick={onUseExample}>
+        <Button type="button" variant="secondary" className="mt-4" onClick={onUseExample}>
           Look up this example
         </Button>
       </div>
@@ -167,7 +167,7 @@ export function TransactionDetails({ data, chain, checkedAt }: {
         <p className='text-sm text-muted-foreground'>
           Included transactions are shown with their confirmation count. This is not a finality guarantee.
         </p>
-        <dl className='space-y-2 text-sm'>
+        <dl className='space-y-2 text-base'>
           {rows.map(([label, value]) => (
             <div key={label} className='grid grid-cols-[5rem_minmax(0,1fr)] gap-4'>
               <dt className='text-muted-foreground'>{label}</dt>
@@ -185,7 +185,7 @@ export function TransactionDetails({ data, chain, checkedAt }: {
           href={data.explorerUrl}
           target='_blank'
           rel='noreferrer'
-          className='text-sm underline underline-offset-4'
+          className='text-base underline underline-offset-4'
         >
           View on explorer
         </a>
@@ -277,7 +277,7 @@ export function TrackTransactionScreen() {
   return (
     <div className='space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]'>
       <header className='space-y-2 lg:col-span-2'>
-        <h1 className='text-2xl font-semibold'>Track a transaction</h1>
+        <h1 className=' font-bold'>Track a transaction</h1>
         <p className='text-sm text-muted-foreground'>
           Look up any transaction by its hash, or see recent activity for an address. Results come from public indexers and may lag behind the chain.
         </p>
@@ -364,7 +364,7 @@ export function TrackTransactionScreen() {
             <AlertDescription className='space-y-2'>
               <p>Could not look up this transaction.</p>
               <p>{humanReasonMessage(lookup.result.reason, 'track')}</p>
-              <Button type='button' variant='outline' disabled={!canLookup} onClick={() => void runLookup()}>
+              <Button type='button' variant='secondary' disabled={!canLookup} onClick={() => void runLookup()}>
                 Retry
               </Button>
             </AlertDescription>
@@ -374,7 +374,7 @@ export function TrackTransactionScreen() {
       </div>
 
       <section aria-labelledby='recent-activity-heading' className='space-y-4 border-t pt-6 lg:border-t-0 lg:pt-0'>
-        <h2 id='recent-activity-heading' className='text-xl font-semibold'>
+        <h2 id='recent-activity-heading' className=' font-semibold'>
           Recent activity for an address
         </h2>
         {/* The activity lookup reuses the chain picked above; name it
@@ -433,7 +433,7 @@ export function TrackTransactionScreen() {
           <BawaLoading label="Loading recent activity…" />
         )}
         {activity.kind === 'result' && activity.result.status === 'ok' && activity.result.data.length === 0 && (
-          <div className='space-y-1 text-sm'>
+          <div className='space-y-1 text-base'>
             <p>No transactions found for this address.</p>
             <p className='text-muted-foreground'>Indexed results may lag behind the chain.</p>
           </div>
@@ -444,7 +444,7 @@ export function TrackTransactionScreen() {
               <li key={tx.hash}>
                 <Link
                   to={`/transactions/${encodeURIComponent(tx.hash)}`}
-                  className='flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm hover:bg-panel-hover'
+                  className='flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-base hover:bg-panel-hover'
                 >
                   <span className='font-medium'>{directionLabel(tx.direction)}</span>
                   {' '}
@@ -470,7 +470,7 @@ export function TrackTransactionScreen() {
                   adapter at all, so a refetch cannot succeed and no
                   Retry is shown. */}
               {activity.result.status === 'error' && (
-                <Button type='button' variant='outline' disabled={!address.trim()} onClick={() => void runActivity()}>
+                <Button type='button' variant='secondary' disabled={!address.trim()} onClick={() => void runActivity()}>
                   Retry
                 </Button>
               )}

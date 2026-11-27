@@ -103,7 +103,7 @@ function DetailRow({
       <dt className="text-sm font-medium text-muted-foreground">
         {label}
       </dt>
-      <dd className="min-w-0 break-words text-sm">{children}</dd>
+      <dd className="min-w-0 break-words text-base">{children}</dd>
     </div>
   );
 }
@@ -263,17 +263,17 @@ export function TransactionDetailScreen() {
       <header className="mb-6">
         <Link
           to="/transactions"
-          className="text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+          className="text-base font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
         >
           ← Transactions
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold">Transaction details</h1>
+        <h1 className="mt-3 font-bold">Transaction details</h1>
       </header>
 
       {check?.refreshFailed && (
         <p
           role="alert"
-          className="mb-4 rounded-xl border border-warning-border bg-warning-surface p-4 text-sm text-warning-text"
+          className="mb-4 rounded-xl border border-warning-border bg-warning-surface p-4 text-base text-warning-text"
         >
           History could not be refreshed. The information below is from the
           loaded history; the check time marks the refresh attempt.
@@ -389,7 +389,7 @@ export function TransactionDetailScreen() {
               </div>
             )}
             {lookup !== null && lookup.status === 'error' && (
-              <p role="alert" className="mt-4 text-sm text-ink">
+              <p role="alert" className="mt-4 text-base text-ink">
                 {`The public indexer could not be reached: ${lookup.reason}`}
               </p>
             )}
@@ -412,7 +412,7 @@ export function TransactionDetailScreen() {
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <Link
                   to={trackHref}
-                  className="text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                  className="text-base font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
                 >
                   Look it up on Track
                 </Link>
@@ -421,13 +421,13 @@ export function TransactionDetailScreen() {
                     href={explorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                    className="text-base font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
                   >
                     View on explorer
                   </a>
                 )}
                 {lookup.status !== 'malformed' && (
-                  <Button type="button" variant="outline" onClick={handleRetry}>
+                  <Button type="button" variant="secondary" onClick={handleRetry}>
                     Retry
                   </Button>
                 )}
@@ -435,7 +435,7 @@ export function TransactionDetailScreen() {
             )}
             <Link
               to="/transactions"
-              className="mt-5 inline-block text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+              className="mt-5 inline-block text-base font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
             >
               Back to transactions
             </Link>

@@ -13,8 +13,9 @@
 // network via broadcastSignedDevnet. Mainnet still never broadcasts.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
-import { ScanIcon } from '../ui/components/icons';
+import { BawaIcon, ScanIcon } from '../ui/components/icons';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import {
@@ -685,7 +686,7 @@ export function SendScreen() {
     const amountText =
       link.amount === undefined ? `some ${symbol}` : `${link.amount} ${symbol}`;
     return (
-      <p className="text-sm leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-5 text-muted-foreground">
         This link asks to send{' '}
         <span className="font-semibold text-ink">{amountText}</span> to{' '}
         <code className="break-all font-mono text-ink">{link.to}</code> on{' '}
@@ -1547,9 +1548,9 @@ export function SendScreen() {
     if (vaultState === 'locked') {
       return (
         <div className="space-y-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+          <h1 className="font-bold tracking-tight">Send</h1>
           {pendingLink !== null && pendingLinkSummary(pendingLink)}
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-5 text-muted-foreground">
             {pendingLink !== null
               ? 'Your wallet is locked. Unlock it to continue with this send.'
               : 'Your wallet is locked. Unlock it to send.'}
@@ -1557,7 +1558,7 @@ export function SendScreen() {
           <div className="flex flex-wrap gap-3">
             <Link
               to="/lock"
-              className="text-sm font-medium text-primary underline underline-offset-4"
+              className="text-base font-medium text-primary underline underline-offset-4"
             >
               Unlock your wallet
             </Link>
@@ -1567,28 +1568,22 @@ export function SendScreen() {
     }
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        <h1 className="font-bold tracking-tight">Send</h1>
         {pendingLink !== null && pendingLinkSummary(pendingLink)}
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-5 text-muted-foreground">
           No wallet yet. Create or import a wallet first — sending needs a
           vault address to send from.
         </p>
         <div className="flex flex-wrap gap-3">
-          <Link
-            to="/create-wallet"
-            className="text-sm font-medium text-primary underline underline-offset-4"
-          >
-            Create a wallet
-          </Link>
-          <Link
-            to="/import-wallet"
-            className="text-sm font-medium text-primary underline underline-offset-4"
-          >
-            Import a wallet
-          </Link>
+          <Button asChild size="lg">
+            <Link to="/create-wallet">Create a wallet</Link>
+          </Button>
+          <Button asChild variant="secondary" size="md">
+            <Link to="/import-wallet">Import a wallet</Link>
+          </Button>
         </div>
         {pendingLink !== null && (
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-5 text-muted-foreground">
             This payment is kept — once your wallet is ready, open Send
             and it will be filled in.
           </p>
@@ -1611,9 +1606,9 @@ export function SendScreen() {
   ) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        <h1 className="font-bold tracking-tight">Send</h1>
         {pendingLinkSummary(pendingLink)}
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-5 text-muted-foreground">
           Choose which wallet sends this payment.
         </p>
         <ul className="space-y-2">
@@ -1630,7 +1625,7 @@ export function SendScreen() {
                   onClick={() => void chooseAccountForLink(account)}
                   className="flex w-full flex-col gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-60"
                 >
-                  <span className="text-sm font-semibold">
+                  <span className="text-base font-semibold">
                     {accountName(account)}
                     {isCurrent ? ' · Current wallet' : ''}
                   </span>
@@ -1648,7 +1643,7 @@ export function SendScreen() {
           </p>
         )}
         {chooserError && (
-          <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+          <p role="alert" className="text-base text-ink bawa-squiggle-underline">
             {chooserError}
           </p>
         )}
@@ -1668,7 +1663,7 @@ export function SendScreen() {
     <div className="space-y-3 lg:grid lg:grid-cols-5 lg:min-h-[calc(100vh-7.5rem)] lg:content-center lg:gap-8 lg:items-start lg:space-y-0">
       <div className="space-y-3 lg:col-span-2 lg:sticky lg:top-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        <h1 className="font-bold tracking-tight">Send</h1>
         {/* Redesign Lane 3: the full banner sets expectations once, at
             flow entry (chain). Later steps do not repeat it — the
             review carries its own warning box, and repeating the same
@@ -1678,7 +1673,7 @@ export function SendScreen() {
         {step === 'chain' && (
         <p
           role="note"
-          className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
+          className="rounded-bawa border-2 border-ink bg-sun p-4 text-base text-ink"
         >
           {devnetEnabled
             ? devnetName
@@ -1743,7 +1738,7 @@ export function SendScreen() {
                 </li>
               ))}
             </ol>
-            <p className="text-body-sm font-medium text-panel-text-muted">
+            <p className="text-sm font-medium text-panel-text-muted">
               {`Step ${activeIndex + 1} of 6: ${steps[activeIndex]}`}
             </p>
           </div>
@@ -1755,7 +1750,7 @@ export function SendScreen() {
 
       {step === 'chain' && (
         <section aria-labelledby="send-chain-heading" className="space-y-3">
-          <h2 id="send-chain-heading" className="text-lg font-semibold">
+          <h2 id="send-chain-heading" className="font-semibold">
             Choose a network
           </h2>
       {/* Scan first (UI/UX Round 2, item 1): a payment QR fills in
@@ -1774,14 +1769,14 @@ export function SendScreen() {
           <ScanIcon className="h-11 w-11 text-ink" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">Scan a QR code</p>
+          <p className="text-base font-semibold text-ink">Scan a QR code</p>
           <p className="text-sm text-muted-foreground">
             Scan a payment QR and the network, token, amount and address fill in themselves.
           </p>
         </div>
       </div>
       {prefillNote && (
-        <p role="note" className="text-sm text-ink">
+        <p role="note" className="text-base text-ink">
           {prefillNote}
         </p>
       )}
@@ -1808,7 +1803,7 @@ export function SendScreen() {
         recentKey={SEND_RECENT_CHAINS_KEY}
       />
       {noWalletNote && (
-        <p role="note" className="text-sm text-ink">
+        <p role="note" className="text-base text-ink">
           {noWalletNote}
         </p>
       )}
@@ -1817,7 +1812,7 @@ export function SendScreen() {
 
       {step === 'token' && (
       <section aria-labelledby="send-token-heading" className="space-y-3">
-        <h2 id="send-token-heading" className="text-lg font-semibold">
+        <h2 id="send-token-heading" className="font-semibold">
           {`Token · ${config.displayName}`}
         </h2>
         <ul className="space-y-2">
@@ -1875,7 +1870,7 @@ export function SendScreen() {
                       an unverified token reads "Unverified". */}
                   {token !== null &&
                     (isVerifiedToken(token) ? (
-                      <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                      <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
                     ) : (
                       <span className="ml-2" aria-label="Unverified token">Unverified</span>
                     ))}
@@ -1887,12 +1882,12 @@ export function SendScreen() {
             })}
         </ul>
         {selectedToken !== null && tokenStandardFor(chain).standard === null && (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             {`Sending ${selectedToken.symbol} isn't available yet. ${config.displayName} has no token standard — only its native coin can be sent.`}
           </p>
         )}
         {!SIGNING_CHAINS.includes(chain) && selectedToken === null && (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             {`Sending on ${config.displayName} isn't available yet. This wallet signs native transfers offline for BTC, TRX, TON, SOL and EVM chains only.`}
           </p>
         )}
@@ -1904,7 +1899,7 @@ export function SendScreen() {
           and on result the screen speaks for itself — the bar would
           eat ~60 px on both. */}
       {(step === 'token' || step === 'details') && (
-        <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
+        <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base text-ink">
           <span>
             <span className="font-semibold">
               {selectedToken === null
@@ -1914,13 +1909,13 @@ export function SendScreen() {
                   its name in the summary. */}
               {selectedToken !== null &&
                 (isVerifiedToken(selectedToken) ? (
-                  <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                  <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
                 ) : (
                   <span className="ml-2" aria-label="Unverified token">Unverified</span>
                 ))}
             </span>
           </span>
-          <Button type="button" variant="outline" onClick={() => setStep('chain')}>
+          <Button type="button" variant="secondary" onClick={() => setStep('chain')}>
             Change
           </Button>
         </p>
@@ -1946,7 +1941,7 @@ export function SendScreen() {
               className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-3 outline-none"
             >
               <p className="font-semibold">Check before you review</p>
-              <ul className="list-inside list-disc space-y-1 text-sm">
+              <ul className="list-inside list-disc space-y-1 text-base">
                 {recipientError !== null && (
                   <li>
                     <a
@@ -1985,7 +1980,7 @@ export function SendScreen() {
               address wraps in full: truncating it would need a copy
               button to stay useful, and the copy lives on the
               Receive/account screens already. */}
-          <div className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm">
+          <div className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base">
             <div className="flex justify-between gap-3">
               <span className="shrink-0 text-ink">From</span>
               <span className="min-w-0 break-all font-mono">{from}</span>
@@ -2009,7 +2004,7 @@ export function SendScreen() {
                 {balanceRetryable && (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() =>
                       void (selectedToken !== null
@@ -2034,7 +2029,7 @@ export function SendScreen() {
           {tokenNamesake !== null && selectedToken !== null && (
             <p
               role="alert"
-              className="rounded-xl border border-warning-border bg-warning-surface p-3 text-sm text-warning-text"
+              className="rounded-xl border border-warning-border bg-warning-surface p-3 text-base text-warning-text"
             >
               {`Unverified ${selectedToken.symbol} — a verified ${tokenNamesake.symbol} exists on ${config.displayName}. Check the contract address before sending.`}
             </p>
@@ -2050,8 +2045,8 @@ export function SendScreen() {
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
-                  variant="outline"
-                  size="tall"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => void handlePaste()}
                 >
                   Paste
@@ -2082,7 +2077,7 @@ export function SendScreen() {
               aria-describedby={recipientError !== null ? 'send-recipient-error' : undefined}
             />
             {recipientError && (
-              <p id="send-recipient-error" role="alert" className="text-sm text-ink bawa-squiggle-underline">
+              <p id="send-recipient-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
                 {recipientError}
               </p>
             )}
@@ -2094,18 +2089,18 @@ export function SendScreen() {
             {recipientDetection !== null && (
               <p
                 role={recipientDetection.tone === 'warn' ? 'alert' : 'note'}
-                className="text-sm text-ink"
+                className="text-base text-ink"
               >
                 {recipientDetection.text}
               </p>
             )}
             {pasteNote !== null ? (
-              <p role="note" className="text-sm text-ink">
+              <p role="note" className="text-base text-ink">
                 {pasteNote}
               </p>
             ) : (
               prefillNote !== null && (
-                <p role="note" className="text-sm text-ink">
+                <p role="note" className="text-base text-ink">
                   {prefillNote}
                 </p>
               )
@@ -2125,7 +2120,7 @@ export function SendScreen() {
                     handleRecipientChange(event.target.value);
                   }
                 }}
-                className="w-full rounded-bawa border-2 border-ink bg-paper px-3 py-2 text-sm text-ink"
+                className="w-full rounded-bawa border-2 border-ink bg-paper px-3 py-2 text-base text-ink"
               >
                 <option value="">Choose a saved address…</option>
                 {bookForChain.map((entry) => (
@@ -2175,8 +2170,8 @@ export function SendScreen() {
               />
               <Button
                 type="button"
-                variant="outline"
-                size="tall"
+                variant="secondary"
+                size="sm"
                 disabled={!maxInfo.enabled}
                 title={maxInfo.enabled ? 'Use the full balance minus the estimated fee' : maxInfo.reason}
                 onClick={handleMax}
@@ -2185,7 +2180,7 @@ export function SendScreen() {
               </Button>
             </div>
             {amountError && (
-              <p id="send-amount-error" role="alert" className="text-sm text-ink bawa-squiggle-underline">
+              <p id="send-amount-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
                 {amountError}
               </p>
             )}
@@ -2275,12 +2270,12 @@ export function SendScreen() {
             )}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="outline" size="lg" onClick={() => setStep('token')}>
+            <Button type="button" variant="secondary" size="md" onClick={() => setStep('token')}>
               Back
             </Button>
             <Button
               type="button"
-              size="lg"
+              size="md"
               disabled={previewBusy}
               onClick={() => void handleDetailsNext()}
             >
@@ -2330,7 +2325,7 @@ export function SendScreen() {
             </p>
           )}
           {signState.status === 'error' && (
-            <div role="alert" className="space-y-2 text-sm">
+            <div role="alert" className="space-y-2 text-base">
               <p className="text-ink bawa-squiggle-underline">
                 {signState.reason}
               </p>
@@ -2349,14 +2344,14 @@ export function SendScreen() {
 
       {step === 'result' && signState.status === 'signed' && (
         <section aria-labelledby="send-result-heading" className="space-y-4">
-          <h2 id="send-result-heading" className="text-lg font-semibold">
+          <h2 id="send-result-heading" className="font-semibold">
             {devnetEnabled && devnetBroadcast.status === 'error'
               ? 'Send signed — broadcast failed'
               : devnetEnabled
                 ? 'Send broadcast to the test network'
                 : 'Send signed, not sent'}
           </h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-5 text-muted-foreground">
             {devnetEnabled && devnetBroadcast.status === 'error'
               ? `The transaction was signed offline with your vault key. The broadcast to the ${devnetName ?? config.displayName} test network failed — it was not broadcast. Test tokens have no value.`
               : devnetEnabled
@@ -2369,7 +2364,7 @@ export function SendScreen() {
             </p>
           )}
           {devnetEnabled && devnetBroadcast.status === 'submitted' && (
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-base">
               <p className="text-ink">
                 Broadcast submitted — track it on the testnet explorer.
               </p>
@@ -2384,7 +2379,7 @@ export function SendScreen() {
             </div>
           )}
           {devnetEnabled && devnetBroadcast.status === 'error' && (
-            <div role="alert" className="space-y-2 text-sm">
+            <div role="alert" className="space-y-2 text-base">
               <p className="text-ink bawa-squiggle-underline">
                 {devnetBroadcast.reason}
               </p>
@@ -2394,7 +2389,7 @@ export function SendScreen() {
               </p>
             </div>
           )}
-          <dl className="space-y-1 text-sm">
+          <dl className="space-y-1 text-base">
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">Transaction</dt>
               <dd className="min-w-0 break-all font-mono">
@@ -2412,18 +2407,18 @@ export function SendScreen() {
             >
               {signState.payload}
             </pre>
-            <Button type="button" variant="outline" onClick={() => void copyPayload()}>
+            <Button type="button" variant="secondary" onClick={() => void copyPayload()}>
               {copied ? 'Copied' : 'Copy signed transaction'}
             </Button>
           </div>
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-5 text-muted-foreground">
             If it is ever unclear whether a transaction was sent, it stays unresolved —
             never resend it and never create a replacement without
             checking the network first.
           </p>
           <Link
             to="/"
-            className="inline-block text-sm font-medium text-primary underline underline-offset-4"
+            className="inline-block text-base font-medium text-primary underline underline-offset-4"
           >
             Back to dashboard
           </Link>
@@ -2438,7 +2433,7 @@ export function SendScreen() {
       {(step === 'chain' || step === 'result') && (
         <Link
           to="/receive"
-          className="inline-block text-sm font-medium underline underline-offset-4"
+          className="inline-block text-base font-medium underline underline-offset-4"
         >
           Receive
         </Link>

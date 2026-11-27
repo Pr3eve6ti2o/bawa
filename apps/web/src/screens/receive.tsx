@@ -49,7 +49,9 @@ import { QrCard, qrCardSubtitle, qrCardTitle, qrCardTokenLabel, qrCardTokenSubli
 import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
 import { TokenPickerRow } from './token-picker-row';
 import { Alert, AlertDescription } from '../ui/components/alert';
+import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
+import { BawaIcon } from '../ui/components/icons';
 import { Card } from '../ui/components/card';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
@@ -120,24 +122,11 @@ function ChainRow({
         className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-bawa-sm p-2 text-left text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         <ChainMark chain={chain} />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+        <span className="min-w-0 flex-1 truncate text-base font-semibold">
           {config.displayName}{' '}
           <span className="font-normal">{config.symbol}</span>
         </span>
-        <svg
-          viewBox="0 0 16 16"
-          aria-hidden="true"
-          className="size-4 shrink-0 -rotate-90"
-        >
-          <path
-            d="M3 6l5 5 5-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <BawaIcon name="chevron-down" className="size-4 shrink-0 -rotate-90" />
       </button>
     </li>
   );
@@ -155,6 +144,8 @@ type BuyUnavailable = {
   body: string;
   to: string;
   action: string;
+  variant: 'primary' | 'secondary';
+  size: 'lg' | 'md';
 };
 
 function buyUnavailableState(
@@ -166,7 +157,9 @@ function buyUnavailableState(
       title: 'Create a wallet first',
       body: 'You need a wallet first.',
       to: '/create-wallet',
-      action: 'Create wallet',
+      action: 'Create a wallet',
+      variant: 'primary',
+      size: 'lg',
     };
   }
   if (vaultState === 'locked') {
@@ -175,6 +168,8 @@ function buyUnavailableState(
       body: 'Unlock to see where a purchase would be delivered.',
       to: '/lock',
       action: 'Unlock',
+      variant: 'primary',
+      size: 'md',
     };
   }
   if (!hasDestination) {
@@ -182,7 +177,9 @@ function buyUnavailableState(
       title: 'No address to deliver to',
       body: 'This wallet has no address on a network any Buy provider delivers to.',
       to: '/import-wallet',
-      action: 'Import wallet',
+      action: 'Import a wallet',
+      variant: 'secondary',
+      size: 'md',
     };
   }
   return null;
@@ -239,42 +236,42 @@ function BuyProviderRow({
   return (
     <Card radius="xl">
       <div className="flex flex-col items-start gap-2 p-4">
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-base font-semibold text-ink">
           {provider.rank}. {provider.name}
           {tag !== null ? ` — ${tag}` : ''}
         </p>
-        <p className="text-sm text-ink">{provider.keyCopy}</p>
-        <p className="text-sm text-ink">{provider.feeCopy}</p>
+        <p className="text-base text-ink">{provider.keyCopy}</p>
+        <p className="text-base text-ink">{provider.feeCopy}</p>
         {buttonLabel === null ? (
           <>
             {provider.readiness === 'needs-backend' ? (
-              <p className="text-sm text-ink">
+              <p className="text-base text-ink">
                 Needs a backend — {provider.setupCopy}
               </p>
             ) : provider.readiness === 'ready' ||
               provider.readiness === 'ready-no-prefill' ? (
-              <p className="text-sm text-ink">
+              <p className="text-base text-ink">
                 No address on a network {provider.name} delivers to.
               </p>
             ) : provider.id === 'coinbase' ? (
               <>
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-base font-semibold text-ink">
                   Buy isn&apos;t set up yet
                 </p>
-                <p className="text-sm text-ink">{provider.setupCopy}</p>
+                <p className="text-base text-ink">{provider.setupCopy}</p>
               </>
             ) : (
-              <p className="text-sm text-ink">
+              <p className="text-base text-ink">
                 Not set up yet — {provider.setupCopy}
               </p>
             )}
-            {note !== null && <p className="text-sm text-ink">{note}</p>}
+            {note !== null && <p className="text-base text-ink">{note}</p>}
           </>
         ) : (
           <>
             {destination !== null && (
               <>
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-base font-semibold text-ink">
                   Deliver to
                 </p>
                 <p className="w-full break-all font-mono text-xs text-ink">
@@ -282,7 +279,7 @@ function BuyProviderRow({
                 </p>
               </>
             )}
-            {note !== null && <p className="text-sm text-ink">{note}</p>}
+            {note !== null && <p className="text-base text-ink">{note}</p>}
             <Button
               type="button"
               size="sm"
@@ -294,18 +291,18 @@ function BuyProviderRow({
           </>
         )}
         {isActive && buyStatus === 'opened' && (
-          <p role="status" className="text-sm text-ink">
+          <p role="status" className="text-base text-ink">
             {provider.name} opened in a pop-up — complete your purchase
             there.
           </p>
         )}
         {isActive && buyStatus === 'load-failed' && (
-          <p role="alert" className="text-sm text-ink">
+          <p role="alert" className="text-base text-ink">
             {provider.name} couldn&apos;t be loaded. Check your connection.
           </p>
         )}
         {isActive && buyStatus === 'blocked' && (
-          <p role="alert" className="text-sm text-ink">
+          <p role="alert" className="text-base text-ink">
             Pop-up blocked. Allow pop-ups and try again.
           </p>
         )}
@@ -957,8 +954,8 @@ export function ReceiveScreen() {
   if (!chain) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold text-ink">Receive</h1>
-        <p className="text-sm text-ink">
+        <h1 className="font-bold text-ink">Receive</h1>
+        <p className="text-base text-ink">
           Receive isn't available for this network yet.
         </p>
       </div>
@@ -1004,16 +1001,16 @@ export function ReceiveScreen() {
   if (buyMode) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold text-ink">Buy crypto</h1>
+        <h1 className="font-bold text-ink">Buy crypto</h1>
         {buyUnavailable !== null ? (
           <Card radius="xl">
             <div className="flex flex-col items-start gap-2 p-4">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-base font-semibold text-ink">
                 {buyUnavailable.title}
               </p>
-              <p className="text-sm text-ink">{buyUnavailable.body}</p>
+              <p className="text-base text-ink">{buyUnavailable.body}</p>
               {buyUnavailable.to !== '/receive' && (
-                <Button asChild size="sm">
+                <Button asChild variant={buyUnavailable.variant} size={buyUnavailable.size}>
                   <Link to={buyUnavailable.to}>{buyUnavailable.action}</Link>
                 </Button>
               )}
@@ -1022,7 +1019,7 @@ export function ReceiveScreen() {
         ) : (
           <>
             {devnetEnabled === true && (
-              <p className="text-sm text-ink">
+              <p className="text-base text-ink">
                 Devnet test mode is on — buying delivers real mainnet
                 crypto, so it stays off.
               </p>
@@ -1045,13 +1042,13 @@ export function ReceiveScreen() {
                 />
               );
             })}
-            <p className="text-sm text-ink">
+            <p className="text-base text-ink">
               Fees are indicative only — the quote at purchase time is
               authoritative.
             </p>
           </>
         )}
-        <p className="text-sm text-ink">
+        <p className="text-base text-ink">
           <Link
             to="/receive"
             className="font-medium text-primary underline underline-offset-4"
@@ -1071,13 +1068,13 @@ export function ReceiveScreen() {
   // mobile layout is untouched.
   return (
     <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start lg:space-y-0">
-      <h1 className="text-2xl font-semibold text-ink lg:col-span-2">Receive</h1>
+      <h1 className="font-bold text-ink lg:col-span-2">Receive</h1>
       {/* Lane 7: no step line on the details step — the user has
           completed steps 1–2 and the QR screen says where they are.
           The line's 32 px is what the template row needs to sit
           above the fold at 390 px. Steps 1–2 keep their lines. */}
       {step !== 'details' && (
-        <p className="text-body-sm font-medium text-panel-text-muted lg:col-span-2">
+        <p className="text-sm font-medium text-panel-text-muted lg:col-span-2">
           {step === 'chain' ? 'Step 1 of 3: Network' : 'Step 2 of 3: Token'}
         </p>
       )}
@@ -1113,7 +1110,7 @@ export function ReceiveScreen() {
         </div>
         {chainSearch !== '' ? (
           <div className="space-y-3">
-            <p role="status" className="text-sm text-ink">
+            <p role="status" className="text-base text-ink">
               {searchedChains.length === 0
                 ? `No networks match “${chainSearch}”.`
                 : `${searchedChains.length} ${
@@ -1133,7 +1130,7 @@ export function ReceiveScreen() {
           </div>
         ) : (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-ink">Popular</h3>
+            <h3 className="font-semibold text-ink">Popular</h3>
             <ul className="space-y-2">
               {popularChains.map((available) => (
                 <ChainRow
@@ -1150,25 +1147,15 @@ export function ReceiveScreen() {
                   type="button"
                   aria-expanded={allNetworksOpen}
                   onClick={() => setAllNetworksOpen((open) => !open)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper p-2 text-left text-sm font-semibold text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                  className="flex min-h-11 w-full cursor-pointer items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper p-2 text-left text-sm font-semibold text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                 >
                   <span>
                     All networks ({otherChains.length})
                   </span>
-                  <svg
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
+                  <BawaIcon
+                    name="chevron-down"
                     className={`size-4 shrink-0 motion-safe:transition-transform ${allNetworksOpen ? 'motion-safe:rotate-180' : ''}`}
-                  >
-                    <path
-                      d="M3 6l5 5 5-5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  />
                 </button>
                 {allNetworksOpen && (
                   <ul className="space-y-2">
@@ -1195,10 +1182,10 @@ export function ReceiveScreen() {
             and the explainer is gone — the native coin first, then every
             token, with a tick for verified, reads without it. */}
         <div className="flex items-center justify-between gap-3">
-          <h2 id="receive-tokens-heading" className="text-lg font-semibold text-ink">
+          <h2 id="receive-tokens-heading" className="font-semibold text-ink">
             {`Token · ${config.displayName}`}
           </h2>
-          <Button type="button" variant="outline" size="sm" onClick={() => setStep('chain')}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setStep('chain')}>
             Back
           </Button>
         </div>
@@ -1216,7 +1203,7 @@ export function ReceiveScreen() {
           />
         </div>
         {orderedAssets.length === 0 ? (
-          <p className="text-sm text-ink">
+          <p className="text-base text-ink">
             {filter === ''
               ? `No tokens yet on ${config.displayName}.`
               : `No token found for “${filter}”. Try Add token — it searches CoinGecko by ticker or name.`}
@@ -1240,7 +1227,7 @@ export function ReceiveScreen() {
                     >
                       {/* Lane G: the real chain mark (see above). */}
                       <ChainLogo chain={chain} size={24} />
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                      <span className="min-w-0 flex-1 truncate text-base font-semibold">
                         {config.displayName} · {config.symbol} · Native coin
                       </span>
                     </button>
@@ -1275,7 +1262,7 @@ export function ReceiveScreen() {
                   {/* Lane 1: the verified mark on every picker row —
                       an unverified token reads "Unverified". */}
                   {isVerifiedToken(token) ? (
-                    <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                    <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
                   ) : (
                     <span className="ml-2" aria-label="Unverified token">Unverified</span>
                   )}
@@ -1287,7 +1274,7 @@ export function ReceiveScreen() {
             })}
           </ul>
         )}
-        <Button type="button" variant="outline" size="sm" onClick={() => setAddTokenOpen(true)}>
+        <Button type="button" variant="secondary" size="sm" onClick={() => setAddTokenOpen(true)}>
           Add token
         </Button>
         <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
@@ -1297,19 +1284,19 @@ export function ReceiveScreen() {
       {step === 'details' && (
         <>
         <div className="space-y-2">
-      <p className="flex items-center justify-between gap-3 text-sm text-ink">
+      <p className="flex items-center justify-between gap-3 text-base text-ink">
         <span>
           {`${config.displayName} · ${assetSymbol}`}
           {/* Lane 1: the selected token's verified state on the
               details step (the QR card itself is Lane 5's). */}
           {effectiveToken !== null &&
             (isVerifiedToken(effectiveToken) ? (
-              <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+              <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
             ) : (
               <span className="ml-2" aria-label="Unverified token">Unverified</span>
             ))}
         </span>
-        <Button type="button" variant="outline" onClick={() => setStep('token')}>
+        <Button type="button" variant="secondary" onClick={() => setStep('token')}>
           Back
         </Button>
       </p>
@@ -1336,7 +1323,7 @@ export function ReceiveScreen() {
 
       </div>
       <div className="space-y-2 lg:sticky lg:top-6">
-      <Card radius="xl" tone="card" borderTone="border" padding="sm">
+      <Card radius="xl" tone="card" borderTone="border">
         {address ? (
           <div className="flex flex-col items-center gap-1.5">
             {/* The QR card (UI/UX Round 2, item 1): QR, amount,
@@ -1364,7 +1351,7 @@ export function ReceiveScreen() {
                 control belongs beside the card, not a screen below the
                 actions. The full address stays on the card above. */}
             <div className="w-full space-y-1">
-              <Label htmlFor="receive-amount" className="text-sm font-medium">
+              <Label htmlFor="receive-amount" className="text-base font-medium">
                 Amount (optional) — {assetSymbol}
               </Label>
               <Input
@@ -1377,7 +1364,7 @@ export function ReceiveScreen() {
                
               />
               {amountError ? (
-                <p role="alert" className="text-sm text-ink bawa-squiggle-underline">{amountError}</p>
+                <p role="alert" className="text-base text-ink bawa-squiggle-underline">{amountError}</p>
               ) : null}
             </div>
 {/* Lane 4 (redesign): the share actions sit directly under the
@@ -1387,17 +1374,17 @@ export function ReceiveScreen() {
                 below it. The old row's "Copy address" is gone (the card's
                 own Copy button does that job, in context beside the
                 address); "New address" moved to the rotation block below,
-                beside the line it explains. All buttons are lg (48 px):
+                beside the line it explains. All buttons are md (48 px):
                 the old sm (32 px) sizes were below the 44 px touch rule. */}
             <div className="flex w-full flex-col gap-2">
-              <Button type="button" size="lg" onClick={() => void sharePayment()}>
+              <Button type="button" size="md" onClick={() => void sharePayment()}>
                 Share
               </Button>
               <div className="flex w-full gap-2">
                 <Button
                   type="button"
-                  variant="outline"
-                  size="lg"
+                  variant="secondary"
+                  size="md"
                   className="flex-1"
                   onClick={() => void downloadQr()}
                 >
@@ -1405,8 +1392,8 @@ export function ReceiveScreen() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="lg"
+                  variant="secondary"
+                  size="md"
                   className="flex-1"
                   onClick={() => void copyLink()}
                 >
@@ -1420,7 +1407,7 @@ export function ReceiveScreen() {
                 <p> leaves ~40 px of dead space under the buttons. Lane 4:
                 it sits here, next to the actions it reports on. */}
             {copyStatus !== '' && (
-              <p role="status" className="w-full text-center text-sm text-ink">
+              <p role="status" className="w-full text-center text-base text-ink">
                 {copyStatus}
               </p>
             )}
@@ -1431,7 +1418,7 @@ export function ReceiveScreen() {
                 template's hint shows as one line under the grid. Same
                 contract: role group, aria-pressed, active = sun,
                 accessible names "Show {label} card style". */}
-            <p className="w-full text-center text-sm font-semibold text-ink">
+            <p className="w-full text-center text-base font-semibold text-ink">
               Card style — tap to switch
             </p>
             <div
@@ -1460,7 +1447,7 @@ export function ReceiveScreen() {
               {QR_CARD_TEMPLATES.find((candidate) => candidate.id === cardTemplate)?.hint}
             </p>
             {paymentUriUnavailable && (
-              <p className="text-sm text-ink">
+              <p className="text-base text-ink">
                 Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
                 standard payment-request link, so the QR encodes the address only. The share
                 link below still carries the amount.)
@@ -1473,7 +1460,7 @@ export function ReceiveScreen() {
                 height for zero information. Compact labelled segments
                 (12 px, 44 px hit area); the unavailable segment still
                 stays disabled with its reason, never a dead box. */}
-            <p className="w-full text-center text-sm font-semibold text-ink">
+            <p className="w-full text-center text-base font-semibold text-ink">
               {`QR type: ${effectiveLabel} — tap to switch`}
             </p>
             <div
@@ -1528,13 +1515,13 @@ export function ReceiveScreen() {
               <div className="flex w-full flex-col items-center gap-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => void newReceiveAddress()}
                   disabled={isRotating || !nextReceiveAddress}
                 >
                   {isRotating ? 'Making address…' : 'New address'}
                 </Button>
-                <p className="w-full text-center text-xs leading-[18px] text-muted-foreground">
+                <p className="w-full text-center text-xs leading-4 text-muted-foreground">
                   New addresses come from the same phrase. Funds sent to an
                   earlier address still belong to this wallet, but the
                   dashboard only shows your main address on each chain.
@@ -1545,9 +1532,9 @@ export function ReceiveScreen() {
         ) : (
           <div className="space-y-2">
             <p className="text-foreground">No receiving address available for this chain.</p>
-            <Link to="/import-wallet" className="font-medium text-primary underline underline-offset-4">
-              Import wallet
-            </Link>
+            <Button asChild variant="secondary" size="md">
+              <Link to="/import-wallet">Import a wallet</Link>
+            </Button>
           </div>
         )}
       </Card>
@@ -1555,7 +1542,7 @@ export function ReceiveScreen() {
       {/* Lane 4 (redesign): the network warning was said three times
           (alert above the card + these two paragraphs). One paragraph
           now carries it, below the card. */}
-      <p className="text-sm text-ink">
+      <p className="text-base text-ink">
         {(() => {
           const devnetConfig = devnetEnabled
             ? devnetChainConfigOrUndefined(chain)
@@ -1567,7 +1554,7 @@ export function ReceiveScreen() {
       </p>
 
       {chain === 'ton' && (
-        <p className="text-sm text-ink">
+        <p className="text-base text-ink">
           This address can only receive TON. To send or withdraw TON, you need an external wallet.
         </p>
       )}

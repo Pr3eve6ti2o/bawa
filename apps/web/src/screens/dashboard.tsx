@@ -36,7 +36,7 @@ import { useAnimatedHeroValue } from './use-hero-ticker';
 const ACTIONS = [
   { to: '/send', icon: <BawaIcon name="send" className="size-6" />, label: 'Send' },
   { to: '/receive', icon: <BawaIcon name="receive" className="size-6" />, label: 'Receive' },
-  { to: '/receive?buy=1', icon: <BawaIcon name="plus" className="size-6" />, label: 'Buy' },
+  { to: '/receive?buy=1', icon: <BawaIcon name="card" className="size-6" />, label: 'Buy' },
   { to: '/send?scan=1', icon: <ScanIcon className="size-6" />, label: 'Scan' },
   { to: '/transactions', icon: <BawaIcon name="activity" className="size-6" />, label: 'Activity' },
 ] as const;
@@ -435,7 +435,7 @@ export function DashboardScreen() {
 
       <div className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[13px] leading-[18px] font-medium text-ink">Portfolio balance</p>
+          <p className="text-base font-semibold leading-6 text-ink">Portfolio balance</p>
           <button
             type="button"
             aria-pressed={hideBalance}
@@ -465,8 +465,8 @@ export function DashboardScreen() {
             </span>
             <Button
               type="button"
-              variant="outline"
-              size="pill"
+              variant="secondary"
+              size="sm"
               aria-live="polite"
               onClick={() => void copyPrimaryAddress()}
             >
@@ -475,27 +475,27 @@ export function DashboardScreen() {
           </div>
         )}
         {hero.showAttribution && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
+          <p className="text-xs leading-4 text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}
         {/* Lane 4 (UX-major, data): when the prices were last fetched —
             the freshness signal for the total above. Only once a fetch
             has landed; before that the rows carry their own states. */}
         {hero.showAttribution && pricesState.lastFetchedAtMs !== null && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">
+          <p className="text-xs leading-4 text-panel-text-muted">
             {`Prices updated ${new Date(pricesState.lastFetchedAtMs).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}.`}
           </p>
         )}
         {hero.partialNote && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">Partial total. Some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
+          <p className="text-xs leading-4 text-panel-text-muted">Partial total. Some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
         )}
         {hero.quietNote && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">Some balances or prices couldn&apos;t be checked just now.</p>
+          <p className="text-xs leading-4 text-panel-text-muted">Some balances or prices couldn&apos;t be checked just now.</p>
         )}
         {hero.freshZeroNote && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">Nothing here yet — receive on any chain to get started.</p>
+          <p className="text-xs leading-4 text-panel-text-muted">Nothing here yet — receive on any chain to get started.</p>
         )}
         {hero.noPriceFeed && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">
+          <p className="text-xs leading-4 text-panel-text-muted">
             {isLocked
               ? 'Locked. Unlock to see balances.'
               : devnetEnabled
@@ -508,7 +508,7 @@ export function DashboardScreen() {
           </p>
         )}
         {hero.priceError !== null && (
-          <p className="text-xs leading-[18px] text-ink">
+          <p className="text-xs leading-4 text-ink">
             {humanReasonMessage(hero.priceError, 'price')}
           </p>
         )}
@@ -518,20 +518,20 @@ export function DashboardScreen() {
             labels, same order, same behaviour — only the gap. */}
         <div className="flex flex-wrap gap-2">
           {isLocked ? (
-            <Button type="button" variant="outline" asChild>
+            <Button type="button" variant="secondary" asChild>
               <Link to="/lock">Unlock</Link>
             </Button>
           ) : (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={heroLoading}
               onClick={() => void refreshBalances()}
             >
               {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
             </Button>
           )}
-          <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
+          <Button type="button" variant="secondary" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
         </div>
       </div>
       {/* Actions sit at the hero's baseline on desktop (lg:self-end):
@@ -624,13 +624,13 @@ export function DashboardScreen() {
                 room, and the row ran past the viewport edge (probe:
                 dashboard@320 overflow +14). */}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-ink">Assets</h2>
+              <h2 className="font-semibold text-ink">Assets</h2>
               <div className="flex shrink-0 items-center gap-2">
                 <Button
                   type="button"
                   onClick={() => setAddTokenOpen(true)}
-                  variant="outline"
-                  size="pill"
+                  variant="secondary"
+                  size="sm"
                 >
                   Add token
                 </Button>
@@ -638,8 +638,8 @@ export function DashboardScreen() {
                   type="button"
                   aria-pressed={hideZero}
                   onClick={() => setHideZero((current) => !current)}
-                  variant={hideZero ? 'default' : 'outline'}
-                  size="pill"
+                  variant={hideZero ? 'primary' : 'secondary'}
+                  size="sm"
                 >
                   Hide zero balances
                 </Button>
@@ -647,7 +647,7 @@ export function DashboardScreen() {
             </div>
             <Card className="mt-4">
               {devnetEnabled && (
-                <p className="border-b px-4 pt-4 text-sm text-ink">
+                <p className="border-b px-4 pt-4 text-base text-ink">
                   Devnet test mode — only the four test networks show
                   balances. Prices below are live market prices; test
                   tokens have no market value, so there is no portfolio
@@ -663,9 +663,9 @@ export function DashboardScreen() {
                 configured, so they are named as unavailable rather than
                 listed with a fake value. */}
             <section aria-label="Portfolio breakdown" className="mt-6">
-              <h2 className="text-lg font-semibold text-ink">Breakdown</h2>
+              <h2 className="font-semibold text-ink">Breakdown</h2>
               {devnetEnabled ? (
-                <p className="mt-4 text-sm text-ink">
+                <p className="mt-4 text-base text-ink">
                   Devnet test mode — test tokens have no market value, so
                   there is no breakdown.
                 </p>
@@ -681,7 +681,7 @@ export function DashboardScreen() {
                   </div>
                 </>
               ) : breakdown.holdings.length === 0 ? (
-                <p className="mt-4 text-sm text-ink">
+                <p className="mt-4 text-base text-ink">
                   Nothing to break down yet — receive on any chain to get started.
                 </p>
               ) : (
@@ -690,14 +690,14 @@ export function DashboardScreen() {
                     {breakdown.holdings.slice(0, 8).map((holding) => (
                       <li key={holding.key} className="flex items-center justify-between gap-3 px-4 py-3">
                         <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold text-ink">{holding.label}</span>
+                          <span className="block truncate text-base font-semibold text-ink">{holding.label}</span>
                           <span className="block text-xs text-panel-text-muted">
                             {holding.detail}
                             {holding.change24hPct !== undefined ? ` · 24h ${formatChangePct(holding.change24hPct)}` : ''}
                           </span>
                         </span>
                         <span className="shrink-0 text-right">
-                          <span className="block text-sm font-semibold text-ink">
+                          <span className="block text-base font-semibold text-ink">
                             {hideBalance
                               ? '••••••'
                               : (holding.valueText ?? 'Value unavailable')}
@@ -714,20 +714,20 @@ export function DashboardScreen() {
                     ))}
                   </ul>
                   {breakdown.holdings.length > 8 ? (
-                    <p className="mt-2 text-xs leading-[18px] text-panel-text-muted">
+                    <p className="mt-2 text-xs leading-4 text-panel-text-muted">
                       {`And ${breakdown.holdings.length - 8} more holding${breakdown.holdings.length - 8 === 1 ? '' : 's'} — see Assets above for the full list.`}
                     </p>
                   ) : null}
                   {breakdown.zeroCount > 0 ? (
-                    <p className="mt-2 text-xs leading-[18px] text-panel-text-muted">
+                    <p className="mt-2 text-xs leading-4 text-panel-text-muted">
                       {`${breakdown.zeroCount} asset${breakdown.zeroCount === 1 ? '' : 's'} at zero balance — not listed here.`}
                     </p>
                   ) : null}
                 </>
               )}
               <div className="mt-4 rounded-bawa border-2 border-dashed border-ink bg-paper p-4">
-                <p className="text-sm font-semibold text-ink">NFTs — not connected yet</p>
-                <p className="mt-1 text-sm text-ink">
+                <p className="text-base font-semibold text-ink">NFTs — not connected yet</p>
+                <p className="mt-1 text-base text-ink">
                   Bawa has no NFT indexer configured, so NFTs are not listed
                   here and are never given a made-up value. Connecting one
                   needs an NFT indexer provider and key — an owner decision.
