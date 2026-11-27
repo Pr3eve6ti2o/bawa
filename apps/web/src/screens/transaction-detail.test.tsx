@@ -521,6 +521,23 @@ describe('transaction detail screen', () => {
         `a[href="https://mempool.space/tx/${genesisHash}"]`,
       );
       expect(explorerLink).not.toBeNull();
+      // T1-3: a 64-hex hash is shared by four chains — the panel offers
+      // every candidate explorer, never a single guessed Bitcoin link.
+      expect(
+        mounted.div.querySelector(
+          `a[href="https://litecoinspace.org/tx/${genesisHash}"]`,
+        ),
+      ).not.toBeNull();
+      expect(
+        mounted.div.querySelector(
+          `a[href="https://dogechain.info/tx/${genesisHash}"]`,
+        ),
+      ).not.toBeNull();
+      expect(
+        mounted.div.querySelector(
+          `a[href="https://tronscan.org/#/transaction/${genesisHash}"]`,
+        ),
+      ).not.toBeNull();
       const callsBefore = vi.mocked(lookupTransaction).mock.calls.length;
       const retry = Array.from(mounted.div.querySelectorAll('button')).find(
         (button) => button.textContent === 'Retry',

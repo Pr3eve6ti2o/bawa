@@ -151,7 +151,7 @@ export function TransactionDetails({ data, chain, checkedAt }: {
         <a
           href={data.explorerUrl}
           target='_blank'
-          rel='noreferrer'
+          rel='noopener noreferrer'
           className='text-base underline underline-offset-4'
         >
           View on explorer
@@ -376,22 +376,6 @@ export function TrackTransactionScreen() {
           <Button
             type='submit'
             disabled={!address.trim() || activity.kind === 'loading'}
-            // P0-6: the shared Button renders disabled as a dashed
-            // outline, which reads as broken — the one-button-system
-            // fix (P1-11) owns the global rule. At this call site the
-            // disabled state is 40% opacity + a not-allowed cursor
-            // with a solid border instead (inline style wins over the
-            // component's disabled classes, deterministically).
-            style={
-              !address.trim() && activity.kind !== 'loading'
-                ? {
-                    borderStyle: 'solid',
-                    opacity: 0.4,
-                    cursor: 'not-allowed',
-                    pointerEvents: 'auto',
-                  }
-                : undefined
-            }
           >
             Show recent activity
           </Button>

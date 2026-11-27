@@ -116,22 +116,43 @@ type TrackerLookupOutcome =
   | { status: 'malformed' };
 
 // P0-6: a hash's shape says which chains it can belong to, before any
-// network call — a 64-hex hash is Bitcoin/TRON-shaped, a 0x-prefixed
-// one is EVM-shaped. Anything else is not a transaction hash at all,
-// and no refetch can fix it (so it gets no Retry).
+// network call — a 64-hex hash is shared by Bitcoin, Litecoin, Dogecoin
+// and TRON, a 0x-prefixed one is EVM-shaped. Anything else is not a
+// transaction hash at all, and no refetch can fix it (so it gets no
+// Retry). The lookup below tries Bitcoin then TRON for a 64-hex hash —
+// the wallet has no indexer lookup for Litecoin/Dogecoin yet, so those
+// two are offered as explorer links only (see explorerUrlsFor).
 function hashChainHint(id: string): 'btc' | 'eth' | null {
   if (/^[0-9a-fA-F]{64}$/.test(id)) return 'btc';
   if (/^0x[0-9a-fA-F]{64}$/.test(id)) return 'eth';
   return null;
 }
 
-// The public explorer for a hash whose shape names its chain. Only
-// the two shapes above get one — an unshaped hash has no explorer to
-// link to, and Track is the way to try other chains.
-function explorerUrlFor(id: string): string | null {
-  if (/^[0-9a-fA-F]{64}$/.test(id)) return `https://mempool.space/tx/${id}`;
-  if (/^0x[0-9a-fA-F]{64}$/.test(id)) return `https://eth.blockscout.com/tx/${id}`;
-  return null;
+// The public explorers for a hash whose shape names its chain(s). A
+// 0x hash names one chain family, so it gets one link. A 64-hex hash is
+// shared by Bitcoin, Litecoin, Dogecoin and TRON — no single explorer
+// is right, so every candidate is offered and none is guessed: a
+// Litecoin or Dogecoin hash used to get a dead Bitcoin explorer link
+// (T1-3). Each URL is the chain's own canonical explorer, already used
+// for that chain's history elsewhere in the wallet. An unshaped hash
+// has no explorer to link to, and Track is the way to try other chains.
+function explorerUrlsFor(
+  id: string,
+): ReadonlyArray<{ label: string; url: string }> {
+  if (/^[0-9a-fA-F]{64}$/.test(id)) {
+    return [
+      { label: 'Bitcoin explorer', url: `https://mempool.space/tx/${id}` },
+      { label: 'Litecoin explorer', url: `https://litecoinspace.org/tx/${id}` },
+      { label: 'Dogecoin explorer', url: `https://dogechain.info/tx/${id}` },
+      { label: 'TRON explorer', url: `https://tronscan.org/#/transaction/${id}` },
+    ];
+  }
+  if (/^0x[0-9a-fA-F]{64}$/.test(id)) {
+    return [
+      { label: 'View on explorer', url: `https://eth.blockscout.com/tx/${id}` },
+    ];
+  }
+  return [];
 }
 
 export function TransactionDetailScreen() {
@@ -147,6 +168,11 @@ export function TransactionDetailScreen() {
   const [lookup, setLookup] = useState<TrackerLookupOutcome | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const lookupKeyRef = useRef<string | null>(null);
+  // T1-2: the hash in the URL can change without a remount (Back /
+  // Forward, direct URL edit). Remember the last hash so the mount
+  // effect below can drop the previous hash's check/lookup instead of
+  // painting them under the new hash's "Requested ID" for a frame.
+  const prevIdRef = useRef<string | undefined>(id);
 
   function handleRetry(): void {
     // Re-run both checks: the mount refresh (reset its cached promise
@@ -159,6 +185,16 @@ export function TransactionDetailScreen() {
 
   useEffect(() => {
     let active = true;
+
+    // T1-2: a new hash drops the previous hash's check/lookup and
+    // refetches — the lookup effect below is keyed to id, but without
+    // this reset the old result paints under the new "Requested ID".
+    if (prevIdRef.current !== id) {
+      prevIdRef.current = id;
+      checkPromiseRef.current = null;
+      setCheck(null);
+      setLookup(null);
+    }
 
     // Reuse the mount refresh during Strict Mode effect replays and rerenders.
     if (checkPromiseRef.current === null) {
@@ -185,7 +221,7 @@ export function TransactionDetailScreen() {
     return () => {
       active = false;
     };
-  }, [refreshHistory, retryNonce]);
+  }, [id, refreshHistory, retryNonce]);
 
   const found = (() => {
     if (!id) return null;
@@ -241,8 +277,8 @@ export function TransactionDetailScreen() {
   }, [check, found, id, retryNonce]);
 
   // P0-6: the Track link carries the hash (and the chain its shape
-  // names, so Track opens on the right network); the explorer link
-  // goes to the public explorer for that shape. Computed once, so
+  // names, so Track opens on the right network); the explorer links
+  // go to the public explorers for that shape. Computed once, so
   // the render below stays readable.
   const trackHref = (() => {
     if (id === undefined) return '/track';
@@ -252,7 +288,7 @@ export function TransactionDetailScreen() {
     params.set('hash', id);
     return `/track?${params.toString()}`;
   })();
-  const explorerUrl = id === undefined ? null : explorerUrlFor(id);
+  const explorerUrls = id === undefined ? [] : explorerUrlsFor(id);
 
   return (
     // Desktop layout (desktop-layout-v2): the detail lays out in two
@@ -414,16 +450,18 @@ export function TransactionDetailScreen() {
                 >
                   Look it up on Track
                 </Link>
-                {lookup.status !== 'malformed' && explorerUrl !== null && (
-                  <a
-                    href={explorerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-base font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
-                  >
-                    View on explorer
-                  </a>
-                )}
+                {lookup.status !== 'malformed' &&
+                  explorerUrls.map((explorer) => (
+                    <a
+                      key={explorer.url}
+                      href={explorer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-base font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                    >
+                      {explorer.label}
+                    </a>
+                  ))}
                 {lookup.status !== 'malformed' && (
                   <Button type="button" variant="secondary" onClick={handleRetry}>
                     Retry

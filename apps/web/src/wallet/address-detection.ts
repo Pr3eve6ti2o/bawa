@@ -15,9 +15,9 @@
 //      tokens), is called out before Review.
 //
 // What this is NOT, stated plainly:
-//   - A 0x address is the same address on all 60 EVM chains, so chain
+//   - A 0x address is the same address on all 59 EVM chains, so chain
 //     auto-detection from a bare 0x address is IMPOSSIBLE — the module
-//     says "the same address on all 60 EVM chains" instead of guessing
+//     says "the same address on all 59 EVM chains" instead of guessing
 //     one. Chain auto-detection from a bare address only exists for
 //     formats that belong to exactly one chain (bc1 → Bitcoin, T… →
 //     TRON, UQ/EQ → TON, bare base58 32–44 → Solana, …).
@@ -48,13 +48,14 @@
 import type { ChainId } from '../engine/boundary';
 import type { TokenRecord } from './tokens';
 
-/** The EVM chains sharing one 0x address (watch-only-families: the
-    fifty-nine 0x EVM chains, plus Ronin — its on-wire address is the
-    same 0x value, only displayed with a ronin: prefix — for sixty
-    EVM transaction chains in all). Hardcoded in the copy, with a unit
-    test asserting EVM_TX_CHAINS.length stays 60, so a chain change
-    fails the test instead of silently shipping a stale number. */
-export const EVM_CHAIN_COUNT = 60;
+/** The EVM chains sharing one 0x address string — the fifty-nine
+    0x EVM chains (watch-only-families). Ronin is the sixtieth EVM
+    transaction chain, but its addresses are shown with a ronin:
+    prefix, not as 0x strings, so it is not counted here. Hardcoded
+    in the copy, with a unit test asserting EVM_CHAIN_COUNT stays 59
+    and EVM_TX_CHAINS.length stays 60, so a chain change fails the
+    test instead of silently shipping a stale number. */
+export const EVM_CHAIN_COUNT = 59;
 
 /** What a pasted value looks like, by shape alone. */
 type AddressFormat =
@@ -65,7 +66,7 @@ type AddressFormat =
 const BASE58 = '1-9A-HJ-NP-Za-km-z';
 
 // One-chain formats, most specific first. A bare 0x address is NOT in
-// this table — it belongs to all 60 EVM chains at once (see above) —
+// this table — it belongs to all 59 EVM chains at once (see above) —
 // and bare base58 32–44 chars is last: it is Solana only once every
 // prefixed form above it has failed to match.
 const CHAIN_PATTERNS: ReadonlyArray<readonly [RegExp, ChainId, string]> = [

@@ -125,16 +125,16 @@ describe('detectAddressFormat', () => {
 });
 
 describe('describeRecipientDetection', () => {
-  it('says a 0x address works on all 60 EVM chains', () => {
+  it('says a 0x address works on all 59 EVM chains', () => {
     expect(onEth(ETH_ADDRESS)).toEqual({
       tone: 'info',
       text: `Detected: 0x address — the same address on all ${EVM_CHAIN_COUNT} EVM chains.`,
     });
   });
 
-  it('keeps the 60 in step with the EVM transaction chains', () => {
+  it('keeps the 59 0x chains distinct from the 60 EVM transaction chains', () => {
     expect(EVM_TX_CHAINS.length).toBe(60);
-    expect(EVM_CHAIN_COUNT).toBe(60);
+    expect(EVM_CHAIN_COUNT).toBe(59);
   });
 
   it('keeps the 0x watch-only family at fifty-nine (Ronin excluded by design)', () => {

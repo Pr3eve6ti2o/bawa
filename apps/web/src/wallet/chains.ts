@@ -37,9 +37,9 @@ interface CapabilityEntry {
   evidenceLevel: EvidenceLevel;
 }
 
-export type Capabilities = Record<CapabilityName, CapabilityEntry>;
+type Capabilities = Record<CapabilityName, CapabilityEntry>;
 
-export interface ChainConfig {
+interface ChainConfig {
   id: ChainId;
   displayName: string;
   symbol: string;
@@ -557,9 +557,11 @@ export const GENERATED_CHAIN_FACTS: Record<
   },
 };
 // END GENERATED CHAIN FACTS
-// Lane C (bundle-size gate): the 60 EVM chains share the same
-// CAIP-2 / CAIP-19 / profile facts, so the records carry only the
-// chain id and this helper fills in the rest. networkId is always
+// Lane C (bundle-size gate): the 60 chains filled in by this helper
+// share the same CAIP-2 / CAIP-19 / profile facts, so the records carry
+// only the chain id and this helper fills in the rest. (61 chains carry
+// a numeric evmChainId in all; eth is the one exception — its facts are
+// literal in GENERATED_CHAIN_FACTS, not filled in here.) networkId is always
 // `eip155:<evmChainId>`; assetId is `eip155:<id>/slip44:<slip44>`
 // with slip44 60 unless the chain's own coin type differs (the ten
 // chains that pass one explicitly); profileId is always
