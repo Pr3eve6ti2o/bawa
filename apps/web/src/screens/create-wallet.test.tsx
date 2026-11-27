@@ -567,7 +567,9 @@ describe('create wallet screen', () => {
     try {
       await generate(mounted.div);
       const button = mounted.div.querySelector(
-        '[aria-label="Copy recovery phrase"]',
+        // P3-A (style B): the Copy-all button's accessible name is its
+        // visible label, "Copy all 24 words" (WCAG 2.5.3 Label in Name).
+        '[aria-label="Copy all 24 words"]',
       ) as HTMLButtonElement;
       expect(button).not.toBeNull();
       await act(async () => {

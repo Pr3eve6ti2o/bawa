@@ -387,6 +387,16 @@
   --radius-bawa: var(--bawa-radius);
   --radius-bawa-sm: var(--bawa-radius-sm);
 
+  /* P3-A (style B, 2026-11-28): flat radii for the recovery-phrase
+     screens ONLY. Every --radius-* token above resolves to the wobbly
+     --bawa-radius, so no clean radius exists anywhere; these three
+     flat tokens are the clean variant the phrase screen uses (tiles
+     8px, buttons 10px, cards 12px). P3-B reuses them for the remaining
+     money screens — no other screen uses them yet. */
+  --radius-flat-sm: 8px;
+  --radius-flat: 10px;
+  --radius-flat-lg: 12px;
+
   --shadow-bawa: var(--bawa-shadow);
   --radius-xs: var(--bawa-radius-sm);
   --radius-sm: var(--bawa-radius-sm);
@@ -667,5 +677,32 @@
 
   .text-destructive {
     color: var(--link);
+  }
+}
+
+/* P3-A (style B, 2026-11-28): the flat button shape, recovery-phrase
+   screens only. Button's variants carry the wobbly radius + 2px ink
+   border (P1's system); .btn-flat — applied via Button's `flat` prop,
+   never via className — flattens both to a 1px hairline + uniform
+   10px radius, and drops the wavy press underline. Same layer,
+   later in file, so it wins over the variant utilities (the same
+   override pattern as the Lane T2 block above). P3-B reuses it for
+   the remaining money screens. */
+@layer utilities {
+  .btn-flat {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-flat);
+  }
+
+  .btn-flat:active {
+    text-decoration-line: none;
+  }
+
+  /* P3-A: the flat alert shape, recovery-phrase screens only —
+     applied via Alert's `flat` prop. Width + radius only, never the
+     border colour: the destructive variant's coral border stays. */
+  .alert-flat {
+    border-width: 1px;
+    border-radius: var(--radius-flat-lg);
   }
 }

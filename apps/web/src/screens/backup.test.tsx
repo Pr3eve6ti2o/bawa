@@ -415,8 +415,9 @@ describe.sequential('BackupScreen (S3-A: one screen, two tabs)', () => {
         value: { writeText },
         configurable: true,
       });
+      // P3-A (style B): the Copy-all button reads "Copy all 24 words".
       await act(async () => {
-        findButton(div, 'Copy').click();
+        findButton(div, 'Copy all 24 words').click();
       });
       await waitForText(div, 'Copied');
       expect(writeText).toHaveBeenCalledWith(TEST_MNEMONIC);
@@ -437,10 +438,12 @@ describe.sequential('BackupScreen (S3-A: one screen, two tabs)', () => {
   // Password verification runs a 600k-iteration PBKDF2 trial decrypt,
   // which can take several seconds while the full suite runs in parallel
   // workers.
-  it('shows the revealed words four across on desktop widths', async () => {
-    // Desktop layout (desktop-layout-v2): the revealed 24-word grid is
-    // four across at lg (six rows) instead of three across at every
-    // width. Below lg it stays two across, then three at sm.
+  it('shows the revealed words three across on desktop widths', async () => {
+    // P3-A (style B): the revealed 24-word grid is three across at
+    // desktop, not four. Four across squeezed 8-letter words to an
+    // ellipsis in this half-width column ("indica…", CDP-verified at
+    // 1280px) — a recovery word must never be visually cut. Below lg
+    // it stays two across, then three at sm.
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
     const { div, cleanup } = await mountApp('/mnemonic-backup');
     try {
@@ -450,7 +453,7 @@ describe.sequential('BackupScreen (S3-A: one screen, two tabs)', () => {
       const words = [...div.querySelectorAll('ol')].find((el) =>
         el.textContent?.includes('abandon'),
       );
-      expect(words?.className).toContain('lg:grid-cols-4');
+      expect(words?.className).not.toContain('lg:grid-cols-4');
       expect(words?.className).toContain('sm:grid-cols-3');
       expect(words?.className).toContain('grid-cols-2');
     } finally {

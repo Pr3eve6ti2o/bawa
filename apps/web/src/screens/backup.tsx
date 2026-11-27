@@ -26,6 +26,7 @@ import {
   CardTitle,
 } from '../ui/components/card';
 import { CopyButton } from '../ui/components/copy-button';
+import { RecoveryPhraseGrid } from '../ui/components/recovery-phrase-grid';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 
@@ -162,7 +163,10 @@ function RecoveryPhrasePanel({
   // reveal, profiles, guidance), so the mobile layout is untouched.
   return (
     <div className="flex flex-col space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start lg:space-y-0">
-      <Card radius="xl" className="order-1 lg:col-span-2">
+      {/* P3-A (style B): the phrase panel is flat — uniform radius,
+          1px hairline borders. The shares panel and the tabs keep the
+          existing treatment; that is P3-B. */}
+      <Card radius="flat" borderWidth="hairline" className="order-1 lg:col-span-2">
         <CardHeader>
           <CardTitle>Recovery phrase</CardTitle>
           <CardDescription>
@@ -202,14 +206,14 @@ function RecoveryPhrasePanel({
               user cannot act on without the words, so they collapse
               into a disclosure; the heading and the list stay in the
               DOM, unchanged. */}
-          <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+          <details className="rounded-flat-lg border border-border bg-paper p-4">
             <summary className="cursor-pointer text-sm font-semibold text-ink">
               Show the derivation profiles
             </summary>
             <p className="mt-2 text-base leading-6 text-ink">
               Back up the profile names with the words.
             </p>
-            <ul className="mt-2 divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+            <ul className="mt-2 divide-y rounded-flat-sm border border-border bg-paper">
               {BACKUP_PROFILES.map((profileId) => {
                 const stored = profiles.includes(profileId);
                 return (
@@ -240,7 +244,7 @@ function RecoveryPhrasePanel({
               bulleted list said the same four facts as this compact
               list, so it is deleted — not shortened. No check mark:
               these are reminders, not completed steps. */}
-          <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+          <ul className="divide-y rounded-flat-sm border border-border bg-paper">
             {guidanceItems.map((item) => (
               <li
                 key={item.id}
@@ -264,7 +268,7 @@ function RecoveryPhrasePanel({
               Anyone with these words can spend. Showing needs your
               password.
             </p>
-            <Button onClick={() => setStage('password')}>
+            <Button onClick={() => setStage('password')} flat>
               Reveal recovery phrase
             </Button>
           </>
@@ -296,7 +300,7 @@ function RecoveryPhrasePanel({
               </p>
             )}
 
-            <Button type="submit" disabled={isVerifying}>
+            <Button type="submit" disabled={isVerifying} flat>
               {isVerifying ? 'Verifying…' : 'Verify password'}
             </Button>
             {revealError && (
@@ -313,20 +317,17 @@ function RecoveryPhrasePanel({
               Write these words down in order, then hide them. Never
               photograph, share, or paste them anywhere.
             </p>
-            <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-              {words.map((word, index) => (
-                <li
-                  key={`${index}-${word}`}
-                  className="rounded-lg border border-border bg-card p-3 text-base"
-                >
-                  <span className="text-muted-foreground">{index + 1}. </span>
-                  {word}
-                </li>
-              ))}
-            </ol>
+            {/* P3-A (style B): flat, numbered, mono tiles — the shared
+                phrase grid. */}
+            <RecoveryPhraseGrid words={words} />
             <div className="flex flex-wrap gap-3">
-              <CopyButton value={words.join(' ')} label="Copy recovery phrase" />
-              <Button type="button" variant="secondary" onClick={handleHide}>
+              <CopyButton
+                value={words.join(' ')}
+                label="Copy all 24 words"
+                copyLabel="Copy all 24 words"
+                flat
+              />
+              <Button type="button" variant="secondary" onClick={handleHide} flat>
                 Hide recovery phrase
               </Button>
             </div>

@@ -18,6 +18,12 @@ const stateClasses: Record<StepState, string> = {
   completed: "border-ink bg-sun/20",
 };
 
+// P3-A (style B): StepCard is used ONLY by the Create flow
+// (screens/create-wallet.tsx), so its flat treatment is the phrase
+// screen's treatment — uniform 10px radius, 1px hairline border,
+// and the yellow highlighter is off the active label (money and
+// security copy must not look highlighted). State fills stay: sun
+// tint for completed, coral border for active — the palette is kept.
 function StepCard({
   icon,
   label,
@@ -32,7 +38,7 @@ function StepCard({
       data-slot="step-card"
       data-state={state}
       className={cn(
-        "flex items-start gap-3 rounded-bawa border-2 p-4 text-ink",
+        "flex items-start gap-3 rounded-flat border p-4 text-ink",
         stateClasses[state],
         className,
       )}
@@ -40,7 +46,7 @@ function StepCard({
       <div
         aria-hidden="true"
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-ink [&_svg]:size-5",
+          "flex size-10 shrink-0 items-center justify-center rounded-flat-sm border border-border text-ink [&_svg]:size-5",
           state === "completed" ? "bg-sun" : "bg-paper",
         )}
       >
@@ -57,11 +63,7 @@ function StepCard({
       {' '}
       <div className="min-w-0 flex-1">
         <p className="text-base font-bold text-ink">
-          {state === "active" ? (
-            <span className="bawa-marker">{label}</span>
-          ) : (
-            label
-          )}
+          {label}
         </p>
         {' '}
         {detail != null && (
