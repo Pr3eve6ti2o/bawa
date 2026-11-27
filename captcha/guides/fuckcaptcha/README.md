@@ -11,3 +11,5 @@ What was imported, and what was not: only the 39 Markdown guides from the upstre
 Intended use: education and authorised research, as the upstream project states — not evading protections on services without permission.
 
 Note on the credit wording: the upstream clone contains no literal @fcukcaptcha handle anywhere in its text; that referral wording was prescribed by the owner for this import. The upstream repository is FuckCaptcha by @vsmutok.
+
+Link maintenance (2026-11-28): eight links in the imported guides had died upstream (the 2Captcha Enterprise page, the engageub and ptigas repositories, three ScrapingCourse pages, the CapMonster Turnstile demo, the Rebrowser docs page). Dead links were removed or replaced with working equivalents in `captchas/recaptcha.md` and `captchas/cloudflare.md`; the guides are otherwise verbatim imports from FuckCaptcha at commit `410c4cab`.

@@ -20,8 +20,8 @@ This changelog does not claim full conformance to [Keep a Changelog](https://kee
 
 ### Fixed
 
-- Corrected Wallet Core pin wording: the installed pin is 4.8.4; 4.9.2 is the demonstrated reference (D21; GitHub pre-release), not the pin; 4.9.3 is the latest stable, not yet adopted (re-pinning and re-verification remain open).
-- Clarified the platform-draft pin references: repository tools pin Wallet Core 4.8.4; the Web guide specifies Wallet Core 4.9.2 as its reference pin in its tool table; the Android AAR procedure checks out tag 4.9.2.
+- Corrected Wallet Core pin wording (as recorded at [1.1.0], before the 2026-11-18 re-pin in [Unreleased]): the installed pin was 4.8.4; 4.9.2 was the demonstrated reference (D21; GitHub pre-release), not the pin; 4.9.3 was the latest stable, not yet adopted (re-pinning and re-verification remained open).
+- Clarified the platform-draft pin references (as recorded at [1.1.0], before the 2026-11-18 re-pin in [Unreleased]): repository tools pinned Wallet Core 4.8.4; the Web guide specified Wallet Core 4.9.2 as its reference pin in its tool table; the Android AAR procedure checked out tag 4.9.2.
 - Removed the carried-over CI workflow entry and its incorrect "smoke tests (28/28)" figure: 28 is the whole npm-test total at `e3b65fb8`, not a `smoke.test.js` count.
 
 ## [1.1.0] — Documentation and hardening pass — date not evidenced

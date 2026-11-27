@@ -4,7 +4,7 @@ This index is the single entry point for Bawa documentation on `main`; the root 
 
 The AI Wallet Builder itself — registries, starters, scripts, and the example web wallet — lives on the active development branch (`panel-rebuild/token-gaps`); this index lists only what exists on `main`.
 
-This index maps Bawa's wallet reference and guide: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 25 November 2026 named below (engine smoke 440, web vitest 99 files, 2,799 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and guide: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 25 November 2026 named below. On `main` itself (HEAD `29b4b62`, re-verified 28 November 2026): engine smoke 136 checks, 0 failures; launcher 48 tests OK; `make_wallet` 26 tests OK; differential test PASS; no web wallet and no vitest on `main`. Passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -31,6 +31,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [Doc 14 — Wallet App Implementation](14-wallet-app-implementation/README.md) — `DOCUMENTED_NOT_TESTED`.
 - [RECOVERY](RECOVERY.md) — `DOCUMENTED_NOT_TESTED`: recovery guidance, via the reference catalogue.
 - [Create the example wallet](CREATE-EXAMPLE-WALLET.md) — `DOCUMENTED_NOT_TESTED`: create the pre-built example web wallet from a clean checkout.
+- [Wallet lifecycle](wallet-lifecycle.md) — `DOCUMENTED_NOT_TESTED`: unlock, sign, broadcast and refresh order for the web wallet on `panel-rebuild/token-gaps`.
 
 ## Reference — accurate information
 
@@ -42,12 +43,14 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [FAQ](FAQ.md) — `DOCUMENTED_NOT_TESTED`: common questions, via the reference catalogue.
 - [FURTHER-READING](FURTHER-READING.md) — `DOCUMENTED_NOT_TESTED`: supporting reading, via the reference catalogue.
 - [References](REFERENCES.md) — `DOCUMENTED_NOT_TESTED`: supporting sources.
+- [ADR-0011 — E2E root-base build](adr/0011-e2e-root-base-build.md) — `DOCUMENTED_NOT_TESTED`: E2E harness runs against a root-base build (ADR).
 
 ## Explanation — concepts, context, reasons
 
 - [Doc 13 — Wallet App Architecture](13-wallet-app-architecture/README.md) — `DOCUMENTED_NOT_TESTED`.
 - [Doc 15 — Threat Model & Theft Prevention](15-threat-model-and-theft-prevention/README.md) — `DOCUMENTED_NOT_TESTED`.
 - [Doc 16 — Security Decision Guide](16-security-decision-guide/README.md) — `DOCUMENTED_NOT_TESTED`.
+- [How Bawa works](HOW-IT-WORKS.md) — `DOCUMENTED_NOT_TESTED`: system map and accuracy trace; describes the wallet as built on `panel-rebuild/token-gaps`.
 - [Mainnet](mainnet/MAINNET-GUIDE.md) — `DOCUMENTED_NOT_TESTED`: activation is `EXTERNALLY_DEPENDENT`; §5 SHA staleness is RESOLVED (M-33, 2026-11-10; T07 re-verification note 2026-11-12).
 - [Architecture](../ARCHITECTURE.md) — `DOCUMENTED_NOT_TESTED`: code map, invariants, and boundaries.
 - [Decisions](DECISIONS.md) — owner-delegated decisions register (ECDSA, confirmation policy, merges).
@@ -61,6 +64,8 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [Token Everywhere programme](TOKEN-EVERYWHERE-PROGRAMME.md) — programme record: Add Token by ticker, verified marks, token send/receive, full names, QR card; merged into `panel-rebuild/token-gaps` (commit `047232e`).
 - [Expansion programme](EXPANSION-PROGRAMME.md) — programme record: diagrams redrawn, captcha merge + FuckCaptcha import onto `main`, Solana sending, 22 → 84 chains, cold-load −43%; merged into `token-gaps` (commit `6c93e66`); `main` `7f9d364`.
 - [Token Verify programme](TOKEN-VERIFY-PROGRAMME.md) — programme record: token verification by contract address, new-chains bug hunt, bundle gate kept, npm audit 9 → 0, all 28 icon-less chains get real icons; merged into `token-gaps` (commit `7f12de4`).
+- [Deep Audit + Devnet E2E programme](DEEP-AUDIT-DEVNET-PROGRAMME.md) — programme record: 5-lane Deep Audit + Devnet E2E programme, merged into `panel-rebuild/token-gaps` (2026-11-23), branch `panel-rebuild/deep-audit-devnet`.
+- [Finish Product programme](FINISH-PRODUCT-PROGRAMME.md) — programme record: Lane F merge record, merged into `panel-rebuild/token-gaps` as `8191b2c` (2026-11-23).
 
 ## Evidence and gates
 

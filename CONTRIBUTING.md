@@ -45,7 +45,7 @@ Match the conventions of the surrounding code in the language you are changing. 
 
 ## Local setup and checks
 
-Use Node.js 22 and Python 3.13 to match CI; see `.github/workflows/ci.yml`. The reported local versions were Node v22.23.4 and Python 3.12.3. The [README Verification section](README.md#verification) records verification output for `npm install`, `npm test` (136 checks), the differential test, the launcher unit tests (48 tests), and the `make_wallet` unit tests (26 tests), all verified at main HEAD `667527e` on 2026-11-20. The differential test ran with bip-utils 2.12.2 (per the `smoke.test.js` header), while `requirements.txt` pins `bip-utils==2.12.3`; that run does not verify the pinned version.
+Use Node.js 22 and Python 3.13 to match CI; see `.github/workflows/ci.yml`. The reported local versions were Node v22.23.4 and Python 3.12.3. The [README Verification section](README.md#verification) records verification output for `npm install`, `npm test` (136 checks), the differential test, the launcher unit tests (48 tests), and the `make_wallet` unit tests (26 tests), all verified at main HEAD `667527e` on 2026-11-20. The differential test passes with the pinned `bip-utils==2.12.3` (`bip_utils reference checks: PASS`, verified 2026-11-13 and re-verified at main HEAD `29b4b62` on 2026-11-28); the `smoke.test.js` header's mention of 2.12.2 describes the 2026-11-08 fixture verification, not the differential run.
 
 Create and activate a Python virtual environment. From the repository root, install the Node dependencies in `tools/hdwallet-gen` and the Python dependencies from `requirements.txt`:
 

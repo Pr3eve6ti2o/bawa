@@ -1294,7 +1294,7 @@ Paying does not automatically remove risk: a paid service can reduce dependence 
 Check-date policy: for mutable pages, record the check date and the version or commit consulted. For immutable specifications, cite the fixed version or identifier; any check date records link availability only.
 
 - [EIP-155](https://eips.ethereum.org/EIPS/eip-155)
-- [TEP-74 (Jettons)](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons.md)
+- [TEP-74 (Jettons)](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md)
 - [Bitcoin Developer Guide](https://developer.bitcoin.org/devguide/)
 
 - BIP-39 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0039.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)

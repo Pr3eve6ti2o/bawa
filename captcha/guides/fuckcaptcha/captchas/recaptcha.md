@@ -134,7 +134,6 @@ Use these official and community test sites to benchmark detection, test solvers
 | **Google Appspot v3 Score** | [recaptcha-demo.appspot.com/recaptcha-v3-request-scores.php](https://recaptcha-demo.appspot.com/recaptcha-v3-request-scores.php) | v3 Score | Returns real-time score assessment (`0.0 - 1.0`) |
 | **2Captcha Demo Suite** | [2captcha.com/demo/recaptcha-v2](https://2captcha.com/demo/recaptcha-v2) | v2, v3, Enterprise | Live playground for testing automation & token insertion |
 | **CapMonster Cloud Demo** | [capmonster.cloud/en/demo/recaptcha-v2](https://capmonster.cloud/en/demo/recaptcha-v2) | v2 Checkbox | Interactive test form for callback and token handling |
-| **ScrapingCourse Demo** | [scrapingcourse.com/recaptcha-v2](https://www.scrapingcourse.com/recaptcha-v2) | v2 & v3 | Web scraping benchmark suite |
 
 ---
 
@@ -198,8 +197,6 @@ A curated list of dedicated open-source projects, automation libraries, and solv
 | **Xewdy444/Playwright-reCAPTCHA** | Python (Playwright) | 🔥 Solves reCAPTCHA v2 via audio & captures v3 tokens (Sync + Async) | [Xewdy444/Playwright-reCAPTCHA](https://github.com/Xewdy444/Playwright-reCAPTCHA) |
 | **sarperavci/GoogleRecaptchaBypass** | Python (DrissionPage/Selenium) | Audio challenge solver with high bypass success rate | [sarperavci/GoogleRecaptchaBypass](https://github.com/sarperavci/GoogleRecaptchaBypass) |
 | **thicccat688/selenium-recaptcha-solver** | Python (Selenium) | Audio solver for Selenium with multi-step support | [thicccat688/selenium-recaptcha-solver](https://github.com/thicccat688/selenium-recaptcha-solver) |
-| **engageub/Anonymously-Solve-reCAPTCHA** | Python | Audio challenge solver using SpeechRecognition and pydub | [engageub/Anonymously-Solve-reCAPTCHA](https://github.com/engageub/Anonymously-Solve-reCAPTCHA) |
-| **ptigas/reCAPTCHA-solver** | Python / PyTorch | Deep learning vision-based solver for reCAPTCHA image challenges | [ptigas/reCAPTCHA-solver](https://github.com/ptigas/reCAPTCHA-solver) |
 
 ### 🛡️ Stealth & Anti-Detection Frameworks
 
@@ -270,7 +267,6 @@ Source: [FAQ — test keys](https://developers.google.com/recaptcha/docs/faq). E
 | [v3 scores](https://recaptcha-demo.appspot.com/recaptcha-v3-request-scores.php) | Live score `0.0–1.0` and `action` |
 | [2captcha v2](https://2captcha.com/demo/recaptcha-v2) · [v3](https://2captcha.com/demo/recaptcha-v3) · [Enterprise](https://2captcha.com/demo/recaptcha-v2-enterprise) | Sandboxes with a visible sitekey |
 | [CapMonster v2](https://capmonster.cloud/en/demo/recaptcha-v2) · [v3](https://capmonster.cloud/en/demo/recaptcha-v3) | Forms for checking the callback |
-| [scrapingcourse v2](https://www.scrapingcourse.com/recaptcha-v2) · [v3](https://www.scrapingcourse.com/recaptcha-v3) | Scraping training pages |
 | [bot.sannysoft.com](https://bot.sannysoft.com/) | Automation leaks that cut the v3 score |
 | [creepjs](https://abrahamjuliot.github.io/creepjs/) | Canvas / WebGL / lies collected by the client script |
 
@@ -280,11 +276,10 @@ Source: [FAQ — test keys](https://developers.google.com/recaptcha/docs/faq). E
 - [dessant/buster](https://github.com/dessant/buster) — an extension that takes the audio challenge; useful for the audio-route UX, not for copying the integration.
 - [Xewdy444/Playwright-reCAPTCHA](https://github.com/Xewdy444/Playwright-reCAPTCHA) — a library with separate paths for v2 audio and capturing a v3 token.
 - [sarperavci/GoogleRecaptchaBypass](https://github.com/sarperavci/GoogleRecaptchaBypass) — an audio route on DrissionPage.
-- [ptigas/reCAPTCHA-solver](https://github.com/ptigas/reCAPTCHA-solver) — an older vision approach to tiles; shows the limits of grid classification.
 - [openai/whisper](https://github.com/openai/whisper) · [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — models commonly used to transcribe the audio challenge.
 - [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) · [patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) — why stock Playwright gets a low v3 score.
 - [SeleniumBase UC Mode](https://seleniumbase.io/help_docs/uc_mode/) — the browser mode where v2 more often gives a one-click green checkbox.
-- [2Captcha reCAPTCHA v2](https://2captcha.com/p/recaptcha_v2) · [v3](https://2captcha.com/p/recaptcha_v3) · [Enterprise](https://2captcha.com/p/recaptcha_v2_enterprise) — field notes on sitekey, `action`, `enterprisePayload`, and token lifetime (120 seconds, single-use).
+- [2Captcha reCAPTCHA v2](https://2captcha.com/p/recaptcha_v2) · [v3](https://2captcha.com/p/recaptcha_v3) · [Enterprise](https://2captcha.com/demo/recaptcha-v2-enterprise) — field notes on sitekey, `action`, `enterprisePayload`, and token lifetime (120 seconds, single-use).
 
 ---
 

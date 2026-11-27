@@ -2324,7 +2324,7 @@ Require UTXOs, nonce, resources, account state and the fee quote to satisfy thei
 ### Sources
 
 - [mempool.space Bitcoin testnet4 API](https://mempool.space/testnet4/api) — checked 2026-11-08.
-- [Blockstream draft endpoint: testnet3, rejected for this integration](https://blockstream.info/testnet/api/) — checked 2026-11-08.
+- Blockstream draft endpoint `https://blockstream.info/testnet/api/` (testnet3, rejected for this integration) — checked 2026-11-08; the endpoint now returns 404.
 - [PublicNode Sepolia execution RPC](https://ethereum-sepolia-rpc.publicnode.com) — checked 2026-11-08.
 - [Blockscout Sepolia API](https://eth-sepolia.blockscout.com/api/v2) — checked 2026-11-08.
 - [TRON Nile API](https://nile.trongrid.io) — checked 2026-11-08.
@@ -2453,7 +2453,7 @@ Handle a reorganisation as a reversible state transition, including after the th
 ### Sources
 
 - [mempool.space testnet4 tip-height endpoint](https://mempool.space/testnet4/api/blocks/tip/height) — checked 2026-11-08.
-- [Draft Blockstream endpoint — testnet3, rejected for testnet4](https://blockstream.info/testnet/api/) — checked 2026-11-08; endpoint defect confirmed by live-check record R04 F12 (OI-033).
+- Draft Blockstream endpoint `https://blockstream.info/testnet/api/` — testnet3, rejected for testnet4 — checked 2026-11-08; endpoint defect confirmed by live-check record R04 F12 (OI-033); the endpoint now returns 404.
 - BUILD-LOG Stage 2 / this guide's Confirmation and finality policy table — BTC policy threshold of 6 confirmations; check date: 2026-11-08.
 
 ### F.6 — Ethereum Sepolia

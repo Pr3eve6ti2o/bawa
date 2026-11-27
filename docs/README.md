@@ -19,6 +19,7 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 - [09 — Signing, Descriptors, PSBT & Hardware](09-signing-and-hardware/README.md) — **How-to guide:** work with signing, descriptors, PSBT and hardware.
 - [13 — Wallet App Architecture](13-wallet-app-architecture/README.md) — **How-to guide:** structure a wallet app. Continue with [Wallet App Implementation](14-wallet-app-implementation/README.md) when you want to implement it.
 - [14 — Wallet App Implementation](14-wallet-app-implementation/README.md) — **How-to guide:** implement a wallet app. Use [Wallet App Architecture](13-wallet-app-architecture/README.md) for design context.
+- [Wallet lifecycle](wallet-lifecycle.md) — **How-to guide:** follow the unlock, sign, broadcast and refresh order for the web wallet on `panel-rebuild/token-gaps`.
 
 ### Platform guides
 
@@ -35,6 +36,7 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 - [FAQ](FAQ.md) — **Reference:** find answers to common questions.
 - [Further reading](FURTHER-READING.md) — **Reference:** choose what to read next.
 - [References](REFERENCES.md) — **Reference:** find the referenced sources.
+- [ADR-0011 — E2E root-base build](adr/0011-e2e-root-base-build.md) — **Reference:** the E2E harness runs against a root-base build (ADR).
 
 ## Explanation — understand concepts and reasons
 
@@ -42,6 +44,9 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 - [15 — Threat Model & Theft Prevention](15-threat-model-and-theft-prevention/README.md) — **Explanation:** understand threats and the reasons for theft-prevention measures before you make security decisions.
 - [Security](SECURITY.md) — **Explanation:** understand the trust boundaries and security posture. For decisions, use the [Security Decision Guide](16-security-decision-guide/README.md).
 - [Testing](TESTING.md) — **Explanation:** understand the layered testing strategy. For operations and testing tasks, use [Operations & Testing](10-operations-and-testing/README.md).
+- [How Bawa works](HOW-IT-WORKS.md) — **Explanation:** the system map and accuracy trace; describes the wallet as built on `panel-rebuild/token-gaps`.
+- [Deep Audit + Devnet E2E programme](DEEP-AUDIT-DEVNET-PROGRAMME.md) — **Explanation:** programme record for the 5-lane Deep Audit + Devnet E2E programme, merged into `panel-rebuild/token-gaps` (2026-11-23).
+- [Finish Product programme](FINISH-PRODUCT-PROGRAMME.md) — **Explanation:** programme record for the Lane F merge, merged into `panel-rebuild/token-gaps` as `8191b2c` (2026-11-23).
 
 ## Recommended reading order
 

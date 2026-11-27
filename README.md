@@ -41,7 +41,7 @@ Then open <http://localhost:4173>. No account, no API key, no funds needed — e
 
 ![Bawa architecture: guide, HD core, vault, providers, flows and storage](docs/diagrams/architecture.svg)
 
-![One phrase, one account, 22 chains](docs/diagrams/explainer.svg)
+![One phrase, one account, 87 chains](docs/diagrams/explainer.svg)
 
 How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
 
@@ -112,12 +112,12 @@ Do not treat these checks as a mainnet or production-readiness claim.
 
 ## Architecture
 
-On `main` at HEAD `667527e` (verified 2026-11-20), Bawa's launcher prints routes and never executes them. Secret-handling tools sit inside a trust boundary; public-roots-only tools, documentation routes and unavailable printed routes sit outside it.
+On `main` at HEAD `29b4b62` (verified 2026-11-28), Bawa's launcher prints routes and never executes them. Secret-handling tools sit inside a trust boundary; public-roots-only tools, documentation routes and unavailable printed routes sit outside it.
 
 *The two diagrams above are static SVG images so they display in every viewer, including the GitHub mobile app.*
 
 
-The CLI prints routes without executing them; secret-handling tools sit inside a trust boundary: M uses Trust Wallet Core 4.9.3 WASM and writes encrypted seed.enc.json using AES-256-GCM with AAD nova-shop-seed-v1 and file mode 0600; G exports verifySeedBundle and readDataKeyFromFd; D defaults to secrets/seed.enc.json. Outside the boundary, H lives in tools/hdwallet-gen/ and holds public-roots-only tools: derive_daemon.js is a JSONL daemon; compare.js compares addresses from public roots; the paths are BTC m/84'/0'/0'/0'/i, ETH m/44'/60'/0'/0'/i and TRX m/44'/195'/0'/0'/i; extended-key.js validates extended keys before WASM. Also outside the boundary, the AI-guided documentation route covers guides 01 to 16, and three launcher targets are unavailable.
+The CLI prints routes without executing them; secret-handling tools sit inside a trust boundary: M uses Trust Wallet Core 4.9.3 WASM and writes encrypted seed.enc.json using AES-256-GCM with AAD nova-shop-seed-v1 and file mode 0600; G exports verifySeedBundle and readDataKeyFromFd; D defaults to secrets/seed.enc.json. Outside the boundary, H lives in tools/hdwallet-gen/ and holds public-roots-only tools: derive_daemon.js is a JSONL daemon; compare.js compares addresses from public roots; the paths are BTC m/84'/0'/0'/0'/i, ETH m/44'/60'/0'/0'/i and TRX m/44'/195'/0'/0'/i; extended-key.js validates extended keys before WASM. Also outside the boundary, the AI-guided documentation route covers guides 01 to 16, and four launcher targets are unavailable.
 
 ### Inside the trust boundary
 
@@ -165,7 +165,7 @@ Use a wallet application instead for balances, signing or broadcast. The `main` 
 
 **AI-guided build routes:** Options 3 and 4 provide AI-guided build routes following guides 01 to 16 and the web-wallet and android-wallet guides. Starters are unavailable on `main`.
 
-**Recorded test results:** All at `667527e`: smoke, 136 checks with 0 failures; launcher, 48 tests OK; `make_wallet`, 26 tests OK; differential `bip_utils` reference checks, PASS. See the [full records](docs/10-operations-and-testing/README.md). Passing tests do not establish production readiness.
+**Recorded test results:** All at `667527e`: smoke, 136 checks with 0 failures; launcher, 48 tests OK; `make_wallet`, 26 tests OK; differential `bip_utils` reference checks, PASS. See the [Verification](#verification) section below. Passing tests do not establish production readiness.
 
 **Mainnet-first direction:** The owner’s direction is mainnet-first, with testnet secondary. This has not yet been delivered. The [mainnet guide](docs/mainnet/MAINNET-GUIDE.md) exists but does not establish mainnet readiness.
 
@@ -227,7 +227,7 @@ Verified at commit `667527e` on 2026-11-20:
 - `make_wallet`: `26 tests OK`
 - Differential: `bip_utils reference checks: PASS`
 
-See the [full verification records](docs/10-operations-and-testing/README.md).
+To re-run these checks, see [docs/10-operations-and-testing/README.md](docs/10-operations-and-testing/README.md) and [docs/TESTING.md](docs/TESTING.md).
 
 [`docs/README-FULL.md`](docs/README-FULL.md) is the frozen 2026-11-08 archive, with 1,285 lines and 81,316 bytes, whose header names the `e3b65fb8` snapshot. It is not a verbatim copy of that commit’s root README, which has 1,019 lines and 55,192 bytes, and it is not the file of the same name at tag `archive/hd-wallet-professional`.
 

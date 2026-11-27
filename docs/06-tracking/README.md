@@ -857,8 +857,5 @@ Use primary sources only:
   - [`getGenesisHash`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getgenesishash.mdx).
   - [`getSlot`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getslot.mdx).
   - [`getSignatureStatuses`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getsignaturestatuses.mdx).
-  - [`getGenesisHash`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getgenesishash.mdx).
-  - [`getSlot`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getslot.mdx).
 - [Wallet Core repository](https://github.com/trustwallet/wallet-core).
-  - [`getSignatureStatuses`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getsignaturestatuses.mdx).
 - Trust Wallet: [documentation home](https://developer.trustwallet.com/) and [Wallet Core repository](https://github.com/trustwallet/wallet-core).

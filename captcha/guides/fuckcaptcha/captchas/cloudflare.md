@@ -128,8 +128,7 @@ Cloudflare provides official test keys for integration testing. These keys work 
 | **NowSecure Challenge Lab** | [nowsecure.nl](https://nowsecure.nl/) | WAF Challenge | Classic Cloudflare Edge Managed Challenge test domain |
 | **2Captcha Turnstile Playground** | [2captcha.com/demo/cloudflare-turnstile](https://2captcha.com/demo/cloudflare-turnstile) | Turnstile | Live test sandbox for token insertion and callback tests |
 | **2Captcha Challenge Playground** | [2captcha.com/demo/cloudflare-turnstile-challenge](https://2captcha.com/demo/cloudflare-turnstile-challenge) | Managed Challenge | Live interactive challenge test bed |
-| **CapMonster Cloud Turnstile Demo** | [capmonster.cloud/en/demo/turnstile](https://capmonster.cloud/en/demo/turnstile) | Turnstile | Interactive sandbox with event callbacks |
-| **ScrapingCourse Turnstile** | [scrapingcourse.com/cloudflare-turnstile](https://www.scrapingcourse.com/cloudflare-turnstile) | Turnstile | Web scraping benchmark suite |
+| **CapMonster Cloud Turnstile Demo** | [capmonster.cloud/en/cloudflare-turnstile](https://capmonster.cloud/en/cloudflare-turnstile/) | Turnstile | Turnstile solver — test it free on the page |
 
 ---
 
@@ -236,11 +235,10 @@ This page does not include ready-made scripts. Below is a map of official pages,
 | [tls.peet.ws](https://tls.peet.ws/) | JA3/JA4, HTTP/2, and Client Hints for the same session — useful for comparing a browser and an HTTP client |
 | [turnstile.zerocdn.com](https://turnstile.zerocdn.com/) | Public bench for watching the iframe and the `cf-turnstile-response` field |
 | [nowsecure.nl](https://nowsecure.nl/) | Classic full-page Managed Challenge ("Just a moment…") |
-| [scrapingcourse.com/cloudflare-turnstile](https://www.scrapingcourse.com/cloudflare-turnstile) | Turnstile training ground |
 | [scrapingcourse.com/cloudflare-challenge](https://www.scrapingcourse.com/cloudflare-challenge) | Edge challenge training ground |
 | [2captcha.com/demo/cloudflare-turnstile](https://2captcha.com/demo/cloudflare-turnstile) | Widget sandbox with field descriptions |
 | [2captcha.com/demo/cloudflare-turnstile-challenge](https://2captcha.com/demo/cloudflare-turnstile-challenge) | Interactive challenge |
-| [capmonster.cloud/en/demo/turnstile](https://capmonster.cloud/en/demo/turnstile) | Demo with callback events |
+| [capmonster.cloud/en/cloudflare-turnstile](https://capmonster.cloud/en/cloudflare-turnstile/) | Turnstile solver page |
 | [bot.sannysoft.com](https://bot.sannysoft.com/) | Quick checklist of automation leaks that Cloudflare also looks at |
 | [abrahamjuliot.github.io/creepjs](https://abrahamjuliot.github.io/creepjs/) | Deep fingerprint: canvas, WebGL, lies, headless |
 
@@ -251,7 +249,6 @@ This page does not include ready-made scripts. Below is a map of official pages,
 - [FoxIO-LLC/ja4](https://github.com/FoxIO-LLC/ja4) — the JA4 specification that Bot Management shows alongside JA3.
 - [lwthiker/curl-impersonate](https://github.com/lwthiker/curl-impersonate) — why a normal HTTP client does not match a Chrome fingerprint even with the correct `User-Agent`.
 - [rebrowser/rebrowser-bot-detector](https://github.com/rebrowser/rebrowser-bot-detector) — an open detector for CDP leaks that Turnstile and Challenge react to.
-- [rebrowser.net docs](https://rebrowser.net/docs/playwright-puppeteer-leak-patches) — why `Runtime.enable` breaks a "clean" Playwright/Puppeteer session.
 - [SeleniumBase UC Mode](https://seleniumbase.io/help_docs/uc_mode/) — docs for the mode that clicks Turnstile with a system mouse, not a synthetic CDP click.
 - [Camoufox](https://camoufox.com/) — stealth Firefox and which fingerprints are spoofed at the engine level.
 - [D4Vinci/Scrapling](https://github.com/D4Vinci/Scrapling) — a framework with `StealthyFetcher` and built-in Turnstile/interstitial handling.
