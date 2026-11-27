@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -23,6 +24,23 @@ import {
 // build base, or relative URLs (e.g. wallet-core.wasm) resolve to the
 // domain root instead of /bawa/. Captured from the resolved config.
 let resolvedBase = '/'
+
+// G-9 (Lane T2, 2026-11-28): build stamp — the source commit + build
+// time, injected into dist/index.html so the served artifact identifies
+// itself. Generated at build time from git; falls back to 'unknown'
+// when git is unavailable (e.g. a source tarball). Never hardcoded.
+function buildStamp(): { commit: string; time: string } {
+  let commit = 'unknown'
+  try {
+    commit = execSync('git rev-parse --short HEAD', {
+      encoding: 'utf-8',
+    }).trim()
+  } catch {
+    commit = 'unknown'
+  }
+  return { commit, time: new Date().toISOString() }
+}
+const { commit: buildCommit, time: buildTime } = buildStamp()
 
 export default defineConfig({
   // GitHub Pages (panel-rebuild/pages-base): served under /bawa/ —
@@ -56,10 +74,21 @@ export default defineConfig({
         const meta =
           `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY_META}">`
         const withBase = html.replace('<base href="/" />', `<base href="${resolvedBase}" />`)
+        // G-9 build stamp (Lane T2): source commit + build time, as an
+        // HTML comment and a data attribute on <html> (readable in the
+        // DOM as document.documentElement.dataset.bawaBuild). The favicon
+        // href is rebased the same way as <base> above, so the Pages
+        // build (base /bawa/) serves /bawa/favicon.svg.
+        const withStamp = withBase
+          .replace('<html lang="en">', `<html lang="en" data-bawa-build="${buildCommit} ${buildTime}">`)
+          .replace('href="/favicon.svg"', `href="${resolvedBase}favicon.svg"`)
+        const stampComment = `<!-- Bawa build: ${buildCommit} ${buildTime} -->`
         // Insert before the LAST </head>: a first-occurrence replace breaks
         // if any earlier literal (e.g. a comment) contains the string.
-        const headClose = withBase.lastIndexOf('</head>')
-        return headClose === -1 ? withBase : withBase.slice(0, headClose) + meta + '\n  ' + withBase.slice(headClose)
+        const headClose = withStamp.lastIndexOf('</head>')
+        return headClose === -1
+          ? withStamp
+          : withStamp.slice(0, headClose) + meta + '\n  ' + stampComment + '\n  ' + withStamp.slice(headClose)
       },
     },
   ],
