@@ -4,7 +4,7 @@ import { useWallet } from '../state/wallet-context';
 import type { BalanceState } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
-import { fiatValueForBalance, quoteFreshnessLabel, unitPriceForChain } from '../wallet/prices';
+import { fiatValueForBalance, formatChangePct, isFreshQuote, quoteFreshnessLabel, unitPriceForChain } from '../wallet/prices';
 import type {
   FiatValueResult,
   PriceEntry,
@@ -52,6 +52,36 @@ function priceCell(displayUnit: UnitPrice): PriceCell {
 }
 
 /**
+ * P0-A (24h on the row): the 24 h movement from the entry's quote, when
+ * the feed sent one. Fresh by the app's own 10-minute rule → plain;
+ * older than that — an expired quote, or a last-good quote carried over
+ * a 429 by mergePreservingFreshEntries — → the same figure with a
+ * "stale" marker, never dropped and never a fabricated 0.00%. A
+ * fallback quote carries no change, and an error with no previous quote
+ * has none either; both omit the movement. Colour is sign only: the
+ * 4-colour cap (palette audit) admits no green/red until the P3 style
+ * work restores semantic colours.
+ */
+export type RowChange24h = { text: string; stale: boolean };
+
+function change24hForEntry(
+  entry: PriceEntry | undefined,
+  nowMs: number,
+): RowChange24h | undefined {
+  if (entry?.status !== 'fresh' && entry?.status !== 'expired') return undefined;
+  const pct = entry.quote.change24hPct;
+  if (typeof pct !== 'number' || !Number.isFinite(pct)) return undefined;
+  return { text: `24h ${formatChangePct(pct)}`, stale: !isFreshQuote(entry.quote, nowMs) };
+}
+
+/** The change as a detail-line suffix (` · 24h +1.23%`, ` · stale` when stale). */
+function changeSuffix(change: RowChange24h | undefined): string {
+  return change === undefined
+    ? ''
+    : ` · ${change.text}${change.stale ? ' · stale' : ''}`;
+}
+
+/**
  * One asset's row — a native chain or a token — computed once and
  * rendered by either variant (list rows or the wide table). The
  * computation is the same either way, so a balance or price state can
@@ -88,6 +118,8 @@ type AssetRowModel =
       symbol: string;
       statusText: string;
       price: PriceCell;
+      /** P0-A: the 24 h movement for the price cell, when the feed sent one. */
+      change24h?: RowChange24h;
       link: string;
       isToken: boolean;
       logoChain: ChainId | null;
@@ -110,6 +142,8 @@ type AssetRowModel =
       valueText: string | undefined;
       detail: string;
       price: PriceCell;
+      /** P0-A: the 24 h movement for the price cell, when the feed sent one. */
+      change24h?: RowChange24h;
       link: string;
       isToken: boolean;
       logoChain: ChainId | null;
@@ -281,6 +315,9 @@ function getNativeRowModel(
       ? { kind: 'missing' }
       : unit;
   const link = `/assets/${chain}`;
+  // P0-A: the 24 h movement for this row, computed once — the ready
+  // detail line and the price cells share it.
+  const change24h = change24hForEntry(entry, nowMs);
 
   if (balance.status === 'loading') {
     return {
@@ -313,6 +350,7 @@ function getNativeRowModel(
           ? 'Balance unavailable'
           : 'Could not load balance',
       price: priceCell(displayUnit),
+      ...(change24h === undefined ? {} : { change24h }),
       link,
       isToken: false,
       logoChain: chain,
@@ -341,6 +379,10 @@ function getNativeRowModel(
       devnet,
       balance.status === 'zero',
     ));
+    // P0-A: the 24 h movement rides on the existing detail line — no
+    // extra row height. The price line already says "per BTC", so the
+    // movement appends to it ("$61,706.00 per BTC · 24h +1.23%").
+    detail += changeSuffix(change24h);
   }
 
   return {
@@ -351,10 +393,14 @@ function getNativeRowModel(
     searchText: `${config.displayName} ${config.symbol} ${chain}`,
     symbol: config.symbol,
     balanceStatus: balance.status,
-    amount: balance.status === 'zero' ? 'Zero balance' : value,
+    // P0-A (double-zero): the amount is always the figure — "0 BTC"
+    // for a zero balance, never the words "Zero balance". The words
+    // survive only as the subline (ListRow), as in the table variant.
+    amount: value,
     valueText: fiatText,
     detail,
     price: priceCell(displayUnit),
+    ...(change24h === undefined ? {} : { change24h }),
     link,
     isToken: false,
     logoChain: chain,
@@ -396,6 +442,9 @@ function getTokenRowModel(
     tokenPricesLoading === true && unit.kind === 'unavailable'
       ? { kind: 'missing' }
       : unit;
+  // P0-A: the 24 h movement for this row, computed once (see the
+  // native model above).
+  const change24h = change24hForEntry(entry, nowMs);
 
   if (balance.status === 'loading') {
     return {
@@ -434,6 +483,7 @@ function getTokenRowModel(
           ? 'Balance unavailable'
           : 'Could not load balance',
       price: priceCell(displayUnit),
+      ...(change24h === undefined ? {} : { change24h }),
       link,
       isToken: true,
       logoChain: null,
@@ -466,6 +516,9 @@ function getTokenRowModel(
       devnet,
       balance.status === 'zero',
     ));
+    // P0-A: the 24 h movement rides on the existing detail line — no
+    // extra row height (see the native model above).
+    detail += changeSuffix(change24h);
   }
 
   return {
@@ -476,10 +529,14 @@ function getTokenRowModel(
     searchText: `${token.name} ${token.symbol} ${chainName} ${token.chain} ${token.contract}`,
     symbol: token.symbol,
     balanceStatus: balance.status,
-    amount: balance.status === 'zero' ? 'Zero balance' : value,
+    // P0-A (double-zero): the amount is always the figure — "0 USDC"
+    // for a zero balance, never the words "Zero balance" (see the
+    // native model above).
+    amount: value,
     valueText: fiatText,
     detail,
     price: priceCell(displayUnit),
+    ...(change24h === undefined ? {} : { change24h }),
     link,
     isToken: true,
     logoChain: null,
@@ -523,9 +580,15 @@ function ListRow({ model }: { model: AssetRowModel }) {
             <span className="block text-[15px] font-bold text-foreground">
               {model.price.text}
             </span>
-            <span className="block text-xs text-muted-foreground">
-              {`per ${model.symbol}`}
-            </span>
+            {/* P0-A: no "per <symbol>" label here — the price stands
+                alone, with the 24 h movement under it when the feed
+                sent one (same shape as the table price cell). */}
+            {model.change24h !== undefined ? (
+              <span className="block text-xs text-muted-foreground">
+                {model.change24h.text}
+                {model.change24h.stale ? ' · stale' : ''}
+              </span>
+            ) : null}
           </span>
         ) : model.price.kind === 'state' ? (
           <span className="shrink-0 text-xs text-muted-foreground">{model.price.text}</span>
@@ -547,7 +610,18 @@ function ListRow({ model }: { model: AssetRowModel }) {
           {...(model.valueText === undefined ? {} : { value: model.valueText })}
           detail={model.detail}
           {...(model.isToken ? { verified: model.verified === true } : {})}
-          subline={model.isToken ? model.subtitle : undefined}
+          // P0-A (double-zero): a zero native row carries "Zero
+          // balance" only as the subline — the amount line is the
+          // figure ("0 BTC"), as in the table variant. A token row
+          // keeps its contract subtitle here (the copycat check), so
+          // its zero state reads from the "0 USDC" amount + $0.00.
+          subline={
+            model.isToken
+              ? model.subtitle
+              : model.balanceStatus === 'zero'
+                ? 'Zero balance'
+                : undefined
+          }
         />
       </Link>
     </li>
@@ -563,15 +637,22 @@ function ListRow({ model }: { model: AssetRowModel }) {
 const TABLE_GRID =
   'grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 px-4 py-3 @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] @md:items-center';
 
-function TablePriceCell({ price, symbol }: { price: PriceCell; symbol: string }) {
+function TablePriceCell({ price, change }: { price: PriceCell; change?: RowChange24h }) {
   // No alignment here: the parent cell aligns the price (right in the
   // wide table, right in the narrow right-hand column, left under the
-  // name on a failed row).
+  // name on a failed row). P0-A: no "per <symbol>" label — the column
+  // header says Price (Lane D #49). The 24 h movement sits on the
+  // existing subline instead, so the cell stays two lines tall.
   if (price.kind === 'fresh') {
     return (
       <span>
         <span className="block text-[15px] font-bold text-foreground">{price.text}</span>
-        <span className="block text-xs text-muted-foreground">{`per ${symbol}`}</span>
+        {change !== undefined ? (
+          <span className="block text-xs text-muted-foreground">
+            {change.text}
+            {change.stale ? ' · stale' : ''}
+          </span>
+        ) : null}
       </span>
     );
   }
@@ -624,7 +705,7 @@ function TableRow({ model }: { model: AssetRowModel }) {
             —
           </span>
           <span className="col-start-1 row-start-2 @md:col-start-auto @md:row-start-auto @md:text-right">
-            <TablePriceCell price={model.price} symbol={model.symbol} />
+            <TablePriceCell price={model.price} change={model.change24h} />
           </span>
         </div>
       </li>
@@ -683,7 +764,7 @@ function TableRow({ model }: { model: AssetRowModel }) {
             )}
           </span>
           <span className="col-start-2 row-start-2 text-right @md:col-start-auto @md:row-start-auto">
-            <TablePriceCell price={model.price} symbol={model.symbol} />
+            <TablePriceCell price={model.price} change={model.change24h} />
           </span>
           <span className="col-start-2 row-start-1 min-w-0 text-right @md:col-start-auto @md:row-start-auto">
             {valueText === undefined ? (

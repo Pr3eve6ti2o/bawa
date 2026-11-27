@@ -12,6 +12,7 @@ import {
   type PortfolioTokenContribution,
 } from '../wallet/prices';
 import { fiatValueForTokenBalance } from '../wallet/token-prices';
+import { shortenAddress } from '../wallet/address-detection';
 import { tokenKey } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
 import { NumberTicker } from '../ui/components/number-ticker';
@@ -55,6 +56,7 @@ export function DashboardScreen() {
     refreshBalances,
     vaultState,
     tokenBalances,
+    vaultAddresses,
     devnetEnabled,
   } = useWallet();
   const isLocked = vaultState === 'locked';
@@ -392,6 +394,41 @@ export function DashboardScreen() {
   // a missing total is never disguised as a hidden one.
   const heroText = isLocked ? 'Locked' : hideBalance && hero.text !== 'Unavailable' ? '••••••' : animatedHeroText;
 
+  // P0-A (copy address 4 taps → 1): the primary receiving address on
+  // the hero, with a Copy button beside it. The Ethereum address is
+  // the same on all EVM chains, so it is the one address to copy; a
+  // wallet without one falls back to the first address on any balance
+  // chain. A public receiving address, never a secret — it stays
+  // visible even while the balance is masked. Locked (or no) vaults
+  // have no addresses in state, so the row hides itself there.
+  const primaryAddress = useMemo(() => {
+    const eth = vaultAddresses?.eth?.[0];
+    if (typeof eth === 'string' && eth !== '') return eth;
+    for (const chain of availableFor('balance')) {
+      const first = vaultAddresses?.[chain]?.[0];
+      if (typeof first === 'string' && first !== '') return first;
+    }
+    return undefined;
+  }, [vaultAddresses]);
+
+  // P0-A (Lane E M8): the button's own label flips to "Copied!" for 2 s
+  // after a successful copy — no separate status line. A failed write
+  // (e.g. a denied clipboard) flips to "Couldn't copy" for the same 2 s.
+  const [copyLabel, setCopyLabel] = useState<'copy' | 'copied' | 'failed'>('copy');
+  const copyTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(copyTimerRef.current), []);
+  async function copyPrimaryAddress(): Promise<void> {
+    if (primaryAddress === undefined) return;
+    window.clearTimeout(copyTimerRef.current);
+    try {
+      await navigator.clipboard.writeText(primaryAddress);
+      setCopyLabel('copied');
+    } catch {
+      setCopyLabel('failed');
+    }
+    copyTimerRef.current = window.setTimeout(() => setCopyLabel('copy'), 2000);
+  }
+
   return (
     <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
       <h1 className="sr-only">Portfolio</h1>
@@ -421,6 +458,22 @@ export function DashboardScreen() {
             totals render exactly as before. */}
         <p className="break-words tabular-nums text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker"><NumberTicker text={heroText} /></span></p>
         <p className="font-display text-xl text-ink">Total value in US dollars.</p>
+        {primaryAddress !== undefined && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="font-mono text-sm break-all text-ink" title={primaryAddress}>
+              {shortenAddress(primaryAddress)}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="pill"
+              aria-live="polite"
+              onClick={() => void copyPrimaryAddress()}
+            >
+              {copyLabel === 'copied' ? 'Copied!' : copyLabel === 'failed' ? "Couldn't copy" : 'Copy'}
+            </Button>
+          </div>
+        )}
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}

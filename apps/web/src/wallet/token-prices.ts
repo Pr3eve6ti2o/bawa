@@ -297,6 +297,7 @@ export function saveCachedTokenPrices(
       usdPrice: string;
       providerUpdatedAtMs: number;
       fetchedAtMs: number;
+      change24hPct?: number;
     }> = [];
     for (const [key, entry] of Object.entries(entries)) {
       if (entry?.status !== 'fresh') continue;
@@ -316,6 +317,12 @@ export function saveCachedTokenPrices(
         usdPrice: quote.usdPrice,
         providerUpdatedAtMs: quote.providerUpdatedAtMs,
         fetchedAtMs: quote.fetchedAtMs,
+        // P0-A: the 24 h movement rides with the quote (see
+        // saveCachedPrices) — a cold start on a rate-limited feed
+        // still shows the last known movement with its stale marker.
+        ...(typeof quote.change24hPct === 'number'
+          ? { change24hPct: quote.change24hPct }
+          : {}),
       });
     }
     writePriceCache(store, TOKEN_PRICE_CACHE_KEY, 2, quotes);
@@ -375,6 +382,12 @@ export function loadCachedTokenPrices(
         providerUpdatedAtMs,
         fetchedAtMs,
         source: source as PriceSource,
+        // P0-A: restore the cached 24 h movement when the record
+        // carries a finite one (see saveCachedTokenPrices).
+        ...(typeof value['change24hPct'] === 'number' &&
+        Number.isFinite(value['change24hPct'])
+          ? { change24hPct: value['change24hPct'] as number }
+          : {}),
       };
       entries[key] = isFreshQuote(quote, nowMs)
         ? { status: 'fresh', quote }

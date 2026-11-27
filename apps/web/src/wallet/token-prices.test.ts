@@ -554,6 +554,32 @@ describe('token price cache', () => {
     expect(loaded).toEqual(entries);
   });
 
+  it('round-trips the 24h change with the token quote', () => {
+    // P0-A: the stale fallback survives a reload — the movement rides
+    // with the cached token quote, as with native quotes.
+    const entries = parseTokenPriceResponse(
+      {
+        ...freshTokenPayload(),
+        'usd-coin': {
+          usd: 0.999462,
+          last_updated_at: secondsBefore(30_000),
+          usd_24h_change: 0.12,
+        },
+      },
+      tokenIds(),
+      NOW_MS,
+      DEFAULT_TOKENS,
+    );
+    const store = makeStore();
+    saveCachedTokenPrices(entries, NOW_MS, DEFAULT_TOKENS, store as never);
+    const loaded = loadCachedTokenPrices(NOW_MS, TOKEN_KEYS, store as never);
+    const usdcKey = tokenKey('eth', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
+    expect(loaded?.[usdcKey]).toMatchObject({
+      status: 'fresh',
+      quote: { change24hPct: 0.12 },
+    });
+  });
+
   it('round-trips a DexScreener quote with its source intact', () => {
     const antsKey = tokenKey('bsc', '0x74346aE29A2823DA37695d35A6d47cC4F57C06b4');
     const entries = {

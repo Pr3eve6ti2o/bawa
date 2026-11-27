@@ -375,6 +375,48 @@ describe('price cache', () => {
     }
   });
 
+  it('round-trips the 24h change with the quote', () => {
+    // P0-A: the stale fallback survives a reload — the movement rides
+    // with the cached quote, so a cold start on a rate-limited feed
+    // still shows the last known change with its stale marker.
+    const entries = parsePriceResponse(
+      {
+        ...freshPayload(),
+        bitcoin: {
+          usd: 62683,
+          last_updated_at: secondsBefore(30_000),
+          usd_24h_change: 2.5,
+        },
+        ethereum: {
+          usd: 1774.93,
+          last_updated_at: secondsBefore(30_000),
+          usd_24h_change: -1,
+        },
+      },
+      NOW_MS,
+    );
+    const store = makeStore();
+
+    saveCachedPrices(entries, NOW_MS, store);
+    const loaded = loadCachedPrices(NOW_MS, store);
+
+    expect(loaded?.btc).toMatchObject({
+      status: 'fresh',
+      quote: { change24hPct: 2.5 },
+    });
+    expect(loaded?.eth).toMatchObject({
+      status: 'fresh',
+      quote: { change24hPct: -1 },
+    });
+    // A quote without a movement loads without one — never a
+    // fabricated 0.00%.
+    const trx = loaded?.trx;
+    expect(trx?.status).toBe('fresh');
+    if (trx?.status === 'fresh') {
+      expect(trx.quote).not.toHaveProperty('change24hPct');
+    }
+  });
+
   it('round-trips a fallback quote with its source and provider id', () => {
     const entries = parsePriceResponse(freshPayload(), NOW_MS);
     const fantomFallback = {
@@ -805,9 +847,9 @@ describe('formatUnitPriceUsd', () => {
     expect(formatUnitPriceUsd('1.028')).toBe('$1.03');
   });
 
-  it('keeps up to six decimals below one dollar', () => {
-    expect(formatUnitPriceUsd('0.310229')).toBe('$0.310229');
-    expect(formatUnitPriceUsd('0.073494')).toBe('$0.073494');
+  it('keeps up to four decimals below one dollar', () => {
+    expect(formatUnitPriceUsd('0.310229')).toBe('$0.3102');
+    expect(formatUnitPriceUsd('0.073494')).toBe('$0.0735');
   });
 
   it('keeps at least two decimals when trimming trailing zeros', () => {
@@ -838,7 +880,7 @@ describe('unitPriceForChain', () => {
       kind: 'fresh', text: '$62,683.00',
     });
     expect(unitPriceForChain(fresh.trx, NOW_MS)).toEqual({
-      kind: 'fresh', text: '$0.310229',
+      kind: 'fresh', text: '$0.3102',
     });
   });
 

@@ -202,11 +202,12 @@ describe('asset list screen', () => {
       await waitForText(mounted, '$62,683.00');
       expect(mounted.div.textContent).toContain('Balance unavailable');
       // The live market price per unit IS real public data, not a
-      // balance value: each row shows it, labelled "per <symbol>".
-      // No portfolio total exists on this screen, so none may be
-      // fabricated — never $0.00 standing in for a total.
+      // balance value: each row shows it in the Price column (the
+      // column header says Price, so no "per <symbol>" label —
+      // P0-A, Lane D #49). No portfolio total exists on this screen,
+      // so none may be fabricated — never $0.00 standing in for a total.
       expect(mounted.div.textContent).toContain('$62,683.00');
-      expect(mounted.div.textContent).toContain('per BTC');
+      expect(mounted.div.textContent).not.toContain('per BTC');
       expect(mounted.div.textContent).not.toContain('$0.00');
       expect(mounted.div.textContent).not.toContain('Demo figures');
     } finally {
@@ -229,12 +230,13 @@ describe('asset list screen', () => {
     const mounted = await mountScreen();
     try {
       // The BTC row shows its fiat total; the ETH row (balance
-      // unavailable) shows the per-unit price instead.
+      // unavailable) shows the per-unit price instead — in the Price
+      // column, without a "per <symbol>" label (P0-A, Lane D #49).
       await waitForText(mounted, '$1,774.93');
       expect(mounted.div.textContent).toContain('2.5 BTC');
       // Non-zero balances keep their fiat total: 2.5 BTC at $62,683.
       expect(mounted.div.textContent).toContain('$156,707.50');
-      expect(mounted.div.textContent).toContain('per ETH');
+      expect(mounted.div.textContent).not.toContain('per ETH');
     } finally {
       await mounted.cleanup();
     }
@@ -267,6 +269,8 @@ describe('asset list screen', () => {
     // render the source (model.detail) only under a fiat value, so a
     // zero-balance row showed "$0.02973 per FTM" with no source at
     // all — the DexScreener fallback was invisible on /assets.
+    // (P0-A: the price now renders at 4 decimals, "$0.0297", and
+    // without the "per FTM" label — the Price column header says it.)
     vi.mocked(availableFor).mockReturnValue(['btc', 'fantom']);
     // Explicit return type: the multi-branch stub literals otherwise
     // trip TS7023 on the inline `headers.get` (same as
@@ -332,7 +336,7 @@ describe('asset list screen', () => {
     const mounted = await mountScreen();
     try {
       await waitForText(mounted, '$62,683.00');
-      await waitForText(mounted, '$0.02973');
+      await waitForText(mounted, '$0.0297');
       expect(mounted.div.textContent).toContain('CoinGecko');
       expect(mounted.div.textContent).toContain('DexScreener');
     } finally {
@@ -467,13 +471,13 @@ describe('asset list screen', () => {
     }
   });
 
-  it('with no vault and no address, rows show zero with no Retry and no Balance unavailable', async () => {
-    // Lane G: with no wallet there is no address, so no balance fetch
-    // can ever run — every row showed "Balance unavailable" with a
-    // Retry that could only fail again (43 of them on /assets). A
-    // wallet that does not exist holds zero, so the rows show zero.
-    // A locked vault keeps its unavailable state and Unlock prompt
-    // (previous test); only the no-vault state becomes zero.
+  it('with no vault and no address, the list is hidden and only the empty state shows', async () => {
+    // P0-A (plan P0-5, Lane A F4): a wallet that does not exist is
+    // not a wallet of zeros — the 43 rows of $0.00 are gone, not
+    // bannered over. One headline, one line, two ways in (Create /
+    // Import), and a link to the live prices. A locked vault keeps
+    // its unavailable state and Unlock prompt (previous test); only
+    // the no-vault state hides the list.
     stubPriceFetch({
       ok: true,
       status: 200,
@@ -494,34 +498,34 @@ describe('asset list screen', () => {
     } as unknown as ReturnType<typeof useWallet>);
     const mounted = await mountScreen();
     try {
-      await waitForText(mounted, '$62,683.00');
+      await waitForText(mounted, 'No wallet yet');
       expect(mounted.div.textContent).not.toContain('Balance unavailable');
       expect(mounted.div.textContent).not.toContain('Could not load balance');
-      expect(mounted.div.textContent).toContain('Zero balance');
+      expect(mounted.div.textContent).not.toContain('Zero balance');
+      // No rows at all — no $0.00 values, no per-unit prices, no
+      // filter bar, no per-row Retry.
+      expect(mounted.div.textContent).not.toContain('$0.00');
+      expect(mounted.div.textContent).not.toContain('per BTC');
+      expect(mounted.div.querySelectorAll('li')).toHaveLength(0);
+      expect(mounted.div.querySelector('input[type="search"]')).toBeNull();
       const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
         (candidate) => candidate.textContent === 'Retry',
       );
       expect(retryButtons).toHaveLength(0);
-      // The live per-unit price still shows: zero balance, real price.
-      expect(mounted.div.textContent).toContain('per BTC');
-      // Lane G (research follow-up): a zero balance is worth $0.00
-      // whatever the price feed says, so the Value column shows $0.00
-      // on every row — never a bare "—" in the value slot.
-      expect(mounted.div.textContent).toContain('$0.00');
-      const bareDashes = [...mounted.div.querySelectorAll('span')].filter(
-        (candidate) => candidate.textContent === '—',
-      );
-      expect(bareDashes).toHaveLength(0);
+      // The two ways in, plus the live prices.
+      expect(mounted.div.querySelector('a[href="/create-wallet"]')?.textContent).toBe('Create a wallet');
+      expect(mounted.div.querySelector('a[href="/import-wallet"]')?.textContent).toBe('Import a wallet');
+      expect(mounted.div.querySelector('a[href="/assets/btc"]')?.textContent).toBe('See live prices');
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('with no vault, shows the no-wallet empty state with one action', async () => {
-    // Lane G + RESEARCH.md §11 (Aceternity Empty States): illustration
-    // + one plain line + one action, so 43 zero rows are not mistaken
-    // for a loaded wallet. The rows still show zero; this banner says
-    // why, and the one action goes to Create wallet.
+  it('with no vault, shows the no-wallet empty state with Create, Import and live prices', async () => {
+    // P0-A: RESEARCH.md §11 (Aceternity Empty States) — illustration
+    // + one plain line + the two ways in (Create / Import) + a link
+    // to the live prices. The rows are hidden, so the line no longer
+    // says "these are zero balances".
     stubPriceFetch({
       ok: true,
       status: 200,
@@ -540,11 +544,75 @@ describe('asset list screen', () => {
     try {
       await waitForText(mounted, 'No wallet yet');
       expect(mounted.div.textContent).toContain(
-        'zero balances, not your money',
+        'create or import a wallet to see your real balances',
       );
-      const action = mounted.div.querySelector('a[href="/create-wallet"]');
-      expect(action).not.toBeNull();
-      expect(action?.textContent).toBe('Create a wallet');
+      expect(mounted.div.querySelector('a[href="/create-wallet"]')?.textContent).toBe('Create a wallet');
+      expect(mounted.div.querySelector('a[href="/import-wallet"]')?.textContent).toBe('Import a wallet');
+      expect(mounted.div.querySelector('a[href="/assets/btc"]')?.textContent).toBe('See live prices');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the 24h change on the table rows', async () => {
+    // P0-A (plan P0-2, Lane A F2): the movement the feed already
+    // carries shows on the table's Price cell — no extra row height,
+    // no new fetch. The sign carries it; the palette cap allows no
+    // green/red class in the app.
+    const lastUpdatedAt = Math.floor(Date.now() / 1000) - 30;
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        bitcoin: { usd: 62683, last_updated_at: lastUpdatedAt, usd_24h_change: 2.5 },
+        ethereum: { usd: 1774.93, last_updated_at: lastUpdatedAt, usd_24h_change: -1 },
+        tron: { usd: 0.310229, last_updated_at: lastUpdatedAt },
+        'the-open-network': { usd: 1.028, last_updated_at: lastUpdatedAt },
+      }),
+    });
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      const rows = [...mounted.div.querySelectorAll('li')];
+      const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
+      expect(btc).not.toBeUndefined();
+      expect(btc?.textContent).toContain('24h +2.50%');
+      const eth = rows.find((row) => row.textContent?.includes('Ethereum'));
+      expect(eth).not.toBeUndefined();
+      expect(eth?.textContent).toContain('24h -1.00%');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows "0 BTC" with "Zero balance" as the subline on zero table rows', async () => {
+    // P0-A double-zero (Lane A asset-list audit, Lane D #49): one
+    // balance line per row — "0 BTC" as the amount, "Zero balance"
+    // only as the subline, never both as the amount.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({
+        btc: { status: 'zero', value: '0' },
+      }),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+      vaultState: 'unlocked',
+      customTokens: [],
+      tokenBalances: {},
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      const rows = [...mounted.div.querySelectorAll('li')];
+      const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
+      expect(btc).not.toBeUndefined();
+      expect(btc?.textContent).toContain('0 BTC');
+      expect(btc?.textContent).toContain('Zero balance');
+      expect(btc?.textContent?.match(/Zero balance/g)).toHaveLength(1);
+      expect(btc?.textContent).not.toContain('per BTC');
     } finally {
       await mounted.cleanup();
     }

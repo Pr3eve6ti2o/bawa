@@ -405,9 +405,11 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).not.toContain('No fresh prices');
       expect(mounted.div.textContent).not.toContain('$0.00');
       // But the live market price per unit IS real public data, not a
-      // balance value: each row shows it, labelled "per <symbol>".
+      // balance value: each row shows it bare (the "per <symbol>"
+      // label lives only on a ready row's detail line — P0-A, Lane D
+      // #49 — never on a failed row's price block).
       expect(mounted.div.textContent).toContain('$62,683.00');
-      expect(mounted.div.textContent).toContain('per BTC');
+      expect(mounted.div.textContent).not.toContain('per BTC');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();
@@ -1398,6 +1400,157 @@ describe('dashboard screen', () => {
       expect(text.indexOf('Bitcoin')).toBeLessThan(text.indexOf('Ethereum'));
       expect(text).toContain('2 assets at zero balance');
       expect(text).toContain('NFTs — not connected yet');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('copies the receiving address from the hero Copy button in one tap', async () => {
+    // P0-A (plan P0-1, Lane E M8): copy address is 1 tap from Home —
+    // the hero carries its own Copy button beside the shortened
+    // address, and the button itself flips to "Copied!" for 2 s on
+    // success, not a status line elsewhere. Receive keeps its own
+    // copy button.
+    const address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    type ClipboardStub = {
+      clipboard?: { writeText: (value: string) => Promise<void> };
+    };
+    const navigatorStub = navigator as unknown as ClipboardStub;
+    const previousClipboard = navigatorStub.clipboard;
+    navigatorStub.clipboard = { writeText };
+    setWallet(balancesFor({}), {
+      vaultAddresses: { eth: [address] },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('0x742d…f44e');
+      const copy = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Copy',
+      ) as HTMLButtonElement | undefined;
+      expect(copy).not.toBeUndefined();
+      await act(async () => {
+        copy?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(writeText).toHaveBeenCalledWith(address);
+      expect(copy?.textContent).toBe('Copied!');
+      // The label flips back after 2 s.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 2100));
+      });
+      expect(copy?.textContent).toBe('Copy');
+    } finally {
+      navigatorStub.clipboard = previousClipboard;
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the 24h change on the asset row detail line', async () => {
+    // P0-A (plan P0-2, Lane A F2): the movement the feed already
+    // carries shows on the row's existing detail line — no extra row
+    // height, no new fetch. The sign carries it; the palette cap
+    // allows no green/red class in the app.
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    const lastUpdatedAt = Math.floor(Date.now() / 1000) - 30;
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        bitcoin: { usd: 62683, last_updated_at: lastUpdatedAt, usd_24h_change: 2.5 },
+        ethereum: { usd: 1774.93, last_updated_at: lastUpdatedAt, usd_24h_change: -1 },
+        tron: { usd: 0.310229, last_updated_at: lastUpdatedAt },
+        'the-open-network': { usd: 1.028, last_updated_at: lastUpdatedAt },
+      }),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      const rows = [...mounted.div.querySelectorAll('[data-slot="asset-row"]')];
+      const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
+      expect(btc).not.toBeUndefined();
+      expect(btc?.textContent).toContain('$62,683.00 per BTC · 24h +2.50%');
+      const eth = rows.find((row) => row.textContent?.includes('Ethereum'));
+      expect(eth).not.toBeUndefined();
+      expect(eth?.textContent).toContain('$1,774.93 per ETH · 24h -1.00%');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows "0 BTC" as the amount with "Zero balance" only as the subline', async () => {
+    // P0-A double-zero (Lane A asset-list audit, Lane D #49): one
+    // balance line per row — the list variant matches the table.
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      const rows = [...mounted.div.querySelectorAll('[data-slot="asset-row"]')];
+      const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
+      expect(btc).not.toBeUndefined();
+      expect(btc?.textContent).toContain('0 BTC');
+      expect(btc?.textContent).toContain('Zero balance');
+      // "Zero balance" appears exactly once — as the subline, never
+      // also as the amount.
+      expect(btc?.textContent?.match(/Zero balance/g)).toHaveLength(1);
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('falls back to the last known 24h change with a stale marker when the quote ages out', async () => {
+    // P0-A stale fallback: when CoinGecko 429s, the row keeps the
+    // last known movement and says it is stale, rather than dropping
+    // the line. The aged-out price itself is never shown as current.
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    const lastUpdatedAt = Math.floor(Date.now() / 1000) - 11 * 60;
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        bitcoin: { usd: 62683, last_updated_at: lastUpdatedAt, usd_24h_change: 2.5 },
+        ethereum: { usd: 1774.93, last_updated_at: lastUpdatedAt, usd_24h_change: -1 },
+        tron: { usd: 0.310229, last_updated_at: lastUpdatedAt },
+        'the-open-network': { usd: 1.028, last_updated_at: lastUpdatedAt },
+      }),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      const rows = [...mounted.div.querySelectorAll('[data-slot="asset-row"]')];
+      const btc = rows.find((row) => row.textContent?.includes('Bitcoin'));
+      expect(btc).not.toBeUndefined();
+      expect(btc?.textContent).toContain('Price expired · 24h +2.50% · stale');
+      expect(btc?.textContent).not.toContain('$62,683.00');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();

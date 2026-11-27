@@ -592,6 +592,7 @@ export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: Price
         | 'fetchedAtMs'
         | 'source'
         | 'providerAssetId'
+        | 'change24hPct'
       >
     > = [];
 
@@ -616,6 +617,13 @@ export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: Price
         // CoinGecko below.
         source: quote.source,
         providerAssetId: quote.providerAssetId,
+        // P0-A: the 24 h movement rides with the quote, so a cold
+        // start on a rate-limited feed still shows the last known
+        // movement with its stale marker. Old v1 records have no
+        // field and load without a movement, as before.
+        ...(typeof quote.change24hPct === 'number'
+          ? { change24hPct: quote.change24hPct }
+          : {}),
       });
     }
 
@@ -711,6 +719,10 @@ export function loadCachedPrices(nowMs: number, store?: PriceCacheStore): PriceM
         typeof providerAssetIdValue === 'string' && providerAssetIdValue !== ''
           ? providerAssetIdValue
           : PRICE_IDS[chainId];
+      // P0-A: restore the cached 24 h movement when the record
+      // carries a finite one (written since this lane). Old records
+      // have none and load without a movement, as before.
+      const change24hPctValue = record['change24hPct'];
       const quote: PriceQuote = {
         chain: chainId,
         assetId: PRICE_ASSET_IDS[chainId],
@@ -719,6 +731,10 @@ export function loadCachedPrices(nowMs: number, store?: PriceCacheStore): PriceM
         providerUpdatedAtMs,
         fetchedAtMs,
         source,
+        ...(typeof change24hPctValue === 'number' &&
+        Number.isFinite(change24hPctValue)
+          ? { change24hPct: change24hPctValue }
+          : {}),
       };
 
       entries[chainId] = isFreshQuote(quote, nowMs)
@@ -962,11 +978,12 @@ export function formatUnitPriceUsd(usdPrice: string): string {
   }
 
   // Exact BigInt arithmetic: two decimals at or above $1; below $1,
-  // six decimals, extended just far enough to show two significant
-  // digits (capped at 18) so a sub-$0.000001 price never renders as
-  // "$0.00" — a token worth $0.0000004 shows as $0.0000004.
+  // four decimals, extended just far enough to show two significant
+  // digits (capped at 18) so a sub-$0.0001 price never renders as
+  // "$0.00" — a token worth $0.0000004 shows as $0.0000004. (P0-A:
+  // 6-decimal prices round to 2–4 decimals — $0.985873 reads $0.9859.)
   const places =
-    price.exp >= 0 ? 2 : Math.min(18, Math.max(6, 1 - price.exp));
+    price.exp >= 0 ? 2 : Math.min(18, Math.max(4, 1 - price.exp));
   const fixed = toFixedHalfUp(price, places);
   const [whole = '0', fraction = ''] = fixed.split('.');
   const groupedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');

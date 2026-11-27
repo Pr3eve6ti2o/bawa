@@ -50,6 +50,40 @@ export function AssetListScreen() {
       <h1 className="text-2xl font-semibold text-panel-text">Assets</h1>
 
       {/*
+        P0-A (no-wallet zeros): with no wallet the list is hidden
+        entirely — 43 rows of $0.00 presented as the user's money are
+        gone, not bannered over. The empty state (Aceternity Empty
+        States structure, RESEARCH.md §11: illustration + one plain
+        line + actions) says why and offers the two ways in: Create
+        and Import. Live prices stay one tap away: the Bitcoin asset
+        page shows the live market price with no wallet ("See live
+        prices"). Locked and unlocked vaults never see this state —
+        they get the filter bar and the rows below.
+      */}
+      {vaultState === 'no-vault' ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-4 shadow-bawa">
+          <span className="flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+            <BawaIcon name="wallet" className="size-6" />
+          </span>
+          <p className="min-w-40 flex-1 text-sm leading-5 font-medium text-ink">
+            No wallet yet — create or import a wallet to see your real
+            balances.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" asChild>
+              <Link to="/create-wallet">Create a wallet</Link>
+            </Button>
+            <Button type="button" variant="outline" asChild>
+              <Link to="/import-wallet">Import a wallet</Link>
+            </Button>
+            <Button type="button" variant="link" asChild>
+              <Link to="/assets/btc">See live prices</Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+      {/*
         Lane 2: the filter bar — the visible Filters panel is a
         feature, kept and restyled, never removed. Search first (the
         list is 43 rows; finding "USDC on Base" by scrolling is the
@@ -115,29 +149,11 @@ export function AssetListScreen() {
         </div>
       </div>
 
-      {/* No-wallet empty state (Aceternity Empty States structure,
-          RESEARCH.md §11: illustration + one plain line + one action).
-          The rows below already show honest zero balances; this banner
-          says why, so 43 zero rows are not mistaken for a loaded
-          wallet. Locked and unlocked vaults never see it. */}
-      {vaultState === 'no-vault' && (
-        <div className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-4 shadow-bawa">
-          <span className="flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
-            <BawaIcon name="wallet" className="size-6" />
-          </span>
-          <p className="min-w-40 flex-1 text-sm leading-5 font-medium text-ink">
-            No wallet yet — these are zero balances, not your money. Create
-            a wallet to see your real balances.
-          </p>
-          <Button type="button" asChild>
-            <Link to="/create-wallet">Create a wallet</Link>
-          </Button>
-        </div>
-      )}
-
       <Card>
         <AssetRows variant="table" hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} query={query} onClearQuery={() => setQuery('')} />
       </Card>
+        </>
+      )}
       <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
     </div>
   );
