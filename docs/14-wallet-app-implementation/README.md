@@ -19,7 +19,7 @@ How-to guide.
 
 ## Project structure and key module
 
-Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.9.3`, matching the repository tools on main at commit `667527e` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.9.3`), and require Node.js `>=22 <23` for the repository tools and Web app. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, and the Web draft declares the same range.
+Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.9.3`, matching the repository tools on main at commit `667527e` (at that commit the Web draft still pinned `4.9.2` (WEB-GUIDE pins table; D21 work copy) and Android's AAR procedure (C.1) checked out tag `4.9.2`, so the drafts did not then uniformly pin `4.9.3`; both drafts now pin `4.9.3`), and require Node.js `>=22 <23` for the repository tools and Web app. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, and the Web draft declares the same range.
 
 Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 

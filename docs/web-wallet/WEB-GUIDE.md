@@ -322,7 +322,7 @@ Treat this guide as vector-verified and refusal-verified for creation and restor
 
 ### Signing boundary
 
-Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.3.
 
 ### Sources
 
@@ -749,7 +749,7 @@ Follow Section D for the vault construction. Use the exact verified bound: “GC
 
 ### Separate signing from tracking
 
-Follow the signing boundary in Section F. Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.2. Do not attribute transaction construction, signing or broadcast to the Bawa repo.
+Follow the signing boundary in Section F. Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.3. Do not attribute transaction construction, signing or broadcast to the Bawa repo.
 
 Apply the Section F validation gates:
 

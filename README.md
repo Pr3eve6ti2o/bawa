@@ -112,7 +112,7 @@ Do not treat these checks as a mainnet or production-readiness claim.
 
 ## Architecture
 
-On `main` at HEAD `29b4b62` (verified 2026-11-28), Bawa's launcher prints routes and never executes them. Secret-handling tools sit inside a trust boundary; public-roots-only tools, documentation routes and unavailable printed routes sit outside it.
+Verified at `29b4b62` on 2026-11-28, Bawa's launcher prints routes and never executes them. Secret-handling tools sit inside a trust boundary; public-roots-only tools, documentation routes and unavailable printed routes sit outside it.
 
 *The two diagrams above are static SVG images so they display in every viewer, including the GitHub mobile app.*
 
