@@ -377,7 +377,7 @@ the current placement is already right — restyle it, don't move it.
   past bug — keep the clearance).
 - Recent activity list below the result, not above it.
 
-### Create / Import (`screens/create-hub.tsx`, `create-wallet.tsx`, `import-wallet.tsx`, `welcome.tsx`, `/create`, `/create-wallet`, `/import-wallet`, `/welcome`)
+### Create / Import (`screens/create-wallet.tsx`, `import-wallet.tsx`, `welcome.tsx`, `/create-wallet`, `/import-wallet`, `/welcome`)
 - Exactly ONE "Create wallet" button in the whole app (owner order).
   It opens the create flow and carries a small message saying what it
   is and that creating it gives access to 87 chains (finish-product

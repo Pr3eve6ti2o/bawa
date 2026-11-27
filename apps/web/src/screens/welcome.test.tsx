@@ -227,7 +227,7 @@ describe('welcome screen \u2014 Popular chains strip removed (Lane J)', () => {
   // Create and Import ways in.
 });
 
-describe('welcome screen — introduction (Lane C, item 9)', () => {
+describe('welcome screen — one headline, one line, two cards (P0-4)', () => {
   async function mountIntro() {
     setWallet('no-vault', balancesFor({}));
     setPrices(
@@ -237,27 +237,41 @@ describe('welcome screen — introduction (Lane C, item 9)', () => {
     return mountScreen();
   }
 
-  it('explains what Bawa is and what it is for', async () => {
+  it('is one headline, one line and two cards — the essay is gone', async () => {
     const mounted = await mountIntro();
     try {
       const text = mounted.div.textContent ?? '';
       expect(text).toContain('Welcome to Bawa');
-      // Marketing-fix Lane 3: the wallet leads, the guide follows.
-      // The guide sentence stays (Lane C item 9's positioning), but
-      // the first thing a choosing user reads is the wallet itself.
+      // The one line (plan P0-4): the whole intro is this sentence.
       expect(text).toContain(
+        'One recovery phrase for 87 chains. Your keys never leave this device.',
+      );
+      // The essay is gone: no intro paragraphs, no "What this wallet
+      // does" list, no guide-for-AI-agents paragraph, no mode aside.
+      expect(text).not.toContain(
         'Bawa is a self-custodial wallet that runs in your browser',
       );
-      expect(text).toContain('87 chains');
-      expect(text).toContain('Bawa is also a guide for humans and AI agents');
-      expect(text).toContain('What this wallet does');
-      expect(text).toContain('Receive on 87 chains');
-      expect(text).toContain('Real balances and prices');
-      expect(text).toContain('Watch any wallet');
-      expect(text).toContain('Add tokens');
-      // Sending is off by default, and the welcome says so plainly.
-      expect(text).toContain(
+      expect(text).not.toContain('Bawa is also a guide for humans and AI agents');
+      expect(text).not.toContain('What this wallet does');
+      expect(text).not.toContain('Receive on 87 chains');
+      expect(text).not.toContain('Real balances and prices');
+      expect(text).not.toContain('Add tokens');
+      expect(text).not.toContain(
         'Sending is switched off until it is separately approved',
+      );
+      expect(text).not.toContain('Mainnet by default');
+      expect(text).not.toContain(
+        'Your balances come from public blockchain networks',
+      );
+      // The two cards are the screen.
+      expect(text).toContain('Create a wallet');
+      expect(text).toContain('Import a wallet');
+      // Shorter card copy (Lane B rewrites).
+      expect(text).toContain(
+        'One phrase for 87 chains. Set a password, write down 24 words.',
+      );
+      expect(text).toContain(
+        'Restore from a phrase, or watch any wallet from its public address.',
       );
     } finally {
       await mounted.cleanup();
@@ -279,6 +293,21 @@ describe('welcome screen — introduction (Lane C, item 9)', () => {
       expect(
         mounted.div.querySelector('a[href="/import-wallet"]'),
       ).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('keeps the Watch a wallet tertiary link, straight to the Watch-only tab', async () => {
+    const mounted = await mountIntro();
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('Just want to look?');
+      const link = mounted.div.querySelector(
+        'a[href="/import-wallet?mode=watch-only"]',
+      );
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain('Watch a wallet');
     } finally {
       await mounted.cleanup();
     }

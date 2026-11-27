@@ -5,13 +5,11 @@ import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation, useNa
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
 // Hot routes are eager imports (Rabby pattern): the live browser showed
-// the first click on /assets/:chain, /security, /create and
-// /create-wallet rendering the previous screen while the lazy chunk
-// loaded. These four screens ship in the main bundle so the first
-// navigation renders immediately; every other route stays code-split
-// below.
+// the first click on /assets/:chain, /security and /create-wallet
+// rendering the previous screen while the lazy chunk loaded. These
+// three screens ship in the main bundle so the first navigation renders
+// immediately; every other route stays code-split below.
 import { AssetDetailScreen } from '../screens/asset-detail';
-import { CreateScreen } from '../screens/create-hub';
 import { CreateWalletScreen } from '../screens/create-wallet';
 import { SecuritySettingsScreen } from '../screens/security-settings';
 
@@ -554,7 +552,6 @@ export function App() {
             <Route index element={<HomeScreen />} />
             <Route path="welcome" element={<WelcomeScreen />} />
             <Route path="create-wallet" element={<CreateWalletScreen />} />
-            <Route path="create" element={<CreateScreen />} />
             <Route path="import-wallet" element={<ImportWalletScreen />} />
             <Route path="mnemonic-backup" element={<MnemonicBackupScreen />} />
             <Route path="backup-shares" element={<BackupSharesScreen />} />

@@ -260,30 +260,28 @@ beforeEach(() => {
 });
 
 describe('text spacing', () => {
-  it('welcome list reads with real spaces', async () => {
+  it('welcome line and cards read with real spaces', async () => {
     const mounted = await mountScreen(<WelcomeScreen />);
     try {
-      // Lane C, item 9: the welcome steps are gone — the screen is an
-      // introduction now. The spacing check moves to the new list and
-      // intro line: words must not run together. (Marketing-fix Lane 3:
-      // the intro and list now lead with the wallet.)
+      // P0-4: the intro paragraph and the five-bullet list are gone —
+      // the screen is one headline, one line and two cards. The spacing
+      // check moves to the new copy: words must not run together.
       expect(mounted.div.textContent).toContain(
-        'Bawa is a self-custodial wallet that runs in your browser. One recovery phrase covers 87 chains — Bitcoin, Ethereum, Solana, TRON, TON and more. Your keys are made on this device and encrypted with your vault password. They never leave it.',
+        'One recovery phrase for 87 chains. Your keys never leave this device.',
       );
-      expect(mounted.div.textContent).not.toContain('Bawais a self-custodial');
+      expect(mounted.div.textContent).not.toContain('Onerecovery phrase');
       expect(mounted.div.textContent).toContain(
-        'Receive on 87 chains. One wallet, one address per chain, with a QR code for each.',
+        'One phrase for 87 chains. Set a password, write down 24 words.',
       );
-      expect(mounted.div.textContent).not.toContain('Receiveon 87 chains');
+      expect(mounted.div.textContent).not.toContain('Onephrase for 87 chains');
       expect(mounted.div.textContent).toContain(
-        'Real balances and prices. Balances from public blockchains, prices from CoinGecko first, then CoinLore, DexScreener, TonAPI and Coinbase — no made-up numbers.',
+        'Restore from a phrase, or watch any wallet from its public address.',
       );
+      expect(mounted.div.textContent).not.toContain('Restorefrom a phrase');
       expect(mounted.div.textContent).toContain(
-        'Watch any wallet. Follow balances and history from an extended public key, without ever holding its keys.',
+        'Just want to look? Watch a wallet from its public address',
       );
-      expect(mounted.div.textContent).toContain(
-        'Add tokens. Add a whole chain to your wallet, or a single token by its contract address.',
-      );
+      expect(mounted.div.textContent).not.toContain('look?Watch');
     } finally {
       await mounted.cleanup();
     }

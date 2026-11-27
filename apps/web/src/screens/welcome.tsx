@@ -8,18 +8,18 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/components/card";
-import { useWallet } from "../state/wallet-context";
 
+// P0 (plan P0-4, Lane B B-2): one headline + one line + two cards. The
+// intro essay (three paragraphs), the five-bullet "What this wallet
+// does" list and the developer-facing guide paragraph are gone — the
+// guide promo lives in docs, not on the wallet home. The mode note is
+// gone too: the header pill already says Mainnet / Devnet test mode.
+// What stays: the illustration (the style lane owns it), the two cards
+// with shorter copy, and the "Watch a wallet" tertiary link.
 export function WelcomeScreen() {
-  const { devnetEnabled } = useWallet();
   return (
-    // Merge (Lane 1 + Lane 5): Lane 5's fork-first mobile order (the
-    // Create/Import cards render before the intro below lg) and its
-    // "Watch a wallet" tertiary entry, with Lane 1's removal of the
-    // in-card Network bar kept — it duplicated the header
-    // Mainnet/Devnet pill, and the aside below still states the mode.
     <section aria-labelledby="welcome-title" className="mx-auto flex w-full max-w-[480px] flex-col space-y-6 lg:grid lg:max-w-none lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
-      <div className="order-2 rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1">
+      <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <div aria-hidden="true" className="flex items-end gap-3 text-ink">
           <BawaIcon name="wallet" className="size-16 -rotate-3" />
           <BawaIcon name="coins" className="size-10 rotate-3" />
@@ -31,60 +31,16 @@ export function WelcomeScreen() {
           Welcome to <span className="bawa-marker">Bawa</span>
         </h1>
         <p className="mt-2 max-w-xl text-body-md text-ink">
-          Bawa is a self-custodial wallet that runs in your browser. One
-          recovery phrase covers 87 chains — Bitcoin, Ethereum, Solana,
-          TRON, TON and more. Your keys are made on this device and
-          encrypted with your vault password. They never leave it.
+          One recovery phrase for 87 chains. Your keys never leave this device.
         </p>
-        <p className="mt-2 max-w-xl text-body-md text-ink">
-          It shows your real balances and live prices, gives you a
-          receiving address and QR code for every chain, and lets you watch
-          any wallet from its public key — without holding its secrets.
-          Sending is switched off until it is separately approved, so
-          nothing here can move your funds. No account, no sign-up.
-        </p>
-        <p className="mt-2 max-w-xl text-body-md text-ink">
-          Bawa is also a guide for humans and AI agents that builds wallets
-          like this one from a few prompts — this web wallet is the wallet
-          the guide builds.
-        </p>
-
-        <h2 className="mt-6 text-body-md font-semibold text-ink">
-          What this wallet does
-        </h2>
-        <ul className="mt-2 list-disc space-y-2 pl-5 text-body-md text-ink">
-          <li>
-            <strong>Receive on 87 chains</strong>. One wallet, one address
-            per chain, with a QR code for each.
-          </li>
-          <li>
-            <strong>A fresh address for every payment</strong>. The QR card
-            always shows your next unused address, and you can make a new
-            receiving address at any time.
-          </li>
-          <li>
-            <strong>Real balances and prices</strong>. Balances from public
-            blockchains, prices from CoinGecko first, then CoinLore,
-            DexScreener, TonAPI and Coinbase — no made-up numbers.
-          </li>
-          <li>
-            <strong>Watch any wallet</strong>. Follow balances and history
-            from an extended public key, without ever holding its keys.
-          </li>
-          <li>
-            <strong>Add tokens</strong>. Add a whole chain to your wallet,
-            or a single token by its contract address.
-          </li>
-        </ul>
       </div>
 
-      <div className="order-1 grid gap-4 lg:order-none lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
+      <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:sticky lg:top-6">
         <Card radius="xl" tone="card">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>
             <CardDescription>
-              One recovery phrase for 87 chains. Set a vault password,
-              write down 24 words, and your wallet is ready.
+              One phrase for 87 chains. Set a password, write down 24 words.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto px-6 pb-6">
@@ -97,10 +53,7 @@ export function WelcomeScreen() {
           <CardHeader className="px-6 pt-6">
             <CardTitle>Import a wallet</CardTitle>
             <CardDescription>
-              Restore a wallet from its recovery phrase, or paste an extended
-              public key (xpub) to view its derived addresses watch-only.
-              Never paste recovery words, seeds or private keys into a
-              watch-only import.
+              Restore from a phrase, or watch any wallet from its public address.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto px-6 pb-6">
@@ -123,17 +76,6 @@ export function WelcomeScreen() {
           from its public address — no wallet needed.
         </p>
       </div>
-
-      <aside className="order-3 space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-2">
-        <p>
-          {devnetEnabled
-            ? "Devnet test mode. This wallet connects to a test network with valueless test tokens."
-            : "Mainnet by default. Devnet test mode is available from Networks."}
-        </p>
-        <p>
-          Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.
-        </p>
-      </aside>
     </section>
   );
 }

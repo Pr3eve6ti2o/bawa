@@ -29,9 +29,10 @@ export const MORE_LINKS: NavItem[] = [
   { to: "/import-wallet", label: "Import wallet", icon: "import" },
   // Token gaps, item 9: the duplicate 'create wallet' entry is gone.
   // The 'Create' entry was renamed to 'Create wallet' and keeps its
-  // place, its /create target and its wrench icon — exactly one
-  // 'Create wallet' button remains, opening the create flow.
-  { to: "/create", label: "Create wallet", icon: "wrench" },
+  // place and its wrench icon — exactly one 'Create wallet' button
+  // remains, opening the create flow. P0 (plan P0-3): the /create hub
+  // is deleted, so the entry points straight at /create-wallet.
+  { to: "/create-wallet", label: "Create wallet", icon: "wrench" },
   { to: "/security", label: "Security", icon: "shield" },
   { to: "/networks", label: "Networks", icon: "network" },
   { to: "/mnemonic-backup", label: "Mnemonic backup", icon: "key" },

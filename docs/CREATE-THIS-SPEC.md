@@ -430,7 +430,7 @@ implemented (owner order 2026-11-20). Implement and describe it as follows.
   `docs/BSC-SEND-FIX.md`). The Receive/Send QR flow, the 22-button grid
   fix (single "Create wallet" button with a message saying what it is
   and that creating it gives access to 87 chains —
-  `create-hub.tsx:76`, `welcome.tsx:35,57,85`; the count is the full
+  `welcome.tsx`; the count is the full
   wired set, 22 enabled by default), and the Scan icon are covered by
   the finish-product programme (`docs/FINISH-PRODUCT-PROGRAMME.md`).
 

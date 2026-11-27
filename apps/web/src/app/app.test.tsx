@@ -106,7 +106,12 @@ describe.sequential('App', () => {
     await withRenderedApp('/', (div) => {
       expect(div.textContent).toContain('Bawa Web Wallet');
       expect(div.textContent).toContain('Welcome to Bawa');
+      // P0-4: Welcome is one headline + one line + two cards — the mode
+      // aside is gone (the header pill says Mainnet).
       expect(div.textContent).toContain(
+        'One recovery phrase for 87 chains. Your keys never leave this device.',
+      );
+      expect(div.textContent).not.toContain(
         'Mainnet by default. Devnet test mode is available from Networks.',
       );
       expect(div.textContent).not.toContain('No wallet yet');
@@ -286,31 +291,28 @@ describe.sequential('App', () => {
     // effects each) need more than the 5s default.
   }, 30000);
 
-  it('renders the Create screen with one create button', async () => {
+  it('renders Page not found for the deleted /create hub route', async () => {
+    // P0 (plan P0-3): the /create hub is deleted — the sidebar's
+    // Create wallet entry goes straight to /create-wallet — so the old
+    // route falls through to NotFound instead of rendering a hub.
     await withRenderedApp('/create', (div) => {
-      expect(div.querySelector('#create-title')?.textContent).toBe('Create');
-      // Finish-product Lane I: one wallet, one button. The Web wallet
-      // card is gone — the web wallet is this app — and the three
-      // not-yet-available tools are a plain list, not peer cards.
-      expect(div.textContent).toContain('Create a wallet');
-      expect(div.textContent).toContain('One wallet, one identity');
-      expect(div.textContent).not.toContain('Multichain wallet');
-      expect(div.textContent).not.toContain('HD wallet');
-      expect(div.textContent).not.toContain('Web wallet');
-      expect(div.textContent).toContain('Android wallet');
-      expect(div.textContent).toContain('Smart contract creator');
-      expect(div.textContent).toContain('Multi-signature wallet');
-      expect(div.textContent).toContain('Coming soon');
+      expect(div.querySelector('h2')?.textContent).toBe('Page not found');
+      expect(div.textContent).toContain('Back to dashboard');
+      expect(div.querySelector('#create-title')).toBeNull();
+      expect(div.textContent).not.toContain('One wallet, one identity');
     });
   });
 
-  it('shows the Devnet pill and devnet welcome copy when devnet is on', async () => {
+  it('shows the Devnet pill when devnet is on, with no mode essay on Welcome', async () => {
     window.localStorage.removeItem('bawa-vault');
     window.localStorage.setItem('bawa-devnet-enabled', '1');
     try {
       await withRenderedApp('/', (div) => {
         expect(div.textContent).toContain('Devnet test mode');
-        expect(div.textContent).toContain(
+        // P0-4: Welcome no longer carries the mode aside — the header
+        // pill is the mode indicator now — so neither mode paragraph
+        // renders on the home screen.
+        expect(div.textContent).not.toContain(
           'Devnet test mode. This wallet connects to a test network',
         );
         expect(div.textContent).not.toContain(

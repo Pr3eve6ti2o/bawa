@@ -337,6 +337,23 @@ describe('wallet management — vault account selection', () => {
       expect(section?.className).not.toMatch(
         /(^|\s)grid-cols-\[7fr_5fr\](\s|$)/,
       );
+      // P0 (plan P0-7, Lane B B-3): explicit placement — the About
+      // Wallets disclosure spans both columns, the vault card is row 3
+      // column 1 (the wide column) and the rail is row 3 column 2.
+      // Without this, grid auto-placement put the disclosure in column
+      // 1 and the vault card flowed into the narrow rail.
+      const about = mounted.div.querySelector(
+        'details[class~="lg:col-span-2"]',
+      );
+      expect(about?.textContent).toContain('About Wallets');
+      const vaultCard = mounted.div.querySelector(
+        '[class~="lg:col-start-1"][class~="lg:row-start-3"]',
+      );
+      expect(vaultCard?.textContent).toContain('Your accounts');
+      const rail = mounted.div.querySelector(
+        '[class~="lg:col-start-2"][class~="lg:row-start-3"]',
+      );
+      expect(rail?.textContent).toContain('Watch-only wallets');
       const dl = mounted.div.querySelector('dl');
       expect(dl?.className).toContain('lg:grid');
       expect(dl?.className).toContain('lg:grid-cols-2');

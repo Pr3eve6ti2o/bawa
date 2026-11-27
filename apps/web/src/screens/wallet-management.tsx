@@ -301,6 +301,12 @@ export function WalletManagementScreen() {
     // card), note and Forget-all button in a right rail. Below lg the
     // same blocks stack in one column in the same order (space-y-6,
     // no bare grid class), so the mobile layout is untouched.
+    // P0 (plan P0-7, Lane B B-3): the disclosure and the two columns
+    // carry explicit placement — the disclosure spans both columns, the
+    // vault card is row 3 column 1 and the rail is row 3 column 2 — so
+    // grid auto-placement can no longer push the vault card into the
+    // narrow rail (the "About Wallets" disclosure used to take column 1
+    // and the vault card flowed into column 2).
     <section className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:items-start lg:space-y-0" aria-labelledby="wallets-heading">
       <h1 id="wallets-heading" className="text-2xl font-semibold lg:col-span-2">
         Wallets
@@ -310,7 +316,7 @@ export function WalletManagementScreen() {
           It collapses into a disclosure now — same words, same
           "How accounts work" details/summary shape below — so the
           actions come first and the essay is one tap away. */}
-      <details>
+      <details className="lg:col-span-2">
         <summary className="cursor-pointer text-sm font-semibold">
           About Wallets
         </summary>
@@ -323,7 +329,7 @@ export function WalletManagementScreen() {
         </p>
       </details>
 
-      <Card radius="xl">
+      <Card radius="xl" className="lg:col-start-1 lg:row-start-3">
         <CardHeader>
           <CardTitle>Your accounts</CardTitle>
         </CardHeader>
@@ -691,8 +697,10 @@ export function WalletManagementScreen() {
 
       {/* Right rail at lg: imported list (or the empty card), the note
           and the Forget-all button. A plain div below lg, so the
-          mobile order and spacing are unchanged. */}
-      <div className="space-y-6">
+          mobile order and spacing are unchanged. Explicit placement
+          (P0-7): row 3, column 2 — beside the vault card, never below
+          it or in the wide column. */}
+      <div className="space-y-6 lg:col-start-2 lg:row-start-3">
       {hasWallets ? (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Watch-only wallets</h2>

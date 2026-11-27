@@ -135,7 +135,7 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
       '/transactions',
       '/track',
       '/import-wallet',
-      '/create',
+      '/create-wallet',
       '/security',
       '/networks',
       '/mnemonic-backup',
@@ -146,20 +146,20 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
   it('has exactly one Create wallet button, in the Create button’s place and layout', async () => {
     // Token gaps, item 9: the duplicate 'create wallet' entry is gone;
     // the 'Create' entry was renamed to 'Create wallet' and keeps its
-    // /create target and wrench icon.
+    // /create-wallet target and wrench icon.
     expect(
       MORE_LINKS.filter(({ label }) => label === 'Create wallet'),
     ).toHaveLength(1);
     expect(
       MORE_LINKS.find(({ label }) => label === 'Create wallet'),
-    ).toEqual({ to: '/create', label: 'Create wallet', icon: 'wrench' });
+    ).toEqual({ to: '/create-wallet', label: 'Create wallet', icon: 'wrench' });
     const mounted = await mountNav({});
     try {
       const links = [...mounted.div.querySelectorAll('nav a')].filter(
         (link) => link.textContent?.includes('Create wallet'),
       );
       expect(links).toHaveLength(1);
-      expect(links[0]?.getAttribute('href')).toBe('/create');
+      expect(links[0]?.getAttribute('href')).toBe('/create-wallet');
     } finally {
       await mounted.cleanup();
     }
