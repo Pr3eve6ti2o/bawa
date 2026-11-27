@@ -28,7 +28,7 @@ branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
-the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 120 files / 3,216 passed + 5 skipped (loud-stone run at token-gaps `33f1ff1`, 2026-11-27, P0 verification — re-run first-hand by the docs-currency lane from a clean worktree at `33f1ff1`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
+the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 121 files / 3,245 passed + 5 skipped (loud-stone run at token-gaps `f1f0e6c`, 2026-11-27, follow-up verification — re-run first-hand by the bug-hunt-v2 docs lane from a clean worktree at `f1f0e6c`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -49,7 +49,7 @@ calls): removed WalletConnect (§11), added the Buy provider picker
 table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
-**Bundle note:** the merged tree passes the budget — total JS 4,473,583 vs the 6,000,000 budget (§0.2), passing by 1,526,417 bytes; largest chunk 2,906,489 (under the 3,050,000 cap). Measured on token-gaps `33f1ff1` (2026-11-27, P0 verification — re-measured first-hand by the docs-currency lane from a clean worktree at `33f1ff1`, Node 22). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
+**Bundle note:** the merged tree passes the budget — total JS 4,457,308 vs the 6,000,000 budget (§0.2), passing by 1,542,692 bytes; largest chunk 2,906,489 (under the 3,050,000 cap). Measured on token-gaps `f1f0e6c` (2026-11-27, follow-up verification — re-measured first-hand by the bug-hunt-v2 docs lane from a clean worktree at `f1f0e6c`, Node 22). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
@@ -150,8 +150,8 @@ plus 65 expansion chains in `apps/web/src/wallet/chains-expanded.ts`
 (`EXPANDED_CHAINS`, line 148; `EXPANDED_CHAIN_COUNT = 65`, line 1903).
 The 65 break down as 45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other) + 3
 OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) — whose full
-fact records live in the same file (cardano `:1821`, kaspa `:1848`,
-starknet `:1875`), not in a separate file. `SUPPORTED_CHAINS`
+fact records live in the same file (cardano `:1832`, kaspa `:1859`,
+starknet `:1886`), not in a separate file. `SUPPORTED_CHAINS`
 (`chains.ts:1680`) holds all 87.**
 The expansion programme wired 84 into the app (adapters, prices,
 icons, explorers; `docs/EXPANSION-PROGRAMME.md`); Lane B added the
@@ -249,8 +249,8 @@ for them beyond reference material.
 chains (87 total). Registration: `SUPPORTED_CHAINS` in
 `apps/web/src/wallet/chains.ts` ends with `cardano`, `kaspa`,
 `starknet`; full fact records in `apps/web/src/wallet/
-chains-expanded.ts` (cardano `:1821`, kaspa `:1848`, starknet
-`:1875`). Derive-only means receive works (an address is derived
+chains-expanded.ts` (cardano `:1832`, kaspa `:1859`, starknet
+`:1886`). Derive-only means receive works (an address is derived
 and shown); balance, history and send have no adapter and are
 honestly unavailable, never faked (`availableFor` returns them for
 derive/receive only).
@@ -357,7 +357,7 @@ guide must not let an agent assume otherwise:
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
-  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 120 files; the 3,216-passed + 5-skipped figure is the loud-stone run at token-gaps `33f1ff1` (2026-11-27, P0 verification), re-run first-hand by the docs-currency lane from a clean worktree at `33f1ff1`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
+  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 121 files; the 3,245-passed + 5-skipped figure is the loud-stone run at token-gaps `f1f0e6c` (2026-11-27, follow-up verification), re-run first-hand by the bug-hunt-v2 docs lane from a clean worktree at `f1f0e6c`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -697,7 +697,7 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   only devnet chains in devnet mode (`docs/DEVNET-SEND-CRASH-FIX.md`).
 - **Exception E1** (`CONSTRAINTS.md`, owner 2026-11-22, **expires
   2027-02-20**): carves the devnet-only broadcast path out of the "no
-  broadcast path" floor. Mainnet broadcast still throws unconditionally.
+  broadcast path" floor. Mainnet broadcast stays disabled (`broadcastSigned` returns `{ status: 'disabled' }`).
   If devnet is still needed after 2027-02-20, the owner must renew it.
   Recorded in `docs/DECISIONS.md:399-410` and `:685`, `:770`.
 - `AGENTS.md` §8 ("No broadcast path was built or enabled") is read with
@@ -1105,9 +1105,10 @@ the list here — it moves when a provider's live list moves.
 the recovery phrase — is split into N-of-M shares (2-of-3 / 2-of-5 /
 3-of-5) via `shamir-secret-sharing` 0.0.4 (Privy org, Apache-2.0),
 lazy-loaded. Implementation: `apps/web/src/wallet/backup-shares.ts`
-+ `apps/web/src/screens/backup-shares.tsx`, lazy-loaded from
-`apps/web/src/app/app.tsx` (`loadBackupShares`, route
-`/backup-shares`); the screen is linked from Security. Shares are
++ `apps/web/src/screens/backup.tsx` (Shares tab), lazy-loaded from
+`apps/web/src/app/app.tsx` (`loadBackup`); the Shares tab lives
+under `/mnemonic-backup?tab=shares` (`/backup-shares` redirects there);
+the screen is linked from Security. Shares are
 `bawa-share-v1:` base64 + QR. Restore is proven by trial-decrypting
 the real vault envelope after combining (`combine` does NOT verify
 reconstruction integrity, so a bad reconstruction errors clearly
@@ -1168,6 +1169,20 @@ Unknown calls fall back honestly to raw data. Implementation:
 helpers in `apps/web/src/wallet/caip.ts` are implemented from the
 public specs — no code taken from WalletConnect (the CAIP module lives
 in the WalletConnect monorepo under the Reown licence).
+
+**Review section, scope and refresh.** The Send review screen shows a
+"Contract call" section (`apps/web/src/screens/send-review.tsx`) for
+calls the snapshot resolves: the generic ERC-20 `transfer`/`approve`
+descriptors (which apply to any ERC-20 contract) and the vendored 1inch
+AggregationRouterV6 `unoswapTo` only. The decoder handles address and
+uint parameters only; the registry's `$ref` formatters (token amounts,
+address names, dates, enums) are not implemented, and EIP-712 is not
+wired — the wallet has no EIP-712 signing surface. A call the snapshot
+does not resolve falls back to raw calldata; a reading is never
+invented. Refresh: re-run
+`apps/web/scripts/generate-clear-signing-snapshot.mjs`, pulling the
+registry from upstream (`ethereum/clear-signing-erc7730-registry`);
+the surveyed checkout was the okxlabs fork at `3d60345`.
 
 The survey's verified facts, which Lane F implemented from:
 
@@ -1300,12 +1315,12 @@ were re-measured from that tree (see the rows below).
 | §0.3 style B + `--qr-*` | Owner pick 2026-11-27 (style B, polished financial style; tiny paper/comic fraction kept); `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Was the 4-colour cap (2026-11-20 drawing-illustration order) | Fixed in place (docs-currency Lane 2, 2026-11-27; the cap is superseded as the governing rule, the `--qr-*` exception stands, the current tree still carries the `--bawa-*` tokens while P1 migrates screens) |
 | §0.4 no fake data | `apps/web/src/wallet/price-fallbacks.ts` header; `chains.ts` `availableFor` | Correct | Verified |
 | §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 87-chain app — noted as OPEN, not silently widened | Fixed (note updated 84 → 87) |
-| §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:148`, `:1903` (`EXPANDED_CHAIN_COUNT = 65` — 45 EVM + 17 non-EVM (9 Cosmos + 8 other) + 3 OKX-reference in the same file); §2.5 (Cardano `:1821`, Kaspa `:1848`, Starknet `:1875`) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87; 62 → 65, guide-update pass) |
+| §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:148`, `:1903` (`EXPANDED_CHAIN_COUNT = 65` — 45 EVM + 17 non-EVM (9 Cosmos + 8 other) + 3 OKX-reference in the same file); §2.5 (Cardano `:1832`, Kaspa `:1859`, Starknet `:1886`) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87; 62 → 65, guide-update pass) |
 | §2.1 derivation paths | `chains.ts:403-455` (EVM_PATH, SOL/TON); `WALLET_BUILDER.md` policy table | Correct; SOL indexed form added from code | Verified |
 | §2.2 icons / assets pin | `chains-expanded.ts` header; `TRUST_WALLET_ASSETS_PIN` | Correct | Verified |
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |
 | §2.4 XRP/Stellar/NEAR | Coordinator first-hand registry check, 2026-11-25 (survey) | Not previously recorded in the guide | Added |
-| §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1821` (cardano), `:1848` (kaspa), `:1875` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
+| §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1832` (cardano), `:1859` (kaspa), `:1886` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
 | §2.6 Android JSON export + toolchain | `registry/chains.json` (87 chains, 169 RPCs, 4 testnets, `sourceCommit 7efba14`), `registry/tokens.json` (21 tokens); `apps/web/scripts/generate-android-registry.mjs`; `./gradlew assembleDebug` BUILD SUCCESSFUL (clean, 32 s, 2026-11-27) | Was "Proposal (not yet implemented)" with no SDK/JDK on loud-stone | Fixed in place (docs-currency Lane 2, 2026-11-27; export Step 1 commit `58d85c5`; steps 3–6 BLOCKED, Step 3 report removed by safety classifiers) |
 | §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files — the 2,945 + 5 skipped figure is Lane C's loud-stone run, not reproduced in this sandbox, 2026-11-26; smoke 440; dinero.js dropped) |
 | §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:2`, `:82`; `auto-lock.ts:21-26` | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |

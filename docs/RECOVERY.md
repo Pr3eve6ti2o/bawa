@@ -588,7 +588,7 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 
    On each network, retain enough native gas coin for outgoing token transfers. Move the remaining spendable native gas coin last, allowing for the final transaction's own fee, especially where a sweeper bot may be watching.
 
-   Do not assume a fee top-up will remain available. Bots can take incoming funds within seconds, so do not keep feeding an address that is being swept. [3]
+   Do not assume a fee top-up will remain available. Bots can take incoming funds within seconds, so do not keep feeding an address that is being swept.
 
    Verify receipt of each asset and token at the new wallet's address on the correct network. Do not treat a 'sent' banner or a submitted transaction as confirmation.
 
@@ -616,7 +616,7 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 
 **Trace, notify and report.** Treat on-chain transfers as irreversible. For funds already taken, follow the only remaining steps: trace the transactions, notify any identifiable receiving exchange through its official channels and report the theft to the relevant authorities.
 
-Preserve transaction references, addresses and timestamps, not secrets. An exchange may be able to act on assets it still controls, but do not mistake that possibility for an on-chain reversal or a promise of recovery. Never pay a 'recovery service'. [3]
+Preserve transaction references, addresses and timestamps, not secrets. An exchange may be able to act on assets it still controls, but do not mistake that possibility for an on-chain reversal or a promise of recovery. Never pay a 'recovery service'.
 
 > **Expected result:** An evidence record and any available exchange or reporting reference numbers, not a claimed reversal or a supposedly repaired seed.
 
@@ -725,16 +725,15 @@ Never embed the mnemonic in a legal will, as the will may become public or be wi
 
 ## Sources
 
-Community reading on mnemonic backups and recovery testing, not specifications for Bawa derivation or TON configuration. Numbered [1]-[3] are cited in the compromised-seed playbook.
+Community reading on mnemonic backups and recovery testing, not specifications for Bawa derivation or TON configuration. Numbered [1]-[2] are cited in the compromised-seed playbook.
 
 1. [Coin Bureau, Top mistakes to avoid when using hardware wallets](https://coinbureau.com/education/top-mistakes-to-avoid-when-using-hardware-wallets)
 2. [Bitcoin.com, What is a private key?](https://www.bitcoin.com/wallet/what-is-a-private-key/)
-3. [CryptoNakta, Mnemonic exposed](https://cryptonakta.com/seed-phrase-exposed/)
-4. [Self Custody, Seed to key](https://selfcustody.ca/guides/seed-to-key.html)
-5. [Coldcard, Passphrase](https://coldcard.com/docs/passphrase/)
-6. [Blockstream, Fix issues with unexpected wallet balance](https://help.blockstream.com/blockstream-app/troubleshooting/fix-issues-with-unexpected-wallet-balance)
-7. [The Crypto Guide, Mnemonic guide](https://thecryptoguide.org/learn/seed-phrase-guide/)
-8. [BIP39 Phrase, Create a mnemonic](https://bip39-phrase.com/create-a-seed-phrase/)
-9. [Cobo, Bitcoin security best practices](https://www.cobo.com/post/bitcoin-security-best-practices-guide)
-10. [Tangem, How to back up a crypto wallet](https://tangem.com/en/blog/post/how-to-back-up-crypto-wallet/)
+3. [Self Custody, Seed to key](https://selfcustody.ca/guides/seed-to-key.html)
+4. [Coldcard, Passphrase](https://coldcard.com/docs/passphrase/)
+5. [Blockstream, Fix issues with unexpected wallet balance](https://help.blockstream.com/blockstream-app/troubleshooting/fix-issues-with-unexpected-wallet-balance)
+6. [The Crypto Guide, Mnemonic guide](https://thecryptoguide.org/learn/seed-phrase-guide/)
+7. [BIP39 Phrase, Create a mnemonic](https://bip39-phrase.com/create-a-seed-phrase/)
+8. [Cobo, Bitcoin security best practices](https://www.cobo.com/post/bitcoin-security-best-practices-guide)
+9. [Tangem, How to back up a crypto wallet](https://tangem.com/en/blog/post/how-to-back-up-crypto-wallet/)
 
