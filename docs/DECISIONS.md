@@ -2394,3 +2394,53 @@ chain count.
 ## §33 — STON.fi Lanes A–C merged (2026-11-27, commit `8a1d681`)
 
 **Decision (STON.fi lanes A–C):** `@ston-fi/omniston-sdk@0.8.13` is installed (exact pin, MIT verified from the installed package), live quotes are wired (`fetchStonfiQuote` over `wss://omni-ws.ston.fi`; proven live 2026-11-27: 1 USDT on TON → 0.972388 USDC on Base, "Best quote"), and TON order signing is wired (`signStonfiOrderTonOffline` in `stonfi-signing.ts` returns the signed BoC only, V4R2, mode 3; 15 tests). TRON stays live-unverified and is never offered; no current official per-transaction limit is published; execution/broadcast still needs the owner's separate go-ahead. Gates at `8a1d681`: tsc 0, eslint 0, build 0, vitest 120 files / 3,121 passed + 5 skipped, bundle 4,457,283 / 6,000,000.
+
+## §34 — Style decision: option B — polished financial style (owner, 2026-11-27 ~18:26 IST)
+
+**Decision (owner):** option B is picked — polished financial style everywhere, illustration only for brand moments — PLUS keep a tiny fraction of the paper/comic theme. Money screens (dashboard, asset rows, Send, Receive, Swap, recovery phrase) go fully polished: flat, hairline, tabular, real semantic colour. The paper/comic theme stays only in a tiny bounded way: QR card templates, the Welcome illustration, at most one small brand touch per screen. The recovery-phrase screen goes first under the style work; the QR card is untouched.
+
+**What this reverses:** the 2026-11-20 order to rebuild the layout fully in drawing-illustration style is reversed for the money screens (it stands only for the bounded brand moments above). P0 is the first build under this decision (its commits carry "style B": `2d65daf`, `bee40ee`, `33f1ff1`); P1/P2/P3 follow.
+
+## §35 — Bug-hunt fixes: 69 findings, all resolved (2026-11-27, tip `7efba14`)
+
+**Decision (bug-hunt programme):** all 69 findings from the six-lane hunt (run at `8a1d681`; lane reports in `bawa-bughunt/`: A 12, B 3, C 11, D 18, E 16, F 9) are fixed: 1 blocking use, 20 visible to the user, 37 latent, 10 cosmetic, 1 flagged needs-a-second-look. Fix commits: `8247437` (Lane A + A-7), `f999ccf` (Lanes C + F), `ae135f8` (Lane D), `d156657` (Lanes B + E + F2), `7efba14` (D-18 cleanup).
+
+**Top fixes:** BTC exact-spend / dust-change signing (Lane A finding 3, confirmed by probe against the real WASM core: exact spend and 59-sat dust change both failed signing with "Signed outputs do not match the plan" before the fix); vault KDF validation; review-intent binding for EVM / EVM-token / SOL / SPL (`send.ts`, A-7 — the intent created at review time is asserted before any key is used; a mismatch refuses with `intent-mismatch`); STON.fi signing wired into Swap, with a live probe catching a missing HTLC secret; the backup-gate false promise removed as copy-only; `7efba14` drops `export` on 251 internal-only names (D-18), corrects D-15 unwired references, and removes stale Vibe Station comments.
+
+**Still open (follow-ups, not fixed here):** BTC / TRX / TON signing is still unbound to the review intent (`send.ts` lists only EVM, EVM-token, SOL and SPL as asserting intent); the real backup gate is not implemented (`security-settings.tsx`: "no backup gate exists"); chainSupport "etc" key wart.
+
+## §36 — Desktop-layout merge (2026-11-27, `34849a2` → `b65e8c3`)
+
+**Decision (desktop-layout merge):** tag `archive/desktop-layout-v2` is merged into `panel-rebuild/token-gaps` (`34849a2`, 29 files, +1,141/−277), then pushed as part of token-gaps `b65e8c3`.
+
+**Verified:** 980 px shell breakpoint (`globals.css`: Chrome and Brave force the layout viewport to exactly 980 CSS px in "Desktop site" mode); sidebar 224 px with 15 links at 980 / 1280 / 1440, hidden at 390 / 820.
+
+## §37 — Android programme: step 1 done, toolchain proven, steps 3–6 blocked (2026-11-27)
+
+**Decision (Android programme, owner-approved 2026-11-27):** step 1 is done — the versioned JSON export of the web wallet data (commit `58d85c5`, 2026-11-26 23:18): `registry/chains.json` 87 chains, 169 RPC endpoints, 21 tokens, 4 testnets; regenerated at `b65e8c3` (generatedAt 2026-11-27T00:44:31Z, sourceCommit `7efba14`, sourceDirty false).
+
+**Toolchain (installed and proven on loud-stone, verified first-hand 2026-11-27):** JDK 17 OpenJDK 17.0.21.1, SDK platforms android-34 + android-35, build-tools 34.0.0 + 35.0.0, cmake 3.22.1, ndk 27.2.12479018. `./gradlew assembleDebug` BUILD SUCCESSFUL — first cold build 1 m 49 s (33 tasks); clean rebuild on 2026-11-27 in 15 s (34 tasks), `app-debug.apk` 52,578,208 bytes. App skeleton: AGP 8.2.2, Kotlin 1.9.22, Gradle 8.7, Compose BOM 2024.02.00, ZXing core 3.5.3 (QR display only), 14 screens, no data layer / Trust Wallet Core / network / scanner / INTERNET permission.
+
+**Steps 3–6 BLOCKED:** the Step 3 lane's report was removed by safety classifiers before the coordinator could see it, and the coordinator was instructed not to continue that request. The lane left no trace — HEAD stayed `b65e8c3`, worktree clean, nothing committed, nothing pushed. Steps 3–6 need the owner's decision on how to proceed.
+
+## §38 — P0 UX build under style B, pushed and live (2026-11-27, `33f1ff1`; gh-pages `4d8a98f`)
+
+**Decision (P0 UX build, first build under §34):** three commits — `bee40ee` (P0-B: delete /create hub, shorten Welcome, fix Wallets desktop grid), `2d65daf` (P0-A: hero Copy button, 24 h on rows, hide no-wallet zeros), `33f1ff1` (P0-C: one error pattern everywhere).
+
+**What changed:** hero Copy button — copying the address goes from 4 taps to 1, the label flips to "Copied!" for 2 s (`dashboard.tsx`); 24 h change on asset rows (`change24hPct`); no-wallet $0.00 rows hidden; the /create hub route and `create-hub.tsx` deleted (sidebar "Create wallet" and every link now go straight to /create-wallet; /create renders Page not found); Welcome shortened; one error pattern everywhere — one line + the reason + a Retry gated to real failures (hidden for locked / no-address / no-adapter); transaction detail resolves any real hash via Track's lookup; Wallets desktop grid fixed.
+
+**Gates at `33f1ff1` on loud-stone with Node 22 (P0 lane verification):** tsc 0, eslint 0, build 0, vitest 3,216 passed + 5 skipped / 0 failures, bundle 4,473,583 / 6,000,000, diagram test 5/5.
+
+**Pushed and live:** remote `panel-rebuild/token-gaps` is `33f1ff1` (verified by `git ls-remote`); `gh-pages` is `4d8a98f` (2026-11-27 14:36, "Publish Bawa from token-gaps `33f1ff1`…"), serving `assets/index-Bri-_XH1.js`; the live root returns 200 (verified by curl from loud-stone 2026-11-27).
+
+**Current counts (verified 2026-11-27 on this tree):** 87 chains (`registry/chains.json` chainCount 87), 21 default tokens (`registry/tokens.json` tokenCount 21), 43 dashboard rows (22 native assets + 21 default tokens), bundle budget 6,000,000, diagram test 5/5 (`node tests/diagram-references.test.mjs`, re-run first-hand 2026-11-27).
+
+## §39 — Provider keys: still none; swap execution approved, not implemented (2026-11-27)
+
+**Decision (standing state, re-confirmed 2026-11-27):** no provider key is configured — Ramp, MoonPay, Onramper, Banxa, Transak, Relay, STON.fi — and none has been invented. Buy is not set up yet: every Buy row says "Not set up yet" with exactly what is needed (`receive.tsx`; the URL builders in `buy-providers.ts` take the key as a parameter and refuse an empty one).
+
+**Swap execution:** approved in chat by the owner (2026-11-27) but NOT implemented. `swap.tsx` is sign-only, never broadcast ("execution needs the owner's separate broadcast authorisation"); broadcast stays disabled (`broadcastSigned` returns disabled; asserted by `tests/diagram-references.test.mjs`).
+
+## §40 — Standing instruction: move verified work without asking (owner order, 2026-11-27 ~20:03 IST)
+
+**Decision (owner order, standing):** "You can move it if you like, you do not have to take permission from me." The owner does not want to be asked for permission to move or apply verified work. Once work is verified, move/apply it without re-asking. This covers moving and applying verified work only; other promotions and guard installations are still each their own question.
