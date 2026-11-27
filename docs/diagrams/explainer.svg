@@ -47,7 +47,7 @@
 
   <!-- Arrow 2 -->
   <path class="arrow" d="M200,210 L200,228" marker-end="url(#ah2)"/>
-  <text class="lbl" x="208" y="223" font-size="10.5">84 addresses</text>
+  <text class="lbl" x="208" y="223" font-size="10.5">87 addresses</text>
 
   <!-- Derivation panel -->
   <rect class="card" x="16" y="230" width="368" height="96" rx="12"/>
@@ -83,7 +83,7 @@
     <rect class="chipEvm" x="204" y="500" width="180" height="14" rx="6"/><text class="b" x="212" y="510.5">Metis · METIS</text>
     <rect class="chipEvm" x="16" y="516" width="180" height="14" rx="6"/><text class="b" x="24" y="526.5">Aurora · ETH</text>
     <rect class="chipEvm" x="204" y="516" width="180" height="14" rx="6"/><text class="b" x="212" y="526.5">Fantom · FTM</text>
-    <rect class="chip" x="16" y="532" width="368" height="14" rx="6"/><text class="b" x="24" y="542.5">+62 more — ZKsync Era · Cronos · Kava EVM · Filecoin · Ronin · Theta · IoTeX</text>
+    <rect class="chip" x="16" y="532" width="368" height="14" rx="6"/><text class="b" x="24" y="542.5">+65 more — ZKsync Era · Cronos · Kava EVM · Filecoin · Ronin · Theta · IoTeX</text>
     <rect class="chip" x="16" y="548" width="368" height="14" rx="6"/><text class="b" x="24" y="558.5">Cosmos · Stellar · Polkadot · NEAR · Aptos · Tezos · Algorand · Hedera · …</text>
   </g>
 

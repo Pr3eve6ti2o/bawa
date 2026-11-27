@@ -963,6 +963,73 @@ describe('SwapScreen', () => {
     }
   });
 
+  it('clears the quote panel when the pair becomes the same pair', async () => {
+    // Follow-up (fix lanes): after a same-pair selection, the guard
+    // blocked new quotes but the Quote panel still showed the previous
+    // legitimately-fetched ETH->SOL quote below the guard message.
+    setWallet();
+    const seen = stubFetch(LIFI_OK_FIXTURE);
+    const mounted = await mountScreen();
+    try {
+      await enterAmount(mounted.div, '0.1');
+      await waitForText(mounted.div, 'You receive');
+      expect(seen.length).toBeGreaterThan(0);
+      await pickChain(mounted.div, 'swap-to-chain', 'eth', 'Ethereum');
+      await waitForText(mounted.div, 'Choose a different network');
+      expect(mounted.div.textContent).not.toContain('You receive');
+      expect(
+        mounted.div.querySelector('#swap-quote-heading'),
+      ).toBeNull();
+      expect(
+        mounted.div.querySelector('#swap-compare-heading'),
+      ).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('does not resurrect a stale quote when a fetch resolves after the pair becomes the same pair', async () => {
+    // The in-flight LI.FI fetch can resolve after the user picks the
+    // same pair; the late response must not resurrect the old quote
+    // under the guard.
+    setWallet();
+    let resolveLifi: ((value: Response) => void) | null = null;
+    const lifiPromise = new Promise<Response>((resolve) => {
+      resolveLifi = resolve;
+    });
+    const fn = (async (url: unknown) => {
+      const target = String(url);
+      if (target.includes('li.quest')) return lifiPromise;
+      return new Response(JSON.stringify(LIFI_OK_FIXTURE), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fn);
+    const mounted = await mountScreen();
+    try {
+      await enterAmount(mounted.div, '0.1');
+      await waitForText(mounted.div, 'Getting a quote');
+      await pickChain(mounted.div, 'swap-to-chain', 'eth', 'Ethereum');
+      await waitForText(mounted.div, 'Choose a different network');
+      await act(async () => {
+        resolveLifi?.(
+          new Response(JSON.stringify(LIFI_OK_FIXTURE), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      });
+      expect(mounted.div.textContent).not.toContain('You receive');
+      expect(
+        mounted.div.querySelector('#swap-quote-heading'),
+      ).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('collapses the Refuel essay and What happens next into one-line disclosures', async () => {
     // P1 (Lane S4, item 10): one line each on screen; the essays
     // live behind disclosures, still in the DOM.

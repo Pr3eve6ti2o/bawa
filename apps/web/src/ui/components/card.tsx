@@ -20,7 +20,7 @@ function Card({
   radius?: "bawa" | "xl"
   /** Surface: "paper" is the default; "card" matches the theme card surface. */
   tone?: "paper" | "card"
-  /** Border colour: "ink" is the default; "border" is the muted border; "destructive" is the delete-zone border. */
+  /** Border colour: "ink" is the default; "border" is the muted border; "destructive" is the delete-zone border, rendered in the link token (#C23A1D, 5.27:1 on paper) — the bright coral at 40% opacity was a faint peach far below the 3:1 non-text bar, and even full-strength coral is only 2.77:1 (same fix as the destructive icon, F4). */
   borderTone?: "ink" | "border" | "destructive"
 }) {
   return (
@@ -33,7 +33,7 @@ function Card({
         borderTone === "border"
           ? "border-border"
           : borderTone === "destructive"
-            ? "border-destructive/40"
+            ? "border-link"
             : "border-ink",
         // Lane T (P1, item 3): one card padding — 16px mobile,
         // 24px desktop, all round. The py-6-only default (no

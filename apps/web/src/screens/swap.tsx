@@ -424,7 +424,17 @@ export function SwapScreen() {
   // A quote belongs to one exact request: changing either side, the
   // amount or the recipient clears it, so nobody acts on a stale one.
   // LI.FI quotes stale in about a minute in any case (see the card).
+  // Bump requestId too: the check in handleGetQuote only guards
+  // against a NEWER fetch, not against the request changing
+  // mid-flight — without this, a late response from the old request
+  // would resurrect the cleared quote (same-pair guard engaged, old
+  // quote panel still showing below it). Clear the auto-quote key
+  // as well, or changing back to a pair that was already quoted
+  // would never refire (the key would match a quote that no longer
+  // exists) and no fresh quote would land.
   useEffect(() => {
+    requestId.current += 1;
+    lastAutoQuoteKey.current = null;
     setQuoteState({ status: 'idle' });
     setRelayState(null);
     setStonfiState(null);
@@ -1128,7 +1138,7 @@ export function SwapScreen() {
           )}
         </div>
       )}
-      {quoteState.status === 'ok' && (
+      {quoteState.status === 'ok' && !isSamePair && (
         <section
           aria-labelledby="swap-quote-heading"
           className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
@@ -1202,7 +1212,9 @@ export function SwapScreen() {
         </section>
       )}
 
-      {quoteState.status !== 'idle' && quoteState.status !== 'loading' && (
+      {quoteState.status !== 'idle' &&
+        quoteState.status !== 'loading' &&
+        !isSamePair && (
         <section
           aria-labelledby="swap-compare-heading"
           className="space-y-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
