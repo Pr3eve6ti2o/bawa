@@ -112,7 +112,52 @@ describe('price chart', () => {
     }
   });
 
-  it('shows no-chart-data without fetching when there is no CoinGecko id', async () => {
+  it('offers a Retry on a failed chart that refetches the chart only', async () => {
+    // P0-6: the chart error said "try again" with nothing to tap.
+    // The first fetch fails (rate limit); Retry refetches and the
+    // chart plots. No other screen state is touched.
+    const fetchStub = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    }));
+    vi.stubGlobal('fetch', fetchStub);
+    const { div, cleanup } = await mountChart('bitcoin');
+    try {
+      await flush();
+      expect(div.textContent).toContain('rate-limiting charts');
+      const retry = Array.from(div.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Retry',
+      );
+      expect(retry).not.toBeUndefined();
+      fetchStub.mockImplementation(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          prices: [
+            [1000, 60000],
+            [2000, 61000],
+            [3000, 62683],
+          ],
+        }),
+        headers: { get: () => null },
+      }));
+      await act(async () => {
+        retry?.click();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await flush();
+      expect(fetchStub).toHaveBeenCalledTimes(2);
+      expect(div.querySelector('polyline')).not.toBeNull();
+      expect(div.textContent).toContain('$60,000.00');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('offers no Retry when there is no CoinGecko id to fetch', async () => {
     const fetchStub = vi.fn(async () => ({
       ok: true,
       status: 200,
@@ -126,6 +171,12 @@ describe('price chart', () => {
       expect(fetchStub).not.toHaveBeenCalled();
       expect(div.querySelector('polyline')).toBeNull();
       expect(div.textContent).toContain('No chart data for this asset yet.');
+      // P0-6: no id means nothing to refetch, so no Retry either.
+      expect(
+        Array.from(div.querySelectorAll('button')).find(
+          (button) => button.textContent === 'Retry',
+        ),
+      ).toBeUndefined();
     } finally {
       await cleanup();
     }

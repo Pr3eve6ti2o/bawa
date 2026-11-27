@@ -132,7 +132,13 @@ export function TransactionHistoryScreen() {
           </div>
 
           {anyLoading && rows.length === 0 ? (
-            <Skeleton className="h-24 w-full" />
+            // P0-6: the bare skeleton loaded for 10–35 s with no words
+            // at all. The labelled skeleton carries the line
+            // ("Loading your activity…") inside the box; the header
+            // and the chain filter above stay visible, so the screen
+            // never looks blank. Rows stream in as chains settle
+            // (this branch only shows while no row has landed yet).
+            <Skeleton className="h-24 w-full" label="Loading your activity…" />
           ) : rows.length === 0 ? (
             vaultState === 'no-vault' ? (
               // Lane 2: no vault, no addresses, no history can exist —

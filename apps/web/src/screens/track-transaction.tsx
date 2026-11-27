@@ -18,7 +18,12 @@ import { ChainSearchSelect } from './chain-search-select';
 import { Card, CardContent } from '../ui/components/card';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { BawaLoading } from '../ui/components/loading';
-import { humanReasonMessage, useWallet } from '../state/wallet-context';
+import {
+  ensureAdapters,
+  ensureDevnetAdapters,
+  humanReasonMessage,
+  useWallet,
+} from '../state/wallet-context';
 
 type ChainId = (typeof SUPPORTED_CHAINS)[number];
 // Result states wrap the tracker result so the discriminant is always
@@ -134,7 +139,9 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
   );
 }
 
-function TransactionDetails({ data, chain, checkedAt }: {
+// P0-6: exported so the transaction-detail route can render the same
+// lookup result Track shows (one home for the lookup-result UI).
+export function TransactionDetails({ data, chain, checkedAt }: {
   data: TrackedTx;
   chain: ChainId;
   checkedAt: string;
@@ -252,6 +259,12 @@ export function TrackTransactionScreen() {
     const request = ++activityRequest.current;
     setActivity({ kind: 'loading' });
     try {
+      // P0-6: the history adapters load lazily — on a cold visit to
+      // /track nothing has registered them yet, so the activity call
+      // would fail at once with "No history adapter…", and a Retry
+      // would fail the same way. Load them first so the lookup
+      // actually runs and a Retry can succeed.
+      await (devnetEnabled ? ensureDevnetAdapters() : ensureAdapters());
       const result = await getRecentActivity(chain, address.trim(), 10, { devnet: devnetEnabled });
       if (request === activityRequest.current) setActivity({ kind: 'result', result });
     } catch (error: unknown) {
@@ -385,9 +398,35 @@ export function TrackTransactionScreen() {
               required
             />
           </div>
-          <Button type='submit' disabled={!address.trim() || activity.kind === 'loading'}>
+          <Button
+            type='submit'
+            disabled={!address.trim() || activity.kind === 'loading'}
+            // P0-6: the shared Button renders disabled as a dashed
+            // outline, which reads as broken — the one-button-system
+            // fix (P1-11) owns the global rule. At this call site the
+            // disabled state is 40% opacity + a not-allowed cursor
+            // with a solid border instead (inline style wins over the
+            // component's disabled classes, deterministically).
+            style={
+              !address.trim() && activity.kind !== 'loading'
+                ? {
+                    borderStyle: 'solid',
+                    opacity: 0.4,
+                    cursor: 'not-allowed',
+                    pointerEvents: 'auto',
+                  }
+                : undefined
+            }
+          >
             Show recent activity
           </Button>
+          {/* P0-6: a disabled button with no reason reads as broken.
+              Say what unblocks it. */}
+          {!address.trim() && activity.kind !== 'loading' && (
+            <p className='text-sm text-muted-foreground'>
+              Enter an address above to see its recent activity.
+            </p>
+          )}
         </form>
 
         {activity.kind === 'loading' && (
@@ -422,6 +461,19 @@ export function TrackTransactionScreen() {
             <AlertDescription className='space-y-2'>
               <p>{humanReasonMessage(activity.result.reason, 'track')}</p>
               <p>Recent activity could not be loaded.</p>
+              {/* P0-6: the lookup error on this screen has a Retry;
+                  the activity error had none — same failure, same
+                  action. Gated like the lookup Retry: disabled with
+                  no address, since a refetch cannot run without one.
+                  And only for a real failure ('error'): an
+                  'unavailable' result means the chain has no history
+                  adapter at all, so a refetch cannot succeed and no
+                  Retry is shown. */}
+              {activity.result.status === 'error' && (
+                <Button type='button' variant='outline' disabled={!address.trim()} onClick={() => void runActivity()}>
+                  Retry
+                </Button>
+              )}
             </AlertDescription>
           </Alert>
         )}

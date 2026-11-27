@@ -752,8 +752,7 @@ describe('send screen', () => {
     }
   });
 
-  it('shows a focused error summary when Review fails', async () => {
-    // Redesign Lane 3: the old preview error rendered below the
+  it('shows a focused error summary when Review fails', async () => {    // Redesign Lane 3: the old preview error rendered below the
     // action row, where a failed Review looked like nothing had
     // happened. The summary sits at the top of the step, lists each
     // failure with a link to its field, and takes focus.
@@ -777,6 +776,59 @@ describe('send screen', () => {
       expect(summary?.textContent).toContain('Invalid Ethereum address.');
       expect(document.activeElement).toBe(summary);
       expect(mounted.div.textContent).not.toContain('Review your send');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('offers a Retry next to a failed balance, and none for no-adapter', async () => {
+    // P0-6: a failed balance sat there as "Balance unavailable" with
+    // no way back. The Retry refetches the balance; a chain with no
+    // adapter gets none, since a refetch cannot succeed there.
+    const refreshBalances = vi.fn(() => Promise.resolve());
+    setWallet({
+      balances: {
+        btc: { status: 'unavailable', reason: 'no-adapter' },
+        eth: { status: 'error', reason: 'down' },
+        trx: { status: 'unavailable', reason: 'no-adapter' },
+        ton: { status: 'unavailable', reason: 'no-adapter' },
+      },
+      refreshBalances,
+    });
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      expect(mounted.div.textContent).toContain('Balance unavailable');
+      const retry = findButton(mounted.div, 'Retry');
+      await act(async () => {
+        retry.click();
+      });
+      expect(refreshBalances).toHaveBeenCalledTimes(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a failed balance with no Retry when the chain has no adapter', async () => {
+    setWallet({
+      balances: {
+        btc: { status: 'unavailable', reason: 'no-adapter' },
+        eth: { status: 'unavailable', reason: 'no-adapter' },
+        trx: { status: 'unavailable', reason: 'no-adapter' },
+        ton: { status: 'unavailable', reason: 'no-adapter' },
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      expect(mounted.div.textContent).toContain('Balance unavailable');
+      expect(
+        [...mounted.div.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === 'Retry',
+        ),
+      ).toBeUndefined();
     } finally {
       await mounted.cleanup();
     }

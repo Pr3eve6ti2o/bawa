@@ -10,6 +10,44 @@ type BawaLoadingProps = {
   compact?: boolean;
 };
 
+// P0-6 (one error pattern everywhere): a bare "Loading…" on a lazy
+// route says nothing about where the user is going. When no explicit
+// label is passed — the app shell's Suspense fallback renders
+// <BawaLoading /> with none — the route name rides along as a second
+// line under the literal "Loading…" label, so the existing
+// 'Loading…' assertions (app.test.tsx settle loop,
+// app-routing.test.tsx first-navigation test) keep matching while
+// the user sees which screen is loading. The basename (/bawa/) is
+// stripped: BrowserRouter serves every route under it.
+const ROUTE_NAMES: Record<string, string> = {
+  '': 'Home',
+  welcome: 'Welcome',
+  'create-wallet': 'Create a wallet',
+  create: 'Create a wallet',
+  'import-wallet': 'Import a wallet',
+  'mnemonic-backup': 'Backup',
+  assets: 'Assets',
+  receive: 'Receive',
+  send: 'Send',
+  transactions: 'Transactions',
+  track: 'Track a transaction',
+  networks: 'Networks',
+  wallets: 'Wallets',
+  security: 'Security',
+  lock: 'Lock',
+};
+
+function routeNameFromPath(pathname: string): string | null {
+  if (typeof window === 'undefined') return null;
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] === 'bawa') segments.shift();
+  const [first, second] = segments;
+  if (first === undefined) return 'Home';
+  if (first === 'transactions' && second !== undefined) return 'Transaction details';
+  if (first === 'assets' && second !== undefined) return 'Asset details';
+  return ROUTE_NAMES[first] ?? first.charAt(0).toUpperCase() + first.slice(1);
+}
+
 const animationStyles = `
   .bawa-loading .bawa-draw-circle {
     animation: bawa-loading-draw 1.6s linear infinite;
@@ -42,11 +80,22 @@ const animationStyles = `
 `;
 
 export function BawaLoading({
-  label = "Loading…",
+  label,
   className,
   compact = false,
 }: BawaLoadingProps) {
   const size = compact ? 24 : 48;
+  // An explicit label always wins. With none, the loader says
+  // "Loading…" and names the route underneath (see
+  // routeNameFromPath): the Suspense fallback carries no label of
+  // its own, so this is what names the screen being loaded.
+  const displayLabel = label ?? 'Loading…';
+  const routeName =
+    label === undefined && !compact
+      ? routeNameFromPath(
+          typeof window === 'undefined' ? '/' : window.location.pathname,
+        )
+      : null;
   return (
     <div
       role="status"
@@ -108,8 +157,11 @@ export function BawaLoading({
             : { fontSize: "1.5rem", lineHeight: 1.2 }
         }
       >
-        {label}
+        {displayLabel}
       </span>
+      {routeName !== null && (
+        <span className="text-sm text-muted-foreground">{routeName}</span>
+      )}
     </div>
   );
 }

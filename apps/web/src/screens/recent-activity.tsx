@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { Button } from '../ui/components/button';
+import { Skeleton } from '../ui/components/skeleton';
 import { TxRow } from './tx-row';
 
 /**
@@ -127,16 +128,12 @@ export function RecentActivity() {
                 ))}
               </ul>
             ) : loading ? (
-              // UX-major Lane 2: same placeholder as asset-detail — the
-              // shared Skeleton overflows here too (its ~105 px spinner
-              // in an h-20 box: +19 px, the "Loading…" label lands fully
-              // below the card — seen at 1440 px). Plain placeholder
-              // div with the announcement, no spinner to spill.
-              <div
-                role="status"
-                aria-label="Loading…"
-                className="h-20 w-full rounded-bawa border-2 border-ink bg-paper"
-              />
+              // P0-6: the loading state was a plain bordered box with
+              // no words (a Skeleton overflowed here first-hand, so a
+              // bare div replaced it). The labelled Skeleton renders
+              // the compact loader — spinner + dots + the line — inside
+              // the box, so the wait is named.
+              <Skeleton className="h-20 w-full" label="Loading recent activity…" />
             ) : anyLoaded ? (
               <div className="rounded-bawa border-2 border-ink bg-paper p-4">
                 <p className="text-sm font-semibold text-panel-text">No activity yet</p>

@@ -30,6 +30,7 @@ import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
 import { CopyButton } from '../ui/components/copy-button';
+import { Skeleton } from '../ui/components/skeleton';
 import { usePriceFeedAutoRefresh } from './use-live-prices';
 import { ChainLogo, TokenLogo } from './token-logo';
 import type { BalanceState } from '../state/wallet-context';
@@ -448,20 +449,21 @@ export function AssetDetailScreen() {
           // UX-major Lane 2 (DESIGN-SYSTEM §1.7): loading is a skeleton
           // shaped like the hero number, never a spinner and never
           // blank. A plain placeholder div, NOT the shared Skeleton —
-          // measured first-hand (probe): Skeleton draws a ~105 px
-          // BawaLoading inside its box, so it overflows at every
+          // measured first-hand (probe): Skeleton drew a ~105 px
+          // BawaLoading inside its box, so it overflowed at every
           // height used here (h-10 +59 px, h-20 +19 px, h-24 +3 px;
-          // the "Loading…" label straddles the card edge on screen).
-          // The shared component needs its own fix; until then the
-          // placeholder carries the shape + the announcement itself
-          // (role="status" + aria-label). Static, not pulsing — the
-          // shape and border are the signal, and a static box is what
-          // reduced-motion users see anyway.
-          <div
-            role="status"
-            aria-label="Loading…"
-            className="h-10 w-48 rounded-bawa border-2 border-ink bg-paper"
-          />
+          // the "Loading…" label straddled the card edge on screen).
+          // P0-6: the box alone is still wordless, so the line sits
+          // under it in plain text — the shape stays, and the wait is
+          // named ("Loading balance…"). The labelled Skeleton (compact
+          // loader) is what the taller boxes below use now.
+          <div role="status" className="space-y-2">
+            <div
+              aria-hidden="true"
+              className="h-10 w-48 rounded-bawa border-2 border-ink bg-paper"
+            />
+            <p className="text-sm text-panel-text-muted">Loading balance…</p>
+          </div>
         ) : effectiveBalance.status === 'zero' ? (
           <>
             {/* break-words (Lane 2): a long native amount wraps inside
@@ -566,21 +568,17 @@ export function AssetDetailScreen() {
       {/* Lane 4 (UX-major, data): the 7-day price chart, lazy-loaded
           (see the lazy import above) — real CoinGecko history only,
           with its honest empty/error states inside the component. */}
-      {/* Lane 4 (UX-major, data): the fallback is a plain placeholder,
-          NOT the Skeleton — Skeleton renders BawaLoading's literal
-          "Loading…" label, which the Lane F first-navigation
-          regression test (app-routing.test.tsx) asserts never appears
-          on the first render of this screen. The detail itself stays
-          eager; only the chart area waits for its chunk. */}
+      {/* Lane 4 (UX-major, data): the fallback is a labelled Skeleton,
+          not a wordless box — the old plain placeholder carried the
+          wait in an sr-only span only. The label reads "Loading price
+          chart…", never the bare "Loading…" the Lane F
+          first-navigation regression test (app-routing.test.tsx)
+          asserts never appears on the first render of this screen.
+          The detail itself stays eager; only the chart area waits for
+          its chunk. */}
       <Suspense
         fallback={
-          <div
-            role="status"
-            aria-label="Price chart loading"
-            className="h-[120px] w-full rounded-bawa border-2 border-ink bg-paper"
-          >
-            <span className="sr-only">Loading price chart…</span>
-          </div>
+          <Skeleton className="h-[120px] w-full" label="Loading price chart…" />
         }
       >
         <PriceChart coingeckoId={chartCoingeckoId} label={displayTitle} />
@@ -711,11 +709,9 @@ export function AssetDetailScreen() {
           Transaction history is not connected for this token yet.
         </p>
       ) : chainHistory.status === 'loading' && recentTxs.length === 0 ? (
-          <div
-            role="status"
-            aria-label="Loading…"
-            className="h-20 w-full rounded-bawa border-2 border-ink bg-paper"
-          />
+          // P0-6: the history wait was a wordless bordered box. The
+          // labelled Skeleton names it inside the box.
+          <Skeleton className="h-20 w-full" label="Loading transactions…" />
         ) : showHistoryList ? (
           <>
             {chainHistory.status === 'loading' ? (
@@ -786,11 +782,9 @@ export function AssetDetailScreen() {
             <DerivedAddressItems addresses={addresses[chainId]} copyAddress={copyAddress} />
           </ul>
         ) : state === 'loading' ? (
-          <div
-            role="status"
-            aria-label="Loading…"
-            className="h-20 w-full rounded-bawa border-2 border-ink bg-paper"
-          />
+          // P0-6: the addresses wait was a wordless bordered box. The
+          // labelled Skeleton names it inside the box.
+          <Skeleton className="h-20 w-full" label="Loading derived addresses…" />
         ) : state === 'empty' ? (
           <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
             <p>No wallet imported for this chain</p>

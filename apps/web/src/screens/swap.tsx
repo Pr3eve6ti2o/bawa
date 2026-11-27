@@ -1030,9 +1030,24 @@ export function SwapScreen() {
         </p>
       )}
       {quoteState.status === 'unavailable' && (
-        <p role="alert" className="text-sm text-ink">
-          {quoteState.reason}
-        </p>
+        <div role="alert" className="space-y-2 text-sm">
+          <p className="text-ink">{quoteState.reason}</p>
+          {/* P0-6: a failed quote said why and offered no way back —
+              re-entering the amount was the only retry. The Retry
+              refetches the quote (same call as Get quote). Gated: it
+              only shows when a refetch can run — while the amount or
+              addresses are missing, Get quote itself is disabled and
+              its reason line above says what is missing. */}
+          {quoteDisabledReason === null && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleGetQuote()}
+            >
+              Retry
+            </Button>
+          )}
+        </div>
       )}
       {quoteState.status === 'ok' && (
         <section
@@ -1434,9 +1449,21 @@ export function SwapScreen() {
               </p>
             )}
             {refuelQuoteState.status === 'unavailable' && (
-              <p role="alert" className="text-sm text-ink">
-                {refuelQuoteState.reason}
-              </p>
+              <div role="alert" className="space-y-2 text-sm">
+                <p className="text-ink">{refuelQuoteState.reason}</p>
+                {/* P0-6: same pattern as the main quote — a failed
+                    refuel quote gets a Retry that refetches it, gated
+                    on a refetch being runnable. */}
+                {refuelDisabledReason === null && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleGetRefuelQuote()}
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
             )}
             {refuelQuoteState.status === 'ok' && (
               <section

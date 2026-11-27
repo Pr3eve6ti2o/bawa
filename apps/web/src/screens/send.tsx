@@ -187,7 +187,7 @@ function signedTxResult(
 }
 
 export function SendScreen() {
-  const { vaultState, vaultAddresses, vaultAccount, vaultAccounts: vaultAccountsRaw, selectVaultAccount, balances, selectedChain, customTokens, tokenBalances, devnetEnabled } = useWallet();
+  const { vaultState, vaultAddresses, vaultAccount, vaultAccounts: vaultAccountsRaw, selectVaultAccount, balances, selectedChain, customTokens, tokenBalances, devnetEnabled, refreshBalances, refreshTokenBalances } = useWallet();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   // Older mocked contexts may not provide the account fields; default
@@ -316,6 +316,25 @@ export function SendScreen() {
         : balance.status === 'loading'
           ? 'Loading balance…'
           : 'Balance unavailable';
+
+  // P0-6: the balance the amount step decides on. A failed balance
+  // used to sit there as "Balance unavailable" with no way back —
+  // Max dead, Review blind. The failed state below (next to the
+  // Balance row) names the reason in one line and offers a Retry
+  // that refetches the balance. Gated: no Retry when the reason is
+  // no-adapter — no balance adapter exists for the chain, so a
+  // refetch cannot succeed.
+  const failedBalance =
+    selectedToken !== null
+      ? tokenBalance !== undefined &&
+        (tokenBalance.status === 'unavailable' || tokenBalance.status === 'error')
+        ? tokenBalance
+        : null
+      : balance.status === 'unavailable' || balance.status === 'error'
+        ? balance
+        : null;
+  const balanceRetryable =
+    failedBalance !== null && failedBalance.reason !== 'no-adapter';
 
   // Redesign Lane 3 (Send): the chain picker, the error summary, the
   // paste fallback note and the recipient re-check sequence. The
@@ -1975,6 +1994,34 @@ export function SendScreen() {
               <span className="shrink-0 text-ink">Balance</span>
               <span>{balanceText}</span>
             </div>
+            {/* P0-6: one line + the reason + a gated Retry (see
+                failedBalance above). The flow is not blocked by a
+                failed balance: Review re-reads it live through the
+                adapters (handleAmountNext), so this Retry restores
+                the check — it does not gate the flow. */}
+            {failedBalance !== null && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-panel-border pt-2">
+                <p className="text-sm text-muted-foreground">
+                  {failedBalance.reason
+                    ? `Balance unavailable. ${humanReasonMessage(failedBalance.reason, 'balance')}`
+                    : 'Balance unavailable.'}
+                </p>
+                {balanceRetryable && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      void (selectedToken !== null
+                        ? refreshTokenBalances()
+                        : refreshBalances())
+                    }
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             Check the address — sent funds cannot be reversed.

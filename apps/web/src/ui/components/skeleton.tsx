@@ -1,15 +1,25 @@
 import type { ComponentProps } from "react";
 
+import { BawaLoading } from "./loading";
 
 /** @deprecated New code should use BawaLoading.
     Renders a compact pulsing bar (UX-major Lane 7 merge, 2026-11-26):
     the full BawaLoading spinner (~99 px) overflowed every fixed-height
     box this component is placed in, so the spinner lives in BawaLoading
-    only — never inside a Skeleton. */
+    only — never inside a Skeleton.
+    P0-6 (one error pattern everywhere): the bar alone is wordless —
+    the Transactions screen loaded for 10–35 s behind a bare dashed
+    box with no text. Pass `label` and the box renders the compact
+    BawaLoading row instead (24 px spinner + dots + the label beside
+    it, ~24 px tall, so it fits the h-20/h-24 boxes the old spinner
+    spilled out of) — skeleton + one line of text, as the pattern
+    requires. Without a label the wordless pulsing bar is unchanged
+    (asset rows, dashboard hero). */
 export function Skeleton({
   className,
+  label,
   ...props
-}: ComponentProps<"div">) {
+}: ComponentProps<"div"> & { label?: string }) {
   return (
     <div
       {...props}
@@ -51,20 +61,24 @@ export function Skeleton({
         />
       </svg>
 
-      <div
-        role="status"
-        aria-label="Loading…"
-        style={{
-          width: "60%",
-          height: "12px",
-          borderRadius: "999px",
-          backgroundColor: "var(--bawa-ink)",
-          opacity: 0.18,
-          animation: "bawa-skeleton-pulse 1.4s ease-in-out infinite",
-        }}
-      >
-        <span className="sr-only">Loading…</span>
-      </div>
+      {label === undefined ? (
+        <div
+          role="status"
+          aria-label="Loading…"
+          style={{
+            width: "60%",
+            height: "12px",
+            borderRadius: "999px",
+            backgroundColor: "var(--bawa-ink)",
+            opacity: 0.18,
+            animation: "bawa-skeleton-pulse 1.4s ease-in-out infinite",
+          }}
+        >
+          <span className="sr-only">Loading…</span>
+        </div>
+      ) : (
+        <BawaLoading compact label={label} />
+      )}
       <style>{`@keyframes bawa-skeleton-pulse { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.28; } }`}</style>
     </div>
   );

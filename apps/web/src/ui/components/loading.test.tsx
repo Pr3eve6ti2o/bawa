@@ -102,6 +102,34 @@ describe("BawaLoading", () => {
     expect(hasGreyBackgroundClass).toBe(false);
   });
 
+  it("names the route under the default label, and no route line with an explicit label", async () => {
+    // P0-6: the app shell's Suspense fallback renders <BawaLoading />
+    // with no label, so a bare "Loading…" never says which screen is
+    // coming. The route name rides under the literal label (the
+    // 'Loading…' text itself is unchanged, so the app settle loops
+    // keep matching). jsdom starts at "/", i.e. Home.
+    const home = await mount(<BawaLoading />);
+    expect(getByText(home, "Loading…")).not.toBeNull();
+    expect(getByText(home, "Home")).not.toBeNull();
+
+    const previous = window.location.pathname;
+    window.history.pushState({}, "", "/transactions");
+    try {
+      const transactions = await mount(<BawaLoading />);
+      expect(getByText(transactions, "Transactions")).not.toBeNull();
+      expect(getByText(transactions, "Loading…")).not.toBeNull();
+    } finally {
+      window.history.pushState({}, "", previous);
+    }
+
+    const labelled = await mount(
+      <BawaLoading label="Finding your wallet…" />,
+    );
+    expect(getByText(labelled, "Finding your wallet…")).not.toBeNull();
+    // An explicit label carries its own words: no route line is added.
+    expect(labelled.textContent).not.toContain("Home");
+  });
+
   it("accepts a custom label and className", async () => {
     const container = await mount(
       <BawaLoading label="Finding your wallet…" className="wallet-loading" />,
@@ -185,5 +213,25 @@ describe("Skeleton", () => {
     expect(skeleton).not.toBeNull();
     expect(skeleton?.contains(label)).toBe(true);
     expect(skeleton?.contains(getByRole(container, "status"))).toBe(true);
+  });
+
+  it("renders the label visibly as a compact row when one is passed", async () => {
+    // P0-6: the wordless pulsing bar left the Transactions screen
+    // blank for 10–35 s. A labelled skeleton shows the compact
+    // loader — spinner, dots and the label beside them — inside the
+    // box, so the loading state has words.
+    const container = await mount(
+      <Skeleton className="h-24 w-full" label="Loading your activity…" />,
+    );
+
+    const skeleton = container.querySelector('[data-slot="skeleton"]');
+    expect(skeleton).not.toBeNull();
+    expect(getByText(container, "Loading your activity…")).not.toBeNull();
+    expect(skeleton?.contains(getByRole(container, "status"))).toBe(true);
+    expect(
+      getByRole(container, "status").classList.contains(
+        "bawa-loading-compact",
+      ),
+    ).toBe(true);
   });
 });

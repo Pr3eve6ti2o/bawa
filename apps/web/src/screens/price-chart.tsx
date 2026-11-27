@@ -5,6 +5,7 @@ import {
   formatUnitPriceUsd,
   type PriceHistoryPoint,
 } from '../wallet/prices';
+import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 
 /**
@@ -66,6 +67,10 @@ export function PriceChart({
   label: string;
 }) {
   const [state, setState] = useState<ChartState>({ status: 'loading' });
+  // P0-6: the chart error said "try again" with nothing to tap. A
+  // Retry refetches the chart only: bumping this counter re-runs the
+  // fetch below, nothing else on the screen.
+  const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
     if (coingeckoId === null) {
@@ -87,7 +92,7 @@ export function PriceChart({
     return () => {
       mounted = false;
     };
-  }, [coingeckoId]);
+  }, [coingeckoId, reloadCount]);
 
   const plotted = useMemo(
     () =>
@@ -138,16 +143,28 @@ export function PriceChart({
         Price · last 7 days
       </h2>
       {state.status === 'loading' ? (
-        <div role="status">
-          <Skeleton className="h-[120px] w-full" />
-          <span className="sr-only">Loading price chart…</span>
-        </div>
+        <Skeleton className="h-[120px] w-full" label="Loading price chart…" />
       ) : state.status === 'unavailable' ? (
         <p className="text-sm text-ink">
           No chart data for this asset yet.
         </p>
       ) : state.status === 'error' ? (
-        <p className="text-sm text-ink">{chartErrorText(state.reason)}</p>
+        // P0-6: one line + the reason + a Retry that refetches the
+        // chart only. Chart failures are transient provider failures
+        // (rate limit, timeout, network), so a refetch can succeed —
+        // the Retry is always offered here. The 'unavailable' state
+        // above (no CoinGecko id) gets none: there is nothing to
+        // refetch.
+        <div className="space-y-2">
+          <p className="text-sm text-ink">{chartErrorText(state.reason)}</p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setReloadCount((count) => count + 1)}
+          >
+            Retry
+          </Button>
+        </div>
       ) : geometry === null || first === undefined || lastPoint === undefined ? (
         <p className="text-sm text-ink">
           No chart data for this asset yet.

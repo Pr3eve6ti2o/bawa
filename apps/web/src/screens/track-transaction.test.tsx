@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TrackTransactionScreen } from './track-transaction';
 import { getRecentActivity, lookupTransaction } from '../wallet/tracker';
-import { useWallet } from '../state/wallet-context';
+import { ensureAdapters, useWallet } from '../state/wallet-context';
 
 vi.mock('../wallet/tracker', () => ({
   lookupTransaction: vi.fn(),
@@ -14,13 +14,17 @@ vi.mock('../wallet/tracker', () => ({
 }));
 
 // The screen reads devnetEnabled from the wallet context; the tracker
-// tests run with devnet off unless a test flips it.
+// tests run with devnet off unless a test flips it. The adapter
+// loaders are stubbed: the real ones would import the ~3 MB adapter
+// chunk and register real adapters in jsdom.
 vi.mock('../state/wallet-context', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../state/wallet-context')>();
   return {
     ...actual,
     useWallet: vi.fn(() => ({ devnetEnabled: false })),
+    ensureAdapters: vi.fn(() => Promise.resolve()),
+    ensureDevnetAdapters: vi.fn(() => Promise.resolve()),
   };
 });
 
@@ -292,6 +296,66 @@ describe('TrackTransactionScreen', () => {
     expect(getRecentActivity).toHaveBeenCalledTimes(1);
     expect(div.textContent).toMatch(/could not be loaded/i);
     expect(div.textContent).toContain('Indexer unavailable');
+  });
+
+  it('offers a Retry on the activity error that refetches it', async () => {
+    // P0-6: the lookup error on this screen has a Retry; the
+    // activity error had none. Same failure, same action.
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'error',
+      reason: 'Indexer unavailable',
+    });
+    mounted = mount();
+    const { div } = mounted;
+
+    setInputValue(div.querySelector<HTMLInputElement>('#activity-address'), btcAddress);
+    await clickButton(div, 'Show recent activity');
+    expect(getRecentActivity).toHaveBeenCalledTimes(1);
+
+    await clickButton(div, 'Retry');
+    expect(getRecentActivity).toHaveBeenCalledTimes(2);
+  });
+
+  it('loads the adapters before the activity lookup, and hides the Retry when the chain has none', async () => {
+    // CDP first-hand: on a cold visit to /track the activity call
+    // ran before any adapter was registered and failed at once with
+    // "No history adapter…", and the Retry could never succeed
+    // because the retry path registered nothing either. The screen
+    // now loads the adapters first; a chain with genuinely no
+    // adapter still gets the reason, but no dead Retry.
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'unavailable',
+      reason: 'No history adapter is available for this chain.',
+    });
+    mounted = mount();
+    const { div } = mounted;
+
+    setInputValue(div.querySelector<HTMLInputElement>('#activity-address'), btcAddress);
+    await clickButton(div, 'Show recent activity');
+    expect(vi.mocked(ensureAdapters)).toHaveBeenCalledTimes(1);
+    expect(getRecentActivity).toHaveBeenCalledTimes(1);
+    expect(div.textContent).toContain(
+      'No history adapter is available for this chain.',
+    );
+    expect(div.textContent).toContain('Recent activity could not be loaded.');
+    expect(
+      [...div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Retry',
+      ),
+    ).toBeUndefined();
+  });
+
+  it('says what unblocks the disabled Show recent activity button', async () => {
+    // P0-6: with no address the button rendered as a dashed outline
+    // and read as broken. It now says what to do instead.
+    mounted = mount();
+    const { div } = mounted;
+
+    expect(div.textContent).toContain(
+      'Enter an address above to see its recent activity.',
+    );
+    const button = findButton(div, 'Show recent activity');
+    expect(button.disabled).toBe(true);
   });
 
   it('fills the bottom of the page with honest guidance and a real example', async () => {

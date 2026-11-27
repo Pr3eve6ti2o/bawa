@@ -5,6 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { TransactionDetailScreen } from './transaction-detail';
 import { useWallet } from '../state/wallet-context';
+import { lookupTransaction } from '../wallet/tracker';
 import { availableFor, chainConfig } from '../wallet/chains';
 import type { ChainId } from '../engine/boundary';
 import type { HistoryState } from '../state/wallet-context';
@@ -13,9 +14,24 @@ vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
 }));
 
+vi.mock('../wallet/tracker', () => ({
+  lookupTransaction: vi.fn(),
+}));
+
 vi.mock('../wallet/chains', () => ({
   availableFor: vi.fn(),
   chainConfig: vi.fn(),
+  // P0-6: the detail imports Track's result card, which pulls in the
+  // chain search picker — the picker reads SUPPORTED_CHAINS at
+  // import time, so the mock supplies the same chain ids the test's
+  // CHAINS record below covers. filterChains only runs when the
+  // picker itself renders (never in this screen's tests).
+  SUPPORTED_CHAINS: [
+    'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op',
+    'base', 'avax', 'gnosis', 'celo', 'linea', 'mantle', 'scroll',
+    'opbnb', 'metis', 'aurora', 'fantom', 'ltc', 'doge',
+  ],
+  filterChains: vi.fn((_query: string, chains: unknown) => chains),
 }));
 
 const testGlobal = globalThis as typeof globalThis & {
@@ -97,6 +113,7 @@ async function mountScreen(path: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(lookupTransaction).mockReset();
   vi.mocked(chainConfig).mockImplementation(
     (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
   );
@@ -349,8 +366,7 @@ describe('transaction detail screen', () => {
     }
   });
 
-  it('splits a found transaction into two detail columns on desktop widths', async () => {
-    setWallet({
+  it('splits a found transaction into two detail columns on desktop widths', async () => {    setWallet({
       btc: emptyHistory,
       eth: {
         status: 'loaded',
@@ -396,6 +412,148 @@ describe('transaction detail screen', () => {
       const wrapper = lists[0]?.parentElement;
       expect(wrapper?.className).toContain('lg:grid');
       expect(wrapper?.className).toContain('lg:grid-cols-2');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // P0-6: the detail used to be a dead end for a real hash — "not in
+  // the loaded history" with no way forward. It now runs the same
+  // public-indexer lookup Track uses (BTC, then TRON, for a 64-hex
+  // hash) and renders Track's result card.
+  const genesisHash =
+    'f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16';
+  const genesisTx = {
+    hash: genesisHash,
+    chain: 'btc',
+    networkId: 'bip122:000000000019d6689c085ae165831e93',
+    status: 'confirmed',
+    statusLabel: 'confirmed',
+    confirmations: 977607,
+    blockHeight: 170,
+    from: null,
+    to: null,
+    amountBaseUnits: '5000000000',
+    feeBaseUnits: '0',
+    timestamp: 1231731025000,
+    explorerUrl: `https://mempool.space/tx/${genesisHash}`,
+    source: 'mempool.space',
+    fetchedAt: 1231731025000,
+  } as const;
+
+  function emptyWallet(): Record<ChainKey, HistoryState> {
+    return {
+      btc: emptyHistory,
+      eth: emptyHistory,
+      trx: emptyHistory,
+      ton: emptyHistory,
+      sol: emptyHistory,
+      bsc: emptyHistory,
+      matic: emptyHistory,
+      arb: emptyHistory,
+      op: emptyHistory,
+      base: emptyHistory,
+      avax: emptyHistory,
+      gnosis: emptyHistory,
+      celo: emptyHistory,
+      linea: emptyHistory,
+      mantle: emptyHistory,
+      scroll: emptyHistory,
+      opbnb: emptyHistory,
+      metis: emptyHistory,
+      aurora: emptyHistory,
+      fantom: emptyHistory,
+      ltc: emptyHistory,
+      doge: emptyHistory,
+    };
+  }
+
+  async function flushLookup(): Promise<void> {
+    // The mount refresh, then the indexer lookup, each resolve in
+    // their own microtask round — flush both.
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+  }
+
+  it('resolves a real hash through the public indexer when it is not in loaded history', async () => {
+    vi.mocked(lookupTransaction).mockResolvedValue({
+      status: 'ok',
+      data: genesisTx,
+    });
+    setWallet(emptyWallet());
+    const mounted = await mountScreen(`/transactions/${genesisHash}`);
+    try {
+      await flushLookup();
+      expect(lookupTransaction).toHaveBeenCalledWith('btc', genesisHash);
+      expect(mounted.div.textContent).toContain(
+        'Found on Bitcoin via the public indexer',
+      );
+      expect(mounted.div.textContent).toContain('977,607 confirmations');
+      expect(mounted.div.textContent).toContain('50 BTC');
+      const explorerLink = mounted.div.querySelector(
+        `a[href="https://mempool.space/tx/${genesisHash}"]`,
+      );
+      expect(explorerLink).not.toBeNull();
+      expect(mounted.div.textContent).not.toContain('Its status is unknown');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('offers Track, explorer and Retry when the indexer finds nothing', async () => {
+    vi.mocked(lookupTransaction).mockResolvedValue({ status: 'not-found' });
+    setWallet(emptyWallet());
+    const mounted = await mountScreen(`/transactions/${genesisHash}`);
+    try {
+      await flushLookup();
+      expect(mounted.div.textContent).toContain('not in the loaded history');
+      const trackLink = mounted.div.querySelector(
+        `a[href="/track?chain=btc&hash=${genesisHash}"]`,
+      );
+      expect(trackLink).not.toBeNull();
+      expect(trackLink?.textContent).toContain('Look it up on Track');
+      const explorerLink = mounted.div.querySelector(
+        `a[href="https://mempool.space/tx/${genesisHash}"]`,
+      );
+      expect(explorerLink).not.toBeNull();
+      const callsBefore = vi.mocked(lookupTransaction).mock.calls.length;
+      const retry = Array.from(mounted.div.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Retry',
+      );
+      expect(retry).not.toBeUndefined();
+      await act(async () => {
+        retry?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      await flushLookup();
+      expect(vi.mocked(lookupTransaction).mock.calls.length).toBeGreaterThan(
+        callsBefore,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows no Retry for a hash that is not shaped like one', async () => {
+    setWallet(emptyWallet());
+    const mounted = await mountScreen('/transactions/0xmissing');
+    try {
+      await flushLookup();
+      // A malformed hash can never succeed on refetch, so there is no
+      // Retry — but the Track link is still there.
+      expect(lookupTransaction).not.toHaveBeenCalled();
+      expect(mounted.div.textContent).toContain('Look it up on Track');
+      expect(mounted.div.textContent).toContain(
+        'doesn’t look like a transaction hash',
+      );
+      expect(
+        Array.from(mounted.div.querySelectorAll('button')).find(
+          (button) => button.textContent === 'Retry',
+        ),
+      ).toBeUndefined();
     } finally {
       await mounted.cleanup();
     }

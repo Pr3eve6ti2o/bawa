@@ -490,6 +490,27 @@ describe('SwapScreen', () => {
     }
   });
 
+  it('offers a Retry on a failed quote that refetches it', async () => {
+    // P0-6: a failed quote said why and offered no way back —
+    // re-entering the amount was the only retry. The first fetch
+    // fails (rate limit); Retry refetches and the live quote lands.
+    setWallet();
+    stubFetch({ message: 'Rate limit exceeded', code: 1005 }, 429);
+    const mounted = await mountScreen();
+    try {
+      await pickToken(mounted.div, 'Token on Polygon', 'USDC');
+      await enterAmount(mounted.div, '0.1');
+      await click(mounted.div, 'Get quote');
+      await waitForText(mounted.div, 'rate-limited');
+      stubFetch(LIFI_OK_FIXTURE);
+      await click(mounted.div, 'Retry');
+      await waitForText(mounted.div, 'You receive');
+      expect(mounted.div.textContent).toContain('167.627101 USDC');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('uses exact decimals: 1 USDC is a million base units, 1 DAI is 10^18', async () => {
     setWallet();
     const seen: string[] = [];

@@ -148,6 +148,26 @@ const perChainEmpty = (): Record<ChainKey, HistoryState> => ({
 });
 
 describe('transaction history screen', () => {
+  it('names the wait while history loads, with the header visible', async () => {
+    // P0-6: the loading state was one bare skeleton, no words at all.
+    const loading: HistoryState = { status: 'loading', txs: [] };
+    setWallet({
+      ...perChainEmpty(),
+      btc: loading,
+      eth: loading,
+      trx: loading,
+      ton: loading,
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Transactions');
+      expect(mounted.div.textContent).toContain('Loading your activity…');
+      expect(mounted.div.querySelector('[data-slot="skeleton"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('lists transactions across chains, newest first', async () => {
     setWallet({
       ...perChainEmpty(),

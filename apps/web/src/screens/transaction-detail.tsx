@@ -10,11 +10,19 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { CopyButton } from '../ui/components/copy-button';
+import { BawaLoading } from '../ui/components/loading';
+import { Button } from '../ui/components/button';
 import { availableFor, chainConfig } from '../wallet/chains';
 import {
   CHAIN_DECIMALS,
   formatNativeWithSymbol,
 } from '../wallet/chain-amount-format';
+import {
+  lookupTransaction,
+  type TrackedTx,
+} from '../wallet/tracker';
+import type { ChainId } from '../engine/boundary';
+import { TransactionDetails } from './track-transaction';
 
 const STATUS_CLASSES = {
   pending: 'text-warning-text',
@@ -64,11 +72,20 @@ function CheckedAt({ check }: { check: HistoryCheck | null }) {
     return <span>Checking network history…</span>;
   }
 
+  // P0-6: the time alone ("Checked at 08:18:24") said nothing about
+  // which day was checked, or what was checked. Date + time, and the
+  // not-found panel below names the check.
   return (
     <span>
       Checked at{' '}
       <time dateTime={check.checkedAt.toISOString()}>
-        {check.checkedAt.toLocaleTimeString('en-GB')}
+        {check.checkedAt.toLocaleString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
       </time>
     </span>
   );
@@ -91,11 +108,54 @@ function DetailRow({
   );
 }
 
+type TrackerLookupOutcome =
+  | { status: 'loading' }
+  | { status: 'found'; data: TrackedTx; chain: ChainId }
+  | { status: 'not-found' }
+  | { status: 'error'; reason: string }
+  | { status: 'malformed' };
+
+// P0-6: a hash's shape says which chains it can belong to, before any
+// network call — a 64-hex hash is Bitcoin/TRON-shaped, a 0x-prefixed
+// one is EVM-shaped. Anything else is not a transaction hash at all,
+// and no refetch can fix it (so it gets no Retry).
+function hashChainHint(id: string): 'btc' | 'eth' | null {
+  if (/^[0-9a-fA-F]{64}$/.test(id)) return 'btc';
+  if (/^0x[0-9a-fA-F]{64}$/.test(id)) return 'eth';
+  return null;
+}
+
+// The public explorer for a hash whose shape names its chain. Only
+// the two shapes above get one — an unshaped hash has no explorer to
+// link to, and Track is the way to try other chains.
+function explorerUrlFor(id: string): string | null {
+  if (/^[0-9a-fA-F]{64}$/.test(id)) return `https://mempool.space/tx/${id}`;
+  if (/^0x[0-9a-fA-F]{64}$/.test(id)) return `https://eth.blockscout.com/tx/${id}`;
+  return null;
+}
+
 export function TransactionDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const { history, refreshHistory } = useWallet();
   const [check, setCheck] = useState<HistoryCheck | null>(null);
   const checkPromiseRef = useRef<Promise<HistoryCheck> | null>(null);
+  // P0-6: the not-found state used to be a dead end even for a real,
+  // confirmed hash. Once the wallet-history check is done and the
+  // hash is not in it, the same public-indexer lookup Track uses runs
+  // here (BTC, then TRON, for a 64-hex hash; Ethereum for a 0x one)
+  // and a found transaction renders Track's own result card.
+  const [lookup, setLookup] = useState<TrackerLookupOutcome | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const lookupKeyRef = useRef<string | null>(null);
+
+  function handleRetry(): void {
+    // Re-run both checks: the mount refresh (reset its cached promise
+    // so it really refetches) and the indexer lookup (via retryNonce).
+    checkPromiseRef.current = null;
+    setCheck(null);
+    setLookup(null);
+    setRetryNonce((nonce) => nonce + 1);
+  }
 
   useEffect(() => {
     let active = true;
@@ -125,7 +185,7 @@ export function TransactionDetailScreen() {
     return () => {
       active = false;
     };
-  }, [refreshHistory]);
+  }, [refreshHistory, retryNonce]);
 
   const found = (() => {
     if (!id) return null;
@@ -140,6 +200,59 @@ export function TransactionDetailScreen() {
     }
     return null;
   })();
+
+  useEffect(() => {
+    if (check === null || found !== null || !id) return;
+    const key = `${id}:${retryNonce}`;
+    if (lookupKeyRef.current === key) return;
+    lookupKeyRef.current = key;
+    const hint = hashChainHint(id);
+    if (hint === null) {
+      setLookup({ status: 'malformed' });
+      return;
+    }
+    let cancelled = false;
+    setLookup({ status: 'loading' });
+    void (async () => {
+      // TON needs an account address, so it is not tried here — its
+      // lookup lives on Track, linked below. Other chains likewise:
+      // the Track link carries the hash, so the user can try them.
+      const chains: ChainId[] = hint === 'btc' ? ['btc', 'trx'] : ['eth'];
+      let lastError: string | null = null;
+      for (const lookupChain of chains) {
+        const result = await lookupTransaction(lookupChain, id);
+        if (cancelled) return;
+        if (result.status === 'ok') {
+          setLookup({ status: 'found', data: result.data, chain: lookupChain });
+          return;
+        }
+        if (result.status === 'error') lastError = result.reason;
+      }
+      if (cancelled) return;
+      setLookup(
+        lastError !== null
+          ? { status: 'error', reason: lastError }
+          : { status: 'not-found' },
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [check, found, id, retryNonce]);
+
+  // P0-6: the Track link carries the hash (and the chain its shape
+  // names, so Track opens on the right network); the explorer link
+  // goes to the public explorer for that shape. Computed once, so
+  // the render below stays readable.
+  const trackHref = (() => {
+    if (id === undefined) return '/track';
+    const hint = hashChainHint(id);
+    const params = new URLSearchParams();
+    if (hint !== null) params.set('chain', hint);
+    params.set('hash', id);
+    return `/track?${params.toString()}`;
+  })();
+  const explorerUrl = id === undefined ? null : explorerUrlFor(id);
 
   return (
     // Desktop layout (desktop-layout-v2): the detail lays out in two
@@ -241,6 +354,20 @@ export function TransactionDetailScreen() {
             )}
           </dl>
         </div>
+      ) : lookup !== null && lookup.status === 'found' ? (
+        // P0-6: a real hash resolves here now, via the same public-
+        // indexer lookup Track uses — the transaction is shown with
+        // its on-chain status instead of the "unknown" dead end.
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {`Found on ${chainConfig(lookup.chain).displayName} via the public indexer — this transaction is not in this wallet's loaded history.`}
+          </p>
+          <TransactionDetails
+            data={lookup.data}
+            chain={lookup.chain}
+            checkedAt={new Date(lookup.data.fetchedAt).toLocaleTimeString('en-GB')}
+          />
+        </div>
       ) : (
         <section className="rounded-2xl border border-border bg-card p-5 lg:grid lg:grid-cols-2 lg:gap-6">
           <div>
@@ -256,11 +383,56 @@ export function TransactionDetailScreen() {
                 <code className="text-sm">{id ?? 'No ID supplied'}</code>
               </dd>
             </dl>
+            {lookup !== null && lookup.status === 'loading' && (
+              <div className="mt-4">
+                <BawaLoading label="Looking up this transaction…" />
+              </div>
+            )}
+            {lookup !== null && lookup.status === 'error' && (
+              <p role="alert" className="mt-4 text-sm text-ink">
+                {`The public indexer could not be reached: ${lookup.reason}`}
+              </p>
+            )}
+            {lookup !== null && lookup.status === 'malformed' && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                This doesn&rsquo;t look like a transaction hash — check it
+                and try again.
+              </p>
+            )}
           </div>
           <div>
             <p className="mt-3 text-xs text-muted-foreground lg:mt-0">
               <CheckedAt check={check} />
             </p>
+            {/* P0-6: the dead end is gone. Look it up on Track (the
+                hash rides along, with the chain its shape names), check
+                the explorer, or retry both checks — except for a
+                malformed hash, where a refetch cannot succeed. */}
+            {lookup !== null && lookup.status !== 'loading' && (
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Link
+                  to={trackHref}
+                  className="text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                >
+                  Look it up on Track
+                </Link>
+                {lookup.status !== 'malformed' && explorerUrl !== null && (
+                  <a
+                    href={explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                  >
+                    View on explorer
+                  </a>
+                )}
+                {lookup.status !== 'malformed' && (
+                  <Button type="button" variant="outline" onClick={handleRetry}>
+                    Retry
+                  </Button>
+                )}
+              </div>
+            )}
             <Link
               to="/transactions"
               className="mt-5 inline-block text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
