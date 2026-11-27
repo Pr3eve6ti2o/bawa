@@ -29,7 +29,7 @@
 // pairs with no liquidity — both surface as `no-route`, never as a
 // guessed number. A failed fetch surfaces as `unavailable` with a
 // human sentence; the raw provider error is never rendered.
-import { chainConfig, SUPPORTED_CHAINS } from './chains';
+import { chainConfig } from './chains';
 import { isRecord, ownValue } from './guards';
 import type { ChainId } from '../engine/boundary';
 
@@ -58,15 +58,6 @@ export function lifiChainIdFor(chain: ChainId): number | null {
   if (chain === 'sol') return LIFI_SOLANA_CHAIN_ID;
   return chainConfig(chain).evmChainId;
 }
-
-/**
- * Chains the Swap screen may offer: every Bawa chain LI.FI can route,
- * in Bawa display order. Pairs LI.FI does not serve still answer
- * `no-route` at quote time — the picker never claims a route exists.
- */
-export const SWAP_CHAINS: readonly ChainId[] = SUPPORTED_CHAINS.filter(
-  (chain) => lifiChainIdFor(chain) !== null,
-);
 
 /** One side of a swap: the native coin or one verified token. */
 export type SwapTokenChoice =

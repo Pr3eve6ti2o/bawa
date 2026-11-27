@@ -2,8 +2,7 @@ import type { ComponentProps } from "react";
 
 import { BawaLoading } from "./loading";
 
-/** @deprecated New code should use BawaLoading.
-    Renders a compact pulsing bar (UX-major Lane 7 merge, 2026-11-26):
+/** In-place loading pattern — renders a compact pulsing bar (UX-major Lane 7 merge, 2026-11-26):
     the full BawaLoading spinner (~99 px) overflowed every fixed-height
     box this component is placed in, so the spinner lives in BawaLoading
     only — never inside a Skeleton.

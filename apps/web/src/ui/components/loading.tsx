@@ -23,7 +23,6 @@ const ROUTE_NAMES: Record<string, string> = {
   '': 'Home',
   welcome: 'Welcome',
   'create-wallet': 'Create a wallet',
-  create: 'Create a wallet',
   'import-wallet': 'Import a wallet',
   'mnemonic-backup': 'Backup',
   assets: 'Assets',

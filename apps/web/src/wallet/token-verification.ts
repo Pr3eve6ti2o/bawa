@@ -127,7 +127,7 @@ export const ONE_INCH_CHAIN_IDS: ReadonlySet<number> = new Set([
 ]);
 
 /** Bitget Agent API base (bitget-wallet-skill, MIT, no key). */
-export const BITGET_AGENT_API_BASE = 'https://copenapi.bgwapi.io';
+const BITGET_AGENT_API_BASE = 'https://copenapi.bgwapi.io';
 
 /**
  * Bawa chain → Bitget Agent API chain code (bitget-wallet-skill).

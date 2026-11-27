@@ -1299,7 +1299,7 @@ export function isBroadcastAllowedFor(provenance: KeyProvenance): boolean {
   return provenance.isTesting !== true;
 }
 
-export function assertNotTestAccount(): void {
+function assertNotTestAccount(): void {
   let testing = false;
   try {
     testing = isTestVault();

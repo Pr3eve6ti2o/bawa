@@ -64,7 +64,7 @@ function priceCell(displayUnit: UnitPrice): PriceCell {
  * 4-colour cap (palette audit) admits no green/red until the P3 style
  * work restores semantic colours.
  */
-export type RowChange24h = { text: string; stale: boolean };
+type RowChange24h = { text: string; stale: boolean };
 
 function change24hForEntry(
   entry: PriceEntry | undefined,

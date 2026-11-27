@@ -6,7 +6,6 @@ import { act } from "react-dom/test-utils";
 import type { ReactElement } from "react";
 
 import { BawaLoading } from "./loading";
-import { SquiggleDivider } from "./squiggle-divider";
 import { Skeleton } from "./skeleton";
 
 const testGlobal = globalThis as typeof globalThis & {
@@ -168,39 +167,6 @@ describe("BawaLoading", () => {
     expect((status as HTMLElement).style.flexDirection).toBe("row");
     expect(status.querySelectorAll("span.bawa-dot")).toHaveLength(3);
   });
-});
-
-describe("SquiggleDivider", () => {
-  it("defaults to the horizontal orientation", async () => {
-    const container = await mount(<SquiggleDivider />);
-
-    expect(
-      container.querySelector("svg")?.getAttribute("viewBox"),
-    ).toBe("0 0 120 8");
-  });
-
-  it.each([
-    ["horizontal", "0 0 120 8"],
-    ["vertical", "0 0 8 120"],
-  ] as const)(
-    "renders one %s stroke without a hex colour literal",
-    async (orientation, viewBox) => {
-      const container = await mount(
-        <SquiggleDivider orientation={orientation} />,
-      );
-
-      const svg = container.querySelector("svg");
-
-      expect(svg).not.toBeNull();
-      expect(svg?.getAttribute("viewBox")).toBe(viewBox);
-      expect(svg?.getAttribute("aria-hidden")).toBe("true");
-      expect(svg?.getAttribute("stroke")).toBe("currentColor");
-      expect(svg?.getAttribute("stroke-width")).toBe("2");
-      expect(svg?.getAttribute("fill")).toBe("none");
-      expect(svg?.querySelectorAll("path")).toHaveLength(1);
-      expect(svg?.outerHTML).not.toContain("#");
-    },
-  );
 });
 
 describe("Skeleton", () => {

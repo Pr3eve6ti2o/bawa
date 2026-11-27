@@ -74,7 +74,7 @@ export { ensureAdapters, ensureDevnetAdapters };
 // fits — see REPORT.md. The label input also carries maxLength={40}.
 // localStorage contains public watch-only data only (xpubs and labels), never secrets.
 const STORAGE_KEY = 'bawa-watch-only-xpubs';
-export const LABEL_MAX_LENGTH = 40;
+const LABEL_MAX_LENGTH = 40;
 type PerChain<T> = Record<ChainId, T>;
 // Kept as a literal list, not SUPPORTED_CHAINS: the screen tests mock
 // '../wallet/chains' with only {availableFor, chainConfig}, so importing

@@ -9,7 +9,6 @@ import {
   formatQuoteUsd,
   lifiChainIdFor,
   lifiTokenAddress,
-  SWAP_CHAINS,
   type SwapQuoteInput,
 } from './swap-quotes';
 
@@ -102,12 +101,6 @@ describe('lifiChainIdFor', () => {
     expect(lifiChainIdFor('cardano')).toBeNull();
   });
 
-  it('offers only routable chains, and at least the majors', () => {
-    expect(SWAP_CHAINS).toContain('eth');
-    expect(SWAP_CHAINS).toContain('sol');
-    expect(SWAP_CHAINS).not.toContain('btc');
-    expect(SWAP_CHAINS).not.toContain('ton');
-  });
 });
 
 describe('lifiTokenAddress', () => {

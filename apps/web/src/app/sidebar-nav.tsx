@@ -15,7 +15,7 @@ type SidebarNavProps = {
   onPreloadRoute?: (to: string) => void;
 };
 
-export type SidebarNavGroup = {
+type SidebarNavGroup = {
   heading: string;
   items: NavItem[];
 };
