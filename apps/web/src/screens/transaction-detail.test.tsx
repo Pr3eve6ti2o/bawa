@@ -5,7 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { TransactionDetailScreen } from './transaction-detail';
 import { useWallet } from '../state/wallet-context';
-import { lookupTransaction } from '../wallet/tracker';
+import { lookupTransactionAnyChain } from '../wallet/tracker';
 import { availableFor, chainConfig } from '../wallet/chains';
 import type { ChainId } from '../engine/boundary';
 import type { HistoryState } from '../state/wallet-context';
@@ -15,7 +15,16 @@ vi.mock('../state/wallet-context', () => ({
 }));
 
 vi.mock('../wallet/tracker', () => ({
-  lookupTransaction: vi.fn(),
+  // Lane P2-B (F30): the screen calls the any-chain lookup, and the
+  // shape classifier is the tracker's own — reimplemented here so the
+  // mock keeps the real classification (the lookup itself is stubbed).
+  lookupTransactionAnyChain: vi.fn(),
+  hashShape: (id: string) => {
+    if (/^0x[0-9a-fA-F]{64}$/.test(id)) return 'evm';
+    if (/^[0-9a-fA-F]{64}$/.test(id)) return 'utxo';
+    if (/^[1-9A-HJ-NP-Za-km-z]{87,88}$/.test(id)) return 'sol';
+    return null;
+  },
 }));
 
 vi.mock('../wallet/chains', () => ({
@@ -70,10 +79,12 @@ const emptyHistory: HistoryState = { status: 'empty', txs: [] };
 function setWallet(
   history: Record<ChainKey, HistoryState>,
   refreshHistory: () => Promise<void> = () => Promise.resolve(),
+  devnetEnabled = false,
 ): void {
   vi.mocked(useWallet).mockReturnValue({
     history,
     refreshHistory,
+    devnetEnabled,
   } as unknown as ReturnType<typeof useWallet>);
 }
 
@@ -113,7 +124,7 @@ async function mountScreen(path: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(lookupTransaction).mockReset();
+  vi.mocked(lookupTransactionAnyChain).mockReset();
   vi.mocked(chainConfig).mockImplementation(
     (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
   );
@@ -480,15 +491,18 @@ describe('transaction detail screen', () => {
   }
 
   it('resolves a real hash through the public indexer when it is not in loaded history', async () => {
-    vi.mocked(lookupTransaction).mockResolvedValue({
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({
       status: 'ok',
       data: genesisTx,
+      chain: 'btc',
     });
     setWallet(emptyWallet());
     const mounted = await mountScreen(`/transactions/${genesisHash}`);
     try {
       await flushLookup();
-      expect(lookupTransaction).toHaveBeenCalledWith('btc', genesisHash);
+      expect(lookupTransactionAnyChain).toHaveBeenCalledWith(genesisHash, {
+        devnet: false,
+      });
       expect(mounted.div.textContent).toContain(
         'Found on Bitcoin via the public indexer',
       );
@@ -505,7 +519,7 @@ describe('transaction detail screen', () => {
   });
 
   it('offers Track, explorer and Retry when the indexer finds nothing', async () => {
-    vi.mocked(lookupTransaction).mockResolvedValue({ status: 'not-found' });
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({ status: 'not-found' });
     setWallet(emptyWallet());
     const mounted = await mountScreen(`/transactions/${genesisHash}`);
     try {
@@ -538,7 +552,14 @@ describe('transaction detail screen', () => {
           `a[href="https://tronscan.org/#/transaction/${genesisHash}"]`,
         ),
       ).not.toBeNull();
-      const callsBefore = vi.mocked(lookupTransaction).mock.calls.length;
+      // Lane P2-B: a 64-hex hash could also be TON — the TON
+      // explorer joins the candidate links.
+      expect(
+        mounted.div.querySelector(
+          `a[href="https://tonviewer.com/transaction/${genesisHash}"]`,
+        ),
+      ).not.toBeNull();
+      const callsBefore = vi.mocked(lookupTransactionAnyChain).mock.calls.length;
       const retry = Array.from(mounted.div.querySelectorAll('button')).find(
         (button) => button.textContent === 'Retry',
       );
@@ -548,7 +569,7 @@ describe('transaction detail screen', () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
       await flushLookup();
-      expect(vi.mocked(lookupTransaction).mock.calls.length).toBeGreaterThan(
+      expect(vi.mocked(lookupTransactionAnyChain).mock.calls.length).toBeGreaterThan(
         callsBefore,
       );
     } finally {
@@ -563,7 +584,7 @@ describe('transaction detail screen', () => {
       await flushLookup();
       // A malformed hash can never succeed on refetch, so there is no
       // Retry — but the Track link is still there.
-      expect(lookupTransaction).not.toHaveBeenCalled();
+      expect(lookupTransactionAnyChain).not.toHaveBeenCalled();
       expect(mounted.div.textContent).toContain('Look it up on Track');
       expect(mounted.div.textContent).toContain(
         'doesn’t look like a transaction hash',
@@ -573,6 +594,178 @@ describe('transaction detail screen', () => {
           (button) => button.textContent === 'Retry',
         ),
       ).toBeUndefined();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Lane P2-B (F30): the detail route resolves ANY real hash, not
+  // just wallet-known transactions — a 0x hash on a non-Ethereum
+  // EVM chain, a Litecoin hash, and the honest states for Solana
+  // and for a hash no chain has.
+  it('resolves a real Optimism hash, not just an Ethereum one', async () => {
+    const opHash =
+      '0x2bfcadb4c53025f00c074e7990a5240aca38b1f0bf772f4b40eeb190e33c70ca';
+    const opTx = {
+      hash: opHash,
+      chain: 'op',
+      networkId: 'eip155:10',
+      status: 'confirmed',
+      statusLabel: 'ok',
+      confirmations: 123,
+      blockHeight: 160110409,
+      from: '0xae2Fc483527B8EF99EB5D9B44875F005ba1FaE13',
+      to: '0x6b75d8AF000000e20B7a7DDf000Ba900b4009A80',
+      amountBaseUnits: '1050180096',
+      feeBaseUnits: '1584659750723964',
+      timestamp: 1795819000000,
+      explorerUrl: `https://explorer.optimism.io/tx/${opHash}`,
+      source: 'blockscout',
+      fetchedAt: 1795819000000,
+    } as const;
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({
+      status: 'ok',
+      data: opTx,
+      chain: 'op',
+    });
+    setWallet(emptyWallet());
+    const mounted = await mountScreen(`/transactions/${opHash}`);
+    try {
+      await flushLookup();
+      expect(lookupTransactionAnyChain).toHaveBeenCalledWith(opHash, {
+        devnet: false,
+      });
+      expect(mounted.div.textContent).toContain(
+        'Found on OP Mainnet via the public indexer',
+      );
+      expect(mounted.div.textContent).toContain('123 confirmations');
+      expect(mounted.div.textContent).toContain('160,110,409');
+      expect(
+        mounted.div.querySelector(`a[href="${opTx.explorerUrl}"]`),
+      ).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('resolves a real Litecoin hash', async () => {
+    const ltcHash =
+      '3869fed5d5b58005977830385d0310986abbc9140b6b61491992ca5ca93203c4';
+    const ltcTx = {
+      hash: ltcHash,
+      chain: 'ltc',
+      networkId:
+        'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2',
+      status: 'confirmed',
+      statusLabel: 'confirmed',
+      confirmations: 1,
+      blockHeight: 3220509,
+      from: 'ltc1qsenderaddress0000000000000000000000',
+      to: 'ltc1qrecipient0000000000000000000000000000',
+      amountBaseUnits: '1000000000',
+      feeBaseUnits: '1000',
+      timestamp: 1795819000000,
+      explorerUrl: `https://litecoinspace.org/tx/${ltcHash}`,
+      source: 'litecoinspace',
+      fetchedAt: 1795819000000,
+    } as const;
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({
+      status: 'ok',
+      data: ltcTx,
+      chain: 'ltc',
+    });
+    setWallet(emptyWallet());
+    const mounted = await mountScreen(`/transactions/${ltcHash}`);
+    try {
+      await flushLookup();
+      expect(mounted.div.textContent).toContain(
+        'Found on Litecoin via the public indexer',
+      );
+      expect(mounted.div.textContent).toContain('10 LTC');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('names Solana as unsupported with a Solscan link, not malformed', async () => {
+    const solSig =
+      '4Bq5kEwFejLnvu8khYxbFPzU9JKbpXgHnvmsvBMK2xjkPo7Km2zwf1X2jhsZpDXXMdrRMWXHVCmBSc1N3QEuPQUd';
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({
+      status: 'unsupported',
+      reason:
+        'Solana transactions cannot be looked up in the wallet yet. Check the transaction on Solscan.',
+    });
+    setWallet(emptyWallet());
+    const mounted = await mountScreen(`/transactions/${solSig}`);
+    try {
+      await flushLookup();
+      expect(mounted.div.textContent).toContain(
+        'Solana transactions cannot be looked up in the wallet yet',
+      );
+      expect(mounted.div.textContent).not.toContain(
+        'doesn’t look like a transaction hash',
+      );
+      expect(
+        mounted.div.querySelector(`a[href="https://solscan.io/tx/${solSig}"]`),
+      ).not.toBeNull();
+      // No lookup exists to retry, so there is no Retry.
+      expect(
+        Array.from(mounted.div.querySelectorAll('button')).find(
+          (button) => button.textContent === 'Retry',
+        ),
+      ).toBeUndefined();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('says a 64-hex hash could be TON when no chain has it', async () => {
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({ status: 'not-found' });
+    setWallet(emptyWallet());
+    const mounted = await mountScreen(`/transactions/${genesisHash}`);
+    try {
+      await flushLookup();
+      expect(mounted.div.textContent).toContain(
+        'This could also be a TON transaction',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('passes the devnet flag through, like Track does', async () => {
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({
+      status: 'ok',
+      data: genesisTx,
+      chain: 'btc',
+    });
+    setWallet(emptyWallet(), undefined, true);
+    const mounted = await mountScreen(`/transactions/${genesisHash}`);
+    try {
+      await flushLookup();
+      expect(lookupTransactionAnyChain).toHaveBeenCalledWith(genesisHash, {
+        devnet: true,
+      });
+      expect(mounted.div.textContent).toContain(
+        'Found on Bitcoin test network via the public indexer',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the note when some networks could not be reached', async () => {
+    vi.mocked(lookupTransactionAnyChain).mockResolvedValue({
+      status: 'not-found',
+      note: 'Some networks could not be reached; Retry may help.',
+    });
+    setWallet(emptyWallet());
+    const mounted = await mountScreen(`/transactions/${genesisHash}`);
+    try {
+      await flushLookup();
+      expect(mounted.div.textContent).toContain(
+        'Some networks could not be reached; Retry may help.',
+      );
     } finally {
       await mounted.cleanup();
     }

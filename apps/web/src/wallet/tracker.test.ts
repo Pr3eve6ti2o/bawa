@@ -4,8 +4,12 @@ import { base64ToHex } from './adapters/ton';
 import type { ChainAdapter } from './adapters/types';
 import {
   getRecentActivity,
+  hashShape,
   lookupTransaction,
+  lookupTransactionAnyChain,
+  parseBlockcypherDogeTx,
   parseBtcTx,
+  parseDogeTx,
   parseEthTx,
   parseTonTxEntry,
   parseTrxTx,
@@ -616,5 +620,284 @@ describe('tracker — Blockscout v2 expanded chains (Lane B)', () => {
     expect(
       await lookupTransaction('mode', ETH_TX.hash, { devnet: true }),
     ).toMatchObject({ status: 'unsupported' });
+  });
+});
+
+// Lane P2-B (F30): the detail route resolves ANY real hash with the
+// same lookup /track uses — Litecoin and Dogecoin gain a lookup, and
+// lookupTransactionAnyChain tries every candidate chain for the
+// hash's shape instead of the one chain the screen guessed.
+// (Appended to wallet/tracker.test.ts.)
+describe('tracker — any-chain lookup (Lane P2-B)', () => {
+  const queue: unknown[] = [];
+
+  beforeEach(() => {
+    queue.length = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => queue.shift(),
+    })));
+  });
+
+  // The real Litecoin transaction 3869fed5… (tip-block txid, verified
+  // live against litecoinspace.org on 2026-11-27); the inputs/outputs
+  // below are the mempool.shape the parser needs, not a recorded body.
+  const LTC_TXID =
+    '3869fed5d5b58005977830385d0310986abbc9140b6b61491992ca5ca93203c4';
+  const LTC_TX = {
+    txid: LTC_TXID,
+    fee: 1000,
+    status: {
+      confirmed: true,
+      block_height: 3220509,
+      block_hash: '7e3ee7cf4e889a1fa9ad7b32c720bb9b779472bbcf35b982386bd0b49d0f3cbd',
+      block_time: 1795819000,
+    },
+    vin: [{
+      txid: '0000000000000000000000000000000000000000000000000000000000000000',
+      vout: 0,
+      prevout: { scriptpubkey_address: 'ltc1qsenderaddress0000000000000000000000', value: 2500000000 },
+      is_coinbase: false,
+    }],
+    vout: [
+      { scriptpubkey_address: 'ltc1qrecipient0000000000000000000000000000', value: 1000000000 },
+      { scriptpubkey_address: 'ltc1qsenderaddress0000000000000000000000', value: 1499999000 },
+    ],
+  };
+  const LTC_NETWORK_ID =
+    'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2';
+
+  const DOGE_TXID =
+    '15107524d13e6930159ca8eb1e7e0d27256d6abde0683e73a57f0fb743f52c38';
+  const DOGE_SENDER = 'D8r8y7SenderAddress0000000000000000000';
+  const DOGE_RECIPIENT = 'D9s9zRecipientAddress000000000000000000';
+  const DOGE_SOCHAIN = {
+    status: 'success',
+    data: {
+      txid: DOGE_TXID,
+      block_no: 6000000,
+      confirmations: 120,
+      time: 1795819000,
+      inputs: [{ address: DOGE_SENDER, value: '100.50000000' }],
+      outputs: [
+        { address: DOGE_RECIPIENT, value: '100.00000000' },
+        { address: DOGE_SENDER, value: '0.49900000' },
+      ],
+    },
+  };
+  const DOGE_BLOCKCYPHER = {
+    hash: DOGE_TXID,
+    block_height: 6000000,
+    confirmations: 120,
+    fees: 100000,
+    confirmed: '2026-11-27T22:00:00.000Z',
+    inputs: [{ addresses: [DOGE_SENDER], output_value: 10050000000 }],
+    outputs: [
+      { addresses: [DOGE_RECIPIENT], value: 10000000000 },
+      { addresses: [DOGE_SENDER], value: 4999000000 },
+    ],
+  };
+
+  it('classifies hash shapes before any network call', () => {
+    expect(hashShape('0x' + 'a'.repeat(64))).toBe('evm');
+    expect(hashShape('a'.repeat(64))).toBe('utxo');
+    expect(
+      hashShape('4Bq5kEwFejLnvu8khYxbFPzU9JKbpXgHnvmsvBMK2xjkPo7Km2zwf1X2jhsZpDXXMdrRMWXHVCmBSc1N3QEuPQUd'),
+    ).toBe('sol');
+    expect(hashShape('not-a-hash')).toBeNull();
+    expect(hashShape('')).toBeNull();
+  });
+
+  it('parses a Litecoin transaction with the mempool shape and LTC identity', () => {
+    expect(
+      parseBtcTx(LTC_TX, 3220509, false, {
+        chain: 'ltc',
+        networkId: LTC_NETWORK_ID,
+        explorerBase: 'https://litecoinspace.org',
+        source: 'litecoinspace',
+      }),
+    ).toMatchObject({
+      chain: 'ltc',
+      networkId: LTC_NETWORK_ID,
+      status: 'confirmed',
+      confirmations: 1,
+      blockHeight: 3220509,
+      // Change (1.499999 LTC back to the sender) is excluded.
+      amountBaseUnits: '1000000000',
+      feeBaseUnits: '1000',
+      from: 'ltc1qsenderaddress0000000000000000000000',
+      to: 'ltc1qrecipient0000000000000000000000000000',
+      explorerUrl: `https://litecoinspace.org/tx/${LTC_TXID}`,
+      source: 'litecoinspace',
+    });
+  });
+
+  it('looks up Litecoin from litecoinspace', async () => {
+    queue.push(LTC_TX, 3220509);
+    const result = await lookupTransaction('ltc', LTC_TXID);
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { chain: 'ltc', status: 'confirmed', confirmations: 1 },
+    });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain(
+      `litecoinspace.org/api/tx/${LTC_TXID}`,
+    );
+  });
+
+  it('reports Litecoin lookup mainnet-only in devnet mode', async () => {
+    expect(
+      await lookupTransaction('ltc', LTC_TXID, { devnet: true }),
+    ).toMatchObject({ status: 'unsupported' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('parses a Dogecoin transaction from the SoChain shape', () => {
+    expect(parseDogeTx(DOGE_SOCHAIN, DOGE_TXID)).toMatchObject({
+      chain: 'doge',
+      status: 'confirmed',
+      confirmations: 120,
+      blockHeight: 6000000,
+      // Change (0.499 DOGE back to the sender) is excluded.
+      amountBaseUnits: '10000000000',
+      feeBaseUnits: null,
+      from: DOGE_SENDER,
+      to: DOGE_RECIPIENT,
+      explorerUrl: `https://dogechain.info/tx/${DOGE_TXID}`,
+      source: 'sochain',
+    });
+  });
+
+  it('parses a Dogecoin transaction from the BlockCypher shape', () => {
+    expect(parseBlockcypherDogeTx(DOGE_BLOCKCYPHER, DOGE_TXID)).toMatchObject({
+      chain: 'doge',
+      status: 'confirmed',
+      confirmations: 120,
+      blockHeight: 6000000,
+      amountBaseUnits: '10000000000',
+      feeBaseUnits: '100000',
+      from: DOGE_SENDER,
+      to: DOGE_RECIPIENT,
+      explorerUrl: `https://dogechain.info/tx/${DOGE_TXID}`,
+      source: 'blockcypher',
+    });
+  });
+
+  it('rejects a Dogecoin parse whose hash does not match the request', () => {
+    expect(parseDogeTx(DOGE_SOCHAIN, '0'.repeat(64))).toBeNull();
+    expect(parseBlockcypherDogeTx(DOGE_BLOCKCYPHER, '0'.repeat(64))).toBeNull();
+  });
+
+  it('looks up Dogecoin from SoChain', async () => {
+    queue.push(DOGE_SOCHAIN);
+    const result = await lookupTransaction('doge', DOGE_TXID);
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { chain: 'doge', status: 'confirmed', source: 'sochain' },
+    });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain(
+      `sochain.com/api/v3/tx/DOGE/${DOGE_TXID}`,
+    );
+  });
+
+  it('falls through to BlockCypher when SoChain has no such transaction', async () => {
+    queue.push({ status: 'fail', data: { error_message: 'not found' } }, DOGE_BLOCKCYPHER);
+    const result = await lookupTransaction('doge', DOGE_TXID);
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { chain: 'doge', status: 'confirmed', source: 'blockcypher' },
+    });
+  });
+
+  it('reports Dogecoin lookup mainnet-only in devnet mode', async () => {
+    expect(
+      await lookupTransaction('doge', DOGE_TXID, { devnet: true }),
+    ).toMatchObject({ status: 'unsupported' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('resolves an Optimism hash through the any-chain lookup', async () => {
+    // The fan-out fires one fetch per Blockscout chain, ETH first:
+    // ETH, Polygon and Arbitrum answer not-found, Optimism answers
+    // with the transaction, the rest answer not-found. The queue
+    // serves in call order, so the Optimism response sits fourth.
+    const opHash =
+      '0x2bfcadb4c53025f00c074e7990a5240aca38b1f0bf772f4b40eeb190e33c70ca';
+    const notFound = { message: 'Not found' };
+    queue.push(
+      notFound,
+      notFound,
+      notFound,
+      { ...ETH_TX, hash: opHash },
+      notFound, notFound, notFound, notFound, notFound, notFound,
+      notFound, notFound, notFound, notFound, notFound, notFound,
+      notFound, notFound, notFound,
+    );
+    const result = await lookupTransactionAnyChain(opHash);
+    expect(result).toMatchObject({
+      status: 'ok',
+      chain: 'op',
+      data: { hash: opHash, status: 'confirmed' },
+    });
+  });
+
+  it('resolves a Litecoin hash through the any-chain lookup', async () => {
+    // Sequential: Bitcoin 404s, TRON answers empty, Litecoin answers.
+    vi.stubGlobal('fetch', vi.fn(async (url: unknown) => {
+      const target = String(url);
+      if (target.includes('mempool.space')) {
+        return { ok: false, status: 404, json: async () => ({}) };
+      }
+      if (target.includes('trongrid')) {
+        return { ok: true, status: 200, json: async () => ({}) };
+      }
+      if (target.includes('litecoinspace.org/api/tx/')) {
+        return { ok: true, status: 200, json: async () => LTC_TX };
+      }
+      return { ok: true, status: 200, json: async () => 3220509 };
+    }));
+    const result = await lookupTransactionAnyChain(LTC_TXID);
+    expect(result).toMatchObject({
+      status: 'ok',
+      chain: 'ltc',
+      data: { hash: LTC_TXID, status: 'confirmed' },
+    });
+  });
+
+  it('an indexer error on one chain does not hide a hit on another', async () => {
+    // Bitcoin 429s; Litecoin still resolves.
+    vi.stubGlobal('fetch', vi.fn(async (url: unknown) => {
+      const target = String(url);
+      if (target.includes('mempool.space/api/tx/')) {
+        throw new Error('HTTP 429');
+      }
+      if (target.includes('trongrid')) {
+        return { ok: true, status: 200, json: async () => ({}) };
+      }
+      if (target.includes('litecoinspace.org/api/tx/')) {
+        return { ok: true, status: 200, json: async () => LTC_TX };
+      }
+      return { ok: true, status: 200, json: async () => 3220509 };
+    }));
+    const result = await lookupTransactionAnyChain(LTC_TXID);
+    expect(result).toMatchObject({ status: 'ok', chain: 'ltc' });
+  });
+
+  it('says a Solana signature is unsupported, not malformed', async () => {
+    const result = await lookupTransactionAnyChain(
+      '4Bq5kEwFejLnvu8khYxbFPzU9JKbpXgHnvmsvBMK2xjkPo7Km2zwf1X2jhsZpDXXMdrRMWXHVCmBSc1N3QEuPQUd',
+    );
+    expect(result).toMatchObject({ status: 'unsupported' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('reports not-found when no candidate chain has the hash', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    })));
+    const result = await lookupTransactionAnyChain('0'.repeat(64));
+    expect(result).toMatchObject({ status: 'not-found' });
   });
 });

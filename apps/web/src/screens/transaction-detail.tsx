@@ -18,7 +18,8 @@ import {
   formatNativeWithSymbol,
 } from '../wallet/chain-amount-format';
 import {
-  lookupTransaction,
+  hashShape,
+  lookupTransactionAnyChain,
   type TrackedTx,
 } from '../wallet/tracker';
 import type { ChainId } from '../engine/boundary';
@@ -111,31 +112,35 @@ function DetailRow({
 type TrackerLookupOutcome =
   | { status: 'loading' }
   | { status: 'found'; data: TrackedTx; chain: ChainId }
-  | { status: 'not-found' }
+  | { status: 'not-found'; note?: string }
   | { status: 'error'; reason: string }
+  | { status: 'unsupported'; reason: string }
   | { status: 'malformed' };
 
-// P0-6: a hash's shape says which chains it can belong to, before any
-// network call — a 64-hex hash is shared by Bitcoin, Litecoin, Dogecoin
-// and TRON, a 0x-prefixed one is EVM-shaped. Anything else is not a
-// transaction hash at all, and no refetch can fix it (so it gets no
-// Retry). The lookup below tries Bitcoin then TRON for a 64-hex hash —
-// the wallet has no indexer lookup for Litecoin/Dogecoin yet, so those
-// two are offered as explorer links only (see explorerUrlsFor).
-function hashChainHint(id: string): 'btc' | 'eth' | null {
-  if (/^[0-9a-fA-F]{64}$/.test(id)) return 'btc';
-  if (/^0x[0-9a-fA-F]{64}$/.test(id)) return 'eth';
+// Lane P2-B (F30): a hash's shape says which chains it can belong
+// to, before any network call — a 64-hex hash is shared by Bitcoin,
+// Litecoin, Dogecoin, TRON and TON, a 0x-prefixed one is EVM-shaped,
+// and an 87–88 character base58 string is a Solana signature.
+// Anything else is not a transaction hash at all, and no refetch can
+// fix it (so it gets no Retry). The shape is the tracker's own
+// classification (hashShape), so the screen and the lookup agree.
+function hashChainHint(id: string): 'btc' | 'eth' | 'sol' | null {
+  const shape = hashShape(id);
+  if (shape === 'utxo') return 'btc';
+  if (shape === 'evm') return 'eth';
+  if (shape === 'sol') return 'sol';
   return null;
 }
 
 // The public explorers for a hash whose shape names its chain(s). A
 // 0x hash names one chain family, so it gets one link. A 64-hex hash is
-// shared by Bitcoin, Litecoin, Dogecoin and TRON — no single explorer
-// is right, so every candidate is offered and none is guessed: a
-// Litecoin or Dogecoin hash used to get a dead Bitcoin explorer link
-// (T1-3). Each URL is the chain's own canonical explorer, already used
-// for that chain's history elsewhere in the wallet. An unshaped hash
-// has no explorer to link to, and Track is the way to try other chains.
+// shared by Bitcoin, Litecoin, Dogecoin, TRON and TON — no single
+// explorer is right, so every candidate is offered and none is
+// guessed: a Litecoin or Dogecoin hash used to get a dead Bitcoin
+// explorer link (T1-3). Each URL is the chain's own canonical
+// explorer, already used for that chain's history elsewhere in the
+// wallet. A Solana signature gets Solscan. An unshaped hash has no
+// explorer to link to, and Track is the way to try other chains.
 function explorerUrlsFor(
   id: string,
 ): ReadonlyArray<{ label: string; url: string }> {
@@ -145,6 +150,7 @@ function explorerUrlsFor(
       { label: 'Litecoin explorer', url: `https://litecoinspace.org/tx/${id}` },
       { label: 'Dogecoin explorer', url: `https://dogechain.info/tx/${id}` },
       { label: 'TRON explorer', url: `https://tronscan.org/#/transaction/${id}` },
+      { label: 'TON explorer', url: `https://tonviewer.com/transaction/${id}` },
     ];
   }
   if (/^0x[0-9a-fA-F]{64}$/.test(id)) {
@@ -152,19 +158,27 @@ function explorerUrlsFor(
       { label: 'View on explorer', url: `https://eth.blockscout.com/tx/${id}` },
     ];
   }
+  if (/^[1-9A-HJ-NP-Za-km-z]{87,88}$/.test(id)) {
+    return [
+      { label: 'Solana explorer', url: `https://solscan.io/tx/${id}` },
+    ];
+  }
   return [];
 }
 
 export function TransactionDetailScreen() {
   const { id } = useParams<{ id: string }>();
-  const { history, refreshHistory } = useWallet();
+  const { history, refreshHistory, devnetEnabled } = useWallet();
   const [check, setCheck] = useState<HistoryCheck | null>(null);
   const checkPromiseRef = useRef<Promise<HistoryCheck> | null>(null);
   // P0-6: the not-found state used to be a dead end even for a real,
   // confirmed hash. Once the wallet-history check is done and the
   // hash is not in it, the same public-indexer lookup Track uses runs
-  // here (BTC, then TRON, for a 64-hex hash; Ethereum for a 0x one)
-  // and a found transaction renders Track's own result card.
+  // here and a found transaction renders Track's own result card.
+  // Lane P2-B (F30): the lookup is now the any-chain lookup — a 0x
+  // hash is tried on every Blockscout chain, a 64-hex hash on BTC,
+  // TRON, Litecoin and Dogecoin — with the devnet flag Track passes,
+  // so a devnet hash resolves here too instead of 404ing on mainnet.
   const [lookup, setLookup] = useState<TrackerLookupOutcome | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const lookupKeyRef = useRef<string | null>(null);
@@ -251,30 +265,27 @@ export function TransactionDetailScreen() {
     setLookup({ status: 'loading' });
     void (async () => {
       // TON needs an account address, so it is not tried here — its
-      // lookup lives on Track, linked below. Other chains likewise:
-      // the Track link carries the hash, so the user can try them.
-      const chains: ChainId[] = hint === 'btc' ? ['btc', 'trx'] : ['eth'];
-      let lastError: string | null = null;
-      for (const lookupChain of chains) {
-        const result = await lookupTransaction(lookupChain, id);
-        if (cancelled) return;
-        if (result.status === 'ok') {
-          setLookup({ status: 'found', data: result.data, chain: lookupChain });
-          return;
-        }
-        if (result.status === 'error') lastError = result.reason;
-      }
+      // lookup lives on Track, linked below with the hash carried
+      // along. Solana has no lookup yet (the tracker says so), and
+      // that outcome renders its own honest panel below.
+      const result = await lookupTransactionAnyChain(id, {
+        devnet: devnetEnabled === true,
+      });
       if (cancelled) return;
-      setLookup(
-        lastError !== null
-          ? { status: 'error', reason: lastError }
-          : { status: 'not-found' },
-      );
+      if (result.status === 'ok') {
+        setLookup({ status: 'found', data: result.data, chain: result.chain });
+      } else if (result.status === 'not-found') {
+        setLookup({ status: 'not-found', note: result.note });
+      } else if (result.status === 'unsupported') {
+        setLookup({ status: 'unsupported', reason: result.reason });
+      } else {
+        setLookup({ status: 'error', reason: result.reason });
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [check, found, id, retryNonce]);
+  }, [check, found, id, retryNonce, devnetEnabled]);
 
   // P0-6: the Track link carries the hash (and the chain its shape
   // names, so Track opens on the right network); the explorer links
@@ -395,7 +406,9 @@ export function TransactionDetailScreen() {
         // its on-chain status instead of the "unknown" dead end.
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {`Found on ${chainConfig(lookup.chain).displayName} via the public indexer — this transaction is not in this wallet's loaded history.`}
+            {devnetEnabled === true
+              ? `Found on ${chainConfig(lookup.chain).displayName} test network via the public indexer — this transaction is not in this wallet's loaded history.`
+              : `Found on ${chainConfig(lookup.chain).displayName} via the public indexer — this transaction is not in this wallet's loaded history.`}
           </p>
           <TransactionDetails
             data={lookup.data}
@@ -427,6 +440,27 @@ export function TransactionDetailScreen() {
                 {`The public indexer could not be reached: ${lookup.reason}`}
               </p>
             )}
+            {lookup !== null && lookup.status === 'unsupported' && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                {lookup.reason}
+              </p>
+            )}
+            {lookup !== null && lookup.status === 'not-found' && (
+              <>
+                {lookup.note !== undefined && (
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    {lookup.note}
+                  </p>
+                )}
+                {id !== undefined && hashShape(id) === 'utxo' && (
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    This could also be a TON transaction — TON lookups
+                    need the account address as well as the hash, so
+                    look it up on Track with the address.
+                  </p>
+                )}
+              </>
+            )}
             {lookup !== null && lookup.status === 'malformed' && (
               <p className="mt-4 text-sm text-muted-foreground">
                 This doesn&rsquo;t look like a transaction hash — check it
@@ -441,7 +475,10 @@ export function TransactionDetailScreen() {
             {/* P0-6: the dead end is gone. Look it up on Track (the
                 hash rides along, with the chain its shape names), check
                 the explorer, or retry both checks — except for a
-                malformed hash, where a refetch cannot succeed. */}
+                malformed hash, where a refetch cannot succeed, and an
+                unsupported one (Solana), where no lookup exists yet
+                to retry. The explorer links stay for unsupported:
+                they are the way forward there. */}
             {lookup !== null && lookup.status !== 'loading' && (
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <Link
@@ -462,11 +499,12 @@ export function TransactionDetailScreen() {
                       {explorer.label}
                     </a>
                   ))}
-                {lookup.status !== 'malformed' && (
-                  <Button type="button" variant="secondary" onClick={handleRetry}>
-                    Retry
-                  </Button>
-                )}
+                {lookup.status !== 'malformed' &&
+                  lookup.status !== 'unsupported' && (
+                    <Button type="button" variant="secondary" onClick={handleRetry}>
+                      Retry
+                    </Button>
+                  )}
               </div>
             )}
             <Link

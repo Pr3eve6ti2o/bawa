@@ -92,6 +92,10 @@ import {
 } from '../wallet/adapters/token-balances';
 import { getAdapterForMode } from '../wallet/adapters';
 import { recordPendingBroadcastDevnet } from '../state/pending-broadcasts';
+import {
+  beginTxLifecycleToast,
+  type TxLifecycleHandle,
+} from '../wallet/tx-lifecycle-toast';
 import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
@@ -272,6 +276,12 @@ export function SendScreen() {
   const [signState, setSignState] = useState<SignState>({ status: 'idle' });
   const [approvalStage, setApprovalStage] = useState<SendApprovalStage>('review');
   const [devnetBroadcast, setDevnetBroadcast] = useState<DevnetBroadcastState>({ status: 'idle' });
+  // Lane P2-B (M4): the devnet transaction's lifecycle toast. The
+  // handle lives in a ref because the toast — and its confirmation
+  // poll — outlive this screen: the user can navigate away while the
+  // transaction confirms and the toast follows them. Mainnet never
+  // starts one (broadcast is disabled, so there is no hash to follow).
+  const txToastRef = useRef<TxLifecycleHandle | null>(null);
   const [copied, setCopied] = useState(false);
   // Full asset list (token gaps, item 4): the selected chain's native
   // coin plus its tokens. A token send previews and signs offline on
@@ -1178,6 +1188,12 @@ export function SendScreen() {
 
     setApprovalStage('signing');
     setSignState({ status: 'signing' });
+    // Lane P2-B (M4): the lifecycle toast starts when signing starts
+    // — "Waiting for wallet…" — and only for a devnet send, the one
+    // place a broadcast actually happens.
+    if (devnetEnabled) {
+      txToastRef.current = beginTxLifecycleToast();
+    }
     try {
       const signed = await withMnemonicAsync(async (mnemonic) => {
         if (token !== null) return signTokenSend(mnemonic, token);
@@ -1283,6 +1299,8 @@ export function SendScreen() {
       });
       if (!signed.ok) {
         setSignState({ status: 'error', reason: signed.reason });
+        txToastRef.current?.failed();
+        txToastRef.current = null;
         return;
       }
       setSignState({
@@ -1310,12 +1328,24 @@ export function SendScreen() {
             txHash: broadcast.txHash,
             explorerUrl: broadcast.explorerUrl,
           });
+          // Lane P2-B (M4): the broadcast landed — the toast moves to
+          // "Transaction submitted / Waiting for confirmation…" with
+          // the hash and explorer link, and starts polling for the
+          // confirmation in the background.
+          txToastRef.current?.submitted({
+            chain,
+            txHash: broadcast.txHash,
+            explorerUrl: broadcast.explorerUrl,
+            devnet: true,
+          });
         } catch (error) {
           setDevnetBroadcast({
             status: 'error',
             reason:
               error instanceof Error ? error.message : 'Broadcast failed.',
           });
+          txToastRef.current?.failed();
+          txToastRef.current = null;
         }
       } else {
         setApprovalStage('broadcast-disabled');
@@ -1327,6 +1357,8 @@ export function SendScreen() {
           error instanceof Error ? error.message : 'Signing failed.',
       });
       setApprovalStage('review');
+      txToastRef.current?.failed();
+      txToastRef.current = null;
     }
   }
 
