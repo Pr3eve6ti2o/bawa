@@ -1,17 +1,22 @@
 /**
- * Read-only transaction tracking via mempool.space (BTC), Blockscout (ETH),
- * TronGrid (TRX) and TonCenter (TON). No API key is needed for any of them.
- * Included transactions are never presented as finalized: expose the
- * indexer's own status wording alongside confirmations, which may be
- * unknown (TronGrid and TonCenter report no block number here).
- * TonCenter has no hash-only lookup: a TON transaction is identified by
- * account address plus lt plus hash, so TON lookup needs the address.
+ * Read-only transaction tracking via mempool.space (BTC), Blockscout (ETH
+ * and the other EVM chains), TronGrid (TRX), TonCenter (TON),
+ * litecoinspace (LTC) and SoChain/BlockCypher (DOGE). No API key is needed
+ * for any of them. Included transactions are never presented as
+ * finalized: expose the indexer's own status wording alongside
+ * confirmations, which may be unknown (TronGrid and TonCenter report no
+ * block number here). TonCenter has no hash-only lookup: a TON
+ * transaction is identified by account address plus lt plus hash, so
+ * TON lookup needs the address. Solana has no lookup here yet: the
+ * detail screen names that honestly instead of calling the signature
+ * malformed (Lane P2-B).
  */
 import type { ChainId } from '../engine/boundary';
-import { chainConfig } from './chains';
+import { chainConfig, SUPPORTED_CHAINS } from './chains';
 import { isRecord } from './guards';
 import { getAdapterForMode } from './adapters/index';
 import { base64ToHex } from './adapters/ton';
+import { sochainConfirmedToKoinu } from './adapters/doge';
 import { fetchJson } from './adapters/types';
 import type { AdapterResult, AdapterTx, TxStatus } from './adapters/types';
 
@@ -98,7 +103,19 @@ function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
-export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = false): TrackedTx | null {
+interface ParseBtcTxOpts {
+  // Lane P2-B: the mempool.space shape is shared by Litecoin
+  // (litecoinspace.org/api). Defaults keep the Bitcoin behaviour
+  // exactly; the LTC branch passes its own chain, network id,
+  // explorer and source. The network id is the Litecoin genesis
+  // block hash, as recorded in adapters/ltc.ts.
+  chain?: 'btc' | 'ltc';
+  networkId?: string;
+  explorerBase?: string;
+  source?: string;
+}
+
+export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = false, opts?: ParseBtcTxOpts): TrackedTx | null {
   if (
     !isRecord(raw) || !isRecord(raw.status) ||
     !Array.isArray(raw.vin) || !Array.isArray(raw.vout) ||
@@ -150,12 +167,21 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = fals
     if (!Number.isSafeInteger(amount)) return null;
   }
 
+  const chain = opts?.chain ?? 'btc';
+  const networkId =
+    opts?.networkId ??
+    (devnet
+      ? 'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043'
+      : 'bip122:000000000019d6689c085ae165831e93');
+  const explorerBase =
+    opts?.explorerBase ??
+    (devnet ? 'https://mempool.space/testnet4' : 'https://mempool.space');
+  const source = opts?.source ?? 'mempool.space';
+
   return {
     hash,
-    chain: 'btc',
-    networkId: devnet
-      ? 'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043'
-      : 'bip122:000000000019d6689c085ae165831e93',
+    chain,
+    networkId,
     status: status.confirmed ? 'confirmed' : 'pending',
     statusLabel: status.confirmed ? 'confirmed' : 'pending',
     // A tip behind the block is stale, not negative
@@ -174,10 +200,8 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = fals
     amountBaseUnits: amount.toString(),
     feeBaseUnits: raw.fee.toString(),
     timestamp,
-    explorerUrl: devnet
-      ? `https://mempool.space/testnet4/tx/${hash}`
-      : `https://mempool.space/tx/${hash}`,
-    source: 'mempool.space',
+    explorerUrl: `${explorerBase}/tx/${hash}`,
+    source,
     fetchedAt: Date.now(),
   };
 }
@@ -353,6 +377,153 @@ export function parseTonTxEntry(raw: unknown, devnet = false): TrackedTx | null 
   }
 }
 
+const DOGE_NETWORK_ID =
+  'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691';
+
+/**
+ * Lane P2-B: parse one SoChain v3 single-transaction response
+ * (GET /api/v3/tx/DOGE/<hash>). The shape is the v3 vocabulary the
+ * Dogecoin adapter already parses for /transactions (status, data,
+ * time, block) with per-transaction inputs/outputs: data carries
+ * txid, block_no, confirmations, time (unix seconds) and inputs /
+ * outputs of {address, value} where value is a decimal DOGE string.
+ * Strictly validated — a wrong shape returns null so the caller can
+ * fall through to BlockCypher instead of showing invented numbers.
+ * Amount is the value leaving the sender (outputs back to the first
+ * input address are change), mirroring parseBtcTx; the fee is not
+ * reported by this endpoint, so it stays null ("Not reported by the
+ * indexer" on screen).
+ */
+export function parseDogeTx(raw: unknown, requestedHash: string): TrackedTx | null {
+  try {
+    if (!isRecord(raw) || raw.status !== 'success') return null;
+    const data = raw.data;
+    if (!isRecord(data)) return null;
+    const hash = stringOrNull(data.txid);
+    if (hash === null || hash.toLowerCase() !== requestedHash.toLowerCase()) return null;
+    const blockHeight = isNonNegativeInteger(data.block_no) ? data.block_no : null;
+    const confirmations = isNonNegativeInteger(data.confirmations) ? data.confirmations : null;
+    const time = typeof data.time === 'number' && Number.isFinite(data.time) ? data.time : null;
+    if (!Array.isArray(data.inputs) || !Array.isArray(data.outputs)) return null;
+    const inputs = data.inputs as unknown[];
+    const outputs = data.outputs as unknown[];
+    const firstInput = inputs[0];
+    const sender =
+      isRecord(firstInput) && typeof firstInput.address === 'string'
+        ? firstInput.address
+        : null;
+    let amount = 0n;
+    let recipient: string | null = null;
+    for (const output of outputs) {
+      if (!isRecord(output)) return null;
+      const address = typeof output.address === 'string' ? output.address : null;
+      const value = typeof output.value === 'string' ? output.value : null;
+      if (address === null || value === null) return null;
+      const koinu = sochainConfirmedToKoinu(value);
+      if (koinu === null) return null;
+      const isChange = sender !== null && address === sender;
+      if (!isChange) {
+        amount += BigInt(koinu);
+        if (recipient === null) recipient = address;
+      }
+    }
+    const firstOutput = outputs[0];
+    return {
+      hash,
+      chain: 'doge',
+      networkId: DOGE_NETWORK_ID,
+      status: blockHeight === null ? 'pending' : 'confirmed',
+      statusLabel: blockHeight === null ? 'pending' : 'confirmed',
+      confirmations,
+      blockHeight,
+      from: sender,
+      to:
+        recipient ??
+        (isRecord(firstOutput) && typeof firstOutput.address === 'string'
+          ? firstOutput.address
+          : null),
+      amountBaseUnits: amount.toString(),
+      feeBaseUnits: null,
+      timestamp: time === null ? null : time * 1000,
+      explorerUrl: `https://dogechain.info/tx/${hash}`,
+      source: 'sochain',
+      fetchedAt: Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lane P2-B: parse one BlockCypher single-transaction object
+ * (GET /v1/doge/main/txs/<hash>). The field names are the ones the
+ * Dogecoin adapter already parses for /full history entries
+ * (adapters/doge.ts blockcypherTxs): hash, inputs with addresses +
+ * output_value, outputs with addresses + value, confirmed (ISO
+ * string); the single-transaction object additionally carries
+ * block_height, confirmations and fees. Strictly validated; null on
+ * a wrong shape.
+ */
+export function parseBlockcypherDogeTx(raw: unknown, requestedHash: string): TrackedTx | null {
+  try {
+    if (!isRecord(raw)) return null;
+    const hash = stringOrNull(raw.hash);
+    if (hash === null || hash.toLowerCase() !== requestedHash.toLowerCase()) return null;
+    if (!Array.isArray(raw.inputs) || !Array.isArray(raw.outputs)) return null;
+    const inputs = raw.inputs as unknown[];
+    const outputs = raw.outputs as unknown[];
+    const firstInput = inputs[0];
+    const sender =
+      isRecord(firstInput) && Array.isArray(firstInput.addresses) && typeof firstInput.addresses[0] === 'string'
+        ? (firstInput.addresses[0] as string)
+        : null;
+    let amount = 0n;
+    let recipient: string | null = null;
+    for (const output of outputs) {
+      if (!isRecord(output)) return null;
+      const addresses = Array.isArray(output.addresses) ? output.addresses : [];
+      const address = typeof addresses[0] === 'string' ? (addresses[0] as string) : null;
+      if (address === null) return null;
+      if (typeof output.value !== 'number' || !Number.isSafeInteger(output.value) || output.value < 0) return null;
+      const isChange = sender !== null && address === sender;
+      if (!isChange) {
+        amount += BigInt(output.value);
+        if (recipient === null) recipient = address;
+      }
+    }
+    const confirmed = typeof raw.confirmed === 'string' ? raw.confirmed : null;
+    const timestamp = confirmed === null ? NaN : Date.parse(confirmed);
+    const blockHeight = isNonNegativeInteger(raw.block_height) ? raw.block_height : null;
+    const firstOutput = outputs[0];
+    const firstOutputAddress =
+      isRecord(firstOutput) && Array.isArray(firstOutput.addresses) && typeof firstOutput.addresses[0] === 'string'
+        ? (firstOutput.addresses[0] as string)
+        : null;
+    return {
+      hash,
+      chain: 'doge',
+      networkId: DOGE_NETWORK_ID,
+      status: confirmed === null ? 'pending' : 'confirmed',
+      statusLabel: confirmed === null ? 'pending' : 'confirmed',
+      confirmations: isNonNegativeInteger(raw.confirmations) ? raw.confirmations : null,
+      blockHeight,
+      from: sender,
+      to: recipient ?? firstOutputAddress,
+      amountBaseUnits: amount.toString(),
+      feeBaseUnits:
+        typeof raw.fees === 'number' && Number.isSafeInteger(raw.fees) && raw.fees >= 0
+          ? String(raw.fees)
+          : null,
+      timestamp: Number.isFinite(timestamp) ? timestamp : null,
+      explorerUrl: `https://dogechain.info/tx/${hash}`,
+      source: 'blockcypher',
+      fetchedAt: Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function lookupTon(hash: string, address: string | undefined, devnet = false): Promise<TrackerLookupResult> {
   if (!address) {
     return {
@@ -431,6 +602,8 @@ export async function lookupTransaction(
     chain !== 'btc' &&
     chain !== 'trx' &&
     chain !== 'ton' &&
+    chain !== 'ltc' &&
+    chain !== 'doge' &&
     !hasBlockscoutV2Lookup(chain)
   ) {
     return {
@@ -440,10 +613,18 @@ export async function lookupTransaction(
   }
 
   if (
-    chain === 'btc' &&
+    (chain === 'btc' || chain === 'ltc' || chain === 'doge') &&
     (hash.length !== 64 || !/^[0-9a-fA-F]{64}$/.test(hash))
   ) {
-    return { status: 'error', reason: 'Invalid Bitcoin transaction hash format.' };
+    return {
+      status: 'error',
+      reason:
+        chain === 'ltc'
+          ? 'Invalid Litecoin transaction hash format.'
+          : chain === 'doge'
+            ? 'Invalid Dogecoin transaction hash format.'
+            : 'Invalid Bitcoin transaction hash format.',
+    };
   }
   if (
     hasBlockscoutV2Lookup(chain) &&
@@ -476,6 +657,78 @@ export async function lookupTransaction(
         : { status: 'error', reason: 'Invalid response: expected a transaction' };
     } catch (error: unknown) {
       return { status: 'error', reason: messageOf(error) };
+    }
+  }
+  if (chain === 'ltc') {
+    // Lane P2-B: Litecoin shares Bitcoin's mempool.space shape on
+    // litecoinspace.org/api, so parseBtcTx parses it with the LTC
+    // chain, network id, explorer and source. Mainnet only: no
+    // Litecoin testnet indexer is configured.
+    if (devnet) {
+      return {
+        status: 'unsupported',
+        reason: 'Transaction lookup for this chain is only available on mainnet.',
+      };
+    }
+    try {
+      const raw: unknown = await fetchJson(`https://litecoinspace.org/api/tx/${hash}`);
+      let tipHeight: number | null = null;
+      try {
+        const tip: unknown = await fetchJson('https://litecoinspace.org/api/blocks/tip/height');
+        if (isNonNegativeInteger(tip)) tipHeight = tip;
+      } catch {
+        // A tip-fetch failure leaves confirmations unknown, not the lookup failed.
+      }
+      const data = parseBtcTx(raw, tipHeight, false, {
+        chain: 'ltc',
+        networkId:
+          'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2',
+        explorerBase: 'https://litecoinspace.org',
+        source: 'litecoinspace',
+      });
+      return data === null
+        ? { status: 'error', reason: 'Unexpected transaction response shape.' }
+        : { status: 'ok', data };
+    } catch (error: unknown) {
+      const reason = messageOf(error);
+      return reason === 'HTTP 404'
+        ? { status: 'not-found' }
+        : { status: 'error', reason };
+    }
+  }
+  if (chain === 'doge') {
+    // Lane P2-B: Dogecoin lookup follows the adapter's own source
+    // order (adapters/doge.ts) — SoChain primary, BlockCypher
+    // fallback — because dogechain.info sends no CORS headers and
+    // cannot be fetched from the browser. Mainnet only: no Dogecoin
+    // testnet indexer is configured. A source that 404s or returns
+    // an unparseable body falls through to the next source; only
+    // when both fail is the outcome an error (or not-found when
+    // BlockCypher 404s).
+    if (devnet) {
+      return {
+        status: 'unsupported',
+        reason: 'Transaction lookup for this chain is only available on mainnet.',
+      };
+    }
+    try {
+      const raw: unknown = await fetchJson(`https://sochain.com/api/v3/tx/DOGE/${hash}`);
+      const data = parseDogeTx(raw, hash);
+      if (data !== null) return { status: 'ok', data };
+    } catch {
+      // SoChain unreachable or 404: fall through to BlockCypher.
+    }
+    try {
+      const raw: unknown = await fetchJson(`https://api.blockcypher.com/v1/doge/main/txs/${hash}`);
+      const data = parseBlockcypherDogeTx(raw, hash);
+      return data === null
+        ? { status: 'error', reason: 'Unexpected transaction response shape.' }
+        : { status: 'ok', data };
+    } catch (error: unknown) {
+      const reason = messageOf(error);
+      return reason === 'HTTP 404'
+        ? { status: 'not-found' }
+        : { status: 'error', reason };
     }
   }
   if (chain === 'ton') {
@@ -544,6 +797,123 @@ export async function lookupTransaction(
       ? { status: 'not-found' }
       : { status: 'error', reason };
   }
+}
+
+export type AnyChainLookupResult =
+  | { status: 'ok'; data: TrackedTx; chain: ChainId }
+  | { status: 'not-found'; note?: string }
+  | { status: 'unsupported'; reason: string }
+  | { status: 'error'; reason: string };
+
+/**
+ * Lane P2-B: what shape a hash is, before any network call. A
+ * 0x-prefixed 64-hex hash is EVM-shaped, a bare 64-hex hash is
+ * shared by the UTXO chains and TRON (and TON, which needs an
+ * address on top), and an 87–88 character base58 string is a Solana
+ * signature. Anything else is not a transaction hash at all.
+ */
+export function hashShape(id: string): 'evm' | 'utxo' | 'sol' | null {
+  if (/^0x[0-9a-fA-F]{64}$/.test(id)) return 'evm';
+  if (/^[0-9a-fA-F]{64}$/.test(id)) return 'utxo';
+  if (/^[1-9A-HJ-NP-Za-km-z]{87,88}$/.test(id)) return 'sol';
+  return null;
+}
+
+/**
+ * Lane P2-B (F30): resolve ANY real hash with the same lookup
+ * /track uses, without the detail screen having to know the chain.
+ * A 0x hash is tried on every Blockscout chain in parallel (ETH
+ * first, so the common case wins the ordering); a 64-hex hash is
+ * tried in turn on BTC, TRON, Litecoin and Dogecoin. A hit on any
+ * chain wins; a lookup that errors on one chain never hides a hit
+ * on another (an indexer 429 on Bitcoin must not dead-end a
+ * Litecoin transaction). Only when every candidate errors is the
+ * outcome an error; when at least one candidate answered
+ * not-found, the hash is not on any chain we could reach, and a
+ * note says so when some networks could not be reached at all.
+ * Solana has no lookup here yet (Track answers 'unsupported' for
+ * it too), so it is named honestly instead of resolved. In devnet
+ * mode only the chains with a devnet indexer are tried.
+ */
+export async function lookupTransactionAnyChain(
+  hash: string,
+  opts?: { devnet?: boolean },
+): Promise<AnyChainLookupResult> {
+  const devnet = opts?.devnet === true;
+  const shape = hashShape(hash);
+  if (shape === null) {
+    return { status: 'error', reason: 'Invalid transaction hash format.' };
+  }
+  if (shape === 'sol') {
+    return {
+      status: 'unsupported',
+      reason:
+        'Solana transactions cannot be looked up in the wallet yet. Check the transaction on Solscan.',
+    };
+  }
+  if (shape === 'evm') {
+    const candidates = (
+      devnet
+        ? ['eth']
+        : SUPPORTED_CHAINS.filter((chain) => hasBlockscoutV2Lookup(chain))
+    ) as ChainId[];
+    const ordered: ChainId[] = [
+      'eth',
+      ...candidates.filter((chain) => chain !== 'eth'),
+    ];
+    const results = await Promise.all(
+      ordered.map((chain) => lookupTransaction(chain, hash, opts)),
+    );
+    const paired = ordered.map((chain, index) => ({
+      chain,
+      result: results[index],
+    }));
+    for (const entry of paired) {
+      if (entry.result !== undefined && entry.result.status === 'ok') {
+        return { status: 'ok', data: entry.result.data, chain: entry.chain };
+      }
+    }
+    if (results.every((result) => result.status === 'error')) {
+      const firstError = results.find((result) => result.status === 'error');
+      return {
+        status: 'error',
+        reason:
+          firstError !== undefined && firstError.status === 'error'
+            ? firstError.reason
+            : 'Lookup failed.',
+      };
+    }
+    return { status: 'not-found' };
+  }
+  const candidates: ChainId[] = devnet
+    ? ['btc', 'trx']
+    : ['btc', 'trx', 'ltc', 'doge'];
+  let sawError = false;
+  let firstError: string | null = null;
+  let sawNotFound = false;
+  for (const chain of candidates) {
+    const result = await lookupTransaction(chain, hash, opts);
+    if (result.status === 'ok') {
+      return { status: 'ok', data: result.data, chain };
+    }
+    if (result.status === 'error') {
+      sawError = true;
+      firstError ??= result.reason;
+      continue;
+    }
+    if (result.status === 'not-found') {
+      sawNotFound = true;
+    }
+    // 'unsupported' (a devnet-only chain in the list, or a chain
+    // that cannot look this hash up) is skipped, not an error.
+  }
+  if (!sawNotFound && sawError) {
+    return { status: 'error', reason: firstError ?? 'Lookup failed.' };
+  }
+  return {
+    status: 'not-found',
+    note: sawError ? 'Some networks could not be reached; Retry may help.' : undefined,
+  };
 }
 
 export type TrackerActivityResult = AdapterResult<AdapterTx[]>;

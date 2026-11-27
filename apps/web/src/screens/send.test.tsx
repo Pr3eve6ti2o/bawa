@@ -6,9 +6,10 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { LAST_USED_CHAIN_KEY } from './chain-search-select';
 import { SendScreen } from './send';
 import { signEvmOffline } from '../wallet/send';
+import { beginTxLifecycleToast } from '../wallet/tx-lifecycle-toast';
 import { useWallet } from '../state/wallet-context';
 import { usePrices } from '../wallet/prices';
-import { getAdapterForMode } from '../wallet/adapters';
+import { getAdapterForMode, getDevnetAdapter } from '../wallet/adapters';
 import type { ChainAdapter } from '../wallet/adapters/types';
 
 vi.mock('../state/wallet-context', async (importOriginal) => {
@@ -73,9 +74,21 @@ const ethAdapter: ChainAdapter = {
 vi.mock('../wallet/adapters', () => ({
   getAdapter: vi.fn(() => ethAdapter),
   getAdapterForMode: vi.fn(() => ethAdapter),
+  getDevnetAdapter: vi.fn(),
   registerAdapter: vi.fn(),
   registeredChains: vi.fn(() => ['eth']),
   registerAllAdapters: vi.fn(),
+}));
+
+// Lane P2-B (M4): the lifecycle toast is stubbed at the module
+// boundary — the screen test asserts the screen starts/advances it;
+// the toast's own stages are covered in tx-lifecycle-toast.test.ts.
+vi.mock('../wallet/tx-lifecycle-toast', () => ({
+  beginTxLifecycleToast: vi.fn(() => ({
+    id: 1,
+    submitted: vi.fn(),
+    failed: vi.fn(),
+  })),
 }));
 
 // Real validateRecipient/previewSendAmount; only the offline signer is
@@ -446,6 +459,9 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('0xdeadbeef');
       expect(mounted.div.textContent).toContain('Signed transaction (hex)');
       expect(mounted.div.textContent).toContain('not sent anywhere');
+      // Lane P2-B (M4): mainnet never starts a lifecycle toast —
+      // broadcast is disabled, so there is no hash to follow.
+      expect(beginTxLifecycleToast).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
     }
@@ -545,6 +561,9 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('0xdeadbeef');
       expect(mounted.div.textContent).toContain('Signed transaction (hex)');
       expect(mounted.div.textContent).toContain('not sent anywhere');
+      // Lane P2-B (M4): mainnet never starts a lifecycle toast —
+      // broadcast is disabled, so there is no hash to follow.
+      expect(beginTxLifecycleToast).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
     }
@@ -608,7 +627,55 @@ describe('send screen', () => {
         'was signed offline with your vault key and broadcast to the',
       );
       expect(mounted.div.textContent).toContain('0xhash1234');
+      // Lane P2-B (M4): the toast started at signing and moved to
+      // failed when the broadcast failed — never to submitted.
+      expect(beginTxLifecycleToast).toHaveBeenCalledTimes(1);
+      const failedHandle =
+        vi.mocked(beginTxLifecycleToast).mock.results[0]?.value;
+      expect(failedHandle!.failed).toHaveBeenCalledTimes(1);
+      expect(failedHandle!.submitted).not.toHaveBeenCalled();
     } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('in devnet mode a successful broadcast moves the lifecycle toast to submitted (M4)', async () => {
+    // The devnet adapter's broadcast resolves, so broadcastSignedDevnet
+    // reports submitted — the toast must follow the transaction from
+    // "Waiting for wallet…" to submitted with the hash and link.
+    const devnetEthAdapter = {
+      ...ethAdapter,
+      networkId: 'eip155:11155111',
+      broadcast: async () => ({
+        txHash: '0xdevnethash',
+        explorerUrl: 'https://sepolia.etherscan.io/tx/0xdevnethash',
+      }),
+    };
+    vi.mocked(getDevnetAdapter).mockReturnValue(
+      devnetEthAdapter as unknown as ChainAdapter,
+    );
+    setWallet({ devnetEnabled: true });
+    const mounted = await mountScreen();
+    try {
+      await reachReview(mounted.div);
+      await click(mounted.div, 'Sign offline');
+      await waitForText(mounted.div, 'Send broadcast to the test network');
+      expect(mounted.div.textContent).toContain(
+        'Send broadcast to the test network',
+      );
+      expect(mounted.div.textContent).toContain('0xdevnethash');
+      expect(beginTxLifecycleToast).toHaveBeenCalledTimes(1);
+      const submittedHandle =
+        vi.mocked(beginTxLifecycleToast).mock.results[0]?.value;
+      expect(submittedHandle!.submitted).toHaveBeenCalledWith({
+        chain: 'eth',
+        txHash: '0xdevnethash',
+        explorerUrl: 'https://sepolia.etherscan.io/tx/0xdevnethash',
+        devnet: true,
+      });
+      expect(submittedHandle!.failed).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(getDevnetAdapter).mockReset();
       await mounted.cleanup();
     }
   });

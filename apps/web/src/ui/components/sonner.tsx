@@ -7,8 +7,14 @@
 // sun background, error toasts use the coral border. Only the enter
 // animation is gone (toasts appear at once); the auto-dismiss timing
 // (4 s) and the placement are unchanged.
+//
+// Lane P2-B (M4): a toast can carry an action link (the lifecycle
+// toast's "View on Explorer →") and a dismiss button — the submitted
+// stage stays on screen until the transaction confirms, so the user
+// must be able to close it by hand. The message keeps its line breaks
+// (the submitted stage shows the hash under its title).
 import { cn } from '../lib/utils'
-import { useToasts, type ToastKind } from './toast'
+import { toast, useToasts, type ToastKind } from './toast'
 
 const KIND_CLASSES: Record<ToastKind, string> = {
   success: 'border-ink bg-sun text-ink',
@@ -39,7 +45,27 @@ function Toaster({ className }: { className?: string }) {
             KIND_CLASSES[item.kind],
           )}
         >
-          {item.message}
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 whitespace-pre-line break-words">{item.message}</p>
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              onClick={() => toast.dismiss(item.id)}
+              className="shrink-0 rounded-bawa-sm px-2 py-0.5 text-base font-bold leading-none hover:bg-panel-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              ×
+            </button>
+          </div>
+          {item.action && (
+            <a
+              href={item.action.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block break-all font-medium text-primary underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+            >
+              {item.action.label}
+            </a>
+          )}
         </div>
       ))}
     </div>
