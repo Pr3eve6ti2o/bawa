@@ -56,7 +56,7 @@
 // signatures or address derivation), so the keccak-vs-sha3 trap
 // does not apply here; derivation stays with Wallet Core.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { Button } from '../ui/components/button';
 import { BawaIcon } from '../ui/components/icons';
 import { Input } from '../ui/components/input';
@@ -365,7 +365,23 @@ export function SwapScreen() {
   // and Relay is not set up, so that pair would open on "No route
   // for this pair" instead of a quotable default.
   const swapLastUsedChain = readLastUsedChain(COMPARE_CHAINS);
-  const initialFromChain: ChainId = swapLastUsedChain ?? 'eth';
+  // Lane P2-C (F7): the asset-detail shortcut — /swap?from=&token= —
+  // pre-selects the From asset. The From chain must be one the Swap
+  // pickers offer (COMPARE_CHAINS); any other chain is ignored and
+  // the last-used chain stands. The token is the detail route's slug
+  // (the default token's lowercased symbol) or a contract address,
+  // matched against this chain's From choices (native + verified
+  // defaults); an unknown slug falls back to the native coin, never
+  // an error — a user-added token is not a Swap choice, so the chain
+  // still pre-selects and the native coin is the fallback.
+  const [searchParams] = useSearchParams();
+  const assetFromParam = searchParams.get('from');
+  const assetFromChain: ChainId | null =
+    assetFromParam !== null &&
+    (COMPARE_CHAINS as readonly string[]).includes(assetFromParam)
+      ? (assetFromParam as ChainId)
+      : null;
+  const initialFromChain: ChainId = assetFromChain ?? swapLastUsedChain ?? 'eth';
   const initialToChain: ChainId =
     COMPARE_CHAINS.find(
       (chain) => chain !== initialFromChain && lifiChainIdFor(chain) !== null,
@@ -374,9 +390,21 @@ export function SwapScreen() {
     initialFromChain;
   const [fromChain, setFromChain] = useState<ChainId>(initialFromChain);
   const [toChain, setToChain] = useState<ChainId>(initialToChain);
-  const [fromToken, setFromToken] = useState<SwapTokenChoice>(() =>
-    nativeChoice(initialFromChain),
-  );
+  const [fromToken, setFromToken] = useState<SwapTokenChoice>(() => {
+    const assetTokenParam = searchParams.get('token');
+    if (assetFromChain === null || assetTokenParam === null) {
+      return nativeChoice(initialFromChain);
+    }
+    const needle = assetTokenParam.toLowerCase();
+    return (
+      tokenChoicesFor(initialFromChain).find(
+        (choice) =>
+          choice.kind === 'token' &&
+          (choice.symbol.toLowerCase() === needle ||
+            choice.contract.toLowerCase() === needle),
+      ) ?? nativeChoice(initialFromChain)
+    );
+  });
   const [toToken, setToToken] = useState<SwapTokenChoice>(() =>
     nativeChoice(initialToChain),
   );

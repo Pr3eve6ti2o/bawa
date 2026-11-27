@@ -249,6 +249,37 @@ describe('receive screen', () => {
     }
   });
 
+  it('opens straight on the QR with the asset pre-selected from the asset-detail shortcut', async () => {
+    // Lane P2-C (F7): /receive?chain=&token= lands on the details
+    // step with the token pre-selected — no chain or token step first.
+    // The QR card pairs the address with its identicon (M6).
+    setWallet();
+    const mounted = await mountScreen('/receive?chain=eth&token=usdc');
+    try {
+      expect(mounted.div.querySelector('[data-testid="qr-card"]')).not.toBeNull();
+      expect(mounted.div.textContent).toContain(VAULT_ETH);
+      expect(mounted.div.textContent).toContain('Ethereum · USDC');
+      expect(mounted.div.textContent).toContain('Amount (optional) — USDC');
+      expect(
+        mounted.div.querySelector('svg[data-testid="address-identicon"]'),
+      ).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('falls back to the native coin on an unknown token slug', async () => {
+    setWallet();
+    const mounted = await mountScreen('/receive?chain=eth&token=nope');
+    try {
+      expect(mounted.div.querySelector('[data-testid="qr-card"]')).not.toBeNull();
+      expect(mounted.div.textContent).toContain('Ethereum · ETH');
+      expect(mounted.div.textContent).not.toContain('USDC');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the Buy panel for ?buy=1 with the honest unconfigured state', async () => {
     setWallet();
     const mounted = await mountScreen('/receive?buy=1');

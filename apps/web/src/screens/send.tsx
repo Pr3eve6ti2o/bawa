@@ -13,6 +13,7 @@
 // network via broadcastSignedDevnet. Mainnet still never broadcasts.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { AddressIdenticon } from '../ui/components/address-identicon';
 import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
 import { BawaIcon, ScanIcon } from '../ui/components/icons';
@@ -58,6 +59,7 @@ import {
   orderAssetsByBalance,
   tokenKey,
   tokenKeyOf,
+  tokenSlug,
   tokenStandardFor,
   type TokenRecord,
 } from '../wallet/tokens';
@@ -224,17 +226,58 @@ export function SendScreen() {
   const chainsWithWallet: ChainId[] = offeredChains.filter(
     (chain) => (vaultAddresses[chain] ?? []).length > 0,
   );
+  // Full asset list (token gaps, item 4): the selected chain's native
+  // coin plus its tokens. Moved up: the asset shortcut below resolves
+  // its token against this list before the initial chain is picked.
+  const allTokens = [...DEFAULT_TOKENS, ...(customTokens ?? [])];
+  // Lane P2-C (F7/F8): the asset-detail shortcut — /send?chain=&token=
+  // — pre-selects the asset and lands on the amount form (details).
+  // The token is the detail route's slug (tokenSlug: symbol for a
+  // default token, contract for a user-added one) or a contract
+  // address; an unknown slug is ignored, never an error — the chain
+  // still pre-selects and the native coin is the fallback. A Bawa
+  // payment link (?chain=&to=...) still wins: it carries a recipient,
+  // so pendingLink !== null keeps the chain step and the link apply
+  // effect owns the prefill (it resolves the same token the same way).
+  const assetChainParam = searchParams.get('chain');
+  const assetChain: ChainId | null =
+    assetChainParam !== null &&
+    (offeredChains as readonly string[]).includes(assetChainParam)
+      ? (assetChainParam as ChainId)
+      : null;
+  const assetTokenParam = searchParams.get('token');
+  const assetToken: TokenRecord | null =
+    assetChain === null || assetTokenParam === null
+      ? null
+      : (allTokens.find(
+          (token) =>
+            token.chain === assetChain &&
+            (tokenSlug(token) === assetTokenParam.toLowerCase() ||
+              token.contract.toLowerCase() === assetTokenParam.toLowerCase()),
+        ) ?? null);
+  // The asset prefill came from this screen's own URL. A manual
+  // chain/token change abandons it: the params leave the URL, or a
+  // later mount would resurrect the prefilled asset (the deep-link
+  // pattern in selectChain/selectToken below).
+  const assetPrefillRef = useRef(assetChain !== null);
   // P1 (Lane S1): the starting chain is the last-used chain — the
   // shared last-used pick the picker records on every selection,
   // then the wallet-context selection (the asset-detail shortcut and
-  // Receive both set it), then the first chain with a wallet.
+  // Receive both set it), then the first chain with a wallet. The
+  // asset shortcut's chain leads them all: the user tapped Send on
+  // that asset's detail, so that asset is the starting point — even
+  // when it has no wallet here, in which case the chain step shows
+  // it with the honest no-wallet note instead of silently opening
+  // another chain's amount form.
   const lastUsedChain = readLastUsedChain(offeredChains);
   const initialChain: ChainId =
-    lastUsedChain !== null && chainsWithWallet.includes(lastUsedChain)
-      ? lastUsedChain
-      : chainsWithWallet.includes(selectedChain)
-        ? selectedChain
-        : (chainsWithWallet[0] ?? 'eth');
+    assetChain !== null
+      ? assetChain
+      : lastUsedChain !== null && chainsWithWallet.includes(lastUsedChain)
+        ? lastUsedChain
+        : chainsWithWallet.includes(selectedChain)
+          ? selectedChain
+          : (chainsWithWallet[0] ?? 'eth');
   const [chain, setChain] = useState<ChainId>(initialChain);
   // P1 (Lane S1): the common case needs no chain step — when the
   // starting chain has a wallet, Send opens straight on the amount
@@ -276,10 +319,11 @@ export function SendScreen() {
   // Full asset list (token gaps, item 4): the selected chain's native
   // coin plus its tokens. A token send previews and signs offline on
   // every chain with a token standard (see SIGNING_CHAINS above).
-  const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(null);
+  // The asset shortcut's token starts pre-selected (see assetToken
+  // above); otherwise the native coin is the starting asset.
+  const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(assetToken);
   const [prefillNote, setPrefillNote] = useState<string | null>(null);
   const prefillApplied = useRef(false);
-  const allTokens = [...DEFAULT_TOKENS, ...(customTokens ?? [])];
   const chainTokens = allTokens.filter((token) => token.chain === chain);
   const assetSymbol = selectedToken?.symbol ?? chainConfig(chain).symbol;
 
@@ -511,11 +555,13 @@ export function SendScreen() {
     setSignState({ status: 'idle' });
     setPrefillNote(null);
     setDevnetBroadcast({ status: 'idle' });
-    // A manual chain change abandons the deep link: it must not
-    // re-apply on the next mount. The link params leave the URL too,
-    // or the sync effect above would resurrect the link from them.
-    if (pendingLink !== null) {
+    // A manual chain change abandons the deep link — and the asset
+    // shortcut, when one brought the user here: both must not
+    // re-apply on the next mount. The link/asset params leave the URL
+    // too, or the sync effect above would resurrect the link from them.
+    if (pendingLink !== null || assetPrefillRef.current) {
       setPendingLink(null);
+      assetPrefillRef.current = false;
       clearPendingSendLink();
       navigate('/send', { replace: true });
     }
@@ -531,10 +577,12 @@ export function SendScreen() {
     setReviewIntent(null);
     setSignState({ status: 'idle' });
     setPrefillNote(null);
-    // A manual token change abandons the deep link, same as a chain
-    // change above: clear it and strip its params from the URL.
-    if (pendingLink !== null) {
+    // A manual token change abandons the deep link and the asset
+    // shortcut, same as a chain change above: clear both and strip
+    // their params from the URL.
+    if (pendingLink !== null || assetPrefillRef.current) {
       setPendingLink(null);
+      assetPrefillRef.current = false;
       clearPendingSendLink();
       navigate('/send', { replace: true });
     }
@@ -2012,7 +2060,12 @@ export function SendScreen() {
           <div className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base">
             <div className="flex justify-between gap-3">
               <span className="shrink-0 text-ink">From</span>
-              <span className="min-w-0 break-all font-mono">{from}</span>
+              {/* Lane P2-C (M6): the sending address pairs with its
+                  identicon, like every other address display. */}
+              <span className="flex min-w-0 items-start gap-2">
+                <AddressIdenticon address={from} size={20} />
+                <span className="min-w-0 break-all font-mono">{from}</span>
+              </span>
             </div>
             <div className="flex justify-between gap-3">
               <span className="shrink-0 text-ink">Balance</span>

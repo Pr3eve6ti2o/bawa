@@ -38,7 +38,12 @@ vi.mock('../wallet/chains', async (importOriginal) => {
   return {
     ...actual,
     availableFor: vi.fn(),
-    chainConfig: vi.fn(),
+    // Lane P2-C: asset-detail now imports swap-providers, which
+    // computes COMPARE_CHAINS at module load by calling chainConfig
+    // for every supported chain — the mock must answer before any
+    // beforeEach runs, so it defaults to the real registry (the
+    // per-test stub below still overrides it).
+    chainConfig: vi.fn((chain: ChainId) => actual.chainConfig(chain)),
   };
 });
 
@@ -77,12 +82,21 @@ const CHAINS = {
   fantom: { displayName: 'Fantom', symbol: 'FTM' },
   ltc: { displayName: 'Litecoin', symbol: 'LTC' },
   doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
+  // Lane P2-C: a chain no swap provider covers, for the disabled-Swap
+  // test — pathFor is the real registry shape (the mock's other
+  // entries omit it only because DERIVATION_PATHS covers them).
+  cosmos: {
+    displayName: 'Cosmos',
+    symbol: 'ATOM',
+    pathFor: (account: number, index: number) =>
+      `m/44'/118'/${account}'/0/${index}`,
+  },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;
 
 function perChain<T>(value: T): Record<ChainKey, T> {
-  return { btc: value, eth: value, trx: value, ton: value, sol: value, bsc: value, matic: value, arb: value, op: value, base: value, avax: value, gnosis: value, celo: value, linea: value, mantle: value, scroll: value, opbnb: value, metis: value, aurora: value, fantom: value, ltc: value, doge: value };
+  return { btc: value, eth: value, trx: value, ton: value, sol: value, bsc: value, matic: value, arb: value, op: value, base: value, avax: value, gnosis: value, celo: value, linea: value, mantle: value, scroll: value, opbnb: value, metis: value, aurora: value, fantom: value, ltc: value, doge: value, cosmos: value };
 }
 
 const unavailablePrices = perChain({ status: 'unavailable', reason: 'missing' } as const);
@@ -295,10 +309,10 @@ describe('asset detail screen', () => {
       expect(text).toContain('0 TON');
       expect(text).not.toContain('0TON');
       expect(text).not.toContain('0BTC');
-      const send = mounted.div.querySelector('a[href="/send"]');
+      const send = mounted.div.querySelector('a[href="/send?chain=ton"]');
       expect(send).not.toBeNull();
       expect(send?.textContent).toContain('Send');
-      const receive = mounted.div.querySelector('a[href="/receive"]');
+      const receive = mounted.div.querySelector('a[href="/receive?chain=ton"]');
       expect(receive).not.toBeNull();
     } finally {
       await mounted.cleanup();
@@ -794,6 +808,147 @@ describe('asset detail screen', () => {
       const sticky = mounted.div.querySelector('.sticky');
       expect(sticky).not.toBeNull();
       expect(grid?.contains(sticky)).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('carries the native asset to Send, Receive and Swap', async () => {
+    // Lane P2-C (F7/F8): the detail owns its actions — the links
+    // carry the asset, so Send lands on the amount form and Receive
+    // on the QR with it pre-selected, and Swap opens on the From side.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      {
+        ...perChain(emptyHistory),
+        eth: {
+          status: 'loaded',
+          txs: [
+            {
+              hash: '0xabc',
+              chain: 'eth',
+              networkId: 'eip155:1',
+              direction: 'in',
+              amountBaseUnits: '1000000000000000000',
+              counterparty: '0xSender',
+              timestamp: 1700000000000,
+              status: 'confirmed',
+              explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
+            },
+          ],
+        },
+      },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      const send = mounted.div.querySelector('a[href="/send?chain=eth"]');
+      expect(send).not.toBeNull();
+      expect(send?.textContent).toContain('Send');
+      const receive = mounted.div.querySelector('a[href="/receive?chain=eth"]');
+      expect(receive).not.toBeNull();
+      expect(receive?.textContent).toContain('Receive');
+      const swap = mounted.div.querySelector('a[href="/swap?from=eth"]');
+      expect(swap).not.toBeNull();
+      expect(swap?.textContent).toContain('Swap');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('carries a token to Send, Receive and Swap with its slug', async () => {
+    // Lane P2-C (F7/F8): a token detail gets Send too — the old
+    // "No Send for tokens" guard was stale (token sends exist) — and
+    // all three links carry the token slug, not just the chain.
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: { eth: { xpub: 'xpub6TestWallet1234567890abcdef' } },
+      addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
+      vaultAddresses: perChain([] as string[]),
+      hydrating: false,
+      uiState: perChain('loaded'),
+      errors: perChain(null),
+      balances: perChain({ status: 'unavailable', reason: 'no-adapter' }),
+      history: perChain(emptyHistory),
+      vaultState: 'unlocked',
+      customTokens: [],
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+      refreshTokenBalances: vi.fn(async () => {}),
+      refreshChain: vi.fn(async () => {}),
+      refreshBalances: vi.fn(async () => {}),
+      refreshHistory: vi.fn(async () => {}),
+      setSelectedChain: vi.fn(),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen('/assets/eth/usdc');
+    try {
+      expect(mounted.div.querySelector('a[href="/send?chain=eth&token=usdc"]')).not.toBeNull();
+      expect(mounted.div.querySelector('a[href="/receive?chain=eth&token=usdc"]')).not.toBeNull();
+      expect(mounted.div.querySelector('a[href="/swap?from=eth&token=usdc"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('disables Swap with its reason on a chain no provider covers', async () => {
+    // Lane P2-C (F7): Cosmos is in no provider's coverage, so the
+    // Swap button is disabled with the reason — never a live button
+    // to a screen that cannot swap this asset. Send and Receive still
+    // carry the chain.
+    setWallet(
+      perChain({ status: 'unavailable', reason: 'no-adapter' }),
+      perChain(emptyHistory),
+    );
+    const mounted = await mountScreen('/assets/cosmos');
+    try {
+      expect(mounted.div.querySelector('a[href^="/swap"]')).toBeNull();
+      const swap = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.textContent === 'Swap',
+      ) as HTMLButtonElement | undefined;
+      expect(swap).not.toBeUndefined();
+      expect(swap?.disabled).toBe(true);
+      expect(swap?.getAttribute('aria-label')).toBe(
+        "Swap — doesn't cover Cosmos yet",
+      );
+      expect(mounted.div.querySelector('a[href="/send?chain=cosmos"]')).not.toBeNull();
+      expect(mounted.div.querySelector('a[href="/receive?chain=cosmos"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('pairs the address rows with their identicons', async () => {
+    // Lane P2-C (M6): the Details Address row and each derived
+    // address carry the deterministic identicon beside the address.
+    // The import-source xpub is a key, not an address — it gets none.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      perChain(emptyHistory),
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      const addressTerm = [...mounted.div.querySelectorAll('dt')].find(
+        (dt) => dt.textContent === 'Address',
+      );
+      const addressRow = addressTerm?.closest('dd');
+      expect(addressRow?.querySelector('svg[data-testid="address-identicon"]')).not.toBeNull();
+      const derived = mounted.div.querySelector('#derived-addresses-heading');
+      const derivedSection = derived?.closest('section');
+      expect(
+        derivedSection?.querySelectorAll('svg[data-testid="address-identicon"]').length,
+      ).toBeGreaterThan(0);
+      const importSource = mounted.div.querySelector('details');
+      expect(
+        importSource?.querySelector('svg[data-testid="address-identicon"]'),
+      ).toBeNull();
     } finally {
       await mounted.cleanup();
     }

@@ -264,7 +264,7 @@ function stubFetch(body: unknown, status = 200): string[] {
   return seen;
 }
 
-async function mountScreen() {
+async function mountScreen(initialEntries: string[] = ['/swap']) {
   const div = document.createElement('div');
   document.body.appendChild(div);
   const root = createRoot(div);
@@ -272,7 +272,7 @@ async function mountScreen() {
   testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/swap']}>
+      <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/swap" element={<SwapScreen />} />
         </Routes>
@@ -435,6 +435,59 @@ describe('SwapScreen', () => {
       expect(getQuote.disabled).toBe(true);
     } finally {
       await mounted.cleanup();
+    }
+  });
+
+  it('pre-selects the From asset from the asset-detail shortcut (?from=&token=)', async () => {
+    // Lane P2-C (F7): the asset-detail Swap link opens Swap with the
+    // asset as From — the chain in the From picker, the token chip
+    // pressed, the amount labelled for it.
+    setWallet();
+    const mounted = await mountScreen(['/swap?from=eth&token=usdc']);
+    try {
+      const fromInput = mounted.div.querySelector(
+        '#swap-from-chain',
+      ) as HTMLInputElement;
+      expect(fromInput.value).toBe('Ethereum');
+      const group = mounted.div.querySelector(
+        '[aria-label="Token on Ethereum"]',
+      ) as HTMLElement | null;
+      expect(group).not.toBeNull();
+      const usdc = [...(group as HTMLElement).querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'USDC',
+      );
+      expect(usdc?.getAttribute('aria-pressed')).toBe('true');
+      expect(mounted.div.textContent).toContain('Amount (USDC)');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('ignores an uncovered From chain and an unknown token, falling back to native', async () => {
+    // A chain no provider covers cannot be From; an unknown token
+    // cannot be the From asset. Both fall back — last-used chain (or
+    // ETH) with the native coin — never an error.
+    setWallet();
+    const uncovered = await mountScreen(['/swap?from=cosmos&token=usdc']);
+    try {
+      const fromInput = uncovered.div.querySelector(
+        '#swap-from-chain',
+      ) as HTMLInputElement;
+      expect(fromInput.value).toBe('Ethereum');
+      expect(uncovered.div.textContent).toContain('Amount (ETH)');
+    } finally {
+      await uncovered.cleanup();
+    }
+    setWallet();
+    const unknown = await mountScreen(['/swap?from=eth&token=nope']);
+    try {
+      const fromInput = unknown.div.querySelector(
+        '#swap-from-chain',
+      ) as HTMLInputElement;
+      expect(fromInput.value).toBe('Ethereum');
+      expect(unknown.div.textContent).toContain('Amount (ETH)');
+    } finally {
+      await unknown.cleanup();
     }
   });
 

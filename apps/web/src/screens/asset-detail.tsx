@@ -5,6 +5,8 @@ import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
+import { COMPARE_CHAINS } from '../wallet/swap-providers';
+import { AddressIdenticon } from '../ui/components/address-identicon';
 import { TxRow } from './tx-row';
 import {
   PRICE_IDS,
@@ -50,7 +52,9 @@ const DERIVATION_PATHS = {
 
 /**
  * One derived-address list item, shared by the vault-address list and
- * the plain list below it.
+ * the plain list below it. The identicon (Lane P2-C, M6) pairs the
+ * address with its deterministic picture, so a wrong address is
+ * recognisable at a glance.
  */
 function DerivedAddressItems({
   addresses,
@@ -68,6 +72,7 @@ function DerivedAddressItems({
         >
           <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
           {' '}
+          <AddressIdenticon address={address} size={24} />
           <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
           <Button
             type="button"
@@ -383,6 +388,22 @@ export function AssetDetailScreen() {
   const firstAddress =
     firstVaultAddress ?? addresses[chainId]?.[0]?.address;
 
+  // Lane P2-C (F7/F8): the detail owns its actions — Send / Receive /
+  // Swap for this asset, native or token. The links carry the asset
+  // (?chain=&token=, ?from=&token=) so the flows land with it
+  // pre-selected: Send on the amount form, Receive on the QR, Swap on
+  // the From side. Swap is offered only when a provider covers the
+  // chain (COMPARE_CHAINS); the rest show it disabled with the reason,
+  // never a live button to a screen that cannot swap this asset.
+  const assetTokenSlug =
+    tokenRecord !== undefined ? tokenSlug(tokenRecord) : null;
+  const tokenQuery =
+    assetTokenSlug !== null ? `&token=${assetTokenSlug}` : '';
+  const sendHref = `/send?chain=${chainId}${tokenQuery}`;
+  const receiveHref = `/receive?chain=${chainId}${tokenQuery}`;
+  const swapHref = `/swap?from=${chainId}${tokenQuery}`;
+  const swapCovered = COMPARE_CHAINS.includes(chainId);
+
   async function copyAddress(address: string) {
     setCopyStatus('');
     try {
@@ -526,31 +547,63 @@ export function AssetDetailScreen() {
 
       {/*
         Sticky actions (MetaMask's asset-sticky-actions.tsx): Send /
-        Receive / Refresh stay pinned to the top of the viewport while
-        the transactions and addresses below scroll, using the same
-        translucent panel treatment as the app's sticky bottom nav.
-        Order and behaviour are unchanged — layout only.
+        Receive / Swap / Refresh stay pinned to the top of the viewport
+        while the transactions and addresses below scroll, using the
+        same translucent panel treatment as the app's sticky bottom nav.
+        Lane P2-C (F7/F8): the detail owns its actions — Send, Receive
+        and Swap for this asset, native or token (token sends exist:
+        the old "No Send for tokens" guard was stale). The links carry
+        the asset, so Send lands on the amount form with it
+        pre-selected instead of back on Send step 1 (Chain) — the old
+        shortcut cost 3 taps and saved nothing. Order and behaviour
+        are unchanged otherwise — layout only.
       */}
       <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-bawa border-2 border-ink bg-paper px-2 py-2">
-        {/* No Send for tokens: no token send exists in this wallet. */}
-        {!isToken && (
-          <Button asChild size="sm">
-            <Link
-              to="/send"
-              onClick={() => {
-                setSelectedChain(chainId);
-                recordLastUsedChain(chainId);
-              }}
-            >
-              Send
-            </Link>
-          </Button>
-        )}
+        <Button asChild size="sm">
+          <Link
+            to={sendHref}
+            onClick={() => {
+              setSelectedChain(chainId);
+              recordLastUsedChain(chainId);
+            }}
+          >
+            Send
+          </Link>
+        </Button>
         <Button asChild variant="secondary" size="sm">
-          <Link to="/receive" onClick={() => setSelectedChain(chainId)}>
+          <Link
+            to={receiveHref}
+            onClick={() => {
+              setSelectedChain(chainId);
+              recordLastUsedChain(chainId);
+            }}
+          >
             Receive
           </Link>
         </Button>
+        {swapCovered ? (
+          <Button asChild variant="secondary" size="sm">
+            <Link
+              to={swapHref}
+              onClick={() => {
+                recordLastUsedChain(chainId);
+              }}
+            >
+              Swap
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled
+            title={`Swap doesn't cover ${config.displayName} yet`}
+            aria-label={`Swap — doesn't cover ${config.displayName} yet`}
+          >
+            Swap
+          </Button>
+        )}
         {/*
           While locked there is no derived address in state, so refreshAll
           can only land back on unavailable/no-address — the same dead
@@ -629,6 +682,7 @@ export function AssetDetailScreen() {
                 <dd className="flex min-w-0 items-center justify-end gap-2">
                   {firstAddress !== undefined ? (
                     <>
+                      <AddressIdenticon address={firstAddress} size={20} />
                       <code className="min-w-0 truncate font-mono text-xs font-semibold">
                         {`${firstAddress.slice(0, 10)}…${firstAddress.slice(-8)}`}
                       </code>
@@ -776,6 +830,7 @@ export function AssetDetailScreen() {
               <li key={`vault:${address}`} className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-3">
                 <span className="text-sm text-muted-foreground">Vault</span>
                 {' '}
+                <AddressIdenticon address={address} size={24} />
                 <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
                 <Button
                   type="button"
