@@ -71,7 +71,7 @@ Request review from the repository owner (Pr3eve6ti2o). Merge only after the che
 
 For derivation changes, update the relevant standards/chain documentation and add deterministic public fixtures. Document the exact path, curve, address format, network assumptions and compatibility effects.
 
-A deterministic public fixture is a deliberately public, non-secret test case with fixed inputs and expected public outputs that can be reproduced under the documented assumptions. Use `docs/11` as the canonical fixture home (see `docs/README-FULL.md` §5.3). Record the inputs, expected outputs and the steps needed to reproduce the result.
+A deterministic public fixture is a deliberately public, non-secret test case with fixed inputs and expected public outputs that can be reproduced under the documented assumptions. Use `docs/11-trust-wallet-and-independent-verification` as the canonical fixture home (see `docs/README-FULL.md` §5.3). Record the inputs, expected outputs and the steps needed to reproduce the result.
 
 The "Never commit" rule below also applies to fixtures.
 

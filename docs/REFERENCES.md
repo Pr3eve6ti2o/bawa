@@ -75,6 +75,19 @@ Lane C, FIX-ALL programme, 2026-11-24. The full entries — what each service do
 - TonAPI rates — https://tonapi.io
 - Coinbase Exchange API rate limits — https://docs.cdp.coinbase.com/exchange/rest-api/rate-limits
 
+### Token verification lists
+
+A token is verified by contract address, not by name or symbol — see
+`apps/web/src/wallet/token-verification.ts`. Raydium and DexScreener
+are deliberately not verifiers: any token with a pool is listable there.
+
+- CoinGecko contract endpoint — https://api.coingecko.com/api/v3 (see Price sources above)
+- Jupiter Strict (Solana) — https://raw.githubusercontent.com/jup-ag/token-list/main/validated-tokens.csv — banned mints refused first: https://raw.githubusercontent.com/jup-ag/token-list/main/banned-tokens.csv
+- 1inch token list (EVM, per chain) — https://tokens.1inch.io/v1.2/{chainId}
+- Uniswap Default (EVM) — https://tokens.uniswap.org
+- PancakeSwap Extended (BSC) — https://tokens.pancakeswap.finance/pancakeswap-extended.json
+- Bitget Agent API (EVM) — https://copenapi.bgwapi.io — agent-side script only; the browser leg cannot fire, so it is not a live in-app call
+
 ## Repositories the wallet draws from
 
 - Trust Wallet Core — https://github.com/trustwallet/wallet-core

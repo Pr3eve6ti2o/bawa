@@ -1,6 +1,6 @@
 # Bawa — value proposition
 
-**Version:** v1 — 2026-11-23 (marketing-fix Lane 3); chain count updated 2026-11-26 (guide-update pass): 22 → 87 chains, 22 enabled by default — see the dated note at the end.
+**Version:** v1 — 2026-11-23 (marketing-fix Lane 3); chain count updated 2026-11-26 (guide-update pass): 22 → 87 chains, 22 enabled by default — see the dated note at the end. Corrected 2026-11-27 (docs-currency Lane 4): swaps/buy wording, price fallbacks, "one address per chain" — see the dated note at the end.
 **Status:** wording for Lane 4 to take into the root README rewrite. Every
 claim below was checked against the build on branch `panel-rebuild/marketing-fix`
 at `4c4cad9` before it was written; the evidence pointer after each claim is
@@ -36,7 +36,7 @@ this wallet does not ask for.
    Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Litecoin,
    Dogecoin, Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora
    and Fantom — the 22 curated chains, enabled by default — plus 65
-   more, one wallet, one address per chain, one recovery phrase.
+   more, one wallet, one account per chain, one recovery phrase.
    (Evidence: `SUPPORTED_CHAINS` in `apps/web/src/wallet/chains.ts`,
    87 entries; the full 87-chain set is specified in
    `docs/CREATE-THIS-SPEC.md` §2.)
@@ -46,12 +46,16 @@ this wallet does not ask for.
    — "the QR card shows the receiving address for this account, derived
    from the next unused index".)
 4. **Real numbers only.** Balances come from public blockchains and prices
-   in US dollars from CoinGecko. A zero balance shows as zero; a value the
-   wallet could not check says so instead of showing a made-up number.
-   (Evidence: `apps/web/src/wallet/prices.ts` — CoinGecko public API;
+   in US dollars from CoinGecko, with CoinLore, Coinbase, DexScreener and
+   TonAPI as fallbacks — the wallet does not depend on CoinGecko alone.
+   A zero balance shows as zero; a value the wallet could not check says
+   so instead of showing a made-up number.
+   (Evidence: `apps/web/src/wallet/prices.ts` — CoinGecko public API,
+   fallbacks in `apps/web/src/wallet/price-fallbacks.ts`;
    "Powered by CoinGecko" on the dashboard.)
-5. **Watch any wallet without risking it.** Paste an extended public key
-   (xpub) and follow a wallet's balances and history watch-only. A
+5. **Watch any wallet without risking it.** Paste an address or an
+   extended public key (xpub) and follow a wallet's balances and history
+   watch-only — one address fans out to every chain it belongs to. A
    watch-only account can never sign or spend — no private key is stored
    here. (Evidence: Import screen copy in
    `apps/web/src/screens/import-wallet.tsx`.)
@@ -78,8 +82,13 @@ A wallet that hides its limits is not trustworthy. Bawa today:
 - **Cannot send funds on mainnet.** Sending is switched off until it is
   separately approved. The Send flow prepares and signs offline only;
   nothing in it sends cryptocurrency anywhere.
-- **No swaps, no staking, no buying crypto, no dApp browser.** If you
-  need those, use a wallet that has them — Bawa does not pretend to.
+- **No swaps, no staking, no buying crypto, no dApp browser — as
+  finished features.** The Swap screen shows live quotes only (LI.FI,
+  STON.fi, Relay) and the Receive screen has a Buy picker whose
+  providers all say "Not set up yet" — no provider keys are configured,
+  and nothing here executes a swap or a purchase, because broadcast
+  stays disabled. If you need those finished, use a wallet that has
+  them — Bawa does not pretend to.
 - **No recovery if you lose your phrase.** Lose the 24 words and the
   device, and the funds are gone. No support team can restore them —
   that is the other side of nobody holding your keys.
@@ -160,3 +169,18 @@ by default, plus 65 expansion chains). The two "What changed in the app
 for this (Lane 3, 2026-11-23)" bullets that say "22 chains" are Lane 3's
 record of what the app did then and are left as written; the live
 wording above is the 87-chain wording.
+
+## Note — 2026-11-27 (docs-currency Lane 4)
+
+- "One address per chain" (point 2) corrected to "one account per
+  chain": Receive rotates to a fresh address for every payment, so one
+  account has many addresses.
+- Point 4 now names the price fallbacks (CoinLore, Coinbase,
+  DexScreener, TonAPI) — the wallet does not depend on CoinGecko alone.
+- The "No swaps … no buying crypto" limit now says plainly that the
+  Swap screen is quotes-only and the Buy picker is not set up yet.
+- The "What changed in the app for this (Lane 3, 2026-11-23)" bullets
+  are Lane 3's record of what the app did then and are left as written
+  — except that the `/create` hub they describe was deleted in P0
+  (2026-11-27, `33f1ff1`): there is one "Create wallet" button, going
+  straight to `/create-wallet`, and no `/create` route.

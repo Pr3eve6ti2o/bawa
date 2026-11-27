@@ -1,12 +1,19 @@
 ---
 title: Frequently asked questions
 description: Short answers to the questions readers ask most often about Bawa, derivation, tracking, signing, security and recovery; testnet only.
-last-updated: 2026-11-08
+last-updated: 2026-11-27
 ---
 
 # Frequently asked questions
 
 Reference. Each answer is short; the linked section carries the detail.
+
+> **Scope note (2026-11-27):** the guide set this FAQ belongs to is
+> testnet-scoped, and most answers below describe that guide model. The
+> example wallet in this repository is different: it is a mainnet,
+> self-custodial HD wallet in the browser (87 chains, 22 enabled by
+> default) with real balances and history. Where an answer below states
+> a capability, it is marked as the guide model or the example wallet.
 
 ## Contents
 
@@ -46,7 +53,11 @@ See [Watch-only derivation](05-watch-only/README.md) and [Security & Recovery](0
 
 Do not rely on Bawa for custody or treat it as an exchange, a hosted service or a security audit.
 
-Do not expect Bawa to **run a node, fetch balances or broadcast transactions**. Handle those jobs in the application or infrastructure, outside Wallet Core's scope.
+Do not expect Bawa to **run a node or broadcast transactions**. The
+example wallet does fetch real balances and history from public RPCs
+and indexers; the guide model leaves those jobs to the application or
+infrastructure, outside Wallet Core's scope. Broadcast stays disabled
+in the example wallet until separately authorised.
 
 Keep signing in a separate signer or hardware wallet. Bawa's tracker side does not sign.
 
@@ -138,7 +149,11 @@ See [Signing & hardware](09-signing-and-hardware/README.md).
 
 ### Can I build a wallet app from Bawa?
 
-Use Bawa as a development reference, not a ready-to-use wallet app. Use its examples to generate a wallet on a trusted computer, derive public addresses without the seed and check results against an independent implementation.
+Use Bawa as a development reference — and as a working example wallet:
+this repository ships a self-custodial web wallet (87 chains, 22
+enabled by default) and an Android starter. Use its examples to
+generate a wallet on a trusted computer, derive public addresses
+without the seed and check results against an independent implementation.
 
 Rely on Wallet Core for derivation and signing, not for connections to blockchain networks. Provide access to your own node or an external provider, code for balances and past transactions, transaction construction, an interface, backup procedures and a security review.
 
@@ -178,7 +193,16 @@ When checking a backup restore, use a tiny testnet amount, not real funds.
 
 ### Why do two wallets show different addresses for the same seed?
 
-Bawa supports watch-only derivation for BTC, ETH and TRX. TON support is generation-only, not watch-only. Solana is a wired chain in Bawa (adapter, balance, offline signing for native SOL and SPL tokens); Cardano is derive-only (CIP-1852 derivation via Wallet Core 4.9.3, receive works, no balance/history/send adapter). Their notes below describe Bawa capabilities as well as comparisons with other wallets.
+The Node tools (`tools/hdwallet-gen`) derive watch-only addresses for
+20 chains (BTC, ETH, TRX, LTC, DOGE and 15 EVM chains). In the example
+web wallet, watch-only is multi-chain: one pasted address fans out to
+every chain that address belongs to, with balances from all of them.
+TON is not generation-only in the web wallet — it has a full adapter
+(balance and history). Solana is a wired chain in Bawa (adapter,
+balance, offline signing for native SOL and SPL tokens); Cardano is
+derive-only (CIP-1852 derivation via Wallet Core 4.9.3, receive works,
+no balance/history/send adapter). Their notes below describe Bawa
+capabilities as well as comparisons with other wallets.
 
 Start by comparing settings rather than assuming a faulty wallet. Check the mnemonic words, then check the BIP-39 passphrase, including whether one was used.
 

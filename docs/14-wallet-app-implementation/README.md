@@ -45,7 +45,7 @@ Keep gate status specific to the platform:
 
 **Web:** Fixture gate enforced in-engine and covered by offline engine tests; no live-network gate run exists.
 
-**Android:** Fixture gate defined (section I.4); the on-device gate has never run. For the fixture gate’s Android side, see `docs/index.md` for the overall Android test inventory and execution status: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Android SDK). This annotation count is not a passing test-run result.
+**Android:** Fixture gate defined (section I.4); the on-device gate has never run. For the fixture gate’s Android side, see `docs/index.md` for the overall Android test inventory and execution status: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Gradle test run; the Android toolchain was installed and the debug build proven on 2026-11-27). This annotation count is not a passing test-run result.
 
 The on-device gate has never run: no Core AAR has been built and no device run has happened. The gate's requirements are acceptance criteria, not results.
 
@@ -391,7 +391,7 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
 Keep the reported test results separate and retain their stated limits:
 
 - 31 offline unit tests pass (mocked transport; no live-network coverage), run by the author against the validation draft, not shipped in any repo.
-- See `docs/index.md` for the Android test count: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Android SDK). This is a source annotation count, not an executed or passing test count.
+- See `docs/index.md` for the Android test count: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Gradle test run; the Android toolchain was installed and the debug build proven on 2026-11-27). This is a source annotation count, not an executed or passing test count.
 - The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0. At token-gaps HEAD 8a1d681 (2026-11-27), test/smoke.test.js contains 115 check() assertions, counted directly. This assertion count is not a current test-run result.
 
 Do not combine these counts or use them as evidence of a build, device run or live-network validation.

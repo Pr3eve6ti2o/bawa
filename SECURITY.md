@@ -6,7 +6,7 @@ See docs/SECURITY.md for the threat model, trust boundaries, secret-handling rul
 
 ## Supported versions
 
-No versioned releases exist yet (there are no tags in the repository). Security fixes are applied to the maintained branches (`main` and `panel-rebuild/token-gaps`). Report against the tip of the branch you use, and say which branch and commit you tested.
+No versioned releases exist yet. Tags exist in the repository but are save-points, not releases (`save/mobile-2026-11-25`, `save/mobile-2026-11-26`, `save/mobile-loved-2026-11-22`). Security fixes are applied to the maintained branches (`main` and `panel-rebuild/token-gaps`). Report against the tip of the branch you use, and say which branch and commit you tested.
 
 Never publish:
 

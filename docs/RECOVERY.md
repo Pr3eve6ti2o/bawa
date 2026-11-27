@@ -1,12 +1,24 @@
 ---
 title: Recovery Procedure
 description: Recover a Bawa wallet from the mnemonic or the encrypted seed bundle, test the recovery before funding, and handle compromised seeds, device loss, backup separation, disaster and inheritance; testnet only, with disposable test fixtures.
-last-updated: 2026-11-08
+last-updated: 2026-11-27
 ---
 
 # Recovery procedure
 
 How-to guide.
+
+> **Scope note (2026-11-27):** this procedure covers the tools'
+> testnet reference policy (`bawa-derivation-policy-v1`, the four
+> chains BTC/ETH/TRX/TON) and the encrypted seed bundle. The example
+> web wallet is a mainnet wallet (87 chains from the same phrase) with
+> its own import/recovery flow — Import a wallet
+> (`apps/web/src/screens/import-wallet.tsx`) restores a mnemonic into
+> the vault, and Mnemonic backup
+> (`apps/web/src/screens/mnemonic-backup.tsx`) shows the phrase for
+> backup. The "testnet signing check" steps below cannot run in the web
+> wallet on mainnet; sending there stays switched off and broadcast
+> stays disabled.
 
 ## Contents
 
@@ -28,7 +40,7 @@ Follow this guide in four parts:
 
 Use recovery to restore access from the mnemonic and its exact BIP-39 passphrase. Recovery cannot recover a lost mnemonic, a lost passphrase or funds already moved.
 
-Live wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd. That verifies the procedure, not your backup: do not claim your recovery is tested until you have executed a rehearsal on a clean install and recorded it.
+Live wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or any later head. That verifies the procedure, not your backup: do not claim your recovery is tested until you have executed a rehearsal on a clean install and recorded it.
 
 ### Required recovery material
 
@@ -52,7 +64,9 @@ Use derivation policy bawa-derivation-policy-v1, with BIP-39 256-bit entropy, a 
 - BTC: m/84'/0'/0'/0/i
 - ETH: m/44'/60'/0'/0/i
 - TRX: m/44'/195'/0'/0/i
-- TON: generation-only from m/44'/607'/0'
+- TON: m/44'/607'/0' (generation-only under this tools reference policy;
+  the example web wallet is not generation-only for TON — it has a full
+  TON adapter with balance and history)
 
 NFKD-normalise the mnemonic and the BIP-39 passphrase, then derive the 64-byte seed with PBKDF2-HMAC-SHA512, using 2,048 iterations and the salt "mnemonic" plus the normalised passphrase.
 
@@ -137,7 +151,9 @@ Use **bawa-derivation-policy-v1** as the current Bawa reference policy: BIP-39 w
 - BTC: m/84'/0'/0'/0/i
 - ETH: m/44'/60'/0'/0/i
 - TRX: m/44'/195'/0'/0/i
-- TON: generation-only from m/44'/607'/0'
+- TON: m/44'/607'/0' (generation-only under this tools reference policy;
+  the example web wallet is not generation-only for TON — it has a full
+  TON adapter with balance and history)
 
 For this reference policy, set the BIP-39 passphrase to **zero characters**. Do not enter a space, a word describing the empty policy, the artefact's data key or an application password.
 
@@ -172,14 +188,14 @@ Use this per-asset checklist for **bawa-derivation-policy-v1**:
   - **Expected account-0 address form:** Retain the form recorded for the independent original TRX address at that index.
   - **Verification method:** Derive the public address from the recovered material using the selected passphrase and recorded settings, then compare it with the pre-existing original.
 
-- **TON (theoretical recovery, generation-only policy)**
-  - **Derivation path:** Restrict the policy claim to generation from m/44'/607'/0'.
+- **TON (theoretical recovery, generation-only under this tools policy)**
+  - **Derivation path:** Restrict the policy claim to generation from m/44'/607'/0'. (The example web wallet is not generation-only for TON — it has a full TON adapter with balance and history.)
   - **Expected account-0 address form:** Retain the form recorded for the independent original TON output.
   - **Verification method:** Compare the generated public output with the pre-existing original using its recorded configuration. Do not describe this generation comparison as evidence of a tested TON recovery procedure.
 
 > **Expected result:** Explicit chain, derivation and address settings tied to independent original account-0 outputs, with verification claims limited to recorded evidence. Keep missing address-form information or an incomplete comparison unresolved; do not treat either as a successful recovery.
 
-This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is not a test of your backup. V1 records verification at 082f7915. That run does not establish verification of any later change — including the symlink-guard changes, the decryption-code changes at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12, and the T41 confirmation and key-handoff changes — so re-demonstrate the procedure end to end at the current head before relying on it. Never paste a real mnemonic or data key anywhere.
+This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is not a test of your backup. V1 records verification at 082f7915. That run does not establish verification of any later change — including the symlink-guard changes, the decryption-code changes at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12, and the T41 confirmation and key-handoff changes — so re-demonstrate the procedure end to end at the head you use before relying on it. Never paste a real mnemonic or data key anywhere.
 
 ### 6. Restore the TON configuration exactly, where applicable
 
@@ -264,7 +280,12 @@ Expect the tool to look for `BAWA_DATA_KEY` first:
 
 For either route, supply 64 hexadecimal digits, represented here by `<YOUR-32-BYTE-HEX-KEY>`. Both routes strip surrounding whitespace and then decode hexadecimal. The decoded result must be **exactly 32 bytes**. Supply a data-encryption key, not a password, mnemonic or wallet private key.
 
-Expect invalid hexadecimal to be rejected. A decoded value of any other length raises `data key must be exactly 32 bytes`. Do not expect a bad non-empty environment value to trigger a retry through the prompt.
+Expect invalid hexadecimal to be rejected. A key typed at the prompt
+of any other length raises `data key must be exactly 32 bytes`. A bad
+non-empty environment value is different (T41): invalid hex, or a
+decoded value that is not 32 bytes, prints a warning naming only the
+variable and falls through to the prompt instead of aborting — so an
+unusable `BAWA_DATA_KEY` does trigger a retry through the prompt.
 
 For manual recovery, prefer the prompt. For automation, inject the environment variable through a protected secret-handling mechanism. Do not place the real key in a shell command that may enter history, in a script or in a job log.
 
@@ -378,9 +399,14 @@ Do not guess further keys, and do not retry with a different tool. Do not bypass
 
 After successful authentication, expect the tool to decode the plaintext as UTF-8 and split it on whitespace. It accepts only 12, 15, 18, 21 or 24 words. Any other count produces the mnemonic-shape refusal. Invalid UTF-8 fails decoding instead.
 
-Treat this as a word-count check only. It does not verify BIP-39 word-list membership or the checksum. Do not add or remove words to make rejected text pass.
+The check is no longer word-count only (F-38): the tool then validates
+the recovered text against the BIP-39 English wordlist and its checksum,
+and refuses text that fails either with `recovered data is not a valid
+BIP-39 mnemonic (wordlist or checksum)`. If the `bip-utils` validator
+library is unavailable it fails closed instead of returning unvalidated
+words. Do not add or remove words to make rejected text pass.
 
-> **Expected result:** `recovered data does not look like a BIP-39 mnemonic` for a rejected word count. Passing this check alone does not establish that the phrase is the intended wallet backup.
+> **Expected result:** `recovered data does not look like a BIP-39 mnemonic` for a rejected word count, or `recovered data is not a valid BIP-39 mnemonic (wordlist or checksum)` for a failed wordlist/checksum check. Passing these checks alone does not establish that the phrase is the intended wallet backup.
 
 Distinguish a BIP-39 passphrase mistake from data-key authentication failure. A wrong BIP-39 passphrase does not produce an error; it derives a different wallet, so a passphrase mistake looks like an empty wallet.
 
@@ -458,7 +484,7 @@ Complete the pre-funding check before using a wallet with meaningful funds. Requ
 
 Keep every exercise below testnet-only. Use disposable test fixtures only, with a tiny testnet amount for transaction checks. Never use real funds for a rehearsal. Never paste a real mnemonic or data key anywhere.
 
-Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is still not a test of your backup, so rehearse your own backup and record it. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd.
+Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is still not a test of your backup, so rehearse your own backup and record it. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or any later head.
 
 1. **Start on a fresh machine.**
 
@@ -468,7 +494,7 @@ Note that the rehearsal procedure was demonstrated end to end on a generated tes
 
 2. **Name and prepare a clean wallet recovery setup.**
 
-   Bawa's tools generate and decrypt seed material; they do not import a mnemonic into a wallet. Name the external wallet software or hardware recovery setup you will use and record its software and firmware versions, as applicable. Independently verify testnet compatibility for that setup and those versions. Obtain and install clean software using that wallet provider's own acquisition and release-verification instructions. For hardware recovery, use a trusted device with verified firmware. Keep mnemonic entry on the hardware device where that is the intended recovery method.
+   Bawa's Node tools generate and decrypt seed material; they do not import a mnemonic into a wallet. The example web wallet does: its Import flow restores a pasted mnemonic into the vault. For a tools-based rehearsal, name the external wallet software or hardware recovery setup you will use and record its software and firmware versions, as applicable. Independently verify testnet compatibility for that setup and those versions. Obtain and install clean software using that wallet provider's own acquisition and release-verification instructions. For hardware recovery, use a trusted device with verified firmware. Keep mnemonic entry on the hardware device where that is the intended recovery method.
 
    > **Expected result:** A named external wallet recovery setup with the intended software and firmware versions recorded as applicable, provenance checked and testnet compatibility independently verified, with no existing wallet state mistaken for a recovery.
 
