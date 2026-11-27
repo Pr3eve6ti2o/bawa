@@ -5,6 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
 import { WalletManagementScreen } from './wallet-management';
 import { ensureAdapters, useWallet } from '../state/wallet-context';
+import { clearBackupDone, writeBackupDone } from '../wallet/backup-state';
 
 vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
@@ -682,6 +683,55 @@ describe('wallet management — export list search (Lane 6)', () => {
       expect(mounted.div.textContent).toContain('Watch-only');
     } finally {
       await mounted.cleanup();
+    }
+  });
+});
+
+describe('wallet management — backup-completion state (S3-A, F28)', () => {
+  it('shows a Backed up badge once the phrase was revealed or shares were created', async () => {
+    writeBackupDone();
+    setWallet(vi.fn(async () => {}));
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Backed up');
+      expect(mounted.div.textContent).not.toContain(
+        'Back up your recovery phrase',
+      );
+    } finally {
+      await mounted.cleanup();
+      clearBackupDone();
+    }
+  });
+
+  it('nudges to the Backup screen while the wallet is not backed up', async () => {
+    clearBackupDone();
+    setWallet(vi.fn(async () => {}));
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).not.toContain('Backed up');
+      const link = mounted.div.querySelector(
+        'a[href="/mnemonic-backup"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain('Back up your recovery phrase');
+    } finally {
+      await mounted.cleanup();
+      clearBackupDone();
+    }
+  });
+
+  it('shows neither badge nor nudge without a vault', async () => {
+    writeBackupDone();
+    setWallet(vi.fn(async () => {}), { account: 0, index: 0 }, { vaultAccounts: [] });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).not.toContain('Backed up');
+      expect(mounted.div.textContent).not.toContain(
+        'Back up your recovery phrase',
+      );
+    } finally {
+      await mounted.cleanup();
+      clearBackupDone();
     }
   });
 });

@@ -15,7 +15,7 @@
  * LAZY-LOAD (bundle rule): the library is reached ONLY through the
  * dynamic import in loadShamir() below — there is no static import of
  * 'shamir-secret-sharing' anywhere in the app. It lands in its own
- * chunk, loaded when the backup-shares screen creates or checks shares,
+ * chunk, loaded when the Backup screen's Shares tab creates or checks shares,
  * and never enters the main bundle. Do not convert it to a static import.
  *
  * Integrity: combine() does NOT verify reconstruction — a mistyped,
@@ -26,7 +26,7 @@
  *
  * Encoding: shares are raw bytes, so each share is shown as one
  * copy-pasteable line, `bawa-share-v1:` plus standard base64 (44 chars
- * for a 33-byte share), and as a QR code on the backup-shares screen.
+ * for a 33-byte share), and as a QR code on the Backup screen's Shares tab.
  * The prefix versions the format and makes a mistyped paste detectable.
  */
 
@@ -41,7 +41,7 @@ const VAULT_KEY_BYTES = 32;
 /** A share is the 32 secret bytes plus one share-number byte. */
 const SHARE_BYTES = VAULT_KEY_BYTES + 1;
 
-/** Schemes the backup-shares screen offers. */
+/** Schemes the Backup screen's Shares tab offers. */
 export const BACKUP_SHARE_SCHEMES: ReadonlyArray<{
   total: number;
   threshold: number;

@@ -75,6 +75,7 @@ import {
   WalletErrorCodes,
 } from './errors';
 import { readAutoLockEnabled } from './auto-lock';
+import { clearBackupDone } from './backup-state';
 
 export const VAULT_STORAGE_KEY = 'bawa-vault';
 export const VAULT_BACKUP_STORAGE_KEY = 'bawa-vault-backup';
@@ -845,6 +846,9 @@ export function deleteVault(): void {
   deleteStoredKey();
   deleteVaultBackup();
   clearVaultAccounts();
+  // S3-A: a deleted vault voids its backup-completion record, so a
+  // fresh vault never inherits a previous wallet's "Backed up".
+  clearBackupDone();
   unlockedKey = null;
   unlockedMnemonic = null;
   unlockedPassphrase = null;

@@ -8,6 +8,7 @@ import {
   formatNativeWithSymbol,
 } from "../wallet/chain-amount-format";
 import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
+import { readBackupDone } from "../wallet/backup-state";
 import { ChainLogo } from "./token-logo";
 import { Badge } from "../ui/components/badge";
 import { Button } from "../ui/components/button";
@@ -144,6 +145,10 @@ export function WalletManagementScreen() {
   const vaultAccounts = vaultAccountsRaw ?? [];
   const vaultPassphraseNeeded = vaultPassphraseNeededRaw ?? false;
   const hasVault = vaultAccounts.length > 0;
+  // S3-A (P1 item 8, F28): the backup-completion state — set when the
+  // phrase is revealed on the Backup screen or a set of backup shares
+  // is created. Read on mount; navigating back here re-reads it.
+  const [backedUp] = useState(() => readBackupDone());
 
   // Vault account selection (Fix Lane 3 p14b). Inputs track the context
   // selection; Apply clamps invalid input to 0 and re-derives.
@@ -334,6 +339,23 @@ export function WalletManagementScreen() {
           <CardTitle>Your accounts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* S3-A (P1 item 8, F28): the backup-completion state on
+              Wallets. Backed up shows a badge; otherwise the nudge
+              links to the Backup screen. */}
+          {hasVault && (
+            <p className="flex flex-wrap items-center gap-2 text-sm">
+              {backedUp ? (
+                <Badge variant="success">Backed up</Badge>
+              ) : (
+                <Link
+                  to="/mnemonic-backup"
+                  className="font-medium text-primary underline underline-offset-4"
+                >
+                  Back up your recovery phrase
+                </Link>
+              )}
+            </p>
+          )}
           {/* Lane 5: with no vault the actions come first — the
               explainer below is about a phrase the user does not have
               yet, and it used to push Create/Import under the bottom

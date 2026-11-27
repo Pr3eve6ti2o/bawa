@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { BawaIcon, type BawaIconName } from '../ui/components/icons';
 import { BawaLoading } from '../ui/components/loading';
-import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
 // Hot routes are eager imports (Rabby pattern): the live browser showed
@@ -18,16 +18,15 @@ const loadImportWallet = () =>
     default: m.ImportWalletScreen,
   }));
 const ImportWalletScreen = lazy(loadImportWallet);
-const loadMnemonicBackup = () =>
-  import('../screens/mnemonic-backup').then((m) => ({
-    default: m.MnemonicBackupScreen,
+// S3-A (P1 item 8): one Backup screen — the Recovery phrase tab and
+// the Backup shares tab live in screens/backup.tsx. The old
+// /backup-shares route redirects to /mnemonic-backup?tab=shares below,
+// so the Security link and any saved link still land on the right tab.
+const loadBackup = () =>
+  import('../screens/backup').then((m) => ({
+    default: m.BackupScreen,
   }));
-const MnemonicBackupScreen = lazy(loadMnemonicBackup);
-const loadBackupShares = () =>
-  import('../screens/backup-shares').then((m) => ({
-    default: m.BackupSharesScreen,
-  }));
-const BackupSharesScreen = lazy(loadBackupShares);
+const BackupScreen = lazy(loadBackup);
 const loadAssetList = () =>
   import('../screens/asset-list').then((m) => ({ default: m.AssetListScreen }));
 const AssetListScreen = lazy(loadAssetList);
@@ -85,8 +84,7 @@ const LockScreen = lazy(loadLock);
 
 const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/import-wallet': loadImportWallet,
-  '/mnemonic-backup': loadMnemonicBackup,
-  '/backup-shares': loadBackupShares,
+  '/mnemonic-backup': loadBackup,
   '/assets': loadAssetList,
   '/receive': loadReceive,
   '/send': loadSend,
@@ -151,8 +149,8 @@ function HomeScreen() {
 // /mnemonic-backup, alongside the existing /create-wallet, /security,
 // /lock). Below desktop: every one of them keeps the 480px cap: the mobile
 // layout is untouched.
-// /swap and /backup-shares (added after the tag) keep HEAD's 480px cap
-// at desktop: too — they were never widened there.
+// /swap (added after the tag) keeps HEAD's 480px cap
+// at desktop: too — it was never widened there.
 // P10: matching runs on the path with trailing slashes stripped.
 // GitHub Pages redirects /bawa/assets to /bawa/assets/, and the
 // trailing slash used to match startsWith('/assets/') and wrap the
@@ -162,7 +160,7 @@ export function outletWrapperClass(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   const isChainDetail = /^\/assets\/[^/]+$/.test(normalized);
   const isNarrow =
-    ['/send', '/receive', '/swap', '/import-wallet', '/mnemonic-backup', '/backup-shares'].includes(
+    ['/send', '/receive', '/swap', '/import-wallet', '/mnemonic-backup'].includes(
       normalized,
     ) || isChainDetail;
   const isWideAtDesktop =
@@ -272,7 +270,7 @@ function AppLayout() {
     }
   }, [vaultState, pathname, navigate]);
   // Focused flows hide the navigation chrome (Safe PageLayout pattern):
-  // the create-wallet flow, the send flow, and the mnemonic-backup
+  // the create-wallet flow, the send flow, and the backup
   // flow (Lane 5, redesign: the backup screen is a focused flow —
   // DESIGN-SYSTEM §6 — the phrase is revealed there, and the bottom
   // nav is one accidental tap away from leaving mid-reveal). Send
@@ -486,8 +484,8 @@ export function App() {
             <Route path="welcome" element={<WelcomeScreen />} />
             <Route path="create-wallet" element={<CreateWalletScreen />} />
             <Route path="import-wallet" element={<ImportWalletScreen />} />
-            <Route path="mnemonic-backup" element={<MnemonicBackupScreen />} />
-            <Route path="backup-shares" element={<BackupSharesScreen />} />
+            <Route path="mnemonic-backup" element={<BackupScreen />} />
+            <Route path="backup-shares" element={<Navigate to="/mnemonic-backup?tab=shares" replace />} />
             <Route path="assets" element={<AssetListScreen />} />
             <Route path="assets/:chain" element={<AssetDetailScreen />} />
             <Route path="assets/:chain/:token" element={<AssetDetailScreen />} />
