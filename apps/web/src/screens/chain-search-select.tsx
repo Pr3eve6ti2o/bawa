@@ -173,6 +173,39 @@ export function chainFamily(chain: ChainId): string {
   return CHAIN_FAMILY_LABELS[chainFamilyId(chain)];
 }
 
+// --- Family tabs (Lane P2-C, M5) ---
+
+/** One family tab for the picker: 'all' plus one tab per family
+    that has chains in the offered set, counts from the registry
+    (never hard-coded). The same tab set as the Networks screen (P1
+    item 7) — same mapping (T1-8), same labels, same order — so the
+    two never disagree; TRON keeps its own tab in both. */
+export interface PickerFamilyTab {
+  id: 'all' | ChainFamily;
+  label: string;
+  count: number;
+}
+
+export function pickerFamilyTabs(
+  chains: readonly ChainId[],
+): PickerFamilyTab[] {
+  const counts = new Map<ChainFamily, number>();
+  for (const chain of chains) {
+    const family = chainFamilyId(chain);
+    counts.set(family, (counts.get(family) ?? 0) + 1);
+  }
+  const tabs: PickerFamilyTab[] = [
+    { id: 'all', label: 'All', count: chains.length },
+  ];
+  for (const family of CHAIN_FAMILY_ORDER) {
+    const count = counts.get(family) ?? 0;
+    if (count > 0) {
+      tabs.push({ id: family, label: CHAIN_FAMILY_LABELS[family], count });
+    }
+  }
+  return tabs;
+}
+
 interface ChainGroup {
   heading: string;
   chains: ChainId[];
@@ -247,9 +280,27 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<ChainPickerValue | null>(null);
   const [recent, setRecent] = useState<ChainId[]>(() => readRecentChains(recentKey));
+  // Lane P2-C (M5): the active family tab — 'all' is the whole list,
+  // a family filters it. The search filters inside the active family
+  // (the Networks screen's pattern, P1 item 7).
+  const [family, setFamily] = useState<'all' | ChainFamily>('all');
 
   const listboxId = `${id}-listbox`;
   const filtered = useMemo(() => filterChains(chains, query), [chains, query]);
+  const tabs = useMemo(() => pickerFamilyTabs(chains), [chains]);
+  // A family tab with no chains in the offered set cannot stay
+  // active (the offered set changed under the picker): it reads as All.
+  const effectiveFamily =
+    family === 'all' || tabs.some((tab) => tab.id === family) ? family : 'all';
+  // The tabs filter the list. The list under the EVM tab IS the EVM
+  // sub-chain selector — the mined pattern's second level, with no
+  // extra dropdown: every EVM chain is one row with its logo.
+  function chainsForFamily(nextFamily: 'all' | ChainFamily): ChainId[] {
+    return nextFamily === 'all'
+      ? filtered
+      : filtered.filter((chain) => chainFamilyId(chain) === nextFamily);
+  }
+  const familyFiltered = chainsForFamily(effectiveFamily);
   // Closed, the field shows the selected chain's name, so the current
   // choice is always visible. Open, it shows what the user typed.
   const inputValue = open
@@ -262,11 +313,13 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
   const recentVisible = recent.filter((chain) => chain !== value);
   // The dropdown's Recent group shows the recents that match the
   // query (the chips below stay unfiltered — they are the one-tap
-  // path and the open dropdown covers them anyway).
+  // path and the open dropdown covers them anyway). The family tab
+  // filters the recents too: a recent from another family is not in
+  // this family's list.
   const recentInList = recent.filter(
-    (chain) => chain !== value && filtered.includes(chain),
+    (chain) => chain !== value && familyFiltered.includes(chain),
   );
-  const groups = groupChainsByFamily(filtered, recentInList);
+  const groups = groupChainsByFamily(familyFiltered, recentInList);
   // What the keyboard can land on: the All row first when present,
   // then every group in order. Disabled chains are shown, never
   // landed on.
@@ -321,6 +374,37 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
       if (pick !== undefined) return pick;
     }
     return null;
+  }
+
+  // Switching family re-aims the keyboard at the first pickable row
+  // of the new family — a stale activeId from the old family would
+  // make ArrowDown jump to a row that is no longer listed.
+  function selectFamily(next: 'all' | ChainFamily): void {
+    setFamily(next);
+    setActiveId(firstPickable(chainsForFamily(next)));
+  }
+
+  function handleFamilyTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    tabId: 'all' | ChainFamily,
+  ): void {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    // Roving tabindex, automatic activation — the tabs-accessibility
+    // pattern, same as the Networks screen's tabs: arrows move focus
+    // and switch the family in one motion.
+    event.preventDefault();
+    const index = tabs.findIndex((entry) => entry.id === tabId);
+    const next =
+      event.key === 'Home'
+        ? tabs[0]!
+        : event.key === 'End'
+          ? tabs[tabs.length - 1]!
+          : tabs[
+              (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) %
+                tabs.length
+            ]!;
+    selectFamily(next.id);
+    document.getElementById(`${id}-family-${next.id}-tab`)?.focus();
   }
 
   function closeList(): void {
@@ -421,18 +505,58 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
           />
         </span>
         {open && (
-          <ul
-            id={listboxId}
-            role="listbox"
-            aria-label="Chains"
-            // Square corners on purpose: the list floats over the form
-            // below it, and any radius lets the fields beneath show
-            // through the corners (the wobbly radius left the xpub
-            // label's "A" visible; rounded-xl still let the coral Add
-            // button peek through the bottom corner). A dropdown that
-            // overlaps form content has to be opaque to its edges.
-            className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-none border-2 border-ink bg-paper shadow-lg"
-          >
+          <div className="absolute left-0 right-0 top-full z-10 mt-1 border-2 border-ink bg-paper shadow-lg">
+            {/* Lane P2-C (M5): family tabs filter the list — one tab
+                per family with its count, same set and styling as
+                the Networks screen. Hidden when the offered chains
+                span a single family (All and that family would list
+                the same rows). The tabs sit outside the scrolling
+                list, so they never scroll away. */}
+            {tabs.length > 2 && (
+              <div
+                role="tablist"
+                aria-label="Filter chains by family"
+                className="flex flex-wrap gap-1 border-b-2 border-ink p-1"
+              >
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    id={`${id}-family-${tab.id}-tab`}
+                    type="button"
+                    role="tab"
+                    aria-selected={effectiveFamily === tab.id}
+                    tabIndex={effectiveFamily === tab.id ? 0 : -1}
+                    onMouseDown={(event) => {
+                      // Keep focus in the search field: without this
+                      // the input blurs and the list closes before
+                      // the click lands (same as the option rows).
+                      event.preventDefault();
+                    }}
+                    onClick={() => selectFamily(tab.id)}
+                    onKeyDown={(event) => handleFamilyTabKeyDown(event, tab.id)}
+                    className={`min-h-11 rounded-bawa-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
+                      effectiveFamily === tab.id
+                        ? 'bg-sun text-ink'
+                        : 'text-ink hover:bg-sun'
+                    }`}
+                  >
+                    {`${tab.label} (${tab.count})`}
+                  </button>
+                ))}
+              </div>
+            )}
+            <ul
+              id={listboxId}
+              role="listbox"
+              aria-label="Chains"
+              // Square corners on purpose: the list floats over the form
+              // below it, and any radius lets the fields beneath show
+              // through the corners (the wobbly radius left the xpub
+              // label's "A" visible; rounded-xl still let the coral Add
+              // button peek through the bottom corner). A dropdown that
+              // overlaps form content has to be opaque to its edges.
+              className="max-h-64 overflow-auto rounded-none"
+            >
             {allowAll && (
               <li
                 key="all"
@@ -461,13 +585,18 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
             )}
             {groups.map((group) => (
               <Fragment key={group.heading}>
-                <li
-                  role="presentation"
-                  aria-hidden="true"
-                  className="px-4 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-muted-foreground"
-                >
-                  {group.heading}
-                </li>
+                {/* Under All the family headings group the list (as
+                    before); under a family tab the tab already names
+                    the family, so the heading would only repeat it. */}
+                {effectiveFamily === 'all' && (
+                  <li
+                    role="presentation"
+                    aria-hidden="true"
+                    className="px-4 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-muted-foreground"
+                  >
+                    {group.heading}
+                  </li>
+                )}
                 {group.chains.map((chain) => {
                   const config = chainConfig(chain);
                   const isSelected = chain === value;
@@ -518,12 +647,15 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
                 })}
               </Fragment>
             ))}
-            {filtered.length === 0 && (
+            {familyFiltered.length === 0 && (
               <li className="px-4 py-3 text-sm text-muted-foreground">
-                No chains match &ldquo;{query.trim()}&rdquo;.
+                {effectiveFamily === 'all'
+                  ? `No chains match “${query.trim()}”.`
+                  : `No ${CHAIN_FAMILY_LABELS[effectiveFamily]} chains match “${query.trim()}”.`}
               </li>
             )}
-          </ul>
+            </ul>
+          </div>
         )}
       </div>
       {recentVisible.length > 0 && (
