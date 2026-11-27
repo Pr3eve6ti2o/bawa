@@ -482,12 +482,16 @@ describe('receive screen', () => {
         'Not available in Louisiana',
       );
       await clickButton(mounted.div, 'Buy with Ramp');
+      // The URL is opened directly (no blank-then-navigate): read it
+      // from the window.open call, not from a pop-up location.
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      const openedUrl = openSpy.mock.calls[0]?.[0] as string;
       expect(openSpy).toHaveBeenCalledWith(
-        'about:blank',
+        openedUrl,
         '_blank',
-        'width=430,height=600,noopener',
+        'noopener,width=430,height=600',
       );
-      const url = new URL(popup.location.href);
+      const url = new URL(openedUrl);
       expect(url.origin).toBe('https://app.ramp.network');
       expect(url.searchParams.get('hostApiKey')).toBe('test-ramp-key');
       expect(url.searchParams.get('userAddress')).toBe(VAULT_ETH);
@@ -523,7 +527,8 @@ describe('receive screen', () => {
         'paste your own address inside MoonPay',
       );
       await clickButton(mounted.div, 'Buy with MoonPay');
-      const url = new URL(popup.location.href);
+      const openedUrl = openSpy.mock.calls[0]?.[0] as string;
+      const url = new URL(openedUrl);
       expect(url.origin).toBe('https://buy.moonpay.com');
       expect(url.searchParams.get('apiKey')).toBe('pk_live_test');
       expect(url.searchParams.get('defaultCurrencyCode')).toBe('eth');
@@ -558,7 +563,8 @@ describe('receive screen', () => {
         'A plain redirect — no quote in Bawa',
       );
       await clickButton(mounted.div, 'Buy with Banxa');
-      const url = new URL(popup.location.href);
+      const openedUrl = openSpy.mock.calls[0]?.[0] as string;
+      const url = new URL(openedUrl);
       expect(url.origin).toBe('https://bawa.banxa.com');
       expect(url.searchParams.get('walletAddress')).toBe(VAULT_ETH);
       expect(url.searchParams.get('coinType')).toBe('ETH');
@@ -601,7 +607,8 @@ describe('receive screen', () => {
       // Lane X (Lane D #70): Ramp's button shows once Ramp is picked.
       await selectBuyProvider(mounted.div, 'ramp');
       await clickButton(mounted.div, 'Buy with Ramp');
-      const url = new URL(popup.location.href);
+      const openedUrl = openSpy.mock.calls[0]?.[0] as string;
+      const url = new URL(openedUrl);
       expect(url.searchParams.get('userAddress')).toBe(TON_ADDRESS);
       expect(url.searchParams.get('enabledCryptoAssets')).toBe('TON_GRAM');
     } finally {
