@@ -28,7 +28,7 @@ branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
-the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 120 files / 3,121 passed + 5 skipped (loud-stone run at token-gaps `8a1d681`, 2026-11-27 — NOT reproduced in this sandbox on Node 22, 2026-11-26: 104 failed / 2,841 passed + 5 skipped on the guide-update tip, 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4`; timeout-dominated, varies run to run — see docs/index.md), eslint 0, link check 0,
+the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 120 files / 3,216 passed + 5 skipped (loud-stone run at token-gaps `33f1ff1`, 2026-11-27, P0 verification — re-run first-hand by the docs-currency lane from a clean worktree at `33f1ff1`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -49,17 +49,20 @@ calls): removed WalletConnect (§11), added the Buy provider picker
 table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
-**Bundle note:** the merged tree passes the budget — total JS 4,457,283 vs the 6,000,000 budget (§0.2), passing by 1,542,717 bytes; largest chunk 2,906,489 (under the 3,050,000 cap). Measured on token-gaps `8a1d681` (2026-11-27). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
+**Bundle note:** the merged tree passes the budget — total JS 4,473,583 vs the 6,000,000 budget (§0.2), passing by 1,526,417 bytes; largest chunk 2,906,489 (under the 3,050,000 cap). Measured on token-gaps `33f1ff1` (2026-11-27, P0 verification — re-measured first-hand by the docs-currency lane from a clean worktree at `33f1ff1`, Node 22). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
-1. **Broadcast is disabled on mainnet until separately authorised.**
+1. **Broadcast is disabled on mainnet in code; swap execution is approved but not implemented.**
    `apps/web/src/wallet/send.ts:65-66` — "no module broadcasts on mainnet:
    broadcast stays DISABLED until separately authorised". `broadcastSigned`
-   throws unconditionally on mainnet. No MAINNET send has ever run. Devnet
+   returns `{ status: 'disabled', reason: BROADCAST_DISABLED_MESSAGE }` on
+   mainnet (it does not throw). No MAINNET send has ever run. Devnet
    test sends have run (TON testnet, app sends 1–3 with transaction hashes;
    `docs/DEVNET-ISSUES.md:50-66`) — that is the only send history, and it
-   is testnet-only.
+   is testnet-only. Owner order 2026-11-27 approved swap execution — but
+   it is NOT implemented yet, and broadcast stays disabled in the code
+   until that implementation lands and is verified.
    The only exception is the temporary devnet-only broadcast path, §10.
    Never build, enable, or work around a mainnet broadcast path.
 2. **Bundle budget: total JS in `dist/assets` ≤ 6,000,000 bytes; largest
@@ -81,20 +84,17 @@ above — Part A is the six lanes only.
    (route chunk 10,085 B) — none of it on the cold-load path (home cold
    load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
    The WalletConnect lazy chunk (348,194 B) was removed with the feature
-   in the providers programme (2026-11-26, §11). The STON.fi lanes (2026-11-27, token-gaps `8a1d681`) re-measured the total on the current tree: 4,457,283 bytes total JS, passing by **1,542,717 bytes (25.7% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Whether the gate should exclude lazy
+   in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
-3. **Four-colour cap.** The app uses at most four colours, named by the
-   design tokens in `docs/DESIGN-SYSTEM.md` §2.1
-   (`apps/web/src/ui/styles/globals.css:60-63`): `--bawa-paper #FFFDF7`
-   (every surface), `--bawa-ink #2B2B2B` (the only text colour, every
-   border), `--bawa-coral #FF6B4A` (primary action only, never body text),
-   `--bawa-sun #FFD93B` (selected / highlight / hover). The single
-   confined exception is the QR card: exactly ten named `--qr-*` tokens
+3. **Visual direction: style B (owner pick, 2026-11-27).** Polished financial style everywhere — flat, hairline, tabular, real semantic colour — with illustration kept only for brand moments, plus a tiny bounded fraction of the paper/comic theme (QR card templates, the Welcome illustration, at most one small brand touch per screen). This supersedes the 2026-11-20 drawing-illustration order and its four-colour cap: the cap no longer governs new work. Transition state, stated honestly: the current tree still carries the four `--bawa-*` tokens in `apps/web/src/ui/styles/globals.css:60-63` (`--bawa-paper #FFFDF7`, `--bawa-ink #2B2B2B`, `--bawa-coral #FF6B4A`, `--bawa-sun #FFD93B`) while the P1 style lane migrates screens — do not cite the cap as the current rule, and do not re-impose it on migrated screens. The single confined exception that STANDS is the QR card: exactly ten named `--qr-*` tokens
    (`--qr-teal`, `--qr-teal-deep`, `--qr-teal-band`, `--qr-teal-copy`,
    `--qr-bar`, `--qr-muted`, `--qr-grey`, `--qr-faint`, `--qr-nearblack`,
    `--qr-white-dim`) in `apps/web/src/ui/styles/globals.css`, used ONLY by
    the QR card and its PNG exporter (`docs/DECISIONS.md` §24, line 2015).
-   No further literal may be added without a recorded decision there.
+   The QR card is untouched by the style work. No further literal colour
+   may be added without a recorded decision there. `docs/DESIGN-SYSTEM.md`
+   is owned by the P1 style lane; this spec states the direction, not the
+   token list.
 4. **No fake balances or prices, no invented data.** A chain with no
    balance source shows no balance (never zero-as-balance, never a
    placeholder). A chain no price source covers keeps its expired/error
@@ -133,7 +133,7 @@ ninth profile. Profile selection is routing, not a capability claim.
 | `bitcoin-wallet` | Bitcoin-focused; transaction support must not be assumed |
 | `evm-wallet` | ETH/EVM-oriented; support beyond the specified ETH policy is OPEN |
 | `multichain-wallet` | Combined BTC, ETH, TRX, TON; TON remains generation-only, single-address |
-| `multichain-extended-wallet` | As registered, combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge). The web wallet now wires 87 chains (§2); the registry has NOT been re-validated for the 87-chain set, so the wider set is OPEN for this profile until the registry is updated |
+| `multichain-extended-wallet` | As registered, combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge). The web wallet now wires 87 chains (§2); the registry was re-validated for the 87-chain set in the registry v4 update (commit `2a0fa75`, 2026-11-26; validator exits 0, 0 errors), so the wider set is no longer OPEN on this count |
 | `web-wallet` | Browser wallet; starter scope only, not a complete wallet |
 | `android-wallet` | Android wallet; approved starter is UI layer only |
 | `watch-only-wallet` | Public-data-only observation; no secret intake, no signing |
@@ -311,14 +311,7 @@ registry" would rebuild what already exists; the work is completion, not creatio
 
 **Registry v4 event (2026-11-26, commit `2a0fa75`):** the validator was upgraded from v3 to v4 (87-chain vocabulary from the schema enum; the v4 profiles rule), history I&V went from 10 to 17 chains, and the schema enum went from 84 to 87 (+cardano, kaspa, starknet). The validator exits 0 with 0 errors; `docs/index.md` records the re-earned IMPLEMENTED_AND_VERIFIED status.
 
-**Proposal (not yet implemented):** export the web wallet's data as
-generated, CI-run JSON — `registry/chains.json` (87 chains: id, name,
-symbol, chainId, coinType, addressFormat, derivationTemplate,
-rpcEndpoints, explorer, coingeckoId, icon, testnet) + `registry/
-tokens.json` (the 21 default tokens, `tokens.ts:182`). This is the
-step that unblocks the Android programme: data export first,
-toolchain in parallel, then the data layer. Until the export exists,
-no Android lane may hand-write chain data from the TypeScript files.
+**Implemented (Android Step 1, 2026-11-27, commit `58d85c5`):** the web wallet's data is exported as generated, versioned JSON — `registry/chains.json` (87 chains, 169 RPC endpoints, 4 testnets, `sourceCommit`, `coverage`) + `registry/tokens.json` (the 21 default tokens, `tokens.ts:182`) — generated by `apps/web/scripts/generate-android-registry.mjs` from `apps/web/src/wallet/*.ts` and `registry/capabilities.json` (current files generated from `7efba14`). This was the step that unblocked the Android programme: data export first, toolchain in parallel, then the data layer. Lanes must read chain/token data from the export; no Android lane may hand-write chain data from the TypeScript files.
 
 **Why Android needs it — the data gap (A1–A12).** The Android starter
 (`apps/android`) is a watch-only UI starter, not a wallet, and the
@@ -335,10 +328,8 @@ guide must not let an agent assume otherwise:
   (`DerivationPolicy.kt:56`) — no Trust Wallet Core AAR exists for any
   version, so on-device derivation is OPEN.
 - Tests: 57 `@Test` annotations across 5 Kotlin test files, executed
-  count NOT-RUN (no Android SDK on the build machine, so Gradle tests
-  are NOT-RUN — `AGENTS.md` §3).
-- Toolchain gap: AGP 8.2.2 + compileSdk 35 (`build.gradle.kts:3-4,12`)
-  are officially unsupported; no Android SDK/JDK on loud-stone.
+  count NOT-RUN — the unit tests have not been run yet. (`AGENTS.md` §3.)
+- Toolchain — INSTALLED and proven (2026-11-27, loud-stone): JDK 17 (OpenJDK 17.0.21.1), Android SDK at `/home/boxd/Android/Sdk` with platform-tools 37.0.3, platforms `android-34` + `android-35`, build-tools 34.0.0 + 35.0.0, cmake 3.22.1, ndk 27.2.12479018. `./gradlew assembleDebug` succeeds (clean build re-run first-hand by the docs-currency lane, BUILD SUCCESSFUL in 32 s; the earlier proven run took 1 m 49 s). The build needs `ANDROID_HOME=/home/boxd/Android/Sdk` in the shell (or `sdk.dir` in `local.properties`) — without it Gradle fails with "SDK location not found". AGP is 8.2.2 with compileSdk 35 (`build.gradle.kts:3-4,12`). Steps 3–6 of the Android programme are BLOCKED: the Step 3 lane's report was removed by safety classifiers before the coordinator could see it, and the coordinator was instructed not to continue that request — the same pattern that blocked Step 2. No data layer, no chain registry and no derivation exist in the app yet; that work is the blocked steps, not a toolchain gap.
 - **Policy tension, recorded not resolved:** watch-only is
   mainnet-only by owner order 2026-11-23 (`docs/DECISIONS.md`,
   Gap 21) — while the Android starter's own header states testnet-only
@@ -366,7 +357,7 @@ guide must not let an agent assume otherwise:
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
-  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 120 files; the 3,121-passed + 5-skipped figure is the loud-stone run at token-gaps `8a1d681` (2026-11-27) and did NOT reproduce in this sandbox on Node 22 (2026-11-26), see `docs/index.md`). Engine smoke suite:
+  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 120 files; the 3,216-passed + 5-skipped figure is the loud-stone run at token-gaps `33f1ff1` (2026-11-27, P0 verification), re-run first-hand by the docs-currency lane from a clean worktree at `33f1ff1`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -829,8 +820,11 @@ History kept, because it still binds a future restoration
   added to `apps/android/app/build.gradle.kts` by Lane H:** the
   Android app is watch-only and testnet-only with no signing path
   (`apps/android/app/build.gradle.kts` header), so WalletConnect is a
-  future feature needing a scope decision first, and there is no
-  Android SDK or JDK on loud-stone to build-verify the dependency.
+  future feature needing a scope decision first. (Lane H also could
+  not build-verify the dependency — no Android SDK/JDK on loud-stone
+  at the time. That gap is closed: the toolchain is installed and
+  `./gradlew assembleDebug` succeeds, §2.6 — a future lane can
+  build-verify it.)
   A WalletConnect Cloud projectId is still required (owner step;
   never invent or hardcode one).
 - Removal verified against commit `7fb1c4a` (providers programme,
@@ -866,7 +860,7 @@ The survey's verified facts, which Lane D implemented from:
   aimed at self-custody wallets as the destination.
 - **Lazy-load only.** Measured via Bundlephobia: **7,473 B minified /
   2,841 B gzip** — 7,473 B alone exceeds the ~5,304 B headroom at survey
-  time (1.4× over; headroom is now 1,542,717 B under the 6,000,000 budget — see §0.2, 2026-11-27). It is loaded by dynamic import on the Buy screen
+  time (1.4× over; headroom is now 1,526,417 B under the 6,000,000 budget — see §0.2, 2026-11-27). It is loaded by dynamic import on the Buy screen
   only, by design. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
 - **The SDK is NOT bundled.** `@coinbase/cbpay-js` 2.4.0 (MIT) is not
@@ -909,12 +903,15 @@ which keys it needs and where they live (source of truth:
 **The deciding constraint:** Bawa is a static site with no backend
 (GitHub Pages). Any provider whose flow needs a server-side secret
 cannot work as-is — it needs a signing backend/proxy first. That is
-why Ramp (on-ramps) works today and MoonPay / Transak wait on a
-backend. The same constraint decides the swaps providers (§12A).
+why Ramp (on-ramps) is the only one that can work from a static page
+once configured — its key is public by design — while MoonPay /
+Transak wait on a backend. No provider key is configured yet (see
+below), so Buy shows "not set up yet" for every provider today. The
+same constraint decides the swaps providers (§12A).
 
 | # | Provider | Key in the app (safe) | Secret (server-only, never in the app) | Works from a static page? |
 | --- | --- | --- | --- | --- |
-| 1 | Ramp — first, works today | `hostApiKey` — public by Ramp's own design (support article, updated 2026-11-12: "disclosing your API key within the URL is completely safe") | None for the widget | Yes |
+| 1 | Ramp — first, works from a static page once configured | `hostApiKey` — public by Ramp's own design (support article, updated 2026-11-12: "disclosing your API key within the URL is completely safe") | None for the widget | Yes |
 | 2 | MoonPay — second, alongside a signing backend | `pk_live_…` publishable key | `sk_live_…` — signs the widget URL (HMAC-SHA256) whenever `walletAddress` is pre-filled; without the signature the widget fails to load | No with address pre-fill; yes if the user pastes their own address (worse UX — do not present it as the polished path) |
 | 3 | Onramper — third, or instead of MoonPay | `apiKey` — public identifier in the widget URL | Signing key pair (production go-live) | Yes (widget) |
 | 4 | Banxa Referral — cheap fourth | None — only the `partnerRef` subdomain | `x-api-key` (API path only) | Yes (Referral) |
@@ -1002,9 +999,11 @@ Route selection prefers Relay / STON.fi where they cover the pair and
 are cheaper, and falls back to LI.FI otherwise; "cheaper" is the
 highest expected output for the same pair, ties break toward Relay,
 then STON.fi, then LI.FI, and only LIVE quotes compete — honest
-not-set-up / not-covered states never win. **Quotes first, execution
-only on the owner's separate go-ahead** — broadcast stays disabled on
-mainnet until then (§0.1). Nothing here signs, sends or bridges
+not-set-up / not-covered states never win. **Quotes first; execution
+approved but not implemented** — the owner approved swap execution on
+2026-11-27, but no execution path is built yet, and broadcast stays
+disabled on mainnet in code until that implementation lands and is
+verified (§0.1). Nothing here signs, sends or bridges
 anything.
 
 **The deciding constraint** is the same as for Buy (§12.1): Bawa is a
@@ -1076,7 +1075,7 @@ Relay waits on a proxy.
    page with USDT (TRC-20 `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`) and the
    production WebSocket accepts connections, but NO live TRON quote has
    been seen — TRON pairs are flagged live-unverified and are NOT
-   offered until one is. **TON signing is wired (signed BoC only, no broadcast):** `signStonfiOrderTonOffline` in `stonfi-signing.ts` signs an order's messages TON Connect-style with the existing Trust Wallet Core engine (V4R2, mode 3, `m/44'/607'/0'` for account 0) and returns the signed BoC only — verified 2026-11-27 against a real live orderTx (quoteId `7fc458a6…59e`), 15 tests. Quotes need no signature; execution still needs the owner's separate broadcast go-ahead — broadcast stays DISABLED on mainnet until then. Owner must still provide: destination-chain integrator address(es) and the fee choice (`integratorFeePips` / `referralValue` bps); nothing else.
+   offered until one is. **TON signing is wired (signed BoC only, no broadcast):** `signStonfiOrderTonOffline` in `stonfi-signing.ts` signs an order's messages TON Connect-style with the existing Trust Wallet Core engine (V4R2, mode 3, `m/44'/607'/0'` for account 0) and returns the signed BoC only — verified 2026-11-27 against a real live orderTx (quoteId `7fc458a6…59e`), 15 tests. Quotes need no signature; execution still needs its implementation — the owner approved swap execution on 2026-11-27, but no execution path is built yet; broadcast stays DISABLED on mainnet until then. Owner must still provide: destination-chain integrator address(es) and the fee choice (`integratorFeePips` / `referralValue` bps); nothing else.
 4. **LI.FI — stays as the fallback.** Already integrated and proven live
    in Bawa (0.1 ETH → POL). Apache-2.0, no key for basic use. Live
    `GET https://li.quest/v1/chains` 2026-11-26 returns **64 chains**,
@@ -1218,11 +1217,18 @@ The survey's verified facts, which Lane F implemented from:
   1919) (§4), type scale and floors (§2.3), spacing/stroke/radius/
   shadow/motion tokens (§2.4), and per-section placement guidance (§6).
   "Popular chains" was removed from the homepage by owner order and
-  must not be re-added (§6, §7).
+  must not be re-added (§6, §7). **Style B (owner pick 2026-11-27,
+  §0.3) supersedes the drawing-illustration direction the design
+  system was written under; the P1 style lane owns
+  `docs/DESIGN-SYSTEM.md` and is migrating it — this spec states the
+  direction, not the token list.**
 - Follow Doc 14 §5.1's **14-screen contract**. **Review is a Send state;
   Lock is an app state**, not extra screens. Required states: **loading,
   empty, stale, locked, gate-failed, error**.
-- Default visual direction: **Bawa Balanced**. Web foundation: **token-ui**
+- Default visual direction: **style B** (owner pick, 2026-11-27 —
+  polished financial style everywhere, illustration only for brand
+  moments, plus a tiny bounded paper/comic fraction; §0.3). The
+  "Bawa Balanced" default is superseded. Web foundation: **token-ui**
   (`consenlabs/token-ui`), **MIT**, vendored in `apps/web/src/ui/`.
   Android foundation: **Tether WDK Starter Kotlin**, **UI layer only**,
   **Apache-2.0**, in `apps/android`. The Android starter is a watch-only
@@ -1230,17 +1236,24 @@ The survey's verified facts, which Lane F implemented from:
   confirmation-policy evaluator for BTC/ETH only, no chain registry,
   no RPCs/tokens/prices/icons, no network permission, no data layer,
   no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP
-  8.2.2 + compileSdk 35 officially unsupported, no Android SDK/JDK on
-  the build machine. Android work is blocked on the JSON export in
-  §2.6 (data export first, toolchain in parallel, then the data
-  layer) — and on the owner resolving the mainnet-only vs testnet-only
-  tension (§2.6).
-- Four-colour cap (§0.3) governs the whole app; the `--qr-*` exception
-  is confined to the QR card and its PNG exporter.
-- Dead controls in a state where they cannot act are defects: show zero
-  where there is no wallet and no amount — never a Retry button with
-  nothing to retry. Keep the Assets screen's search filter bar in a
-  restyle; restructure around it (it is the wallet's filter rail).
+  8.2.2 + compileSdk 35. The JSON export in §2.6 exists (Step 1,
+  2026-11-27) and the toolchain is installed and proven
+  (`./gradlew assembleDebug` succeeds) — Android steps 3–6 are
+  BLOCKED (Step 3 lane's report removed by safety classifiers), not
+  the toolchain or the export — and the owner still has to resolve
+  the mainnet-only vs testnet-only tension (§2.6).
+- Style B governs the visual direction (§0.3); the four-colour cap no
+  longer governs new work. The `--qr-*` exception is confined to the
+  QR card and its PNG exporter, and the QR card is untouched by the
+  style work.
+- Dead controls in a state where they cannot act are defects: where a
+  row IS shown with no wallet and no amount, show zero — never a Retry
+  button with nothing to retry. On /assets, with no wallet the list is
+  hidden entirely (P0, token-gaps `33f1ff1`): the empty state says why
+  and offers Create / Import, with live prices one tap away on the
+  asset page — 43 rows of $0.00 are gone, not bannered over. Keep the
+  Assets screen's search filter bar in a restyle; restructure around
+  it (it is the wallet's filter rail).
 - Owner-approved foundations are not proof of integration — the adoption
   evidence is the starter builds, tests, and preview checks.
 - A first preview must use the REAL site's assets with only the
@@ -1282,9 +1295,9 @@ were re-measured from that tree (see the rows below).
 
 | Spec section | Traced to (file:line or survey) | Older guide state | Verdict |
 | --- | --- | --- | --- |
-| §0.1 broadcast disabled | `apps/web/src/wallet/send.ts:65-66`, `:987` | Correct in `AGENTS.md` §4/§8, `WALLET_BUILDER.md` | Verified |
+| §0.1 broadcast disabled | `apps/web/src/wallet/send.ts:65-66`, `:987`, `:1322` (`broadcastSigned` returns `{ status: 'disabled' }`) | Correct in `AGENTS.md` §4/§8, `WALLET_BUILDER.md`; this spec wrongly said "throws unconditionally" | Fixed in place (docs-currency Lane 2, 2026-11-27); swap execution approved by the owner 2026-11-27 but not implemented, broadcast stays disabled in code |
 | §0.2 bundle 6,000,000 | `CONSTRAINTS.md:40` (re-baselined by owner order 2026-11-26, commit `f5a5f19`); CI `ci.yml:194` | Was 4,185,000 at Lane G writing; re-baselined with the redesign to 4,215,000, then to 4,650,000 by owner order at `7a170f4`, then to 6,000,000 by owner order at `f5a5f19` | Fixed in place (guide-update pass, 2026-11-26; budget updated in the Phase 7 merge) |
-| §0.3 4-colour cap + `--qr-*` | `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Correct in DECISIONS §24; now stated in this spec | Verified |
+| §0.3 style B + `--qr-*` | Owner pick 2026-11-27 (style B, polished financial style; tiny paper/comic fraction kept); `docs/DECISIONS.md` §24 (`:1987`), palette exception `:2015` | Was the 4-colour cap (2026-11-20 drawing-illustration order) | Fixed in place (docs-currency Lane 2, 2026-11-27; the cap is superseded as the governing rule, the `--qr-*` exception stands, the current tree still carries the `--bawa-*` tokens while P1 migrates screens) |
 | §0.4 no fake data | `apps/web/src/wallet/price-fallbacks.ts` header; `chains.ts` `availableFor` | Correct | Verified |
 | §1 profiles (8) | `registry/profiles.json`; `WALLET_BUILDER.md` | `multichain-extended-wallet` 13-chain registry scope vs 87-chain app — noted as OPEN, not silently widened | Fixed (note updated 84 → 87) |
 | §2 87 chains | `apps/web/src/wallet/chains.ts` (`SUPPORTED_CHAINS`, 87 entries); `chains-expanded.ts:148`, `:1903` (`EXPANDED_CHAIN_COUNT = 65` — 45 EVM + 17 non-EVM (9 Cosmos + 8 other) + 3 OKX-reference in the same file); §2.5 (Cardano `:1821`, Kaspa `:1848`, Starknet `:1875`) | `WALLET_BUILDER.md` said "Chains: 13" and its generated table covered only 22; `docs/02-chains/README.md` §2 said SOL reference-only | Fixed in place (84 → 87; 62 → 65, guide-update pass) |
@@ -1293,6 +1306,7 @@ were re-measured from that tree (see the rows below).
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |
 | §2.4 XRP/Stellar/NEAR | Coordinator first-hand registry check, 2026-11-25 (survey) | Not previously recorded in the guide | Added |
 | §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1821` (cardano), `:1848` (kaspa), `:1875` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
+| §2.6 Android JSON export + toolchain | `registry/chains.json` (87 chains, 169 RPCs, 4 testnets, `sourceCommit 7efba14`), `registry/tokens.json` (21 tokens); `apps/web/scripts/generate-android-registry.mjs`; `./gradlew assembleDebug` BUILD SUCCESSFUL (clean, 32 s, 2026-11-27) | Was "Proposal (not yet implemented)" with no SDK/JDK on loud-stone | Fixed in place (docs-currency Lane 2, 2026-11-27; export Step 1 commit `58d85c5`; steps 3–6 BLOCKED, Step 3 report removed by safety classifiers) |
 | §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files — the 2,945 + 5 skipped figure is Lane C's loud-stone run, not reproduced in this sandbox, 2026-11-26; smoke 440; dinero.js dropped) |
 | §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:2`, `:82`; `auto-lock.ts:21-26` | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |
 | §5 offline signing | `apps/web/src/wallet/send.ts:2527-2530` (Solana); capability table in `WALLET_BUILDER.md` | Correct; SOL `@solana/web3.js` route added from code | Verified |
@@ -1307,13 +1321,13 @@ were re-measured from that tree (see the rows below).
 | §10 devnet / E1 | `apps/web/src/wallet/devnet.ts:30`; `docs/DECISIONS.md:399-410`; `CONSTRAINTS.md` E1 | Correct; E1 expiry 2027-02-20 stated | Verified |
 | §11 WalletConnect | Commit `7fb1c4a` (providers programme): screen + 3 modules + tests deleted; route/nav/CSP/deps removed; `security-settings.tsx` restoration note; `docs/DECISIONS.md` §26 (Lane C record, not updated by that commit — see report) | Was IMPLEMENTED (Lane C) | Removed in place (providers programme, 2026-11-26; Android Kotlin route kept as an unimplemented record) |
 | §12 Coinbase Onramp | `apps/web/src/wallet/onramp.ts` (URL builder, no SDK); `receive.tsx` `?buy=1` panel; `package.json` has NO `cbpay-js` | Not in the guide before | Implemented (Lane D; live purchase NOT verified — needs onboarding/keys) |
-| §12.1 Buy provider picker | `apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rank order, key copy, readiness); `receive.tsx:1025` renders the table | Not in the guide before | Implemented (providers programme, 2026-11-26; TON confirmed live for Ramp/MoonPay/Banxa, Mercuryo TON unconfirmed; no live purchase verified) |
-| §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, installed; live RFQ client + TON order signing wired, signed BoC only); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes + TON order signing (providers programme, 2026-11-26; STON.fi Lanes B/C, 2026-11-27; Relay proxy not configured; execution/broadcast needs the owner's separate go-ahead) |
+| §12.1 Buy provider picker | `apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rank order, key copy, readiness); `receive.tsx:1025` renders the table | Not in the guide before | Implemented (providers programme, 2026-11-26; TON confirmed live for Ramp/MoonPay/Banxa, Mercuryo TON unconfirmed; no live purchase verified). "Works today" wording qualified by docs-currency Lane 2, 2026-11-27: no provider key is configured, every provider shows "not set up yet" |
+| §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, installed; live RFQ client + TON order signing wired, signed BoC only); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes + TON order signing (providers programme, 2026-11-26; STON.fi Lanes B/C, 2026-11-27; Relay proxy not configured; execution approved by the owner 2026-11-27 but NOT implemented — broadcast stays disabled in code until it lands) |
 | §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup-shares.tsx`; `app.tsx` lazy route `/backup-shares`; `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only) |
 | §14 ERC-7730 | `apps/web/src/wallet/clear-signing.ts`; `clear-signing-snapshot.json` (1,523 B); `apps/web/src/wallet/caip.ts`; `send-review.tsx` | Not in the guide before | Implemented (Lane F) |
 | §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
 | §18 Lane H mining | Wallet-repos survey + agent-repos dirs (sandbox, read-only) + FEC skills (MIT) | Not in the guide before | Added |
-| §15 UI contract | `WALLET_BUILDER.md` "UI foundations and contract"; Doc 14 §5.1 | Correct | Verified |
+| §15 UI contract | `WALLET_BUILDER.md` "UI foundations and contract"; Doc 14 §5.1; owner style-B pick 2026-11-27 | Said "Bawa Balanced" + four-colour cap; /assets showed zero rows with no wallet | Fixed in place (docs-currency Lane 2, 2026-11-27: style B, /assets no-wallet list hidden per P0 `33f1ff1`) |
 | §16 verify/report | `AGENTS.md` §5/§6 | Correct | Verified |
 
 **Not verified first-hand (re-check pass, 2026-11-26; providers

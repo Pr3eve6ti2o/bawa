@@ -1,6 +1,6 @@
 # Create the example web wallet
 
-_Last verified: 2026-11-23, from a clean checkout of `panel-rebuild/readme-showcase-token` at `bded0df` (Node v22.23.4; `npm ci` exit 0; `npm run build` exit 0; preview served the app and the Welcome screen rendered in headless Chromium)._
+_Last verified: 2026-11-27, from a clean worktree of `panel-rebuild/token-gaps` at `33f1ff1` (Node v22.23.4; `npm ci` exit 0; `npm run build` exit 0, total JS 4,473,583; preview root 200, `wallet-core.wasm` 200; the Welcome screen rendered in headless Chromium with Create, Import and Watch-a-wallet options)._
 
 ## What you will have
 

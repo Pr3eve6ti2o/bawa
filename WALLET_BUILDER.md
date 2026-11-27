@@ -15,7 +15,7 @@ The profiles are validated and carry individual statuses: `hd-wallet-cli`, `bitc
 - `multichain-wallet` — Combined BTC, ETH, TRX and TON requests; TON remains generation-only and single-address.
 - `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only. The web wallet now wires 87 chains (22 curated + 65 expansion, including the 3 OKX-reference chains — see `docs/CREATE-THIS-SPEC.md` §2); this profile's registry entry was re-validated for the 87-chain set in the registry v4 update (commit `2a0fa75`, 2026-11-26; validator exits 0, 0 errors), so the wider set is no longer OPEN on this count.
 - `web-wallet` — Browser-wallet requests; token-ui foundation inspected in Phase 5 and adopted in Phase 6 (vendored in `apps/web/src/ui/`).
-- `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7). It is a watch-only UI starter, not a wallet: 4 derivation-path templates + a confirmation-policy evaluator for BTC/ETH only, no chain registry/RPCs/tokens/prices/icons, no network permission, no data layer, no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP 8.2.2 + compileSdk 35 officially unsupported, no Android SDK/JDK on the build machine. Android work is blocked on the JSON export (`registry/chains.json` + `registry/tokens.json`, completing the existing registry — see `docs/CREATE-THIS-SPEC.md` §2.6) and on the owner resolving the mainnet-only vs testnet-only tension (watch-only is mainnet-only by owner order 2026-11-23; the Android starter states testnet-only).
+- `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7). It is a watch-only UI starter, not a wallet: 4 derivation-path templates + a confirmation-policy evaluator for BTC/ETH only, no chain registry/RPCs/tokens/prices/icons, no network permission, no data layer, no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP 8.2.2 + compileSdk 35. The JSON export exists (`registry/chains.json` + `registry/tokens.json` — Step 1, 2026-11-27, commit `58d85c5`; see `docs/CREATE-THIS-SPEC.md` §2.6) and the toolchain is installed and proven on loud-stone (JDK 17.0.21.1, SDK with platforms android-34 + android-35; `./gradlew assembleDebug` BUILD SUCCESSFUL). Android steps 3–6 are BLOCKED (the Step 3 lane's report was removed by safety classifiers) — the block is the lane, not the toolchain or the export. The owner still has to resolve the mainnet-only vs testnet-only tension (watch-only is mainnet-only by owner order 2026-11-23; the Android starter states testnet-only).
 - `watch-only-wallet` — Public-data-only observation requests, without secret intake or signing; monitoring support still requires evidence.
 
 Profile selection is routing, not a capability claim. There are eight validated profiles. Do not invent a ninth profile or assume profiles can be combined without plan support.
@@ -101,7 +101,7 @@ guards the pin.
 ```sh
 npm run typecheck   # tsc --noEmit, 0 errors
 npm run build       # copy-wasm + tsc + vite build, 0 errors
-npm run test        # vitest run — 120 files; the 3,121-passed + 5-skipped figure is the loud-stone run at token-gaps `8a1d681` (2026-11-27), NOT reproduced in this sandbox on Node 22 (2026-11-26) — see docs/index.md
+npm run test        # vitest run — 120 files; the 3,216-passed + 5-skipped figure is the loud-stone run at token-gaps `33f1ff1` (2026-11-27, P0 verification), re-run first-hand by the docs-currency lane from a clean worktree at `33f1ff1`, exit 0 — see docs/index.md
 ```
 
 **Upstream sources.** The engine is Apache-2.0, upstream
@@ -190,7 +190,7 @@ Default to the mainnet-first direction without silently changing fixed policy. U
 Owner-approved foundations, inspected in Phase 5 and adopted in Phases 6–7:
 - Web: **token-ui** (`consenlabs/token-ui`), **MIT**, vendored in `apps/web/src/ui/`.
 - Android: **Tether WDK Starter Kotlin**, **UI layer only**, **Apache-2.0**, in `apps/android`.
-- Default visual direction: **Bawa Balanced**.
+- Default visual direction: **style B** (owner pick, 2026-11-27 — polished financial style everywhere, illustration only for brand moments, plus a tiny bounded paper/comic fraction; see `docs/CREATE-THIS-SPEC.md` §0.3). The "Bawa Balanced" default is superseded.
 
 Inspected in Phase 5 (see research/ui-candidates.md and registry/ui.json); owner approval is not proof of integration — the adoption evidence is the starter builds, tests and preview checks in Phases 6–7. Foundation pins are recorded in registry/ui.json and templates/web/UPSTREAM.md + templates/android/UPSTREAM.md.
 The UI/UX catalogue is installed: docs/UI-UX-CATALOGUE.md, docs/UI-TEMPLATE-REGISTRY.yaml and docs/ui-ux-assets/ (10 files).
