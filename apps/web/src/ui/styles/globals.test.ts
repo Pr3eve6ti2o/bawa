@@ -18,8 +18,10 @@ describe('globals.css', () => {
     // bawa-qr-cards). The --qr-* tokens are the one confined
     // exception to the 4-colour cap, used only by the Receive QR
     // card's four templates and its PNG exporter; see the --qr-*
-    // note in :root and scripts/palette-audit.mjs. No further
-    // literal may be added without a recorded decision in
+    // note in :root and scripts/palette-audit.mjs. Plus deep coral
+    // #C23A1D (Lane T2 F1/F4, 2026-11-28; decision in
+    // docs/DECISIONS.md §41) — link text and destructive text only.
+    // No further literal may be added without a recorded decision in
     // docs/DECISIONS.md.
     const hexLiterals = css.match(/#[0-9a-f]+\b/gi) ?? [];
     const palette = [...new Set(hexLiterals.map((hex) => hex.toUpperCase()))]
@@ -27,7 +29,7 @@ describe('globals.css', () => {
       .join(' ');
 
     expect(palette).toMatch(
-      /^#011F29 #023139 #0E2127 #111111 #121818 #1B2023 #2B2B2B #6B7280 #7A9491 #9CA3AF #FF6B4A #FFD93B #FFE9E4 #FFFDF7$/,
+      /^#011F29 #023139 #0E2127 #111111 #121818 #1B2023 #2B2B2B #6B7280 #7A9491 #9CA3AF #C23A1D #FF6B4A #FFD93B #FFE9E4 #FFFDF7$/,
     );
   });
 
