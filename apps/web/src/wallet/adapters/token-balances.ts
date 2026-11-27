@@ -1137,7 +1137,7 @@ export async function verifyTronToken(input: {
  * (see token-prices). Never throws: network failure also yields null.
  * Platform ids are CoinGecko's per-chain slugs — the canonical map is
  * COINGECKO_PLATFORM_FOR_CHAIN in wallet/tokens.ts (token-verify Lane A:
- * 60 EVM chains + solana/tron/the-open-network; 'metis-andromeda', not
+ * 60 EVM platforms + solana/tron/the-open-network; 'metis-andromeda', not
  * the nonexistent 'metis'). The endpoint accepts the lowercased
  * address for every platform — verified live 2026-11-23 for Solana,
  * TRON and TON (the friendly EQ… form lowercased still resolves).

@@ -187,7 +187,7 @@ export function assertIntentMatchesTransaction(
  * EVM-transaction chain (Lane 80-APP, 2026-11-24: the generalised EVM
  * signer covers all sixty — the 59 0x chains plus Ronin — with the
  * chain's own key; the 60'-path chains share the ETH key, the five
- * non-60 EVM chains use their own coin path). Filecoin, SOL, LTC,
+ * non-60'-path EVM chains use their own coin path). Filecoin, SOL, LTC,
  * DOGE and the non-EVM expanded chains have no signer here.
  */
 export function isPartialSignerChain(value: unknown): value is ChainId {

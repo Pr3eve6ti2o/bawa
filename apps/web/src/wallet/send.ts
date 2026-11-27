@@ -1096,7 +1096,7 @@ export async function verifyEthSignedTx(
  * chain, so the fingerprint binds it. The signing key is the chain's
  * own key (createPartialSigner takes the actual chain, Lane 80-APP,
  * 2026-11-24): the 60'-path chains share the ETH key, while the five
- * non-60 EVM chains — Filecoin (461'), Theta (500'), IoTeX (304'),
+ * non-60'-path EVM chains — Filecoin (461'), Theta (500'), IoTeX (304'),
  * Rootstock (137'), Ethereum Classic (61') — sign with their own coin
  * path. The transaction is a legacy EIP-155 transfer (21000 gas, no
  * data); v is 27/28 + 2 * chainId. Devnet: only Ethereum Sepolia
@@ -2238,7 +2238,7 @@ export async function verifyEvmTokenSignedTx(
  * chain id comes from the registry, the from address from
  * deriveAddresses()[chain], and the signing key is the chain's own key
  * (Lane 80-APP: the 60'-path chains share the ETH key, the five
- * non-60 EVM chains use their own coin path). The signing intent binds
+ * non-60'-path EVM chains use their own coin path). The signing intent binds
  * the contract, the token amount, the nonce and the recipient — the
  * recipient is decoded from the transfer calldata at signing time and
  * checked against the intent (and again by verifyEvmTokenSignedTx
@@ -2391,7 +2391,7 @@ export async function signEvmTokenOffline(
 
   const digest = hexToBytes(keccak256(unsignedHex));
   // The chain's own key signs (Lane 80-APP): the 60'-path chains share
-  // the ETH key, the five non-60 EVM chains use their own coin path.
+  // the ETH key, the five non-60'-path EVM chains use their own coin path.
   const signer = await createPartialSigner(mnemonic, passphrase, chain);
   const sig = await signer.signDigest(digest);
   const r = bytesToHex(sig.slice(0, 32));

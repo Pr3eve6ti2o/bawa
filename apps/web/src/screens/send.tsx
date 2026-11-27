@@ -126,8 +126,8 @@ import type { ChainId } from '../engine/boundary';
 // produce a valid wire transaction — see wallet/send.ts).
 // SIGNING_CHAINS gates NATIVE sends only. Token sends are gated
 // separately, on tokenStandardFor(chain): every chain with a token
-// standard (all 60 EVM chains, TRON, TON, Solana) signs token
-// transfers offline. (C-8: 60 is the EVM chain count; 57 is the
+// standard (all 60 EVM-transaction chains, TRON, TON, Solana) signs token
+// transfers offline. (C-8: 60 is the EVM-transaction chain count; 57 is the
 // count sharing the default derivation path, EVM_PATH in
 // wallet/chains.ts — the two numbers count different things.)
 // Chains with no token standard (BTC, LTC, DOGE)
@@ -2400,7 +2400,7 @@ export function SendScreen() {
               <a
                 href={devnetBroadcast.explorerUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-block break-all font-medium text-primary underline underline-offset-4"
               >
                 {devnetBroadcast.explorerUrl}

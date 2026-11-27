@@ -43,8 +43,8 @@
 //   address: MoonPay omits walletAddress, Onramper omits wallets /
 //   networkWallets (Onramper's own docs: passing them without a
 //   server-side signature gets checkout requests rejected), Mercuryo
-//   omits the address (and its signature scheme is unresolved:
-//   SHA-512 vs HMAC-SHA512 — open verification #5).
+//   omits the address (its signature scheme is plain SHA-512 —
+//   verified, closing verification #5).
 // - No Transak builder at all: since the 2026-11-16 migration the
 //   widget URL is minted server-side with the API secret — there is
 //   no client-side path.
@@ -630,10 +630,10 @@ type BuildMercuryoUrlOptions = {
 /**
  * The Mercuryo redirect URL — WITHOUT the address, deliberately.
  * Address pre-fill needs a server-generated signature with the
- * widget secret, and the exact scheme is unresolved (SHA-512 of
- * address + secret vs HMAC-SHA512 — open verification #5). The
- * address is left for the user to paste inside the widget; the row
- * copy says so plainly. Throws when the widget ID is blank.
+ * widget secret; the scheme is plain SHA-512 (SHA-512 of address +
+ * secret — verification #5 closed). The address is left for the
+ * user to paste inside the widget; the row copy says so plainly.
+ * Throws when the widget ID is blank.
  */
 export function buildMercuryoUrl({ widgetId }: BuildMercuryoUrlOptions): string {
   if (widgetId.trim() === '') {

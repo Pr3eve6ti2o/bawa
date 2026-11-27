@@ -154,7 +154,7 @@ What each part means, in the wallet's own terms:
   Watch-only is mainnet-only.
 - **9 adapter modules** — one per family (Bitcoin, Ethereum, TRON,
   TON, Solana, Litecoin, Dogecoin) plus the generic EVM adapter
-  (`evm.ts`), which serves all 60 EVM chains, and `token-balances`
+  (`evm.ts`), which serves all 60 EVM-transaction chains, and `token-balances`
   for token reads — each talking to public RPC endpoints
   (up to two per chain in the registry, with fallbacks; a custom
   endpoint can be added per chain, at most three in total). The full

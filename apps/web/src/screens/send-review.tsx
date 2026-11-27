@@ -286,7 +286,7 @@ export function SendReview({
           </>
         ) : (
           <>
-            <p className="font-semibold">Sending is switched off</p>
+            <p className="font-semibold">Sending is off until approved. Offline signing only.</p>
             <p className="break-words text-base">{disabledReason}</p>
           </>
         )}

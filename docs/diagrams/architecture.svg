@@ -83,7 +83,7 @@
   <rect class="sun" x="30" y="328" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
   <text class="t" x="48" y="333" font-size="15.5" font-weight="700">Balances — public RPCs</text>
   <text class="b" x="30" y="349" font-size="11">9 adapter modules: btc eth evm trx ton sol ltc doge</text>
-  <text class="b" x="30" y="362" font-size="11">+ token-balances · eth.ts + evm.ts serve the 60 EVM chains</text>
+  <text class="b" x="30" y="362" font-size="11">+ token-balances · eth.ts + evm.ts serve the 60 EVM-transaction chains</text>
   <text class="b" x="30" y="375" font-size="11">resolveRpcEndpoints(chain) — up to 3 per chain</text>
   <text class="b" x="30" y="388" font-size="11">refreshBalances() — a failed fetch shows as unavailable</text>
 
