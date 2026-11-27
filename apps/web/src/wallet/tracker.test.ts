@@ -128,6 +128,56 @@ describe('tracker (offline)', () => {
     expect(parseBtcTx(BTC_TX, tipHeight)).toMatchObject({ ...BTC_FIELDS, confirmations });
   });
 
+  it('excludes change from the BTC amount and takes "to" from the recipient output (A-9)', () => {
+    const sender = 'bc1qsender0000000000000000000000000000000000';
+    const recipient = 'bc1qrecipient0000000000000000000000000000000';
+    const tx = {
+      ...BTC_TX,
+      fee: 10000,
+      vin: [
+        {
+          ...BTC_TX.vin[0],
+          prevout: { scriptpubkey_address: sender, value: 100000 },
+        },
+      ],
+      vout: [
+        { scriptpubkey_address: sender, value: 40000 },
+        { scriptpubkey_address: recipient, value: 50000 },
+      ],
+    };
+    expect(parseBtcTx(tx, 976624)).toMatchObject({
+      ...BTC_FIELDS,
+      amountBaseUnits: '50000',
+      feeBaseUnits: '10000',
+      from: sender,
+      to: recipient,
+    });
+  });
+
+  it('reports a zero BTC amount for a self-send whose outputs are all change (A-9)', () => {
+    const sender = 'bc1qsender0000000000000000000000000000000000';
+    const tx = {
+      ...BTC_TX,
+      fee: 10000,
+      vin: [
+        {
+          ...BTC_TX.vin[0],
+          prevout: { scriptpubkey_address: sender, value: 100000 },
+        },
+      ],
+      vout: [{ scriptpubkey_address: sender, value: 90000 }],
+    };
+    expect(parseBtcTx(tx, 976624)).toMatchObject({
+      amountBaseUnits: '0',
+      from: sender,
+      to: sender,
+    });
+  });
+
+  it('reports unknown confirmations when the tip is behind the block (A-9)', () => {
+    expect(parseBtcTx(BTC_TX, 100)).toMatchObject({ confirmations: null });
+  });
+
   it('rejects wrong-shaped BTC and empty TRX transactions', () => {
     expect(parseBtcTx({ nope: true }, null)).toBeNull();
     expect(parseTrxTx({})).toBeNull();

@@ -26,6 +26,7 @@ import {
 import {
   assertIntentMatchesTransaction,
   createTransactionIntent,
+  type SigningIntent,
 } from './signing-intent';
 import { chainConfig, pathFor } from './chains';
 import { getAdapterForMode, getDevnetAdapter } from './adapters';
@@ -71,7 +72,7 @@ import { tokenStandardFor, type TokenRecord } from './tokens';
 /** Devnet threading (temporary devnet mode): pass `{ devnet: true }` to
  * use the devnet derivation, the devnet adapters and the devnet
  * broadcast. Mainnet behaviour is unchanged when the option is absent. */
-export type SendDevnetOptions = {
+type SendDevnetOptions = {
   devnet?: boolean;
   /**
    * The signer's message hash (0x-prefixed hex), when the signer
@@ -79,9 +80,18 @@ export type SendDevnetOptions = {
    * devnet broadcast identifies the transaction by this hash instead.
    */
   messageHash?: string;
+  /**
+   * A-7: the intent created at review time in the UI, from the exact
+   * details the user reviewed (recipient, amount, chain, token). The
+   * EVM, EVM-token, SOL and SPL signers assert it against the
+   * transaction being signed before any key is used; a mismatch
+   * refuses with `intent-mismatch`. Absent for direct callers — the
+   * signer's self-built intent below still runs as the fallback.
+   */
+  intent?: SigningIntent;
 };
 
-export type RecipientValidation =
+type RecipientValidation =
   | { ok: true }
   | { ok: false; reason: string };
 
@@ -269,7 +279,7 @@ export type SendPreview =
       signingErrorCode?: number;
     };
 
-export type SendFailureCode =
+type SendFailureCode =
   | 'invalid-input'
   | 'invalid-mnemonic'
   | 'insufficient-funds'
@@ -462,6 +472,31 @@ function sendPreviewOk(
   };
 }
 
+/**
+ * Native-send fee coverage (A-1): the amount alone fitting the
+ * balance is not enough — the fee comes out of the same balance.
+ * Mirrors previewTokenSendAmount's insufficient-gas check. Returns
+ * the failure, or null when amount + fee fits. Callers with an
+ * unknown fee (TON) skip this: there is no fee number to check.
+ */
+function sendPreviewFeeShortfall(
+  balanceBaseUnits: string,
+  amountBaseUnits: string,
+  feeBaseUnits: string,
+): Extract<SendPreview, { ok: false }> | null {
+  if (
+    BigInt(amountBaseUnits) + BigInt(feeBaseUnits) >
+    BigInt(balanceBaseUnits)
+  ) {
+    return {
+      ok: false,
+      code: 'insufficient-gas',
+      reason: 'Amount plus the estimated fee exceeds available balance.',
+    };
+  }
+  return null;
+}
+
 export async function previewSendAmount(
   chain: ChainId,
   fromAddress: string,
@@ -500,6 +535,12 @@ export async function previewSendAmount(
   if (chain === 'ton') {
     const fee = await adapter.estimateFee();
     if (fee.status === 'ok') {
+      const shortfall = sendPreviewFeeShortfall(
+        balance.data.valueBaseUnits,
+        amount,
+        fee.data.feeBaseUnits,
+      );
+      if (shortfall !== null) return shortfall;
       return sendPreviewOk(amount, fee.data.feeBaseUnits, fee.data.note);
     }
     return sendPreviewOk(
@@ -532,19 +573,31 @@ export async function previewSendAmount(
       devnet,
     );
     if (!planned.ok) return planned;
+    const shortfall = sendPreviewFeeShortfall(
+      balance.data.valueBaseUnits,
+      amount,
+      planned.feeBaseUnits,
+    );
+    if (shortfall !== null) return shortfall;
     return sendPreviewOk(amount, planned.feeBaseUnits, `Planned fee at ${fee.data.feeBaseUnits} sat/vB from the live UTXO set.`);
   }
 
+  const shortfall = sendPreviewFeeShortfall(
+    balance.data.valueBaseUnits,
+    amount,
+    fee.data.feeBaseUnits,
+  );
+  if (shortfall !== null) return shortfall;
   return sendPreviewOk(amount, fee.data.feeBaseUnits, fee.data.note);
 }
 
-export type SimulationError = {
+type SimulationError = {
   code: string;
   message: string;
   chain: ChainId;
 };
 
-export type SimulateSendResult =
+type SimulateSendResult =
   | {
       ok: true;
       amountBaseUnits: string;
@@ -655,11 +708,16 @@ export async function simulateSend(
     };
   }
 
-  // BTC/TRX freshness checks (S4b): UTXO coverage and account inputs.
-  // Every other chain falls through to the generic nonce/seqno
-  // freshness check below — including the EVM chains (Lane 80-APP:
-  // the old condition listed eth/bsc by name, which would have let a
-  // new EVM chain skip the nonce check and return the preview early).
+  // Freshness checks for the non-EVM, non-TON chains (S4b): BTC plans
+  // the fee against the live UTXO set, TRX reads the live account,
+  // SOL reads a live blockhash, and the remaining UTXO chains (LTC
+  // today) check live UTXO coverage of the amount. DOGE's inputs are
+  // honestly unavailable, so its check fails closed — but its preview
+  // already refuses, so that path is unreachable from the UI today.
+  // EVM and TON fall through to the generic nonce/seqno freshness
+  // check below (Lane 80-APP: the old condition listed eth/bsc by
+  // name, which would have let a new EVM chain skip the nonce check
+  // and return the preview early).
   if (!isEvmTxChain(chain) && chain !== 'ton') {
     const adapter = getAdapterForMode(chain, devnet);
     if (!adapter) {
@@ -747,6 +805,58 @@ export async function simulateSend(
         }
       }
 
+      if (chain === 'sol') {
+        // SOL has no nonce/seqno: freshness is a live blockhash.
+        // Signing re-fetches one, but simulation must not pass on a
+        // dead RPC. Same check as simulateTokenSend.
+        const inputs = await adapter.getTxInputs(from);
+        if (
+          inputs.status !== 'ok' ||
+          inputs.data.kind !== 'blockhash' ||
+          inputs.data.blockhash.length === 0
+        ) {
+          const reason = 'The Solana adapter did not return a live blockhash.';
+          return simulationFailed(
+            chain,
+            inputs.status === 'ok'
+              ? { status: 'unavailable', reason }
+              : inputs,
+            'bad-blockhash',
+            reason,
+          );
+        }
+        return preview;
+      }
+
+      // Any other chain reaching here is a UTXO chain (LTC today):
+      // the live UTXO set must cover the amount. No fee plan exists
+      // for these chains, so this checks the amount only — the fee
+      // is covered by the preview's amount + fee check above.
+      const inputs = await adapter.getTxInputs(from);
+      if (inputs.status !== 'ok' || inputs.data.kind !== 'utxo') {
+        const reason = `The ${chain} adapter did not return live transaction inputs.`;
+        return simulationFailed(
+          chain,
+          inputs.status === 'ok'
+            ? { status: 'unavailable', reason }
+            : inputs,
+          'adapter-unavailable',
+          reason,
+        );
+      }
+      const available = inputs.data.utxos.reduce(
+        (total, utxo) => total + BigInt(utxo.valueBaseUnits),
+        BigInt(0),
+      );
+      if (available < BigInt(preview.amountBaseUnits)) {
+        return simulationFailed(
+          chain,
+          undefined,
+          'insufficient-funds',
+          `The ${chain} UTXOs no longer cover the amount.`,
+        );
+      }
+
       return preview;
     } catch (cause: unknown) {
       const code =
@@ -754,7 +864,11 @@ export async function simulateSend(
       const reason =
         chain === 'btc'
           ? 'Unable to refresh BTC inputs and fees.'
-          : 'Unable to refresh TRX account inputs.';
+          : chain === 'trx'
+            ? 'Unable to refresh TRX account inputs.'
+            : chain === 'sol'
+              ? 'Unable to refresh the Solana blockhash.'
+              : `Unable to refresh ${chain} transaction inputs.`;
       return simulationFailed(
         chain,
         {
@@ -802,7 +916,7 @@ export async function simulateSend(
   return preview;
 }
 
-export type EthSignedTx =
+type EthSignedTx =
   | { ok: true; signedTxHex: `0x${string}`; txHash: string; from: string }
   | SendFailure;
 
@@ -879,7 +993,7 @@ export function tronAddressToBytes(address: string): Uint8Array {
   return full.slice(0, 21);
 }
 
-export type EthSignIntent = {
+type EthSignIntent = {
   from: string;
   to: string;
   amountBaseUnits: string;
@@ -1063,6 +1177,29 @@ export async function signEvmOffline(
           ? 'Invalid mnemonic.'
           : `Failed to sign ${chainConfig(chain).displayName} transaction offline.`,
     };
+  }
+
+  // A-7: when the UI passes the intent created at review time, the
+  // reviewed recipient and amount must match the transaction being
+  // signed — a recipient or amount swapped between review and
+  // signing refuses here, before any key is used. (The sequence is
+  // not pinned by a review intent: it is fetched live at signing.
+  // See signing-intent.ts.)
+  if (options?.intent !== undefined) {
+    try {
+      assertIntentMatchesTransaction(options.intent, {
+        chain,
+        to: toAddress,
+        amountBaseUnits,
+        sequence: nonce,
+      });
+    } catch {
+      return {
+        ok: false,
+        code: 'intent-mismatch',
+        reason: 'Transaction does not match the approved intent.',
+      };
+    }
   }
 
   const intent = createTransactionIntent(chain, toAddress, amountBaseUnits, nonce);
@@ -1256,14 +1393,14 @@ export function markBroadcastUnknown(txHash: string): {
   };
 }
 
-export interface BtcSigningUtxo {
+interface BtcSigningUtxo {
   /** Display-order txid hex (64 characters), as returned by the adapter. */
   txid: string;
   vout: number;
   valueBaseUnits: string;
 }
 
-export type BtcSignedTx =
+type BtcSignedTx =
   | {
       ok: true;
       signedTxHex: `0x${string}`;
@@ -1283,6 +1420,15 @@ export type BtcSignedTx =
  * to the from address (P2WPKH): this wallet only receives at its own
  * account-0 address in this lane, so the input script is derived from it.
  */
+/**
+ * Standard dust threshold for a Bitcoin change output (546 sats, the
+ * P2PKH dust limit — the largest standard dust value). Trust Wallet
+ * Core drops the change output when the change is zero or at most
+ * dust, folding it into the fee; the post-sign verification must
+ * accept that (A-3).
+ */
+const BTC_DUST_SATS = 546;
+
 export async function signBtcOffline(
   mnemonic: string,
   passphrase: string,
@@ -1429,6 +1575,17 @@ export async function signBtcOffline(
                   hexOf(o.script) === destHex &&
                   Number(o.value) === amount,
               );
+              const plannedChange = Number(plan.change);
+              if (
+                !Number.isSafeInteger(plannedChange) ||
+                plannedChange < 0
+              ) {
+                return {
+                  ok: false as const,
+                  code: 'signing-failed',
+                  reason: 'Signed outputs do not match the plan.',
+                };
+              }
               const changeOut = outs.find(
                 (o) =>
                   o.script !== null &&
@@ -1436,9 +1593,16 @@ export async function signBtcOffline(
                   o.value !== null &&
                   o.value !== undefined &&
                   hexOf(o.script) === changeHex &&
-                  Number(o.value) === Number(plan.change),
+                  Number(o.value) === plannedChange,
               );
-              if (!destOut || !changeOut) {
+              // Trust Wallet Core drops the change output when the
+              // change is zero or dust (it is folded into the fee),
+              // so a missing change output is a mismatch only when
+              // the plan expected a real change output above dust.
+              if (
+                !destOut ||
+                (changeOut === undefined && plannedChange > BTC_DUST_SATS)
+              ) {
                 return {
                   ok: false as const,
                   code: 'signing-failed',
@@ -1469,7 +1633,7 @@ export async function signBtcOffline(
   }
 }
 
-export interface TrxBlockHeader {
+interface TrxBlockHeader {
   timestamp: number;
   number: number;
   txTrieRoot: string;
@@ -1478,7 +1642,7 @@ export interface TrxBlockHeader {
   witnessAddress: string;
 }
 
-export type TrxSignedTx =
+type TrxSignedTx =
   | { ok: true; signedTxJson: string; txId: string; from: string }
   | SendFailure;
 
@@ -1615,19 +1779,19 @@ export async function signTrxOffline(
   }
 }
 
-export type TonSignedTx =
+type TonSignedTx =
   | { ok: true; signedBocBase64: string; messageHash: string; from: string }
   | SendFailure;
 
 export type TonWalletVersion = 'v4r2' | 'v3r2' | 'v4' | 'v5r1';
 
 /** Domain-binding context handed to the external signer. */
-export type SignatureDomain = {
+type SignatureDomain = {
   purpose: 'ton-transfer';
   walletVersion: TonWalletVersion;
 };
 
-export type TonExternalSignRequest = {
+type TonExternalSignRequest = {
   chain: 'ton';
   from: string;
   to: string;
@@ -1638,7 +1802,7 @@ export type TonExternalSignRequest = {
   domain: SignatureDomain;
 };
 
-export type TonExternalSignResult = {
+type TonExternalSignResult = {
   signedBocBase64: string;
   messageHash: string;
 };
@@ -1649,7 +1813,7 @@ export type TonExternalSignResult = {
  * external signer cannot be handed a hash to sign — it signs the whole
  * transfer and returns the signed BOC.
  */
-export type TonExternalSigner = (
+type TonExternalSigner = (
   request: TonExternalSignRequest,
 ) => Promise<TonExternalSignResult>;
 
@@ -1912,13 +2076,13 @@ export async function signTonOffline(
 export const ERC20_GAS_LIMIT = 100000n;
 
 /** Upper-bound energy for a TRC-20 transfer, for the fee estimate (an existing holder costs ~14k energy, a new holder more; the estimate is labelled an upper bound). */
-export const TRC20_ENERGY_ESTIMATE = 65000n;
+const TRC20_ENERGY_ESTIMATE = 65000n;
 
 /** Fee-limit cap for a TRC-20 transfer transaction (100 TRX; a cap, not a charge). */
-export const TRC20_FEE_LIMIT_SUN = 100000000n;
+const TRC20_FEE_LIMIT_SUN = 100000000n;
 
 /** TON attached to a Jetton transfer message (0.05 TON — the TON docs' Jetton-transfer example amount). */
-export const JETTON_ATTACHED_NANO = '50000000';
+const JETTON_ATTACHED_NANO = '50000000';
 
 const ERC20_TRANSFER_SELECTOR = '0xa9059cbb';
 
@@ -1954,7 +2118,7 @@ function uint256BigEndian(decimal: string): Uint8Array {
   return hexToBytes(`0x${hex}`);
 }
 
-export type EvmTokenSignIntent = {
+type EvmTokenSignIntent = {
   from: string;
   /** Token contract the transfer calls. */
   contract: string;
@@ -2075,8 +2239,10 @@ export async function verifyEvmTokenSignedTx(
  * deriveAddresses()[chain], and the signing key is the chain's own key
  * (Lane 80-APP: the 60'-path chains share the ETH key, the five
  * non-60 EVM chains use their own coin path). The signing intent binds
- * the contract, the token amount and the nonce — the recipient lives
- * inside the calldata and is checked by verifyEvmTokenSignedTx.
+ * the contract, the token amount, the nonce and the recipient — the
+ * recipient is decoded from the transfer calldata at signing time and
+ * checked against the intent (and again by verifyEvmTokenSignedTx
+ * after signing).
  * Devnet: only Ethereum Sepolia exists, as for native sends. Nothing
  * here broadcasts.
  */
@@ -2159,18 +2325,40 @@ export async function signEvmTokenOffline(
     };
   }
 
+  const recipient = normalizeEvmAddress(to).toLowerCase();
   const intent = createTransactionIntent(
     chain,
     tokenContract,
     amountBaseUnits,
     nonce,
+    recipient,
   );
   try {
+    // The recipient lives in the transfer calldata, not in the tx
+    // `to` (that is the token contract): decode it from the calldata
+    // that is actually being signed and bind the intent to it. The
+    // calldata stores the address lowercased, so the intent
+    // recipient is lowercased too.
+    const calldataWord = calldata.slice(10, 74);
+    const calldataRecipient = `0x${calldataWord.slice(-40)}`.toLowerCase();
+    // A-7: the review-time intent, when passed, must match the
+    // transaction being signed — same binding as the native EVM
+    // signer, with the recipient read back from the calldata.
+    if (options?.intent !== undefined) {
+      assertIntentMatchesTransaction(options.intent, {
+        chain,
+        to: tokenContract,
+        amountBaseUnits,
+        sequence: nonce,
+        recipient: calldataRecipient,
+      });
+    }
     assertIntentMatchesTransaction(intent, {
       chain,
       to: tokenContract,
       amountBaseUnits,
       sequence: nonce,
+      recipient: calldataRecipient,
     });
   } catch {
     return {
@@ -2227,7 +2415,7 @@ export async function signEvmTokenOffline(
   }
 }
 
-export type Trc20SignedTx = TrxSignedTx;
+type Trc20SignedTx = TrxSignedTx;
 
 /**
  * Offline TRC-20 transfer signing (mirrors signTrxOffline). Wallet
@@ -2365,7 +2553,7 @@ export async function signTrc20Offline(
   }
 }
 
-export type JettonSignedTx = TonSignedTx;
+type JettonSignedTx = TonSignedTx;
 
 /**
  * Offline TON Jetton transfer signing (mirrors signTonOffline's V4R2
@@ -2559,7 +2747,7 @@ export async function signJettonOffline(
 // the canonical implementation. Broadcast stays disabled: these
 // functions only produce a signed transaction, never submit one.
 
-export type SolSignedTx =
+type SolSignedTx =
   | {
       ok: true;
       /** Serialised signed transaction, standard base64 (wire format). */
@@ -2570,7 +2758,7 @@ export type SolSignedTx =
     }
   | SendFailure;
 
-export type SplSignedTx =
+type SplSignedTx =
   | {
       ok: true;
       /** Serialised signed transaction, standard base64 (wire format). */
@@ -2583,7 +2771,7 @@ export type SplSignedTx =
     }
   | SendFailure;
 
-export type SignSolOptions = SendDevnetOptions & {
+type SignSolOptions = SendDevnetOptions & {
   /**
    * The vault account to sign from (default 0), mirroring
    * signTonOffline: the key path and the from address follow it, so a
@@ -2790,6 +2978,27 @@ export async function signSolOffline(
       reason: 'Failed to sign Solana transaction offline.',
     };
   }
+  // A-7: the review-time intent, when passed, must match the
+  // transaction being signed — a recipient or amount swapped between
+  // review and signing refuses here, before any key is used. (The
+  // sequence is '' for SOL on both sides.)
+  if (options?.intent !== undefined) {
+    try {
+      assertIntentMatchesTransaction(options.intent, {
+        chain: 'sol',
+        to,
+        amountBaseUnits,
+        sequence: '',
+      });
+    } catch {
+      return {
+        ok: false,
+        code: 'intent-mismatch',
+        reason: 'Transaction does not match the approved intent.',
+      };
+    }
+  }
+
   const intent = createTransactionIntent('sol', to, amountBaseUnits, '');
   try {
     assertIntentMatchesTransaction(intent, {
@@ -3007,28 +3216,16 @@ export async function signSplOffline(
       reason: 'Invalid Solana token account address.',
     };
   }
-  // Mirror signEvmTokenOffline: the intent pins the token contract
-  // (here the mint), not the recipient owner — the recipient lives
-  // inside the transfer instruction.
-  const intent = createTransactionIntent('sol', mint, amountBaseUnits, '');
-  try {
-    assertIntentMatchesTransaction(intent, {
-      chain: 'sol',
-      to: mint,
-      amountBaseUnits,
-      sequence: '',
-    });
-  } catch {
-    return {
-      ok: false,
-      code: 'intent-mismatch',
-      reason: 'Transaction does not match the approved intent.',
-    };
-  }
+  // The intent pins the recipient owner as well as the mint: the
+  // recipient lives in the transfer instruction's destination token
+  // account, so the assert below reads it back from the built
+  // instruction instead of trusting the input twice.
+  const intent = createTransactionIntent('sol', mint, amountBaseUnits, '', to);
   const transaction = new SolTransaction({
     feePayer: fromPubkey,
     recentBlockhash: blockhash,
   });
+  let transferInstruction: SolInstruction;
   try {
     if (!recipientAtaExists) {
       transaction.add(
@@ -3040,21 +3237,53 @@ export async function signSplOffline(
         ),
       );
     }
-    transaction.add(
-      createTransferCheckedInstruction(
-        new SolPublicKey(senderAta),
-        mintPubkey,
-        new SolPublicKey(recipientAta),
-        fromPubkey,
-        BigInt(amountBaseUnits),
-        decimals,
-      ),
+    transferInstruction = createTransferCheckedInstruction(
+      new SolPublicKey(senderAta),
+      mintPubkey,
+      new SolPublicKey(recipientAta),
+      fromPubkey,
+      BigInt(amountBaseUnits),
+      decimals,
     );
+    transaction.add(transferInstruction);
   } catch {
     return {
       ok: false,
       code: 'invalid-input',
       reason: 'Invalid SPL transfer input.',
+    };
+  }
+  try {
+    // TransferChecked keys are [source, mint, destination, owner]:
+    // the destination must be the recipient's token account for
+    // this mint, or the instruction does not pay the intent's
+    // recipient.
+    const destination = transferInstruction.keys[2]?.pubkey.toBase58();
+    // A-7: the review-time intent, when passed, must match the
+    // transaction being signed — the recipient is the owner of the
+    // destination token account, read back from the built
+    // instruction, same as the fallback below.
+    if (options?.intent !== undefined) {
+      assertIntentMatchesTransaction(options.intent, {
+        chain: 'sol',
+        to: mint,
+        amountBaseUnits,
+        sequence: '',
+        recipient: destination === recipientAta ? to : '',
+      });
+    }
+    assertIntentMatchesTransaction(intent, {
+      chain: 'sol',
+      to: mint,
+      amountBaseUnits,
+      sequence: '',
+      recipient: destination === recipientAta ? to : '',
+    });
+  } catch {
+    return {
+      ok: false,
+      code: 'intent-mismatch',
+      reason: 'Transaction does not match the approved intent.',
     };
   }
   const signed = await signSolTransaction(
@@ -3082,7 +3311,7 @@ export async function signSplOffline(
 // fee the signer must not exceed, and the simulate re-checks it
 // against live inputs before any key is used.
 
-export type TokenSendDeps = {
+type TokenSendDeps = {
   fetchTokenBalance?: typeof fetchTokenBalance;
   /**
    * Solana-only, injectable for tests: whether an address holds an
@@ -3093,7 +3322,7 @@ export type TokenSendDeps = {
   fetchSolanaRentExemption?: typeof fetchSolanaMinimumBalanceForRentExemption;
 };
 
-export type TokenFeeEstimate =
+type TokenFeeEstimate =
   | {
       ok: true;
       /** Native fee (gas / energy / SOL signatures / '0' for TON-unknown). */
@@ -3382,7 +3611,7 @@ export async function previewTokenSendAmount(
   };
 }
 
-export type SimulateTokenSendResult =
+type SimulateTokenSendResult =
   | {
       ok: true;
       amountBaseUnits: string;

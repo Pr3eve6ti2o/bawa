@@ -95,6 +95,11 @@ import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
+import {
+  createTransactionIntent,
+  type SigningIntent,
+} from '../wallet/signing-intent';
+import { normalizeEvmAddress } from '../wallet/adapters/evm';
 import { ChainSearchSelect, SEND_RECENT_CHAINS_KEY } from './chain-search-select';
 import type { ClearSigningInput } from '../wallet/clear-signing';
 import {
@@ -116,7 +121,10 @@ import type { ChainId } from '../engine/boundary';
 // SIGNING_CHAINS gates NATIVE sends only. Token sends are gated
 // separately, on tokenStandardFor(chain): every chain with a token
 // standard (all 60 EVM chains, TRON, TON, Solana) signs token
-// transfers offline. Chains with no token standard (BTC, LTC, DOGE)
+// transfers offline. (C-8: 60 is the EVM chain count; 57 is the
+// count sharing the default derivation path, EVM_PATH in
+// wallet/chains.ts — the two numbers count different things.)
+// Chains with no token standard (BTC, LTC, DOGE)
 // cannot send tokens at all. Filecoin, the non-EVM expanded chains,
 // LTC and DOGE have no native send: the screen says so honestly
 // instead of offering one.
@@ -230,6 +238,10 @@ export function SendScreen() {
   );
   const [amount, setAmount] = useState('');
   const [preview, setPreview] = useState<SendPreview | TokenSendPreview | null>(null);
+  // A-7: the signing intent created when the send entered review,
+  // from the exact details the review screen shows. Null outside a
+  // review; handleSign refuses to sign without one.
+  const [reviewIntent, setReviewIntent] = useState<SigningIntent | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [signState, setSignState] = useState<SignState>({ status: 'idle' });
   const [approvalStage, setApprovalStage] = useState<SendApprovalStage>('review');
@@ -450,6 +462,7 @@ export function SendScreen() {
     setRecipientError(null);
     setAmount('');
     setPreview(null);
+    setReviewIntent(null);
     setSignState({ status: 'idle' });
     setPrefillNote(null);
     setDevnetBroadcast({ status: 'idle' });
@@ -470,6 +483,7 @@ export function SendScreen() {
     setRecipientError(null);
     setAmount('');
     setPreview(null);
+    setReviewIntent(null);
     setSignState({ status: 'idle' });
     setPrefillNote(null);
     // A manual token change abandons the deep link, same as a chain
@@ -525,13 +539,17 @@ export function SendScreen() {
     if (prefill.amount !== undefined) setAmount(prefill.amount);
     setStep('details');
     setPreview(null);
+    setReviewIntent(null);
     setSignState({ status: 'idle' });
     if (prefill.tokenContract !== undefined && tokenRecord === null) {
       setPrefillNote(
         'This link pays a token that is not in your wallet yet. Add it from its contract address first.',
       );
     } else {
-      setPrefillNote(null);
+      // S3: a successful prefill still came from outside the wallet —
+      // say so, so a crafted link or QR cannot silently choose the
+      // recipient and amount.
+      setPrefillNote('Prefilled from a link/QR — check the address');
     }
     const result = await validateRecipient(prefill.chain, prefill.to);
     if (result.ok) {
@@ -804,6 +822,73 @@ export function SendScreen() {
     setStep('details');
   }
 
+  // A-7: build the signing intent from the reviewed details — the
+  // chain, the recipient, the amount in base units from the preview
+  // (the amount the review screen shows) and the token, when the
+  // send is a token transfer. The sequence is not reviewed (the
+  // nonce/blockhash is fetched live at signing), so the intent
+  // carries '' there and does not pin it. EVM values use the same
+  // canonical form the signer asserts against: a `ronin:` recipient
+  // is stripped, and a token recipient is lowercased to match the
+  // ERC-20 calldata.
+  function buildReviewIntent(
+    token: TokenRecord | null,
+    amountBaseUnits: string,
+  ): SigningIntent {
+    if (token !== null) {
+      if (tokenStandardFor(chain).standard === 'erc20') {
+        return createTransactionIntent(
+          chain,
+          token.contract,
+          amountBaseUnits,
+          '',
+          normalizeEvmAddress(recipient).toLowerCase(),
+        );
+      }
+      return createTransactionIntent(
+        chain,
+        token.contract,
+        amountBaseUnits,
+        '',
+        recipient,
+      );
+    }
+    if (isEvmTxChain(chain)) {
+      return createTransactionIntent(
+        chain,
+        normalizeEvmAddress(recipient),
+        amountBaseUnits,
+        '',
+      );
+    }
+    return createTransactionIntent(chain, recipient, amountBaseUnits, '');
+  }
+
+  // A-7: entering review snapshots the reviewed send into the
+  // intent and stores it; handleSign passes that stored intent to
+  // the signer, so signing binds to what the user reviewed. If the
+  // intent cannot be built from the reviewed details, review is not
+  // entered — the send stays on the details step with the failure
+  // shown, instead of signing unbound.
+  function enterReview(
+    token: TokenRecord | null,
+    result: { amountBaseUnits: string },
+  ): void {
+    try {
+      setReviewIntent(buildReviewIntent(token, result.amountBaseUnits));
+      setStep('review');
+    } catch {
+      setReviewIntent(null);
+      setPreview({
+        ok: false,
+        code: 'invalid-input',
+        reason:
+          'The reviewed details could not be confirmed. Please go back and try again.',
+      });
+      setSummaryVisible(true);
+    }
+  }
+
   async function handleAmountNext(): Promise<void> {
     // A token send previews against the cached token balance (the
     // sign step re-reads it live — see handleSign). Native sends on
@@ -834,7 +919,7 @@ export function SendScreen() {
           { devnet: devnetEnabled },
         );
         setPreview(result);
-        if (result.ok) setStep('review');
+        if (result.ok) enterReview(token, result);
         else setSummaryVisible(true);
       } finally {
         setPreviewBusy(false);
@@ -861,11 +946,19 @@ export function SendScreen() {
       }
       const result = await previewSendAmount(chain, from, recipient, amount, { devnet: devnetEnabled });
       setPreview(result);
-      if (result.ok) setStep('review');
+      if (result.ok) enterReview(null, result);
       else setSummaryVisible(true);
     } finally {
       setPreviewBusy(false);
     }
+  }
+
+  // A-7: leaving review abandons the review snapshot with it — a
+  // later Review rebuilds the intent from the (possibly edited)
+  // details instead of signing against stale ones.
+  function handleReviewBack(): void {
+    setReviewIntent(null);
+    setStep('details');
   }
 
   async function handleSign(): Promise<void> {
@@ -889,6 +982,18 @@ export function SendScreen() {
     }
     const previewOk = preview;
     const token = selectedToken;
+    // A-7: signing binds to the intent created when this send
+    // entered review. A missing intent means the review snapshot
+    // was lost — refuse to sign unbound rather than silently
+    // falling back to the signer's self-built intent.
+    if (reviewIntent === null) {
+      setSignState({
+        status: 'error',
+        reason:
+          'The reviewed transaction is no longer available. Go back and review it again.',
+      });
+      return;
+    }
     setApprovalStage('simulating');
     const simulation = token !== null
       ? await simulateTokenSend(chain, token, from, recipient, amount, { devnet: devnetEnabled })
@@ -936,7 +1041,7 @@ export function SendScreen() {
           previewOk.amountBaseUnits,
           String(inputs.data.nonce),
           gasPrice,
-          { devnet: devnetEnabled },
+          { devnet: devnetEnabled, intent: reviewIntent ?? undefined },
         );
         if (!result.ok) return result;
         return signedTxResult(result.txHash, result.signedTxHex, 'Signed transaction (hex)');
@@ -990,7 +1095,7 @@ export function SendScreen() {
           tokenToSend.decimals,
           inputs.data.blockhash,
           recipientAtaExists,
-          { devnet: devnetEnabled, account: vaultAccount.account },
+          { devnet: devnetEnabled, account: vaultAccount.account, intent: reviewIntent ?? undefined },
         );
         if (!result.ok) return result;
         return signedTxResult(result.signature, result.signedTxBase64, 'Signed transaction (base64)');
@@ -1053,7 +1158,7 @@ export function SendScreen() {
             previewOk.amountBaseUnits,
             String(inputs.data.nonce),
             gasPrice,
-            { devnet: devnetEnabled },
+            { devnet: devnetEnabled, intent: reviewIntent ?? undefined },
           );
           if (!result.ok) return result;
           return signedTxResult(result.txHash, result.signedTxHex, 'Signed transaction (hex)');
@@ -1109,7 +1214,7 @@ export function SendScreen() {
             recipient,
             previewOk.amountBaseUnits,
             inputs.data.blockhash,
-            { devnet: devnetEnabled, account: vaultAccount.account },
+            { devnet: devnetEnabled, account: vaultAccount.account, intent: reviewIntent ?? undefined },
           );
           if (!result.ok) return result;
           return signedTxResult(result.signature, result.signedTxBase64, 'Signed transaction (base64)');
@@ -2157,7 +2262,7 @@ export function SendScreen() {
             disabledReason={BROADCAST_DISABLED_MESSAGE}
             stage={approvalStage}
             devnetNetworkName={devnetName}
-            onBack={() => setStep('details')}
+            onBack={handleReviewBack}
             onSign={() => void handleSign()}
           />
           {signState.status === 'signing' && (

@@ -123,18 +123,32 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = fals
     timestamp = status.block_time * 1000;
   }
 
-  let amount = 0;
-  for (const output of raw.vout) {
-    if (!isRecord(output) || !isNonNegativeInteger(output.value)) return null;
-    amount += output.value;
-    if (!Number.isSafeInteger(amount)) return null;
-  }
-
   const firstInput = raw.vin[0];
   const prevout = isRecord(firstInput) && isRecord(firstInput.prevout)
     ? firstInput.prevout
     : null;
+  const sender =
+    prevout === null ? null : stringOrNull(prevout.scriptpubkey_address);
   const firstOutput = raw.vout[0];
+
+  // The amount sent is the value leaving the sender: outputs back to
+  // the sender's own address are change, not sent value, and the
+  // "to" is the first output that is not change. When the sender is
+  // unknown (no prevout address) there is nothing to exclude, so the
+  // old behaviour — sum everything, "to" is vout[0] — is kept.
+  let amount = 0;
+  let recipient: string | null = null;
+  for (const output of raw.vout) {
+    if (!isRecord(output) || !isNonNegativeInteger(output.value)) return null;
+    const address = stringOrNull(output.scriptpubkey_address);
+    const isChange =
+      sender !== null && address !== null && address === sender;
+    if (!isChange) {
+      amount += output.value;
+      if (recipient === null) recipient = address;
+    }
+    if (!Number.isSafeInteger(amount)) return null;
+  }
 
   return {
     hash,
@@ -144,12 +158,19 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = fals
       : 'bip122:000000000019d6689c085ae165831e93',
     status: status.confirmed ? 'confirmed' : 'pending',
     statusLabel: status.confirmed ? 'confirmed' : 'pending',
-    confirmations: blockHeight === null || tipHeight === null
-      ? null
-      : tipHeight - blockHeight + 1,
+    // A tip behind the block is stale, not negative
+    // confirmations: report unknown instead of a negative count.
+    confirmations:
+      blockHeight === null || tipHeight === null || tipHeight < blockHeight
+        ? null
+        : tipHeight - blockHeight + 1,
     blockHeight,
-    from: prevout === null ? null : stringOrNull(prevout.scriptpubkey_address),
-    to: isRecord(firstOutput) ? stringOrNull(firstOutput.scriptpubkey_address) : null,
+    from: sender,
+    to:
+      recipient ??
+      (isRecord(firstOutput)
+        ? stringOrNull(firstOutput.scriptpubkey_address)
+        : null),
     amountBaseUnits: amount.toString(),
     feeBaseUnits: raw.fee.toString(),
     timestamp,
@@ -161,7 +182,7 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = fals
   };
 }
 
-export interface ParseEthTxOpts {
+interface ParseEthTxOpts {
   chain?: ChainId;
   networkId?: string;
   explorerBase?: string;
@@ -385,7 +406,7 @@ async function lookupTon(hash: string, address: string | undefined, devnet = fal
  * Extension point for future chains (Solana is not a ChainId yet): a lane
  * that adds a chain registers its lookup here instead of editing this file.
  */
-export type LookupHandler = (
+type LookupHandler = (
   hash: string,
   opts: { address?: string },
 ) => Promise<TrackerLookupResult>;

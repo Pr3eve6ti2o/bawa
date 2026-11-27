@@ -48,6 +48,7 @@ import {
   simulateTokenSend,
   verifyEvmTokenSignedTx,
 } from './send';
+import { createTransactionIntent } from './signing-intent';
 import { chainConfig } from './chains';
 import { DEFAULT_TOKENS, EVM_TOKEN_CHAINS, type TokenRecord } from './tokens';
 import type { ChainId } from '../engine/boundary';
@@ -316,6 +317,40 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
     ).toEqual({ ok: false, code: 'insufficient-funds', reason: 'Amount exceeds available balance.' });
   });
 
+  it('rejects an amount whose fee does not fit the balance (A-1)', async () => {
+    // 1 ETH balance, 0.00042 ETH fee: sending the full balance leaves
+    // nothing for the fee, so the preview must fail before Review.
+    expect(
+      await previewSendAmount(
+        'eth',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '1',
+      ),
+    ).toEqual({
+      ok: false,
+      code: 'insufficient-gas',
+      reason: 'Amount plus the estimated fee exceeds available balance.',
+    });
+  });
+
+  it('previews an amount that exactly fits amount + fee (A-1)', async () => {
+    expect(
+      await previewSendAmount(
+        'eth',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '0.99958',
+      ),
+    ).toEqual({
+      ok: true,
+      amountBaseUnits: '999580000000000000',
+      feeBaseUnits: '420000000000000',
+      totalBaseUnits: '1000000000000000000',
+      feeNote: 'stub fee',
+    });
+  });
+
   it('rejects invalid and zero amounts', async () => {
     for (const bad of ['abc', '0', '0.0000000000000000001', '']) {
       expect(
@@ -385,6 +420,37 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
       feeBaseUnits: '1000000',
       totalBaseUnits: '501000000',
       feeNote: 'stub fee',
+    });
+  });
+
+  it('rejects a TON amount whose known fee does not fit the balance (A-1)', async () => {
+    registerAdapter(
+      stubAdapter('ton', '1000000000', {
+        status: 'ok',
+        data: {
+          chain: 'ton',
+          networkId: 'test',
+          feeBaseUnits: '1000000',
+          unit: 'nanoton',
+          note: 'stub fee',
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+    );
+    expect(
+      await previewSendAmount(
+        'ton',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+        '0.999999999',
+      ),
+    ).toEqual({
+      ok: false,
+      code: 'insufficient-gas',
+      reason: 'Amount plus the estimated fee exceeds available balance.',
     });
   });
 
@@ -877,6 +943,85 @@ describe('signBtcOffline (hands-on, probe-proven)', () => {
     });
   });
 
+  it('signs an exact spend with no change output (A-3)', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveAddresses(mnemonic, '')).btc;
+    const dest = 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd';
+    const fakeTxid = createHash('sha256')
+      .update('lane3-btc-test-utxo')
+      .digest('hex');
+    const signed = await signBtcOffline(
+      mnemonic,
+      '',
+      dest,
+      '99859',
+      [{ txid: fakeTxid, vout: 0, valueBaseUnits: '100000' }],
+      '1',
+      from,
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    const parsed = parseBtcRawTx(signed.signedTxHex);
+    expect(parsed.txid).toBe(signed.txHash);
+    expect(parsed.outputs).toHaveLength(1);
+    const core = await loadCore();
+    const scriptHex = (address: string): string =>
+      Buffer.from(
+        core.BitcoinScript.lockScriptForAddress(
+          address,
+          core.CoinType.bitcoin,
+        ).data(),
+      ).toString('hex');
+    expect(parsed.outputs).toContainEqual({
+      value: 99859n,
+      scriptHex: scriptHex(dest),
+    });
+    // The fee actually paid is inputs minus the signed outputs.
+    const actualFee =
+      100000 - parsed.outputs.reduce((sum, o) => sum + Number(o.value), 0);
+    expect(signed.feeBaseUnits).toBe(String(actualFee));
+  });
+
+  it('signs a dust-change spend with no change output (A-3)', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveAddresses(mnemonic, '')).btc;
+    const dest = 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd';
+    const fakeTxid = createHash('sha256')
+      .update('lane3-btc-test-utxo')
+      .digest('hex');
+    const signed = await signBtcOffline(
+      mnemonic,
+      '',
+      dest,
+      '99800',
+      [{ txid: fakeTxid, vout: 0, valueBaseUnits: '100000' }],
+      '1',
+      from,
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    const parsed = parseBtcRawTx(signed.signedTxHex);
+    expect(parsed.txid).toBe(signed.txHash);
+    // 59 sats of change is dust: Trust Wallet Core folds it into the
+    // fee instead of emitting a change output.
+    expect(parsed.outputs).toHaveLength(1);
+    const core = await loadCore();
+    const scriptHex = (address: string): string =>
+      Buffer.from(
+        core.BitcoinScript.lockScriptForAddress(
+          address,
+          core.CoinType.bitcoin,
+        ).data(),
+      ).toString('hex');
+    expect(parsed.outputs).toContainEqual({
+      value: 99800n,
+      scriptHex: scriptHex(dest),
+    });
+    const actualFee =
+      100000 - parsed.outputs.reduce((sum, o) => sum + Number(o.value), 0);
+    expect(signed.feeBaseUnits).toBe(String(actualFee));
+  });
+
   it('rejects an invalid mnemonic', async () => {
     expect(
       await signBtcOffline('abandon abandon', '', 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd', '50000', [{ txid: '00'.repeat(32), vout: 0, valueBaseUnits: '100000' }], '10', 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd'),
@@ -1310,6 +1455,18 @@ describe('simulateSend ETH and TON', () => {
     });
   });
 
+  it('rejects a native send whose amount plus fee exceeds the balance (A-1)', async () => {
+    registerAdapter(
+      simStub('eth', ethBalance, 18, ethFee, okInputs({ kind: 'nonce', nonce: 5 })),
+    );
+
+    expect(await simulateSend('eth', ethFrom, ethTo, '1')).toMatchObject({
+      ok: false,
+      code: 'insufficient-gas',
+      error: { code: 'insufficient-gas', chain: 'eth' },
+    });
+  });
+
   it('rejects unavailable ETH nonce inputs', async () => {
     registerAdapter(
       simStub('eth', ethBalance, 18, ethFee, {
@@ -1373,6 +1530,165 @@ describe('simulateSend ETH and TON', () => {
       ok: false,
       error: { code: 'stale-seqno', chain: 'ton' },
       code: 'bad-seqno',
+    });
+  });
+});
+
+describe('simulateSend SOL and LTC freshness (A-2)', () => {
+  const solAddress = 'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK';
+  const ltcFrom = 'ltc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
+  const ltcTo = 'ltc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd';
+
+  function simStub(
+    chain: 'sol' | 'ltc',
+    balance: string,
+    decimals: number,
+    fee: AdapterResult<FeeEstimate>,
+    inputs: AdapterResult<TxInput>,
+  ): ChainAdapter {
+    return {
+      chain,
+      networkId: 'test',
+      getBalance: async () => ({
+        status: 'ok',
+        data: {
+          chain,
+          address: 'stub',
+          networkId: 'test',
+          valueBaseUnits: balance,
+          decimals,
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getHistory: async () => ({
+        status: 'ok',
+        data: [],
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => fee,
+      getTxInputs: async () => inputs,
+      broadcast: async (): Promise<never> => {
+        throw new Error('disabled');
+      },
+    };
+  }
+
+  function okInputs(data: TxInput): AdapterResult<TxInput> {
+    return { status: 'ok', data, source: 'stub', fetchedAt: 0 };
+  }
+
+  const solFee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'sol',
+      networkId: 'test',
+      feeBaseUnits: '5000',
+      unit: 'lamports',
+      note: 'stub',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  const ltcFee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'ltc',
+      networkId: 'test',
+      feeBaseUnits: '1000',
+      unit: 'litoshi',
+      note: 'stub',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  const ltcUtxos: AdapterResult<TxInput> = okInputs({
+    kind: 'utxo',
+    utxos: [
+      {
+        txid: createHash('sha256').update('lane-a-ltc-test-utxo').digest('hex'),
+        vout: 0,
+        valueBaseUnits: '100000',
+      },
+    ],
+  });
+
+  it('simulates a SOL send with a live blockhash', async () => {
+    registerAdapter(
+      simStub(
+        'sol',
+        '1000000000',
+        9,
+        solFee,
+        okInputs({ kind: 'blockhash', blockhash: '4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZAMdL4VZHir' }),
+      ),
+    );
+
+    expect(await simulateSend('sol', solAddress, solAddress, '0.5')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '500000000',
+      feeBaseUnits: '5000',
+    });
+  });
+
+  it('rejects a SOL send when no live blockhash is returned', async () => {
+    registerAdapter(
+      simStub('sol', '1000000000', 9, solFee, {
+        status: 'unavailable',
+        reason: 'stub unavailable',
+      }),
+    );
+
+    expect(await simulateSend('sol', solAddress, solAddress, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'bad-blockhash', chain: 'sol' },
+      code: 'simulation-failed',
+    });
+  });
+
+  it('simulates an LTC send when the live UTXOs cover the amount', async () => {
+    registerAdapter(simStub('ltc', '100000', 8, ltcFee, ltcUtxos));
+
+    expect(await simulateSend('ltc', ltcFrom, ltcTo, '0.0005')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '50000',
+      feeBaseUnits: '1000',
+    });
+  });
+
+  it('rejects an LTC send when the live UTXOs no longer cover the amount', async () => {
+    registerAdapter(
+      simStub(
+        'ltc',
+        '100000',
+        8,
+        ltcFee,
+        okInputs({
+          kind: 'utxo',
+          utxos: [
+            {
+              txid: createHash('sha256').update('lane-a-ltc-test-utxo').digest('hex'),
+              vout: 0,
+              valueBaseUnits: '40000',
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(await simulateSend('ltc', ltcFrom, ltcTo, '0.0005')).toMatchObject({
+      ok: false,
+      error: { code: 'insufficient-funds', chain: 'ltc' },
+      code: 'insufficient-funds',
     });
   });
 });
@@ -3509,5 +3825,227 @@ describe('previewTokenSendAmount / simulateTokenSend (Lane 2)', () => {
       amountBaseUnits: '1000000',
       feeUnknown: true,
     });
+  });
+});
+
+describe('review-time signing intent binding (A-7)', () => {
+  const TO = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+  const OTHER = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+  const BLOCKHASH = 'FyuXxRoUgru9MrwnmRkfFzZiyZ5WR4JePH98mcqPpgHM';
+  const usdcEth = DEFAULT_TOKENS.find(
+    (token) => token.chain === 'eth' && token.symbol === 'USDC',
+  )!;
+  const usdcSol = DEFAULT_TOKENS.find(
+    (token) => token.chain === 'sol' && token.symbol === 'USDC',
+  )!;
+  const intentMismatch = {
+    ok: false,
+    code: 'intent-mismatch',
+    reason: 'Transaction does not match the approved intent.',
+  };
+
+  it('EVM native: refuses when the review intent names a different recipient', async () => {
+    const mnemonic = await createWallet();
+    const intent = createTransactionIntent(
+      'eth',
+      OTHER,
+      '10000000000000000',
+      '',
+    );
+    await expect(
+      signEvmOffline('eth', mnemonic, '', TO, '10000000000000000', '0', '20000000000', {
+        intent,
+      }),
+    ).resolves.toEqual(intentMismatch);
+  });
+
+  it('EVM native: refuses when the review intent names a different amount', async () => {
+    const mnemonic = await createWallet();
+    const intent = createTransactionIntent(
+      'eth',
+      TO,
+      '10000000000000001',
+      '',
+    );
+    await expect(
+      signEvmOffline('eth', mnemonic, '', TO, '10000000000000000', '0', '20000000000', {
+        intent,
+      }),
+    ).resolves.toEqual(intentMismatch);
+  });
+
+  it('EVM native: signs when the review intent matches', async () => {
+    const mnemonic = await createWallet();
+    const intent = createTransactionIntent(
+      'eth',
+      TO,
+      '10000000000000000',
+      '',
+    );
+    const signed = await signEvmOffline(
+      'eth',
+      mnemonic,
+      '',
+      TO,
+      '10000000000000000',
+      '0',
+      '20000000000',
+      { intent },
+    );
+    expect(signed.ok).toBe(true);
+  });
+
+  it('EVM token: refuses when the review intent names a different recipient', async () => {
+    const mnemonic = await createWallet();
+    const intent = createTransactionIntent(
+      'eth',
+      usdcEth.contract,
+      '25000000',
+      '',
+      OTHER.toLowerCase(),
+    );
+    await expect(
+      signEvmTokenOffline(
+        'eth',
+        mnemonic,
+        '',
+        usdcEth.contract,
+        TO,
+        '25000000',
+        '3',
+        '20000000000',
+        { intent },
+      ),
+    ).resolves.toEqual(intentMismatch);
+  });
+
+  it('EVM token: refuses when the review intent names a different amount', async () => {
+    const mnemonic = await createWallet();
+    const intent = createTransactionIntent(
+      'eth',
+      usdcEth.contract,
+      '25000001',
+      '',
+      TO.toLowerCase(),
+    );
+    await expect(
+      signEvmTokenOffline(
+        'eth',
+        mnemonic,
+        '',
+        usdcEth.contract,
+        TO,
+        '25000000',
+        '3',
+        '20000000000',
+        { intent },
+      ),
+    ).resolves.toEqual(intentMismatch);
+  });
+
+  it('EVM token: signs when the review intent matches', async () => {
+    const mnemonic = await createWallet();
+    const intent = createTransactionIntent(
+      'eth',
+      usdcEth.contract,
+      '25000000',
+      '',
+      TO.toLowerCase(),
+    );
+    const signed = await signEvmTokenOffline(
+      'eth',
+      mnemonic,
+      '',
+      usdcEth.contract,
+      TO,
+      '25000000',
+      '3',
+      '20000000000',
+      { intent },
+    );
+    expect(signed.ok).toBe(true);
+  });
+
+  it('SOL native: refuses when the review intent names a different recipient', async () => {
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const other = (await deriveAddresses(await createWallet(), '')).sol;
+    const intent = createTransactionIntent('sol', other, '1000000', '');
+    await expect(
+      signSolOffline(mnemonic, '', recipient, '1000000', BLOCKHASH, {
+        intent,
+      }),
+    ).resolves.toEqual(intentMismatch);
+  });
+
+  it('SOL native: refuses when the review intent names a different amount', async () => {
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const intent = createTransactionIntent('sol', recipient, '1000001', '');
+    await expect(
+      signSolOffline(mnemonic, '', recipient, '1000000', BLOCKHASH, {
+        intent,
+      }),
+    ).resolves.toEqual(intentMismatch);
+  });
+
+  it('SOL native: signs when the review intent matches', async () => {
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const intent = createTransactionIntent('sol', recipient, '1000000', '');
+    const signed = await signSolOffline(mnemonic, '', recipient, '1000000', BLOCKHASH, {
+      intent,
+    });
+    expect(signed.ok).toBe(true);
+  });
+
+  it('SPL: refuses when the review intent names a different recipient', async () => {
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const other = (await deriveAddresses(await createWallet(), '')).sol;
+    const intent = createTransactionIntent(
+      'sol',
+      usdcSol.contract,
+      '25000000',
+      '',
+      other,
+    );
+    await expect(
+      signSplOffline(
+        mnemonic,
+        '',
+        usdcSol.contract,
+        recipient,
+        '25000000',
+        usdcSol.decimals,
+        BLOCKHASH,
+        true,
+        { intent },
+      ),
+    ).resolves.toEqual(intentMismatch);
+  });
+
+  it('SPL: signs when the review intent matches', async () => {
+    const mnemonic = await createWallet();
+    const recipient = (await deriveAddresses(await createWallet(), '')).sol;
+    const intent = createTransactionIntent(
+      'sol',
+      usdcSol.contract,
+      '25000000',
+      '',
+      recipient,
+    );
+    const signed = await signSplOffline(
+      mnemonic,
+      '',
+      usdcSol.contract,
+      recipient,
+      '25000000',
+      usdcSol.decimals,
+      BLOCKHASH,
+      true,
+      { intent },
+    );
+    expect(signed.ok).toBe(true);
   });
 });

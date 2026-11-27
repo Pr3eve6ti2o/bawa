@@ -252,7 +252,7 @@ export const PRICE_ASSET_IDS: Record<ChainId, string> = {
 };
 
 export const MAX_QUOTE_AGE_MS = 10 * 60 * 1000;
-export const PRICE_FETCH_TIMEOUT_MS = 10_000;
+const PRICE_FETCH_TIMEOUT_MS = 10_000;
 export const PRICE_ATTRIBUTION_TEXT = 'Powered by CoinGecko';
 
 export type PriceSource = 'CoinGecko' | 'DexScreener' | 'TonAPI' | 'CoinLore' | 'Coinbase';
@@ -315,7 +315,7 @@ export function isFreshQuote(quote: PriceQuote, nowMs: number): boolean {
  * One definition — prices.ts, token-prices.ts and dex-prices.ts each had
  * their own copy with the same semantics (marketing-fix Lane 2).
  */
-export function isAbortError(error: unknown): boolean {
+function isAbortError(error: unknown): boolean {
   return (
     typeof error === 'object' &&
     error !== null &&
@@ -333,7 +333,7 @@ export function isAbortError(error: unknown): boolean {
  * replaced with undefined at transform time. In a production build
  * import.meta.env is the inlined env object, so the same read works there.
  */
-export function coingeckoHeaders(): Record<string, string> {
+function coingeckoHeaders(): Record<string, string> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   const demoKey: unknown = (import.meta.env as Record<string, unknown>)
     .VITE_COINGECKO_DEMO_KEY;
@@ -498,7 +498,7 @@ export function isCacheableQuote(quote: PriceQuote, nowMs: number): boolean {
  * in error; only keys with no previous quote show the error. Generic
  * over the map type so the native and token feeds share it.
  */
-export function mergePreservingFreshEntries<
+function mergePreservingFreshEntries<
   T extends Record<string, PriceEntry>,
 >(next: T, previous: T): T {
   // A generic map cannot be indexed for writing (TS2862), so merge over
@@ -522,7 +522,7 @@ export function mergePreservingFreshEntries<
  * Retry-After capped at 30s when rate-limited. Shared by usePrices
  * and useTokenPrices.
  */
-export function priceRetryDelayMs(
+function priceRetryDelayMs(
   values: readonly PriceEntry[],
   attempt: number,
 ): number | null {
@@ -562,7 +562,7 @@ export function priceRetryDelayMs(
 }
 
 /** Sleep used by the price hooks: the injected one in tests, else setTimeout. */
-export function resolvePriceWait(
+function resolvePriceWait(
   sleep?: (ms: number) => Promise<void>,
 ): (ms: number) => Promise<void> {
   return (
@@ -576,7 +576,7 @@ export function resolvePriceWait(
 
 export const PRICE_CACHE_KEY = 'bawa:prices-cache:v1';
 
-export type PriceCacheStore = {
+type PriceCacheStore = {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
 };
@@ -840,7 +840,7 @@ export function formatChangePct(pct: number): string {
 /** One point of a CoinGecko market chart: epoch ms + USD price. */
 export type PriceHistoryPoint = { timeMs: number; price: number };
 
-export type PriceHistoryResult =
+type PriceHistoryResult =
   | { status: 'ok'; points: PriceHistoryPoint[] }
   | { status: 'unavailable' }
   | {
@@ -961,8 +961,13 @@ export function formatUnitPriceUsd(usdPrice: string): string {
     throw new Error(invalidPriceMessage);
   }
 
-  // Exact BigInt arithmetic: two decimals at or above $1, six below.
-  const fixed = toFixedHalfUp(price, price.exp >= 0 ? 2 : 6);
+  // Exact BigInt arithmetic: two decimals at or above $1; below $1,
+  // six decimals, extended just far enough to show two significant
+  // digits (capped at 18) so a sub-$0.000001 price never renders as
+  // "$0.00" — a token worth $0.0000004 shows as $0.0000004.
+  const places =
+    price.exp >= 0 ? 2 : Math.min(18, Math.max(6, 1 - price.exp));
+  const fixed = toFixedHalfUp(price, places);
   const [whole = '0', fraction = ''] = fixed.split('.');
   const groupedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const trimmedFraction = fraction.replace(/0+$/, '').padEnd(2, '0');
@@ -1224,7 +1229,7 @@ export function idlePriceEntries(): PriceMap {
 }
 
 
-export type PriceRefreshState<E extends Record<string, PriceEntry>> = {
+type PriceRefreshState<E extends Record<string, PriceEntry>> = {
   status: 'idle' | 'loading' | 'ready';
   entries: E;
   lastFetchedAtMs: number | null;

@@ -34,21 +34,19 @@ import { isRecord, ownValue } from './guards';
 import type { ChainId } from '../engine/boundary';
 
 /** LI.FI public routing API base. Keyless; see the module note. */
-export const LIFI_QUOTE_BASE_URL = 'https://li.quest/v1';
-export const LIFI_QUOTE_URL = `${LIFI_QUOTE_BASE_URL}/quote`;
+const LIFI_QUOTE_BASE_URL = 'https://li.quest/v1';
+const LIFI_QUOTE_URL = `${LIFI_QUOTE_BASE_URL}/quote`;
 /** Slippage tolerance sent with every quote, as a decimal (0.01 = 1%). */
 export const LIFI_SLIPPAGE = 0.01;
 /** LI.FI chain id for Solana (its non-EVM chain ids are not EVM ids). */
 export const LIFI_SOLANA_CHAIN_ID = 1151111081099710;
 /** Native-token placeholder LI.FI expects on EVM chains. */
-export const LIFI_NATIVE_EVM_ADDRESS =
+const LIFI_NATIVE_EVM_ADDRESS =
   '0x0000000000000000000000000000000000000000';
 /** Native-token placeholder LI.FI expects on Solana. */
-export const LIFI_NATIVE_SOL_ADDRESS = '11111111111111111111111111111111';
-/** Quotes go stale quickly (LI.FI: ~60 s) — the screen shows the age. */
-export const LIFI_QUOTE_STALE_MS = 60_000;
+const LIFI_NATIVE_SOL_ADDRESS = '11111111111111111111111111111111';
 /** One quote attempt gets 15 s; a hung provider must not hang the form. */
-export const LIFI_QUOTE_TIMEOUT_MS = 15_000;
+const LIFI_QUOTE_TIMEOUT_MS = 15_000;
 
 /**
  * LI.FI chain id for a Bawa chain, or null when LI.FI cannot route it.
@@ -126,7 +124,7 @@ export interface SwapQuoteInput {
   toAddress: string;
 }
 
-export interface SwapQuoteDeps {
+interface SwapQuoteDeps {
   fetchFn?: typeof fetch;
 }
 
@@ -239,7 +237,12 @@ export async function fetchSwapQuote(
     return { status: 'unavailable', reason: UNAVAILABLE_MESSAGE };
   }
   const quote = parseQuote(raw);
-  if (quote === null) return { status: 'no-route' };
+  // A 200 whose body does not parse is a provider hiccup, not proof
+  // that no route exists — Relay maps the same case to unavailable,
+  // and so must LI.FI (A-6).
+  if (quote === null) {
+    return { status: 'unavailable', reason: UNAVAILABLE_MESSAGE };
+  }
   return { status: 'ok', quote };
 }
 

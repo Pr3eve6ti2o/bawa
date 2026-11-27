@@ -8,9 +8,10 @@ import {
   describeRecipientDetection,
   detectAddressFormat,
   findVerifiedNamesake,
+  isSameAddress,
   shortenAddress,
 } from './address-detection';
-import { EVM_WATCH_CHAINS } from './watch-only-families';
+import { EVM_TX_CHAINS, EVM_WATCH_CHAINS } from './watch-only-families';
 
 const ETH_ADDRESS = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
 const BTC_BECH32 = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
@@ -124,16 +125,20 @@ describe('detectAddressFormat', () => {
 });
 
 describe('describeRecipientDetection', () => {
-  it('says a 0x address works on all 59 EVM chains', () => {
+  it('says a 0x address works on all 60 EVM chains', () => {
     expect(onEth(ETH_ADDRESS)).toEqual({
       tone: 'info',
       text: `Detected: 0x address — the same address on all ${EVM_CHAIN_COUNT} EVM chains.`,
     });
   });
 
-  it('keeps the 59 in step with the watch-only family', () => {
+  it('keeps the 60 in step with the EVM transaction chains', () => {
+    expect(EVM_TX_CHAINS.length).toBe(60);
+    expect(EVM_CHAIN_COUNT).toBe(60);
+  });
+
+  it('keeps the 0x watch-only family at fifty-nine (Ronin excluded by design)', () => {
     expect(EVM_WATCH_CHAINS.length).toBe(59);
-    expect(EVM_CHAIN_COUNT).toBe(59);
   });
 
   it('warns when a 0x address is pasted on a non-EVM chain', () => {
@@ -248,6 +253,62 @@ describe('describeRecipientDetection', () => {
   it('says nothing for empty input or an unrecognised shape', () => {
     expect(onEth('')).toBeNull();
     expect(onEth('not an address')).toBeNull();
+  });
+});
+
+describe('isSameAddress', () => {
+  // UQ/EQ pair for one TON wallet (same workchain + hash; the EQ form
+  // was derived by flipping the bounceable flag and recomputing the
+  // CRC16 — the boundary validator accepts both spellings).
+  const TON_UQ = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+  const TON_EQ = 'EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi';
+  const TON_RAW =
+    '0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f';
+
+  it('flags TON EQ/UQ spellings of the same wallet (A-12)', () => {
+    expect(isSameAddress(TON_UQ, TON_EQ)).toBe(true);
+    expect(isSameAddress(TON_EQ, TON_UQ)).toBe(true);
+  });
+
+  it('flags a TON friendly spelling against its raw form (A-12)', () => {
+    expect(isSameAddress(TON_UQ, TON_RAW)).toBe(true);
+    expect(isSameAddress(TON_EQ, TON_RAW)).toBe(true);
+  });
+
+  it('does not flag two different TON wallets (A-12)', () => {
+    expect(
+      isSameAddress(TON_UQ, 'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N'),
+    ).toBe(false);
+  });
+
+  it('flags an uppercase bc1q address as the same address (A-12)', () => {
+    expect(
+      isSameAddress(
+        'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+        'BC1QPSP72PLNSQE6E2DVTSETXTWW2CZ36ZTMFXGHPD',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not lowercase-compare case-sensitive base58 addresses (A-12)', () => {
+    expect(
+      isSameAddress(
+        'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK',
+        'dyw8jctfwhnrjhhmfcbxvvdtqwmevfbx6zkumg5cnskk',
+      ),
+    ).toBe(false);
+  });
+
+  it('notes a send to your own TON address across EQ/UQ spellings (A-12)', () => {
+    expect(
+      describeRecipientDetection({
+        value: TON_EQ,
+        chain: 'ton',
+        chainName: 'TON',
+        chainIsEvm: false,
+        from: TON_UQ,
+      }),
+    ).toEqual({ tone: 'info', text: 'This is your own address.' });
   });
 });
 

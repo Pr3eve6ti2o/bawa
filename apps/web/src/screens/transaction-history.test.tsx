@@ -345,7 +345,29 @@ describe('transaction history screen', () => {
     setWallet(perChainEmpty());
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain("Transaction history isn't available for this network yet.");
+      expect(mounted.div.textContent).toContain("Transaction history isn't available on any chain yet.");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the unlock prompt when the vault is locked and no chain loaded (A-8)', async () => {
+    // Locked vault: every chain fails with no-address and none loads,
+    // so the old screen rendered nothing below the filter.
+    setWallet(
+      {
+        ...perChainEmpty(),
+        btc: { status: 'unavailable', reason: 'no-address', txs: [] },
+        eth: { status: 'unavailable', reason: 'no-address', txs: [] },
+        trx: { status: 'unavailable', reason: 'no-address', txs: [] },
+        ton: { status: 'unavailable', reason: 'no-address', txs: [] },
+      },
+      'locked',
+    );
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Locked. Unlock to see activity.');
+      expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

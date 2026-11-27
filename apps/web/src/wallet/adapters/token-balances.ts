@@ -65,7 +65,7 @@ export interface EvmRpcClient {
 
 const TRONGRID_BASE_URL = 'https://api.trongrid.io';
 
-export interface TokenBalanceInput {
+interface TokenBalanceInput {
   chain: ChainId;
   contract: string;
   ownerAddress: string;
@@ -73,24 +73,24 @@ export interface TokenBalanceInput {
   decimals?: number;
 }
 
-export interface TokenBalanceDeps {
+interface TokenBalanceDeps {
   evmClient?: EvmRpcClient;
   /** Injectable transport for TronGrid calls. */
   transport?: FetchTransport;
   tronBaseUrl?: string;
 }
 
-export interface TokenMetadata {
+interface TokenMetadata {
   name: string;
   symbol: string;
   decimals: number;
 }
 
-export type TokenVerification =
+type TokenVerification =
   | { ok: true; metadata: TokenMetadata; balanceBaseUnits: string }
   | { ok: false; error: string };
 
-export type MetadataResult =
+type MetadataResult =
   | { ok: true; metadata: TokenMetadata }
   | { ok: false; error: string };
 
@@ -212,7 +212,7 @@ async function ethChainId(client: EvmRpcClient): Promise<number | null> {
 }
 
 /** ERC-20 metadata via raw eth_call. All three reads must succeed. */
-export async function fetchEvmTokenMetadata(input: {
+async function fetchEvmTokenMetadata(input: {
   chain: ChainId;
   contract: string;
   evmClient?: EvmRpcClient;
@@ -479,7 +479,14 @@ async function fetchErc20Balance(input: {
     if (decimals === undefined) {
       const decimalsRaw = await ethCall(client, contract, DECIMALS_SELECTOR);
       const decimalsValue = decimalsRaw === null ? null : decodeUint256Hex(decimalsRaw);
-      if (decimalsValue !== null) decimals = Number(decimalsValue);
+      // The on-chain read is untrusted input like any other: accept
+      // only the 0-36 range the metadata path validates, so an absurd
+      // decimals() cannot reach the formatter's padStart (A-5). An
+      // out-of-range value leaves decimals undefined, which the
+      // caller below reports as an unreadable token.
+      if (decimalsValue !== null && decimalsValue <= 36n) {
+        decimals = Number(decimalsValue);
+      }
     }
     if (decimals === undefined) {
       return { status: 'error', reason: UNREADABLE_TOKEN };
@@ -681,7 +688,7 @@ function parseMetaplexString(
 }
 
 /** SPL metadata: the mint account's decimals + the Metaplex name/symbol. */
-export async function fetchSplTokenMetadata(input: {
+async function fetchSplTokenMetadata(input: {
   contract: string;
   transport?: FetchTransport;
 }): Promise<MetadataResult> {
@@ -944,7 +951,7 @@ async function tonApiGet(
 }
 
 /** Jetton metadata from TonAPI. 404 → not a Jetton master. */
-export async function fetchJettonTokenMetadata(input: {
+async function fetchJettonTokenMetadata(input: {
   contract: string;
   transport?: FetchTransport;
 }): Promise<MetadataResult> {
@@ -1130,7 +1137,7 @@ export async function verifyTronToken(input: {
  * (see token-prices). Never throws: network failure also yields null.
  * Platform ids are CoinGecko's per-chain slugs — the canonical map is
  * COINGECKO_PLATFORM_FOR_CHAIN in wallet/tokens.ts (token-verify Lane A:
- * 59 EVM chains + solana/tron/the-open-network; 'metis-andromeda', not
+ * 60 EVM chains + solana/tron/the-open-network; 'metis-andromeda', not
  * the nonexistent 'metis'). The endpoint accepts the lowercased
  * address for every platform — verified live 2026-11-23 for Solana,
  * TRON and TON (the friendly EQ… form lowercased still resolves).
@@ -1224,7 +1231,7 @@ export async function fetchJettonWalletAddress(input: {
 // from the sender ATA and creates the recipient ATA when missing).
 
 /** Associated Token Program id (the program that owns ATAs). */
-export const SOL_ASSOCIATED_TOKEN_PROGRAM =
+const SOL_ASSOCIATED_TOKEN_PROGRAM =
   'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
 
 /** Ed25519 field prime p = 2^255 - 19. */

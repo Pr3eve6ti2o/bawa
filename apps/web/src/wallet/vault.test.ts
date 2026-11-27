@@ -825,6 +825,35 @@ describe('auto-lock stored-key invariant', () => {
   });
 });
 
+describe('vault KDF iterations (A-10)', () => {
+  function tamperIterations(value: number): void {
+    const raw = localStorage.getItem(VAULT_STORAGE_KEY) as string;
+    const envelope = JSON.parse(raw) as Record<string, unknown>;
+    (envelope.kdf as Record<string, unknown>).iterations = value;
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(envelope));
+  }
+
+  it.each([0, -1, 0.5, 1e12])(
+    'rejects a tampered iterations value %s as VAULT_CORRUPTED, never a raw error or a hang',
+    async (value) => {
+      await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+      tamperIterations(value);
+      await expect(unlock(TEST_PASSWORD)).rejects.toThrow(
+        ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+      );
+    },
+  );
+
+  it('rejects an out-of-range iterations value at the migration boundary', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const envelope = readRawEnvelope();
+    (envelope.kdf as Record<string, unknown>).iterations = 0;
+    expect(() => migrateEnvelope(envelope)).toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+    );
+  });
+});
+
 describe('vault accounts', () => {
   // Lane C, items 6/7/17: one recovery phrase holds many named accounts.
   // Account index 0 is "Account 1", index 1 is "Account 2", and so on.

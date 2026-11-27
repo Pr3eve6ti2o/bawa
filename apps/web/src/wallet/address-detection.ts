@@ -15,9 +15,9 @@
 //      tokens), is called out before Review.
 //
 // What this is NOT, stated plainly:
-//   - A 0x address is the same address on all 59 EVM chains, so chain
+//   - A 0x address is the same address on all 60 EVM chains, so chain
 //     auto-detection from a bare 0x address is IMPOSSIBLE — the module
-//     says "the same address on all 59 EVM chains" instead of guessing
+//     says "the same address on all 60 EVM chains" instead of guessing
 //     one. Chain auto-detection from a bare address only exists for
 //     formats that belong to exactly one chain (bc1 → Bitcoin, T… →
 //     TRON, UQ/EQ → TON, bare base58 32–44 → Solana, …).
@@ -49,13 +49,15 @@ import type { ChainId } from '../engine/boundary';
 import type { TokenRecord } from './tokens';
 
 /** The EVM chains sharing one 0x address (watch-only-families: the
-    fifty-nine 0x EVM chains). Hardcoded in the copy, with a unit test
-    asserting EVM_WATCH_CHAINS.length stays 59, so a family change
+    fifty-nine 0x EVM chains, plus Ronin — its on-wire address is the
+    same 0x value, only displayed with a ronin: prefix — for sixty
+    EVM transaction chains in all). Hardcoded in the copy, with a unit
+    test asserting EVM_TX_CHAINS.length stays 60, so a chain change
     fails the test instead of silently shipping a stale number. */
-export const EVM_CHAIN_COUNT = 59;
+export const EVM_CHAIN_COUNT = 60;
 
 /** What a pasted value looks like, by shape alone. */
-export type AddressFormat =
+type AddressFormat =
   | { kind: 'evm' }
   | { kind: 'chain'; chain: ChainId; label: string }
   | { kind: 'secret'; secret: 'private-key' | 'mnemonic' };
@@ -63,7 +65,7 @@ export type AddressFormat =
 const BASE58 = '1-9A-HJ-NP-Za-km-z';
 
 // One-chain formats, most specific first. A bare 0x address is NOT in
-// this table — it belongs to all 59 EVM chains at once (see above) —
+// this table — it belongs to all 60 EVM chains at once (see above) —
 // and bare base58 32–44 chars is last: it is Solana only once every
 // prefixed form above it has failed to match.
 const CHAIN_PATTERNS: ReadonlyArray<readonly [RegExp, ChainId, string]> = [
@@ -127,9 +129,73 @@ export function detectAddressFormat(value: string): AddressFormat | null {
   return null;
 }
 
-/** Same account, two spellings: exact, 0x case-insensitive, or
-    ronin:0x… versus bare 0x… (Ronin stores the prefixed form).
-    Exported for the review screen's self-send note. */
+const TON_BASE64URL =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+/** Base64url-decode a 48-char TON friendly address to its 36 bytes, or null. */
+function decodeTonFriendly(value: string): Uint8Array | null {
+  const bytes = new Uint8Array(36);
+  for (let i = 0; i < 48; i += 4) {
+    const a = TON_BASE64URL.indexOf(value.charAt(i));
+    const b = TON_BASE64URL.indexOf(value.charAt(i + 1));
+    const c = TON_BASE64URL.indexOf(value.charAt(i + 2));
+    const d = TON_BASE64URL.indexOf(value.charAt(i + 3));
+    if (a < 0 || b < 0 || c < 0 || d < 0) return null;
+    const offset = (i / 4) * 3;
+    bytes[offset] = (a << 2) | (b >> 4);
+    bytes[offset + 1] = ((b & 0x0f) << 4) | (c >> 2);
+    bytes[offset + 2] = ((c & 0x03) << 6) | d;
+  }
+  return bytes;
+}
+
+/**
+ * Canonical key for a TON address: workchain + 32-byte hash. The flag
+ * byte (bounceable EQ vs non-bounceable UQ) and the CRC are ignored,
+ * so the two spellings of one wallet compare equal; the raw `0:<hex>`
+ * form canonicalises to the same key. Null when the value is not a
+ * TON address shape. Local decode (same layout as engine/boundary's
+ * validator): this module does not import it.
+ */
+function tonCanonicalKey(value: string): string | null {
+  const raw = /^(-1|0):([0-9a-fA-F]{64})$/.exec(value);
+  if (raw !== null) return `${raw[1]}:${(raw[2] as string).toLowerCase()}`;
+  if (!/^(EQ|UQ)[0-9A-Za-z_-]{46}$/.test(value)) return null;
+  const bytes = decodeTonFriendly(value);
+  if (bytes === null) return null;
+  const baseTag = (bytes[0] as number) & 0x7f;
+  if (baseTag !== 0x11 && baseTag !== 0x51) return null;
+  const workchain = bytes[1] as number;
+  if (workchain !== 0x00 && workchain !== 0xff) return null;
+  let hash = '';
+  for (let i = 2; i < 34; i += 1) {
+    hash += (bytes[i] as number).toString(16).padStart(2, '0');
+  }
+  return `${workchain === 0 ? 0 : -1}:${hash}`;
+}
+
+/**
+ * Strict bech32 spelling (Bitcoin / Litecoin / testnet): a known HRP,
+ * exactly one '1' (the HRP separator), and bech32-only data chars.
+ * Bech32 is case-insensitive; the shape guard keeps this from ever
+ * applying to case-sensitive base58 addresses.
+ */
+function isBech32Spelling(value: string): boolean {
+  if (
+    !/^(bc1|tb1|ltc1)[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{11,}$/.test(
+      value.toLowerCase(),
+    )
+  ) {
+    return false;
+  }
+  return value.indexOf('1') === value.lastIndexOf('1');
+}
+
+/** Same account, two spellings: exact, 0x case-insensitive,
+    ronin:0x… versus bare 0x… (Ronin stores the prefixed form), TON
+    EQ/UQ spellings of one wallet (and the raw `0:<hex>` form), or
+    upper/lowercase bech32 (bc1q…). Exported for the review screen's
+    self-send note. */
 export function isSameAddress(a: string, b: string): boolean {
   const left = a.trim();
   const right = b.trim();
@@ -138,12 +204,23 @@ export function isSameAddress(a: string, b: string): boolean {
     value.startsWith('ronin:') ? value.slice('ronin:'.length) : value;
   const l = stripRonin(left);
   const r = stripRonin(right);
-  return (
-    l.startsWith('0x') && r.startsWith('0x') && l.toLowerCase() === r.toLowerCase()
-  );
+  if (
+    l.startsWith('0x') &&
+    r.startsWith('0x') &&
+    l.toLowerCase() === r.toLowerCase()
+  ) {
+    return true;
+  }
+  const lTon = tonCanonicalKey(l);
+  const rTon = tonCanonicalKey(r);
+  if (lTon !== null && rTon !== null) return lTon === rTon;
+  if (isBech32Spelling(l) && isBech32Spelling(r)) {
+    return l.toLowerCase() === r.toLowerCase();
+  }
+  return false;
 }
 
-export type RecipientDetection =
+type RecipientDetection =
   | { tone: 'info'; text: string }
   | { tone: 'warn'; text: string };
 

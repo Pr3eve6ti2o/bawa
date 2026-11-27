@@ -166,6 +166,16 @@ describe('evm adapter — fee and tx inputs', () => {
     const result = await adapter.getTxInputs(ADDRESS);
     expect(result).toMatchObject({ status: 'ok', data: { kind: 'nonce', nonce: 4 } });
   });
+
+  it('reads the nonce at the pending block tag (A-4)', async () => {
+    const client = mockClient();
+    const adapter = createEvmAdapter(BSC, { client });
+    const result = await adapter.getTxInputs(ADDRESS);
+    expect(result.status).toBe('ok');
+    expect(client.getTransactionCount).toHaveBeenCalledWith(
+      expect.objectContaining({ blockTag: 'pending' }),
+    );
+  });
 });
 
 describe('evm adapter — history', () => {

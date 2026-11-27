@@ -199,11 +199,16 @@ describe('fetchSwapQuote', () => {
     expect(result.status).toBe('unavailable');
   });
 
-  it('treats a malformed success body as no-route, never a partial quote', async () => {
+  it('treats a malformed success body as unavailable, never a partial quote (A-6)', async () => {
+    // A 200 that does not parse is a provider hiccup, not proof that
+    // no route exists — the same case maps to unavailable for Relay.
     const result = await fetchSwapQuote(INPUT, {
       fetchFn: fetchJson({ estimate: { toAmount: 'not-a-number' } }),
     });
-    expect(result).toEqual({ status: 'no-route' });
+    expect(result.status).toBe('unavailable');
+    if (result.status === 'unavailable') {
+      expect(result.reason).toContain('unavailable');
+    }
   });
 });
 

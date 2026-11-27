@@ -50,6 +50,14 @@ export type SigningIntent =
       readonly amountBaseUnits: string;
       /** ETH nonce, TON seqno, TRX block number; empty string for BTC. */
       readonly sequence: string;
+      /**
+       * Token-transfer recipient (EVM-token: the transfer(recipient)
+       * inside the calldata; SPL: the owner of the destination token
+       * account). Absent for native sends, where `to` already is the
+       * recipient. A review-time intent carries it so signing binds
+       * to the recipient the user reviewed, not just the contract.
+       */
+      readonly recipient?: string;
     }
   | {
       readonly kind: 'message';
@@ -63,6 +71,7 @@ export function createTransactionIntent(
   to: string,
   amountBaseUnits: string,
   sequence: string,
+  recipient?: string,
 ): SigningIntent {
   if (typeof to !== 'string' || to.trim().length === 0) {
     throw new Error('Invalid signing intent field "to": expected a non-empty string.');
@@ -86,33 +95,22 @@ export function createTransactionIntent(
     );
   }
 
+  if (
+    recipient !== undefined &&
+    (typeof recipient !== 'string' || recipient.trim().length === 0)
+  ) {
+    throw new Error(
+      'Invalid signing intent field "recipient": expected a non-empty string.',
+    );
+  }
+
   return Object.freeze({
     kind: 'transaction' as const,
     chain,
     to,
     amountBaseUnits,
     sequence,
-  });
-}
-
-/** Build a secret-free message intent from a supplied hash; this does not sign. */
-export function createMessageIntent(
-  chain: ChainId,
-  messageHash: string,
-): SigningIntent {
-  if (
-    typeof messageHash !== 'string' ||
-    !/^0x[0-9a-fA-F]{64}$/.test(messageHash)
-  ) {
-    throw new Error(
-      'Invalid signing intent field "messageHash": expected 0x followed by exactly 64 hexadecimal characters.',
-    );
-  }
-
-  return Object.freeze({
-    kind: 'message' as const,
-    chain,
-    messageHash,
+    ...(recipient === undefined ? {} : { recipient }),
   });
 }
 
@@ -135,6 +133,7 @@ export function intentFingerprint(intent: SigningIntent): string {
           intent.to,
           intent.amountBaseUnits,
           intent.sequence,
+          ...(intent.recipient === undefined ? [] : [intent.recipient]),
         ]
       : [intent.kind, String(intent.chain), intent.messageHash];
 
@@ -153,17 +152,33 @@ export function assertIntentMatchesTransaction(
     readonly to: string;
     readonly amountBaseUnits: string;
     readonly sequence: string;
+    readonly recipient?: string;
   },
 ): void {
   if (intent.kind !== 'transaction') {
     throw new Error('Signing intent mismatch: kind (expected "transaction").');
   }
 
-  const fields = ['chain', 'to', 'amountBaseUnits', 'sequence'] as const;
+  const fields = ['chain', 'to', 'amountBaseUnits'] as const;
   for (const field of fields) {
     if (intent[field] !== tx[field]) {
       throw new Error(`Signing intent mismatch: ${field}.`);
     }
+  }
+  // A-7: the sequence (ETH nonce, TON seqno, TRX block number; empty
+  // for BTC and SOL) is fetched live at signing and is not part of
+  // what the user reviewed — a review-time intent carries '' here and
+  // does not pin it. An intent created with a non-empty sequence
+  // still pins it exactly, so a stale or swapped nonce/seqno still
+  // refuses.
+  if (intent.sequence !== '' && intent.sequence !== tx.sequence) {
+    throw new Error('Signing intent mismatch: sequence.');
+  }
+  // A pinned recipient binds the transfer's real payee. The check
+  // only runs when the intent carries one, so native sends (whose
+  // `to` already is the recipient) are unaffected.
+  if (intent.recipient !== undefined && intent.recipient !== tx.recipient) {
+    throw new Error('Signing intent mismatch: recipient.');
   }
 }
 

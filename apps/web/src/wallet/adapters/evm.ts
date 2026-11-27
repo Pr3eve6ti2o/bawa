@@ -65,7 +65,7 @@ export interface EvmAdapterConfig {
   historySource?: string;
 }
 
-export interface EvmAdapterOverrides {
+interface EvmAdapterOverrides {
   client?: PublicClient;
   rpcUrl?: string;
   /**
@@ -389,7 +389,13 @@ export function createEvmAdapter(
     }
     try {
       const { value: nonce, source } = await runOnHealthyClient((client) =>
-        client.getTransactionCount({ address: getAddress(normalized) }),
+        // 'pending' counts transactions already in the mempool: with
+        // the default 'latest' a second send made while the first is
+        // still pending reuses its nonce and replaces it (A-4).
+        client.getTransactionCount({
+          address: getAddress(normalized),
+          blockTag: 'pending',
+        }),
       );
       return {
         status: 'ok',

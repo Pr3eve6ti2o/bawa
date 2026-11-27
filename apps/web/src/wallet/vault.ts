@@ -80,13 +80,24 @@ export const VAULT_STORAGE_KEY = 'bawa-vault';
 export const VAULT_BACKUP_STORAGE_KEY = 'bawa-vault-backup';
 /** localStorage key for the raw vault key (base64) that auto-unlock uses. */
 export const VAULT_KEY_STORAGE_KEY = 'bawa-vault-key';
-export const VAULT_VERSION = 1;
+const VAULT_VERSION = 1;
 export const PBKDF2_ITERATIONS = 600_000;
-export const PBKDF2_HASH = 'SHA-256';
-export const SALT_BYTES = 16;
-export const IV_BYTES = 12;
-export const VAULT_CIPHER = 'AES-GCM';
-export const VAULT_KEY_BITS = 256;
+/**
+ * KDF iterations a stored envelope may carry (A-10). The wallet only
+ * ever writes PBKDF2_ITERATIONS; the band allows a future increase
+ * while keeping unlock fast and WebCrypto-legal: 0 / negative /
+ * fractional values throw raw DOMExceptions, and a huge value wraps
+ * through WebIDL (1e12 becomes ~3.6B) and hangs unlock for minutes.
+ * Anything outside the band is corruption (VAULT_CORRUPTED), never a
+ * raw error or a hang.
+ */
+const PBKDF2_ITERATIONS_MIN = 1;
+const PBKDF2_ITERATIONS_MAX = 2_000_000;
+const PBKDF2_HASH = 'SHA-256';
+const SALT_BYTES = 16;
+const IV_BYTES = 12;
+const VAULT_CIPHER = 'AES-GCM';
+const VAULT_KEY_BITS = 256;
 
 /** 'Vault is corrupted.' — the catalogue message for VAULT_CORRUPTED. */
 export const VAULT_CORRUPTED: string =
@@ -229,12 +240,23 @@ function validateV1Envelope(parsed: unknown): VaultEnvelope {
     envelope === null ||
     envelope.kdf?.name !== 'PBKDF2' ||
     typeof envelope.kdf?.hash !== 'string' ||
-    typeof envelope.kdf?.iterations !== 'number' ||
     typeof envelope.kdf?.saltB64 !== 'string' ||
     typeof envelope.ivB64 !== 'string' ||
     typeof envelope.ciphertextB64 !== 'string' ||
     !Array.isArray(envelope.profileIds) ||
     !envelope.profileIds.every((id) => typeof id === 'string')
+  ) {
+    throw corruptError();
+  }
+  // KDF iterations are live input to WebCrypto (see the constants
+  // above): validate the range here, at the envelope boundary, so no
+  // bad value can reach deriveKey.
+  const iterations = envelope.kdf?.iterations;
+  if (
+    typeof iterations !== 'number' ||
+    !Number.isSafeInteger(iterations) ||
+    iterations < PBKDF2_ITERATIONS_MIN ||
+    iterations > PBKDF2_ITERATIONS_MAX
   ) {
     throw corruptError();
   }
@@ -373,7 +395,16 @@ async function decryptEnvelopeText(
   } catch {
     throw createWalletError(WalletErrorCodes.VAULT_CORRUPTED);
   }
-  const key = await deriveKey(password, salt, envelope.kdf.iterations);
+  let key: CryptoKey;
+  try {
+    // Defence in depth: envelopes are range-checked at the read
+    // boundary, so this cannot fail on iterations — but a key
+    // derivation failure must still surface as corruption, never as
+    // a raw WebCrypto error on the lock screen.
+    key = await deriveKey(password, salt, envelope.kdf.iterations);
+  } catch {
+    throw createWalletError(WalletErrorCodes.VAULT_CORRUPTED);
+  }
   let plaintext: ArrayBuffer;
   try {
     plaintext = await globalThis.crypto.subtle.decrypt(
@@ -826,7 +857,7 @@ export function deleteVault(): void {
 // or key. The vault owns the phrase; this record only says which
 // accounts from it the user has created.
 export const VAULT_ACCOUNTS_KEY = 'bawa-vault-accounts:v1';
-export const MAX_VAULT_ACCOUNTS = 200;
+const MAX_VAULT_ACCOUNTS = 200;
 export const MAX_CREATE_AT_ONCE = 50;
 
 /** "Account 1" for index 0, "Account 2" for index 1, and so on. */

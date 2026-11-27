@@ -149,6 +149,36 @@ describe('ERC-20 balanceOf', () => {
     if (result.status === 'ok') expect(result.data.valueBaseUnits).toBe('0');
   });
 
+  it('rejects an on-chain decimals() above 36 in the balance fallback (A-5)', async () => {
+    // A token outside the default-token table, so the on-chain
+    // decimals() read is the only source — an absurd value must fail
+    // the balance read instead of reaching the formatter.
+    const client = mockEvmClient({ decimals: `0x${uint256Hex(100n)}` });
+    const result = await fetchTokenBalance(
+      {
+        chain: 'eth',
+        contract: '0x1234567890123456789012345678901234567890',
+        ownerAddress: OWNER,
+      },
+      { evmClient: client },
+    );
+    expect(result.status).toBe('error');
+  });
+
+  it('accepts an on-chain decimals() of 36 in the balance fallback (A-5)', async () => {
+    const client = mockEvmClient({ decimals: `0x${uint256Hex(36n)}` });
+    const result = await fetchTokenBalance(
+      {
+        chain: 'eth',
+        contract: '0x1234567890123456789012345678901234567890',
+        ownerAddress: OWNER,
+      },
+      { evmClient: client },
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.data.decimals).toBe(36);
+  });
+
   it('errors when the RPC reports the wrong chain id', async () => {
     const client = mockEvmClient({ chainId: '0x38' });
     const result = await fetchTokenBalance(
@@ -663,7 +693,7 @@ describe('SPL balanceOf — UI/UX fixes, item 13', () => {
     );
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
-      expect(result.data.source).toBe('public.rpc.solanavibestation.com');
+      expect(result.data.source).toBe('solana.publicnode.com');
     }
   });
 

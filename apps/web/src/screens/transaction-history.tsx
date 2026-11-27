@@ -72,7 +72,7 @@ export function TransactionHistoryScreen() {
         <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
           <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
           <p className="text-sm leading-relaxed text-panel-text-muted">
-            Transaction history isn't available for this network yet.
+            Transaction history isn't available on any chain yet.
           </p>
           <p className="text-sm leading-relaxed text-panel-text-muted">
             Import a watch-only wallet to see its derived addresses, or open
@@ -193,6 +193,17 @@ export function TransactionHistoryScreen() {
                   ) : (
                     'Retry'
                   )}
+                </Button>
+              </div>
+            ) : vaultState === 'locked' ? (
+              // Lane A (A-8): a locked vault clears every address, so
+              // no chain loaded and none failed — the old code fell
+              // through to null and the screen was blank below the
+              // filter. Match recent-activity: say so, with Unlock.
+              <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
+                <p className="text-sm">Locked. Unlock to see activity.</p>
+                <Button type="button" variant="outline" asChild>
+                  <Link to="/lock">Unlock</Link>
                 </Button>
               </div>
             ) : null

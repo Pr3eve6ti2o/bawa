@@ -815,6 +815,13 @@ describe('formatUnitPriceUsd', () => {
     expect(formatUnitPriceUsd('0.310200')).toBe('$0.3102');
   });
 
+  it('shows tiny prices with more precision instead of $0.00 (A-11)', () => {
+    expect(formatUnitPriceUsd('0.0000004')).toBe('$0.0000004');
+    expect(formatUnitPriceUsd('0.00000045')).toBe('$0.00000045');
+    expect(formatUnitPriceUsd('0.000001')).toBe('$0.000001');
+    expect(formatUnitPriceUsd('0.00000004')).toBe('$0.00000004');
+  });
+
   it('throws for zero, negative, and invalid input', () => {
     for (const price of ['0', '-1', 'not-a-number', '']) {
       expect(() => formatUnitPriceUsd(price)).toThrow();

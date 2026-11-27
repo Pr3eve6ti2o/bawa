@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { SendScreen } from './send';
+import { signEvmOffline } from '../wallet/send';
 import { useWallet } from '../state/wallet-context';
 import { usePrices } from '../wallet/prices';
 import { getAdapterForMode } from '../wallet/adapters';
@@ -421,6 +422,60 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('0xdeadbeef');
       expect(mounted.div.textContent).toContain('Signed transaction (hex)');
       expect(mounted.div.textContent).toContain('not sent anywhere');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('passes the review-time intent to the signer (A-7)', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachReview(mounted.div);
+      await click(mounted.div, 'Sign offline');
+      await waitForText(mounted.div, 'Send signed, not sent');
+      const calls = vi.mocked(signEvmOffline).mock.calls as unknown[][];
+      expect(calls).toHaveLength(1);
+      const options = calls[0]?.[7] as { intent?: unknown } | undefined;
+      expect(options?.intent).toMatchObject({
+        kind: 'transaction',
+        chain: 'eth',
+        to: RECIPIENT,
+        amountBaseUnits: '500000000000000000',
+        sequence: '',
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('re-reviewing after going back rebinds the intent to the new recipient (A-7)', async () => {
+    const NEW_RECIPIENT = '0x0000000000000000000000000000000000000001';
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachReview(mounted.div);
+      await click(mounted.div, 'Back');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, NEW_RECIPIENT);
+      });
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, 'Review your send');
+      await click(mounted.div, 'Sign offline');
+      await waitForText(mounted.div, 'Send signed, not sent');
+      const calls = vi.mocked(signEvmOffline).mock.calls as unknown[][];
+      expect(calls).toHaveLength(1);
+      const options = calls[0]?.[7] as { intent?: unknown } | undefined;
+      expect(options?.intent).toMatchObject({
+        kind: 'transaction',
+        chain: 'eth',
+        to: NEW_RECIPIENT,
+        amountBaseUnits: '500000000000000000',
+        sequence: '',
+      });
     } finally {
       await mounted.cleanup();
     }
