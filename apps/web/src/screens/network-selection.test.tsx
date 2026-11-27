@@ -144,8 +144,9 @@ describe('NetworkSelectionScreen', () => {
         'EVM (61)',
         'Solana (1)',
         'Bitcoin (3)',
+        'TRON (1)',
         'TON (1)',
-        'Other (21)',
+        'Other (20)',
       ]);
     } finally {
       await mounted.cleanup();

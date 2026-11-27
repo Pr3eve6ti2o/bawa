@@ -118,40 +118,62 @@ export function recordLastUsedChain(chain: ChainId): void {
 
 // --- Chain families (P1 Lane S1; Lane E M5) ---
 
+/** The family a chain belongs to, as a stable id — one implementation
+    shared by the picker and the Networks screen (T1-8): the two used
+    to disagree on TRON (picker: "TRON", Networks: "Other"). */
+export type ChainFamily = 'evm' | 'solana' | 'bitcoin' | 'tron' | 'ton' | 'other';
+
+/** The order family groups render in: EVM first, then the
+    single-chain families, then everything else. Shared by the picker
+    and the Networks tabs. */
+export const CHAIN_FAMILY_ORDER: readonly ChainFamily[] = [
+  'evm',
+  'solana',
+  'bitcoin',
+  'tron',
+  'ton',
+  'other',
+];
+
+/** Display label for a family id. */
+export const CHAIN_FAMILY_LABELS: Record<ChainFamily, string> = {
+  evm: 'EVM',
+  solana: 'Solana',
+  bitcoin: 'Bitcoin',
+  tron: 'TRON',
+  ton: 'TON',
+  other: 'Other',
+};
+
 /** The family a chain belongs to, derived from the registry data —
     evmChainId for EVM, coinTypeName for the rest — so a chain added
     to the registry later groups itself without a code change. */
-export function chainFamily(chain: ChainId): string {
+export function chainFamilyId(chain: ChainId): ChainFamily {
   const config = chainConfig(chain);
-  if (config.evmChainId !== null && config.evmChainId !== undefined) return 'EVM';
+  if (config.evmChainId !== null && config.evmChainId !== undefined) return 'evm';
   switch (config.coinTypeName) {
     case 'solana':
-      return 'Solana';
+      return 'solana';
     case 'bitcoin':
     case 'litecoin':
     case 'dogecoin':
-      return 'Bitcoin';
+      return 'bitcoin';
     case 'tron':
-      return 'TRON';
+      return 'tron';
     case 'ton':
-      return 'TON';
+      return 'ton';
     default:
-      return 'Other';
+      return 'other';
   }
 }
 
-/** The order family groups render in: EVM first, then the
-    single-chain families, then everything else. */
-export const CHAIN_FAMILY_ORDER: readonly string[] = [
-  'EVM',
-  'Solana',
-  'Bitcoin',
-  'TRON',
-  'TON',
-  'Other',
-];
+/** The family a chain belongs to, as a display label. Thin wrapper
+    over chainFamilyId — the label contract the picker tests pin. */
+export function chainFamily(chain: ChainId): string {
+  return CHAIN_FAMILY_LABELS[chainFamilyId(chain)];
+}
 
-export interface ChainGroup {
+interface ChainGroup {
   heading: string;
   chains: ChainId[];
 }
@@ -171,10 +193,10 @@ export function groupChainsByFamily(
   if (recentChains.length > 0) {
     groups.push({ heading: 'Recent', chains: recentChains });
   }
-  const byFamily = new Map<string, ChainId[]>();
+  const byFamily = new Map<ChainFamily, ChainId[]>();
   for (const chain of chains) {
     if (recentSet.has(chain)) continue;
-    const family = chainFamily(chain);
+    const family = chainFamilyId(chain);
     const list = byFamily.get(family) ?? [];
     list.push(chain);
     byFamily.set(family, list);
@@ -182,7 +204,7 @@ export function groupChainsByFamily(
   for (const family of CHAIN_FAMILY_ORDER) {
     const list = byFamily.get(family);
     if (list !== undefined && list.length > 0) {
-      groups.push({ heading: family, chains: list });
+      groups.push({ heading: CHAIN_FAMILY_LABELS[family], chains: list });
     }
   }
   return groups;
@@ -190,7 +212,7 @@ export function groupChainsByFamily(
 
 /** A picker value: one chain, or 'all' for the Transactions filter
     (the only call site that filters rather than picks). */
-export type ChainPickerValue = ChainId | 'all';
+type ChainPickerValue = ChainId | 'all';
 
 export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
   chains,

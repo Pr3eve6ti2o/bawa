@@ -583,6 +583,25 @@ describe('asset detail screen', () => {
     }
   });
 
+  it('shows the truncated import-source xpub on a native chain detail', async () => {
+    // T1-12: Lane X #56 deleted the only truncated-xpub display; the
+    // row is restored inside the Import source & derivation disclosure
+    // on the native chain detail (token routes do not render it).
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      perChain(emptyHistory),
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('xpub6TestWal…90abcdef');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the verified tick on a token detail header', async () => {
     // Lane 1: the token detail header carries the mark — USDC is a
     // curated default, so it reads Verified (Badge).

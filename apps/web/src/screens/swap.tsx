@@ -80,6 +80,7 @@ import {
   LIFI_SLIPPAGE,
   fetchSwapQuote,
   formatQuoteUsd,
+  lifiChainIdFor,
   type SwapQuote,
   type SwapQuoteResult,
   type SwapTokenChoice,
@@ -140,11 +141,15 @@ function TokenChips({
   choices,
   selected,
   onSelect,
+  disabledKeys,
 }: {
   chain: ChainId;
   choices: SwapTokenChoice[];
   selected: SwapTokenChoice;
   onSelect: (choice: SwapTokenChoice) => void;
+  /** Choice keys that cannot be picked on this side — the From token,
+      on the To side when both sides share a chain (T1-11). */
+  disabledKeys?: ReadonlySet<string>;
 }) {
   const config = chainConfig(chain);
   return (
@@ -155,15 +160,25 @@ function TokenChips({
     >
       {choices.map((choice) => {
         const isSelected = choiceKey(choice) === choiceKey(selected);
+        // T1-11: the From token, offered on the To side too when both
+        // sides are on one chain, is marked, not silently quotable —
+        // the same-pair guard above blocks it, and the chip says so.
+        const isFromToken = disabledKeys?.has(choiceKey(choice)) ?? false;
         return (
           <button
             key={choiceKey(choice)}
             type="button"
             aria-pressed={isSelected}
+            disabled={isFromToken}
+            title={
+              isFromToken
+                ? 'Same token as From — pick a different token or network'
+                : undefined
+            }
             onClick={() => onSelect(choice)}
             className={`flex min-h-11 items-center gap-2 rounded-bawa-sm border-2 border-ink px-3 py-2 text-sm font-medium ${
               isSelected ? 'bg-sun' : 'bg-paper'
-            }`}
+            }${isFromToken ? ' opacity-40' : ''}`}
           >
             {choice.kind === 'native' ? (
               <ChainLogo chain={chain} size={24} />
@@ -340,13 +355,23 @@ type RefuelQuoteState =
 export function SwapScreen() {
   const { vaultState, vaultAddresses, vaultAccount, balances, tokenBalances, devnetEnabled } =
     useWallet();
-  // P1 (Lane S4, item 10): both sides start on the last-used chain —
-  // the shared last-used pick the picker records on every selection.
-  // To defaults to that chain too, or to the from-chain when nothing
-  // was recorded yet — never to an unasked Polygon (the old default).
+  // P1 (Lane S4, item 10): the From side starts on the last-used
+  // chain — the shared last-used pick the picker records on every
+  // selection. To never defaults to the From chain (T1-11): the same
+  // pair can never quote, and auto-quote would burn the keyless LI.FI
+  // quota on a doomed request every amount entry. To defaults to the
+  // first chain LI.FI can actually route from here — first
+  // COMPARE_CHAIN ≠ From would be Bitcoin, which only Relay covers,
+  // and Relay is not set up, so that pair would open on "No route
+  // for this pair" instead of a quotable default.
   const swapLastUsedChain = readLastUsedChain(COMPARE_CHAINS);
   const initialFromChain: ChainId = swapLastUsedChain ?? 'eth';
-  const initialToChain: ChainId = swapLastUsedChain ?? initialFromChain;
+  const initialToChain: ChainId =
+    COMPARE_CHAINS.find(
+      (chain) => chain !== initialFromChain && lifiChainIdFor(chain) !== null,
+    ) ??
+    COMPARE_CHAINS.find((chain) => chain !== initialFromChain) ??
+    initialFromChain;
   const [fromChain, setFromChain] = useState<ChainId>(initialFromChain);
   const [toChain, setToChain] = useState<ChainId>(initialToChain);
   const [fromToken, setFromToken] = useState<SwapTokenChoice>(() =>
@@ -465,6 +490,11 @@ export function SwapScreen() {
           ? 'Enter an amount above zero.'
           : null;
 
+  // T1-11: the same token on both sides can never quote — block the
+  // auto-quote before it fires a doomed request. Same chain with a
+  // different token is quotable, so only the identical pair is gated.
+  const isSamePair =
+    fromChain === toChain && choiceKey(fromToken) === choiceKey(toToken);
   const quoteDisabledReason = devnetEnabled
     ? 'Quotes are for mainnet. Switch off devnet test mode to get a quote.'
     : fromAddress === null
@@ -473,9 +503,11 @@ export function SwapScreen() {
         ? 'Enter an amount to get a quote.'
         : amountBlockingError !== null
           ? amountBlockingError
-          : recipientError !== null
-            ? recipientError
-            : null;
+          : isSamePair
+            ? 'Choose a different network'
+            : recipientError !== null
+              ? recipientError
+              : null;
   const quoteBusy = quoteState.status === 'loading';
 
   async function handleGetQuote(): Promise<void> {
@@ -1018,6 +1050,9 @@ export function SwapScreen() {
           choices={toChoices}
           selected={toToken}
           onSelect={setToToken}
+          disabledKeys={
+            toChain === fromChain ? new Set([choiceKey(fromToken)]) : undefined
+          }
         />
         <div className="space-y-2">
           <Label htmlFor="swap-recipient">

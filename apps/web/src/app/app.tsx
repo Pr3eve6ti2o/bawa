@@ -398,13 +398,20 @@ function AppLayout() {
               isFocusedFlow ? 'pb-0' : 'pb-24'
             }`}
           >
-            {wrapperClass !== null ? (
-              <div className={wrapperClass}>
+            {/* T1-15: the Suspense sits around the Outlet, not the
+                Routes — the shell (headers, sidebar, bottom nav) is
+                eager, so a cold deep link shows the header while the
+                lazy screen chunk loads, instead of a headerless
+                "Loading…". */}
+            <Suspense fallback={<BawaLoading />}>
+              {wrapperClass !== null ? (
+                <div className={wrapperClass}>
+                  <Outlet />
+                </div>
+              ) : (
                 <Outlet />
-              </div>
-            ) : (
-              <Outlet />
-            )}
+              )}
+            </Suspense>
           </main>
 
           {!isFocusedFlow && (
@@ -477,8 +484,7 @@ export function App() {
     <BrowserRouter basename={base === '' ? undefined : base}>
       <ErrorBoundary fallbackTitle="Unable to show your wallet">
         <WalletProvider>
-        <Suspense fallback={<BawaLoading />}>
-          <Routes>
+        <Routes>
           <Route path="/" element={<AppLayout />}>
             <Route index element={<HomeScreen />} />
             <Route path="welcome" element={<WelcomeScreen />} />
@@ -502,8 +508,7 @@ export function App() {
             <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>
-          </Routes>
-        </Suspense>
+        </Routes>
       </WalletProvider>
       </ErrorBoundary>
     </BrowserRouter>

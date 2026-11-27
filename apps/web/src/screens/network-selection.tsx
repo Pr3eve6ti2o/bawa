@@ -3,7 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/components/card'
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { Switch } from '../ui/components/switch';
-import { ChainSearchSelect, filterChains } from './chain-search-select';
+import {
+  ChainSearchSelect,
+  CHAIN_FAMILY_LABELS,
+  CHAIN_FAMILY_ORDER,
+  chainFamilyId,
+  filterChains,
+  type ChainFamily,
+} from './chain-search-select';
 import { ChainLogo } from './token-logo';
 import { useWallet } from '../state/wallet-context';
 import {
@@ -32,27 +39,13 @@ import { DevnetSetting } from './devnet-setting';
 // two-level pattern (family tabs filter the list; they don't switch a
 // provider connection). EVM is every chain with an EVM chain id;
 // Bitcoin is the UTXO Bitcoin family (Bitcoin, Litecoin, Dogecoin);
-// Solana and TON are single chains; everything else is Other.
-// Counts come from the registry, never hard-coded.
-type ChainFamily = 'evm' | 'solana' | 'bitcoin' | 'ton' | 'other';
-
-const BITCOIN_FAMILY: readonly ChainId[] = ['btc', 'ltc', 'doge'];
-
-function chainFamily(chain: ChainId): ChainFamily {
-  if (chain === 'sol') return 'solana';
-  if (chain === 'ton') return 'ton';
-  if (BITCOIN_FAMILY.includes(chain)) return 'bitcoin';
-  if (CHAINS[chain].evmChainId !== null) return 'evm';
-  return 'other';
-}
-
+// Solana, TON and TRON are single chains; everything else is Other.
+// Counts come from the registry, never hard-coded. The family
+// mapping and order live in chain-search-select (T1-8) — one shared
+// implementation for the picker and this screen.
 const FAMILY_TABS: readonly { id: 'all' | ChainFamily; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'evm', label: 'EVM' },
-  { id: 'solana', label: 'Solana' },
-  { id: 'bitcoin', label: 'Bitcoin' },
-  { id: 'ton', label: 'TON' },
-  { id: 'other', label: 'Other' },
+  ...CHAIN_FAMILY_ORDER.map((id) => ({ id, label: CHAIN_FAMILY_LABELS[id] })),
 ];
 
 // One chain row in the Mainnet list: logo + name + toggle only. The
@@ -119,10 +112,6 @@ export function NetworkSelectionScreen() {
   const enabled = new Set(enabledChains ?? SUPPORTED_CHAINS);
   const [query, setQuery] = useState('');
   const [family, setFamily] = useState<'all' | ChainFamily>('all');
-  // Lane 5: bumped by the RPC manager after every mutation, so the
-  // screen re-reads the RPC state at once instead of after a remount.
-  const [rpcVersion, setRpcVersion] = useState(0);
-  void rpcVersion;
   const needle = query.trim();
   // One alphabetical list per family, computed from the registry; the
   // search filters inside the active family (the same name/symbol/id
@@ -135,10 +124,11 @@ export function NetworkSelectionScreen() {
       evm: [],
       solana: [],
       bitcoin: [],
+      tron: [],
       ton: [],
       other: [],
     };
-    for (const chain of sorted) lists[chainFamily(chain)].push(chain);
+    for (const chain of sorted) lists[chainFamilyId(chain)].push(chain);
     return { all: sorted, ...lists };
   }, []);
   const familyChains = familyLists[family];
@@ -257,9 +247,7 @@ export function NetworkSelectionScreen() {
       <details className="rounded-bawa border-2 border-ink bg-paper">
         <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">RPC endpoints</summary>
         <div className="px-4 pb-4">
-          <RpcEndpointManager
-            onRpcChange={() => setRpcVersion((value) => value + 1)}
-          />
+          <RpcEndpointManager />
         </div>
       </details>
 
@@ -304,9 +292,10 @@ function historySourceFor(chain: ChainId): string | null {
  * first ("Use this one"), remove a custom RPC, or reset everything
  * to the registry defaults. Changes are stored in localStorage and
  * the screen refreshes balances straight away, so the switch is
- * visible at once — the row shows which host answered the last
- * balance ("Last balance from …"), and "Check" probes each endpoint
- * live from this browser. Dogecoin keeps its built-in SoChain /
+ * visible at once — the manager's entry for each chain shows which
+ * host answered its last balance ("Last balance from …"), and
+ * "Check" probes each endpoint live from this browser. Dogecoin
+ * keeps its built-in SoChain /
  * BlockCypher pair (different API shapes): it takes no custom RPC.
  *
  * One honest limit, stated on the screen: the browser only allows
@@ -315,7 +304,7 @@ function historySourceFor(chain: ChainId): string | null {
  * screen says so instead of storing a dead entry. The well-known
  * public RPCs that are allowed are offered as one-tap buttons.
  */
-function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
+function RpcEndpointManager() {
   const { refreshBalances, balances, history } = useWallet();
   const [version, setVersion] = useState(0);
   const [selectedChain, setSelectedChain] = useState<ChainId>('eth');
@@ -333,7 +322,6 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
   /** Applies a change, then refreshes balances so the effect is visible at once. */
   const applyAndRefresh = async (note: string) => {
     refresh();
-    onRpcChange();
     setRefreshing(true);
     setMessage(`${note} Refreshing balance…`);
     try {

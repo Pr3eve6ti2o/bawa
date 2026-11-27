@@ -109,6 +109,10 @@ const testGlobal = globalThis as typeof globalThis & {
 
 const FROM = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
 const RECIPIENT = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+// Solana System Program address — a well-known non-user address, used
+// as the shape-valid fixture recipient for the default To side
+// (Solana). Never a user address, never funded.
+const SOL_RECIPIENT = '11111111111111111111111111111111';
 const TON_ADDRESS = 'UQAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-RKY';
 
 const LIFI_OK_FIXTURE = {
@@ -236,7 +240,7 @@ async function openRefuel(div: HTMLDivElement): Promise<void> {
 function setWallet(overrides: Record<string, unknown> = {}): void {
   vi.mocked(useWallet).mockReturnValue({
     vaultState: 'unlocked',
-    vaultAddresses: { eth: [FROM], matic: [RECIPIENT] },
+    vaultAddresses: { eth: [FROM], matic: [RECIPIENT], sol: [SOL_RECIPIENT] },
     balances: {
       eth: { status: 'available', value: '1000000000000000000' },
       matic: { status: 'available', value: '10000000000000000000' },
@@ -440,8 +444,7 @@ describe('SwapScreen', () => {
     const mounted = await mountScreen();
     try {
       // P1 (Lane S4, item 10): with no last-used chain the To side
-      // defaults to the from-chain, not an unasked Polygon — pick
-      // Polygon explicitly for the fixture pair.
+      // defaults to Solana — pick Polygon explicitly for the fixture pair.
       await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       // The fixture quotes ETH -> a 6-decimal USDC on Polygon, so pick
       // the app's own Polygon USDC first: the request must match the
@@ -507,7 +510,7 @@ describe('SwapScreen', () => {
     stubFetch({ message: 'Rate limit exceeded', code: 1005 }, 429);
     const mounted = await mountScreen();
     try {
-      // P1 (Lane S4, item 10): To defaults to the from-chain with no
+      // P1 (Lane S4, item 10): To defaults to Solana with no
       // last-used chain — pick Polygon explicitly for this pair.
       await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       await pickToken(mounted.div, 'Token on Polygon', 'USDC');
@@ -574,7 +577,7 @@ describe('SwapScreen', () => {
     });
     const mounted = await mountScreen();
     try {
-      // P1 (Lane S4, item 10): To defaults to the from-chain with no
+      // P1 (Lane S4, item 10): To defaults to Solana with no
       // last-used chain — pick Polygon explicitly for this pair, or
       // the fixture's POL amounts never render.
       await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
@@ -629,7 +632,7 @@ describe('SwapScreen', () => {
     const mounted = await mountScreen();
     try {
       // P1 (Lane S4, item 10): the recipient is validated against the
-      // To chain, which now defaults to the from-chain — pick Polygon
+      // To chain, which now defaults to Solana — pick Polygon
       // explicitly for this pair.
       await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       const input = mounted.div.querySelector(
@@ -666,9 +669,9 @@ describe('SwapScreen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      // P1 (Lane S4, item 10): To defaults to the from-chain with no
-      // last-used chain, so pick Polygon as the To side first — the
-      // flip is only observable with two different sides.
+      // P1 (Lane S4, item 10): To defaults to Solana with no
+      // last-used chain — pick Polygon as the To side first, so the
+      // flip lands on POL.
       await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       const flip = mounted.div.querySelector(
         'button[aria-label="Switch direction"]',
@@ -706,7 +709,7 @@ describe('SwapScreen', () => {
         mounted.div,
         'networks have no swap provider yet',
       );
-      // P1 (Lane S4, item 10): To defaults to the from-chain with no
+      // P1 (Lane S4, item 10): To defaults to Solana with no
       // last-used chain — pick Polygon explicitly for this pair.
       await pickChain(mounted.div, 'swap-to-chain', 'matic', 'Polygon');
       await pickToken(mounted.div, 'Token on Polygon', 'USDC');
@@ -897,9 +900,10 @@ describe('SwapScreen', () => {
     }
   });
 
-  it('defaults To to the last-used chain, or to the from-chain', async () => {
-    // P1 (Lane S4, item 10): a recorded last-used chain is the To
-    // default; with nothing recorded the To side follows From.
+  it('defaults To to a different chain LI.FI can quote, never the from-chain', async () => {
+    // T1-11: a recorded last-used chain is the From default; To is
+    // the first LI.FI-covered chain that is not From — the same pair
+    // can never quote, so it is never the default.
     localStorage.setItem('bawa:last-used-chain', JSON.stringify('base'));
     setWallet({
       vaultAddresses: { eth: [FROM], base: [RECIPIENT], matic: [RECIPIENT] },
@@ -918,11 +922,12 @@ describe('SwapScreen', () => {
         '#swap-to-chain',
       ) as HTMLInputElement;
       expect(fromInput.value).toBe('Base');
-      expect(toInput.value).toBe('Base');
+      expect(toInput.value).toBe('Ethereum');
     } finally {
       await mounted.cleanup();
     }
-    // Nothing recorded: To follows From (Ethereum).
+    // Nothing recorded: From is Ethereum, To is the first LI.FI-covered
+    // chain that is not Ethereum — Solana.
     localStorage.clear();
     setWallet();
     const second = await mountScreen();
@@ -930,9 +935,31 @@ describe('SwapScreen', () => {
       const toInput = second.div.querySelector(
         '#swap-to-chain',
       ) as HTMLInputElement;
-      expect(toInput.value).toBe('Ethereum');
+      expect(toInput.value).toBe('Solana');
     } finally {
       await second.cleanup();
+    }
+  });
+
+  it('blocks the same pair from quoting, before any request fires', async () => {
+    // T1-11: ETH -> ETH can never quote — the guard disables Get quote
+    // with its reason, so the auto-quote never fires a doomed LI.FI
+    // request against the keyless quota.
+    setWallet();
+    const seen = stubFetch(LIFI_OK_FIXTURE);
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'swap-to-chain', 'eth', 'Ethereum');
+      await enterAmount(mounted.div, '0.1');
+      await waitForText(mounted.div, 'Choose a different network');
+      expect(findButton(mounted.div, 'Get quote').disabled).toBe(true);
+      // The auto-quote debounce is 600 ms — past it, no request fired.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      });
+      expect(seen).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
     }
   });
 

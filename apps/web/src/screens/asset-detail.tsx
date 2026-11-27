@@ -136,6 +136,7 @@ export function AssetDetailScreen() {
   // is a valid registry chain; chainId carries that assertion once.
   const chainId = chain as ChainId;
   const {
+    xpubs,
     addresses,
     vaultAddresses,
     hydrating,
@@ -234,6 +235,7 @@ export function AssetDetailScreen() {
     );
   }
 
+  const xpub = xpubs[chainId]?.xpub;
   const state = uiState[chainId];
   // Token routes show the token balance; native routes show the chain
   // balance. A missing token entry (before the first refresh) reads as
@@ -813,26 +815,45 @@ export function AssetDetailScreen() {
       </section>
 
       {/*
-        Derivation, last: the path behind the addresses above, behind
-        a disclosure (Lane D #56) — the import-source card
-        duplicated the address already shown above.
+        Import source + Derivation, last: the xpub / vault address
+        behind the addresses above, with the path. Lane X #56 deleted
+        the import-source card on the premise it duplicated the
+        address shown above — it did not: the xpub is shown nowhere
+        else, so with several imports there was no way to tell which
+        xpub a chain's addresses came from (T1-12). The row is
+        restored here, inside the disclosure, truncated like before.
       */}
       <details className="rounded-bawa border-2 border-ink bg-paper">
-        <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">Derivation</summary>
+        <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">Import source &amp; derivation</summary>
         <div className="px-4 pb-4">
-          <p className="break-all text-base">
-            {chain === 'ton' ? (
-              'Single imported address, no derivation. TON path m/44\'/607\'/0\' is fully hardened.'
-            ) : (
-              // The three documented templates first; every other
-              // chain falls back to its registry path (account 0,
-              // index 0) so the row is never blank.
-              <code>
-                {(DERIVATION_PATHS as Partial<Record<ChainId, string>>)[chainId]
-                  ?? config.pathFor(0, 0)}
-              </code>
-            )}
-          </p>
+          <dl className="space-y-4">
+            <div>
+              <dt className="text-sm text-muted-foreground">{xpub ? (chain === 'ton' ? 'Imported TON address' : 'Imported xpub') : hasVaultAddress ? 'Vault address' : (chain === 'ton' ? 'Imported TON address' : 'Imported xpub')}</dt>
+              <dd className="break-all font-mono text-sm">
+                {xpub
+                  ? `${xpub.slice(0, 12)}…${xpub.slice(-8)}`
+                  : hasVaultAddress && firstVaultAddress !== undefined
+                    ? `${firstVaultAddress.slice(0, 12)}…${firstVaultAddress.slice(-8)}`
+                    : 'Not imported'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Derivation</dt>
+              <dd className="break-all text-base">
+                {chain === 'ton' ? (
+                  'Single imported address, no derivation. TON path m/44\'/607\'/0\' is fully hardened.'
+                ) : (
+                  // The three documented templates first; every other
+                  // chain falls back to its registry path (account 0,
+                  // index 0) so the row is never blank.
+                  <code>
+                    {(DERIVATION_PATHS as Partial<Record<ChainId, string>>)[chainId]
+                      ?? config.pathFor(0, 0)}
+                  </code>
+                )}
+              </dd>
+            </div>
+          </dl>
         </div>
       </details>
         </div>
