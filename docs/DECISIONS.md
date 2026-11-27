@@ -2444,3 +2444,9 @@ chain count.
 ## §40 — Standing instruction: move verified work without asking (owner order, 2026-11-27 ~20:03 IST)
 
 **Decision (owner order, standing):** "You can move it if you like, you do not have to take permission from me." The owner does not want to be asked for permission to move or apply verified work. Once work is verified, move/apply it without re-asking. This covers moving and applying verified work only; other promotions and guard installations are still each their own question.
+
+## §41 — Link-text colour: deep coral for text (Lane T2 F1/F4, 2026-11-28)
+
+**Decision (bug-hunt v2 fix-all, Lane T2):** coral `#FF6B4A` text on paper `#FFFDF7` is 2.77:1 — below WCAG AA 4.5:1 for normal text and below the 3:1 bar for the destructive Alert icon. Link text and destructive text now use a darker burnt shade, `--bawa-coral-deep` `#C23A1D`, which is 5.27:1 on paper (both ratios computed first-hand). The CTA button is unchanged: coral background + ink text is 5.03:1 and stays. The literal is added to the `scripts/palette-audit.mjs` allowlist as link-text/destructive-text only (never a fill or background); this entry is the recorded decision that rule requires. The 4-colour cap otherwise stands.
+
+**What changed:** `--link` / `--color-link` tokens in `apps/web/src/ui/styles/globals.css`; `text-primary` (used only for link text) and `text-destructive` (used only for error text) are overridden at the token layer to the link colour, so all 17 link sites pass including the ones in files this lane does not own; the destructive Alert icon uses `text-link` in `apps/web/src/ui/components/alert.tsx` (its coral border is unchanged).

@@ -61,6 +61,13 @@
   --bawa-paper: #FFFDF7;
   --bawa-ink: #2B2B2B;
   --bawa-coral: #FF6B4A;
+  /* Lane T2 (F1/F4, 2026-11-28): deep coral is the LINK-TEXT colour
+     only. Coral text on paper is 2.77:1, below WCAG AA 4.5:1 for
+     normal text (and below 3:1 for the destructive icon), so link
+     text and destructive text use this darker burnt shade instead:
+     #C23A1D on paper #FFFDF7 is 5.27:1, computed first-hand. The
+     CTA button keeps bg-coral + ink text (5.03:1) and is unaffected. */
+  --bawa-coral-deep: #C23A1D;
   --bawa-sun: #FFD93B;
 
   /* QR-card template colours (QR-cards programme, Lane E,
@@ -146,6 +153,7 @@
   --ai-subtle-border: var(--bawa-ink);
 
   --primary: var(--bawa-coral);
+  --link: var(--bawa-coral-deep);
   --primary-hover: var(--bawa-coral);
   --primary-active: var(--bawa-coral);
   --primary-solid: var(--bawa-coral);
@@ -240,6 +248,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-link: var(--link);
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
   --color-primary-disabled: var(--primary-disabled);
@@ -640,5 +649,23 @@
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Lane T2 (F1/F4, 2026-11-28): link text and destructive text render
+   in the deep-coral link colour, not the CTA coral. text-primary is
+   used ONLY for link text in this app (17 sites, all Link/a with an
+   underline; the primary button uses bg-coral, never text-primary),
+   and text-destructive is used ONLY for error text — so overriding
+   the two text utilities here fixes every site, including the ones
+   in files this lane does not own, without touching those files.
+   New link code should use text-link directly. */
+@layer utilities {
+  .text-primary {
+    color: var(--link);
+  }
+
+  .text-destructive {
+    color: var(--link);
   }
 }

@@ -12,6 +12,10 @@ const allowed = new Set([
   '#FFFDF7', // Paper
   '#2B2B2B', // Ink
   '#FF6B4A', // Coral
+  '#C23A1D', // Deep coral link text (Lane T2 F1/F4, 2026-11-28;
+  // decision in docs/DECISIONS.md §41). Link text and destructive
+  // text only — the CTA button keeps #FF6B4A. No other screen may
+  // use it as a fill or background.
   '#FFD93B', // Sun
   // QR-card template colours (QR-cards programme, Lane E,
   // 2026-11-25; design/DESIGN.md in bawa-qr-cards). The one

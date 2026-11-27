@@ -13,10 +13,12 @@ const APP_VERSION = "0.1.0";
 
 // P1 (S3-B, item 9 — F34): Security is a flat settings list, not nine
 // cards. The one real setting (auto-lock) is the first row; Mnemonic
-// backup and Backup shares are link rows; WalletConnect is one greyed
-// row, not a setup manual — it needs a Reown Cloud project ID that does
-// not exist. The Connected-wallets and Connections link-cards are gone
-// (the sidebar already links to Wallets and Networks), the version is
+// backup, Backup shares and Networks are link rows; WalletConnect is
+// one greyed row, not a setup manual — it needs a Reown Cloud
+// project ID that does not exist. The Connected-wallets and
+// Connections link-cards are gone (the sidebar already links to
+// Wallets and Networks on desktop; the Networks row below restores
+// the mobile path — Lane T2 T2-2), the version is
 // one line under the list, and "What this wallet does" is folded into
 // one short line: it no longer duplicates Welcome (P0 cut it there),
 // so the facts stay and the essay goes. Single column at every width;
@@ -59,6 +61,16 @@ export function SecuritySettingsScreen() {
             className="flex min-h-11 items-center justify-between gap-4 px-4 py-3 text-base font-medium text-ink"
           >
             Backup shares
+            <BawaIcon name="chevron-down" className="size-5 shrink-0 -rotate-90" />
+          </Link>
+        </li>
+
+        <li>
+          <Link
+            to="/networks"
+            className="flex min-h-11 items-center justify-between gap-4 px-4 py-3 text-base font-medium text-ink"
+          >
+            Networks
             <BawaIcon name="chevron-down" className="size-5 shrink-0 -rotate-90" />
           </Link>
         </li>

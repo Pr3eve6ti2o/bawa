@@ -2137,7 +2137,10 @@ export function SendScreen() {
           </div>
           {/* Address book (UX-major Lane 5): a saved label for this chain
               fills the recipient. Only entries saved by the user on the
-              Address book screen appear — nothing is added from history. */}
+              Address book screen appear — nothing is added from history.
+              The Manage link below renders even with an empty book
+              (Lane T2 F3): otherwise a first-time mobile user could
+              never reach the screen that adds the first entry. */}
           {bookForChain.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="send-address-book">Saved addresses</Label>
@@ -2158,16 +2161,16 @@ export function SendScreen() {
                   </option>
                 ))}
               </select>
-              <p className="text-sm text-muted-foreground">
-                <Link
-                  to="/address-book"
-                  className="font-medium underline underline-offset-4"
-                >
-                  Manage saved addresses
-                </Link>
-              </p>
             </div>
           )}
+          <p className="text-sm text-muted-foreground">
+            <Link
+              to="/address-book"
+              className="font-medium underline underline-offset-4"
+            >
+              Manage saved addresses
+            </Link>
+          </p>
           {showScanner && (
             <QrScanner
               onScan={(value) => void handleScan(value)}

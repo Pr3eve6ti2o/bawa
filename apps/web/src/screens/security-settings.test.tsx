@@ -177,11 +177,13 @@ describe('security settings screen', () => {
     }
   });
 
-  it('is one flat list: backup link rows, no Wallets/Networks link-cards', async () => {
+  it('is one flat list: backup + Networks link rows, no Wallets/Networks link-cards', async () => {
     // P1 (S3-B, item 9 — F34): the two-column card grid is gone. One
-    // single-column list; Backup and Backup shares are one-line link
-    // rows; the Connected-wallets and Connections link-cards are gone
-    // (the sidebar already links to Wallets and Networks).
+    // single-column list; Backup, Backup shares and Networks are
+    // one-line link rows; the Connected-wallets and Connections
+    // link-cards are gone (the sidebar already links to Wallets and
+    // Networks on desktop; the Networks row restores the mobile
+    // path — Lane T2 T2-2).
     setWallet('unlocked');
     const mounted = await mountScreen();
     try {
@@ -201,6 +203,11 @@ describe('security settings screen', () => {
       ) as HTMLAnchorElement | null;
       expect(sharesLink).not.toBeNull();
       expect(sharesLink?.textContent).toContain('Backup shares');
+      const networksLink = mounted.div.querySelector(
+        'a[href="/networks"]',
+      ) as HTMLAnchorElement | null;
+      expect(networksLink).not.toBeNull();
+      expect(networksLink?.textContent).toContain('Networks');
       const text = mounted.div.textContent ?? '';
       expect(text).not.toContain('Open Wallets');
       expect(text).not.toContain('Open Networks');

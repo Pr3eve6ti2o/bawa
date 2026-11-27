@@ -9,7 +9,7 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "border-ink",
-        destructive: "border-coral [&>svg]:text-coral",
+        destructive: "border-coral [&>svg]:text-link",
       },
     },
     defaultVariants: {
