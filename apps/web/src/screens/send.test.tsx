@@ -432,7 +432,11 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('0.00042 ETH');
       expect(mounted.div.textContent).toContain('0.50042 ETH');
       expect(mounted.div.textContent).toContain('stub fee');
-      expect(mounted.div.textContent).toContain('Sending is switched off');
+      // Lane T2 (T2-7): the review heading now uses the one converged
+      // sending-disabled wording, shared with send.tsx and Security.
+      expect(mounted.div.textContent).toContain(
+        'Sending is off until approved. Offline signing only.',
+      );
       await click(mounted.div, 'Sign offline');
       await waitForText(mounted.div, 'Send signed, not sent');
       expect(mounted.div.textContent).toContain(
