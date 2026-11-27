@@ -1,7 +1,7 @@
 ---
 title: Building the Bawa Android wallet
 seoTitle: Build a non-custodial testnet-only Android wallet with Bawa
-description: A how-to guide for building a non-custodial, testnet-only Android wallet (Bitcoin testnet4, Ethereum Sepolia, TRON Nile, TON testnet) from the Bawa repository, using Trust Wallet Core 4.9.2.
+description: A how-to guide for building a non-custodial, testnet-only Android wallet (Bitcoin testnet4, Ethereum Sepolia, TRON Nile, TON testnet) from the Bawa repository, using Trust Wallet Core 4.9.3.
 last-updated: 2026-11-08
 ---
 
@@ -35,7 +35,7 @@ Throughout this guide, each warning explains what could go wrong, tells you what
 
 - **A. Scope and boundaries** — Review what this testnet-only guide builds, the four testnets it covers, the boundary you must preserve, the claims the wallet must never make and the repository baseline.
 - **B. Prerequisites and toolchain** — Verify the JDKs, Android SDK, native toolchain, Core pin, Gradle and the wrapper, and project setup in one ordered pass.
-- **C. Building the Core AAR from source** — Check out Core 4.9.2, run code generation, build the AAR and protobuf JAR, check the entry points, stage the artefacts and compile Bawa.
+- **C. Building the Core AAR from source** — Check out Core 4.9.3, run code generation, build the AAR and protobuf JAR, check the entry points, stage the artefacts and compile Bawa.
 - **D. Engine integration** — Implement the WalletEngine boundary, fixed derivation policy, mnemonic handling, the empty BIP-39 passphrase policy, public-only boundaries, TON integration, the mandatory offline fixture gate using only published test vectors, signing and native lifetime management.
 - **E. Vault and backup** — Set up the AES-256-GCM envelope, Android Keystore protection, backup confirmation with one mnemonic reveal followed by full re-entry, screen protection, auto-lock and backup exclusions.
 - **F. Connectivity** — Connect only to the four testnets, with per-adapter network-identity checks, request discipline and confirmation thresholds.
@@ -162,7 +162,7 @@ Figure 1 — Where keys live, what leaves the device, and what never does. Takea
 ```mermaid
 flowchart LR
     subgraph Trusted["Trusted boundary — secrets never leave"]
-        M["Mnemonic (24 words)<br/>BIP-39, empty passphrase"] --> H["HDWallet<br/>Trust Wallet Core 4.9.2"]
+        M["Mnemonic (24 words)<br/>BIP-39, empty passphrase"] --> H["HDWallet<br/>Trust Wallet Core 4.9.3"]
         H --> K["Private keys<br/>operation-scoped"]
         K --> S["Signing<br/>AnySigner, inside adapter"]
         DK["Data key<br/>32 random bytes"] --> V["Vault envelope<br/>AES-256-GCM, AAD nova-shop-seed-v1"]
@@ -185,8 +185,8 @@ This guide is testnet only. VERIFIED means the value was checked first-hand on 8
 
 | Component | Scope | Declared value | Required release-verification pin | Status |
 |---|---|---|---|---|
-| Trust Wallet Core | App + Core build | 4.9.2 | 4.9.2, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3` | VERIFIED (tag resolves to that commit; GitHub API, 8 Nov 2026) |
-| Trust Wallet Core (previous pin) | Reference only | 4.8.4 | 4.8.4, commit `d40d24a63d92619167903369308bf0e2f7eb3a59` | VERIFIED (tag resolves to that commit; GitHub API, 8 Nov 2026) |
+| Trust Wallet Core | App + Core build | 4.9.3 | 4.9.3, commit `7a21615fad32edd8dc0b040d845de3973cde2c5a` | VERIFIED (tag resolves to that commit; verified 28 Nov 2026) |
+| Trust Wallet Core (previous pin) | Reference only | 4.9.2 | 4.9.2, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3` | VERIFIED (tag resolves to that commit; GitHub API, 8 Nov 2026) |
 | App JDK | App build | JDK 21 | JDK 21, vendor and patch unpinned | OPEN (OI-001) |
 | Core JDK | Core module build | JDK 17 | JDK 17, vendor and patch unpinned | OPEN (OI-001) |
 | App Gradle | App build | Gradle 8.9 | Gradle 8.9 from the draft wrapper properties; validation baseline, not a project pin | OPEN (OI-007: no wrapper JAR is committed) |
@@ -451,7 +451,7 @@ Installing Build-Tools `34.0.0` does not force Gradle to use them. Confirm and r
 
 ### B.5 Native toolchain: NDK, CMake, protoc
 
-Use Core **4.9.2** for this testnet-only build. These pins belong to the Core module build:
+Use Core **4.9.3** for this testnet-only build. These pins belong to the Core module build:
 
 | Tool | Required version |
 |---|---|
@@ -459,7 +459,7 @@ Use Core **4.9.2** for this testnet-only build. These pins belong to the Core mo
 | CMake | `3.18.1` |
 | protoc | `3.20.3` |
 
-The pins are identical at Core `4.8.4`, `master` and `4.9.2`. Keep this build tied to `4.9.2`.
+The pins are identical at Core `4.9.2`, `master` and `4.9.3`. Keep this build tied to `4.9.3`.
 
 Verify the Core release reference and checkout path. Confirm that the Core Android module build file selects NDK `28.0.12674087` and CMake `3.18.1`, and record the declaration locations.
 
@@ -532,7 +532,7 @@ Print and record the compiler's absolute path:
 printf '%s/build/local/bin/protoc\n' "$(pwd -P)"
 ```
 
-**Expected result:** The absolute path to `build/local/bin/protoc` inside the verified Core `4.9.2` checkout.
+**Expected result:** The absolute path to `build/local/bin/protoc` inside the verified Core `4.9.3` checkout.
 
 Invoke that absolute path for the version check:
 
@@ -590,15 +590,15 @@ Include the Core release reference, module pin locations, SDK root and installed
 
 ### B.6 Trust Wallet Core pin
 
-Pin Trust Wallet Core to exactly `4.9.2` for the Bawa Android wallet's testnet-only builds.
+Pin Trust Wallet Core to exactly `4.9.3` for the Bawa Android wallet's testnet-only builds.
 
 - **Upstream repository:** `https://github.com/trustwallet/wallet-core.git`
-- **Git tag:** `4.9.2`
+- **Git tag:** `4.9.3`
 - **Required full commit:** `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`
 
 Keep both the tag and the full commit as review-controlled constants. The tag-to-commit mapping was verified against the GitHub API on 8 November 2026; the lightweight tag ref points directly at the commit, with no separate tag object.
 
-A version range is not a pin. Never use `4.+`, `4.9.+`, `[4.9.2,5.0)`, `latest.release` or a moving branch.
+A version range is not a pin. Never use `4.+`, `4.9.+`, `[4.9.3,5.0)`, `latest.release` or a moving branch.
 
 Run the following Bash command from a writable parent directory, with Git available. Make it a required builder gate: allow the build to continue only if it succeeds. The command derives the source directory name from the repository URL and refuses any existing entry with that name.
 
@@ -607,8 +607,8 @@ bash <<'BASH'
 set -euo pipefail
 
 readonly repository='https://github.com/trustwallet/wallet-core.git'
-readonly tag='4.9.2'
-readonly expected_commit='17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3'
+readonly tag='4.9.3'
+readonly expected_commit='7a21615fad32edd8dc0b040d845de3973cde2c5a'
 
 source_dir=${repository##*/}
 source_dir=${source_dir%.git}
@@ -640,17 +640,17 @@ printf 'Pin gate passed.\n'
 BASH
 ```
 
-**Expected result:** Git creates a fresh checkout, and `Pin gate passed.` appears only after tag `4.9.2` and `HEAD` both match the required full commit and the checkout is clean. An existing source entry, missing tag, failed Git command, hash mismatch or dirty checkout fails the gate and must stop the builder job.
+**Expected result:** Git creates a fresh checkout, and `Pin gate passed.` appears only after tag `4.9.3` and `HEAD` both match the required full commit and the checkout is clean. An existing source entry, missing tag, failed Git command, hash mismatch or dirty checkout fails the gate and must stop the builder job.
 
 Never obtain `expected_commit` from the remote tag during the build: that compares the remote with itself. Never repair a mismatch by replacing `expected_commit` with whatever upstream returns. After the gate passes, do not pull, switch refs or apply local source patches.
 
 Core's `.gitmodules` file is empty at the pinned releases, so there is nothing to recurse into. For any submodules, use only the revisions recorded by the required commit; never use `git submodule update --remote`.
 
-Where you consume Core as a Maven module, require `strictly("4.9.2")` in the dependency's Gradle `version` block. Do not accept an artefact labelled `4.9.2` without evidence that it was built from the required commit. Record the SHA-256 of the Core artefact actually used in the build, alongside that evidence.
+Where you consume Core as a Maven module, require `strictly("4.9.3")` in the dependency's Gradle `version` block. Do not accept an artefact labelled `4.9.3` without evidence that it was built from the required commit. Record the SHA-256 of the Core artefact actually used in the build, alongside that evidence.
 
-Reject the `4.6.0` Maven Central republish because it would break the exact `4.9.2` pin. Availability on Maven Central does not make a different Core release an acceptable substitute. Do not relabel a `4.6.0` artefact as `4.9.2`.
+Reject the `4.6.0` Maven Central republish because it would break the exact `4.9.3` pin. Availability on Maven Central does not make a different Core release an acceptable substitute. Do not relabel a `4.6.0` artefact as `4.9.3`.
 
-The previous pin, `4.8.4` at commit `d40d24a63d92619167903369308bf0e2f7eb3a59`, is superseded; do not build against it.
+The previous pin, `4.9.2` at commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, is superseded; do not build against it.
 
 **Open item (OI-004):** The EIP-1559 demonstration was completed on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
 
@@ -658,7 +658,7 @@ The previous pin, `4.8.4` at commit `d40d24a63d92619167903369308bf0e2f7eb3a59`, 
 
 **Sources**
 
-- [Wallet Core tag 4.9.2](https://github.com/trustwallet/wallet-core/tree/4.9.2)
+- [Wallet Core tag 4.9.3](https://github.com/trustwallet/wallet-core/tree/4.9.3)
 - [Required commit](https://github.com/trustwallet/wallet-core/commit/17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3)
 - [Git rev-parse](https://git-scm.com/docs/git-rev-parse)
 - [Gradle rich version constraints](https://docs.gradle.org/current/userguide/rich_versions.html)
@@ -788,7 +788,7 @@ A complete fixture pass that actually exercised daemon communication establishes
 
 ### B.8 Project setup and verification
 
-Take every verification input from the B.1 pin table: app JDK 21, Core JDK 17, SDK packages `platforms;android-34` and `build-tools;34.0.0`, CMake 3.18.1, and Core tag 4.9.2. Use its approved Gradle wrapper and plugin pins for the smoke build. Do not accept a newer wrapper, Android Gradle Plugin or SDK level because a project wizard selected it.
+Take every verification input from the B.1 pin table: app JDK 21, Core JDK 17, SDK packages `platforms;android-34` and `build-tools;34.0.0`, CMake 3.18.1, and Core tag 4.9.3. Use its approved Gradle wrapper and plugin pins for the smoke build. Do not accept a newer wrapper, Android Gradle Plugin or SDK level because a project wizard selected it.
 
 Create two Gradle modules: `app` for screens and navigation, and `core` for the engine boundary and verification. Include `:app` and `:core` in `settings.gradle.kts`, and make `:app` depend on `:core`. Keep the upstream Core checkout separate from the Android project.
 
@@ -875,13 +875,13 @@ Run the following checks in order. Make the selected B.1 tools available on your
 5. **Check out and verify Core.** Follow the B.6 fresh-directory procedure to obtain the upstream Core repository outside the Android project. Do not reuse a working tree. Run inside that checkout and select the tag ref explicitly:
 
    ```sh
-   git checkout --detach refs/tags/4.9.2
+   git checkout --detach refs/tags/4.9.3
    ```
 
-   **Expected result:** HEAD is detached at tag 4.9.2; the checkout still requires the hash and clean-tree checks below.
+   **Expected result:** HEAD is detached at tag 4.9.3; the checkout still requires the hash and clean-tree checks below.
 
    ```sh
-   git rev-parse 'refs/tags/4.9.2^{commit}' HEAD
+   git rev-parse 'refs/tags/4.9.3^{commit}' HEAD
    ```
 
    **Expected result:** Both output lines equal `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`. Reject any mismatch.
@@ -898,7 +898,7 @@ This is a toolchain sign-off, not permission to enable the wallet.
 
 **Sources**
 
-- Core commit pin: `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3` for tag 4.9.2.
+- Core commit pin: `7a21615fad32edd8dc0b040d845de3973cde2c5a` for tag 4.9.3.
 - [Android Developers — JDK configuration](https://developer.android.com/build/jdks)
 - [Android Developers — sdkmanager](https://developer.android.com/tools/sdkmanager)
 - [Gradle Daemon](https://docs.gradle.org/current/userguide/gradle_daemon.html)
@@ -907,9 +907,9 @@ This is a toolchain sign-off, not permission to enable the wallet.
 
 ## C. Building the Core AAR from source
 
-Use this section for the Bawa testnet wallet only. Treat it as your first build verification gate: do not proceed with an unidentified AAR, an incomplete binding or a Wallet Core version other than `4.9.2`.
+Use this section for the Bawa testnet wallet only. Treat it as your first build verification gate: do not proceed with an unidentified AAR, an incomplete binding or a Wallet Core version other than `4.9.3`.
 
-No downloadable Android AAR is included among the Wallet Core `4.9.2` release assets. The release is marked Pre-release (`prerelease: true`); its assets carry kdoc, `Package.swift`, a Swift tarball and xcframeworks — no AAR.
+No downloadable Android AAR is included among the Wallet Core `4.9.3` release assets. The release is a full release (`prerelease: false`); its assets carry kdoc, `Package.swift`, a Swift doc archive and xcframeworks — no AAR.
 
 **Open item (OI-005):** The source build in this section has never been completed; no locally built AAR exists.
 
@@ -930,15 +930,15 @@ Start in a directory outside the Bawa repository where `wallet-core` does not al
 Clone a fresh checkout without submodules; `.gitmodules` is empty at the pinned releases.
 
 ```sh
-git clone --branch 4.9.2 --single-branch https://github.com/trustwallet/wallet-core
+git clone --branch 4.9.3 --single-branch https://github.com/trustwallet/wallet-core
 ```
 
-**Expected result:** Git creates a fresh `wallet-core` checkout of tag `4.9.2` without initialising submodules.
+**Expected result:** Git creates a fresh `wallet-core` checkout of tag `4.9.3` without initialising submodules.
 
-Verify that tag `4.9.2` resolves to the full commit ID pinned in B.6.
+Verify that tag `4.9.3` resolves to the full commit ID pinned in B.6.
 
 ```sh
-git -C wallet-core rev-parse --verify 'refs/tags/4.9.2^{commit}'
+git -C wallet-core rev-parse --verify 'refs/tags/4.9.3^{commit}'
 ```
 
 **Expected result:**
@@ -981,8 +981,8 @@ Do not edit anything in this checkout to make the build pass.
 
 **Sources**
 
-- [Wallet Core 4.9.2 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.2)
-- [Wallet Core 4.9.2 Android build configuration](https://github.com/trustwallet/wallet-core/tree/4.9.2/android)
+- [Wallet Core 4.9.3 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.3)
+- [Wallet Core 4.9.3 Android build configuration](https://github.com/trustwallet/wallet-core/tree/4.9.3/android)
 - [Wallet Core repository](https://github.com/trustwallet/wallet-core)
 
 ### C.2 Install the Android toolchain
@@ -1065,9 +1065,9 @@ If either directory is still empty or lacks the expected generated files, stop: 
 
 **Sources**
 
-- [Tagged public headers — 4.9.2](https://github.com/trustwallet/wallet-core/tree/4.9.2/include/TrustWalletCore)
-- [Tagged code generation — 4.9.2](https://github.com/trustwallet/wallet-core/tree/4.9.2/codegen)
-- [Tagged hand-written Java helpers — 4.9.2](https://github.com/trustwallet/wallet-core/tree/4.9.2/jni/java)
+- [Tagged public headers — 4.9.3](https://github.com/trustwallet/wallet-core/tree/4.9.3/include/TrustWalletCore)
+- [Tagged code generation — 4.9.3](https://github.com/trustwallet/wallet-core/tree/4.9.3/codegen)
+- [Tagged hand-written Java helpers — 4.9.3](https://github.com/trustwallet/wallet-core/tree/4.9.3/jni/java)
 - [Android SDK Manager documentation](https://developer.android.com/tools/sdkmanager)
 
 ### C.4 Build Core, then the protobuf artefact
@@ -1286,13 +1286,13 @@ mkdir -p core/libs
 **Expected result:** `core/libs` exists.
 
 ```sh
-aar=core/libs/wallet-core-4.9.2.aar && cp wallet-core-release.aar "$aar"
+aar=core/libs/wallet-core-4.9.3.aar && cp wallet-core-release.aar "$aar"
 ```
 
 **Expected result:** The verified AAR is copied to its versioned staging filename without changing the source file.
 
 ```sh
-proto=core/libs/wallet-core-proto-4.9.2.jar && cp wallet-core-proto.jar "$proto"
+proto=core/libs/wallet-core-proto-4.9.3.jar && cp wallet-core-proto.jar "$proto"
 ```
 
 **Expected result:** The verified protobuf JAR is copied to its versioned staging filename without changing the source file.
@@ -1440,7 +1440,7 @@ Before using the build in the wallet, complete these confirmations:
 
 ## D. Engine integration
 
-Use Trust Wallet Core 4.9.2 behind the application-owned `WalletEngine` interface for the testnet-only Android wallet.
+Use Trust Wallet Core 4.9.3 behind the application-owned `WalletEngine` interface for the testnet-only Android wallet.
 
 Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.9.3.
 
@@ -1450,14 +1450,14 @@ Applies: security rules S-1 to S-15 (repository guide, docs/08 and docs/15); the
 
 ### D.1 Boundary and version
 
-- Pin the Android dependency and packaged native libraries to Trust Wallet Core 4.9.2, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`.
+- Pin the Android dependency and packaged native libraries to Trust Wallet Core 4.9.3, commit `7a21615fad32edd8dc0b040d845de3973cde2c5a`.
 - Make `CoreWalletEngine.kt` the sole wallet file allowed to import `wallet.core.jni`, `wallet.core.java` or `wallet.core.jni.proto`. Route every other wallet file through `WalletEngine`.
 - Expose only application-owned requests and results through `WalletEngine`. Do not let `HDWallet`, `PrivateKey`, `PublicKey`, `CoinType`, native containers or generated protobuf types escape through parameters, return values, callbacks or exceptions. Map Core/JNI values and failures to application-owned types inside the adapter.
 - Keep fixture data separate from the adapter. Use published test vectors only.
 - Enforce the boundary in CI. Check both imports and fully qualified references to the Core packages outside `CoreWalletEngine.kt`.
 - Record the hashes of the packaged artefacts and the supported ABIs.
 
-An API inventory source-verified against the Trust Wallet Core 4.9.2 tag does not prove that the correct AAR or native libraries were packaged.
+An API inventory source-verified against the Trust Wallet Core 4.9.3 tag does not prove that the correct AAR or native libraries were packaged.
 
 ### D.2 Source-verified API inventory
 
@@ -1479,9 +1479,9 @@ The presence of a signing or planning entry point does not establish support for
 
 **Sources**
 
-- [Trust Wallet Core 4.9.2 tagged source](https://github.com/trustwallet/wallet-core/tree/4.9.2)
-- [Trust Wallet Core 4.9.2 public headers](https://github.com/trustwallet/wallet-core/tree/4.9.2/include/TrustWalletCore)
-- [Trust Wallet Core 4.9.2 JNI sources](https://github.com/trustwallet/wallet-core/tree/4.9.2/jni)
+- [Trust Wallet Core 4.9.3 tagged source](https://github.com/trustwallet/wallet-core/tree/4.9.3)
+- [Trust Wallet Core 4.9.3 public headers](https://github.com/trustwallet/wallet-core/tree/4.9.3/include/TrustWalletCore)
+- [Trust Wallet Core 4.9.3 JNI sources](https://github.com/trustwallet/wallet-core/tree/4.9.3/jni)
 
 ### D.3 Fixed derivation policy
 
@@ -1750,7 +1750,7 @@ With the same BIP-39 passphrase, a testnet wallet restricted to discovery under 
 
 Limit signing and planning to testnet. Keep all native signing inputs and outputs inside the adapter.
 
-For `AnySigner.sign` and `signJSON`, verify the selected coin's schema and error handling against the Trust Wallet Core 4.9.2 tag sources before relying on them. This verification remains outstanding and must cover the protobuf fields, EIP-1559 Enveloped mode and big-endian `uint256` encoding.
+For `AnySigner.sign` and `signJSON`, verify the selected coin's schema and error handling against the Trust Wallet Core 4.9.3 tag sources before relying on them. This verification remains outstanding and must cover the protobuf fields, EIP-1559 Enveloped mode and big-endian `uint256` encoding.
 
 Core's ETH signer needs `txMode: 1` (Enveloped) for EIP-1559 — the protobuf enum value is `1`, while `0x02` is the wire type byte; do not confuse the two.
 
@@ -1790,8 +1790,8 @@ Native deletion is not a promise of complete secret erasure. Clear temporary mut
 
 **Sources**
 
-- [Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/4.9.2/include/TrustWalletCore/TWAnySigner.h)
-- [Trust Wallet Core HDWallet header](https://github.com/trustwallet/wallet-core/blob/4.9.2/include/TrustWalletCore/TWHDWallet.h)
+- [Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/4.9.3/include/TrustWalletCore/TWAnySigner.h)
+- [Trust Wallet Core HDWallet header](https://github.com/trustwallet/wallet-core/blob/4.9.3/include/TrustWalletCore/TWHDWallet.h)
 
 ## E. Vault and backup
 
@@ -3011,7 +3011,7 @@ As of 2026-11-08, Bawa contains no transaction construction or signing implement
 |---|---|
 | **BTC send composition** | **OPEN** — Unimplemented. Do not describe coin selection or transaction composition as working. When you implement composition, return change to the **sending address**, because change-branch derivation remains unimplemented. Require the signer to enforce this rule; do not introduce a new change branch. |
 | **TRX send composition** | **OPEN** — Unimplemented. Do not treat address or balance support as a complete send route. |
-| **TON send signing** | **OPEN** — Unimplemented. Confirm the filename evidence and determine whether Core **4.9.2** provides a TON signing API before publication. Blocked pending OI-004. Do not guess a schema or advertise a working signing path. |
+| **TON send signing** | **OPEN** — Unimplemented. Confirm the filename evidence and determine whether Core **4.9.3** provides a TON signing API before publication. Blocked pending OI-004. Do not guess a schema or advertise a working signing path. |
 | **Token sends** | **OPEN** — Unimplemented. Do not treat Core message availability or a decoded review screen as a completed token-send implementation. |
 
 **VERIFIED** — As of 2026-11-08, the TON filename checks found no `TON.proto` at 4.8.4, which contained 60 proto files, or on `master`, which contained 62 files (Requirements provenance, R11 F13). Absence of that filename is not proof that no differently named Core API exists.
@@ -4213,7 +4213,7 @@ The derivation policy is unchanged. Apply the guide’s existing account, path, 
 
 ### J-01 — Keep the trust boundary explicit
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4. The EIP-1559 proof rerun against the 4.9.2 pin remains **APPROVED BUT UNEXECUTED**. Complete the rerun before publication. Blocked pending OI-004.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.9.3. The EIP-1559 proof rerun against the 4.9.2 pin remains **APPROVED BUT UNEXECUTED**. Complete the rerun before publication. Blocked pending OI-004.
 
 Keep mnemonic validation, approved key derivation, seed bundle encryption, vault unlocking and signing within trusted local key operations.
 
@@ -4553,7 +4553,7 @@ Use the shared threat table in `docs/15` (the repository guide) alongside this *
 | Android template and native code | **Malicious template code** | Code executing with the wallet’s privileges while you have it unlocked can read secrets or misuse the in-process signing route. Private storage, encrypted storage and restricted interfaces do not defeat that attacker. |
 | Endpoint configuration and transport | **Endpoint substitution** | TLS, response validation, J-12’s per-adapter checks and section G’s frozen-payload review constrain endpoint use. A provider can satisfy identity checks while lying about balances, fees or chain state. These controls do not prevent denial of service or all metadata exposure. |
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation; place signing in the Android wallet you build, through the Core pin in J-13 (the repository tools pin Trust Wallet Core 4.8.4). **OPEN** — No Core AAR, Gradle build, APK or device/emulator run exists. The committed `gradlew` is a launcher note without a wrapper JAR. Build and device verification: Blocked pending OI-005 and OI-035. Live wallet creation, live restore and live testnet spend still need their first runs: Blocked pending OI-031.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation; place signing in the Android wallet you build, through the Core pin in J-13 (the repository tools pin Trust Wallet Core 4.9.3). **OPEN** — No Core AAR, Gradle build, APK or device/emulator run exists. The committed `gradlew` is a launcher note without a wrapper JAR. Build and device verification: Blocked pending OI-005 and OI-035. Live wallet creation, live restore and live testnet spend still need their first runs: Blocked pending OI-031.
 
 TESTNET-only does not mean testnet-tested. Until then, treat this as a testnet guide for a testnet wallet.
 
@@ -4841,7 +4841,7 @@ Replace any `<ANGLE_BRACKETS>` placeholders before running commands. Treat comma
 
    Compare the actual artefact. A filename does not establish its identity, and setting a checksum variable does not perform an integrity check.
 
-   As a draft-only step for the unpushed Android project, stage the checked artefact as `wallet-core-4.9.2.aar` in the project’s `core/libs/` only at section C’s copy step. This staging directory is not a main-backed location; do not treat it as a download location or the source-build output location.
+   As a draft-only step for the unpushed Android project, stage the checked artefact as `wallet-core-4.9.3.aar` in the project’s `core/libs/` only at section C’s copy step. This staging directory is not a main-backed location; do not treat it as a download location or the source-build output location.
 
    **APPROVED BUT UNEXECUTED** — As of 2026-11-08, the Core 4.9.2 pin still needs its live EIP-1559 proof. Re-run the proof against 4.9.2 before publication; do not carry forward evidence from 4.8.4 as validation of this pin. Publication: Blocked pending OI-004.
 
@@ -5250,7 +5250,7 @@ Passing these checks does not authorise mainnet work; any mainnet work requires 
 
 **Cause:** A timeout leaves the outcome unknown; the provider may already have accepted the transaction.
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.9.3.
 
 **Warning** — The provider may already hold the transaction despite the timeout; retain the exact signed bytes and locally calculated transaction ID, then reconcile that ID before considering any rebroadcast.
 

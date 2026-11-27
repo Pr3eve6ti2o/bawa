@@ -14,7 +14,7 @@ The five-option interactive launcher routes a request either to an existing exec
 
 **Warning:** documents and tools referenced by launcher routes may be absent on `main`.
 
-The launcher is a routing layer, not an implementation of every capability described in the guides. It routes requests to existing tools and documents, but also to targets absent on `main`: 6 absent documents and 3 absent executables. Absent targets must be labelled unavailable, and routing must preserve the distinction between executable workflows and instructions for work not implemented on `main`.
+The launcher is a routing layer, not an implementation of every capability described in the guides. It routes requests to existing tools and documents, but also to targets absent on `main`: 3 absent executables and 1 absent registry data file (`registry/profiles.json`); no documents are absent. Absent targets must be labelled unavailable, and routing must preserve the distinction between executable workflows and instructions for work not implemented on `main`.
 
 ### Secret handling: `tools/make_wallet.py`, `tools/decrypt_seed.py`, and `tools/hdwallet-gen/generate.js`
 
@@ -66,7 +66,7 @@ Use `docs/README.md` to find the relevant guide and `IMPLEMENTATION.md` for impl
 | `differential_test.py` | Compares BTC and ETH index 0 against `bip-utils`. |
 | `smoke.test.js` | Node smoke tests. |
 | `test_bawa_cli.py` | Launcher unit tests. |
-| `test_make_wallet.py` | Seed-bundle validation tests only (`assert_bundle_verified` and `parse_seed_bundle`); no generation, /dev/tty prompts, or encryption round trip. |
+| `test_make_wallet.py` | Seed-bundle validation tests only (`assertBundleVerified`, `assert_bundle_decrypts`, and `_parse_seed_bundle`); no generation, /dev/tty prompts, or encryption round trip. |
 
 `.github/workflows/ci.yml` runs on pushes and pull requests using Node 22 and Python 3.13. It runs `npm install` in `tools/hdwallet-gen/`, checks JavaScript syntax, runs the smoke tests, installs Python reference-test dependencies and runs the differential test.
 

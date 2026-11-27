@@ -249,7 +249,7 @@ Use the mnemonic `test test test test test test test test test test test junk`, 
 
 ### Published negative test vectors
 
-Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` also rejects the first two vectors with a `FATAL` rejection before WASM initialization. The validator reports bad-checksum and wrong-version defects distinctly; only the alleged WASM-abort output would not distinguish them.
+Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.9.3 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` also rejects the first two vectors with a `FATAL` rejection before WASM initialization. The validator reports bad-checksum and wrong-version defects distinctly; only the alleged WASM-abort output would not distinguish them.
 
 - **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
 

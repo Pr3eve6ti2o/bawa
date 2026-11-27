@@ -35,9 +35,9 @@ Label issues suitable for a first contribution so contributors can find them. Be
 
 ## Branch workflow
 
-Fork [`Pr3eve6ti2o/bawa`](https://github.com/Pr3eve6ti2o/bawa) on GitHub and create a working branch from `main` in your fork. All work builds from `main`. Existing branches use `feature/<topic>` and `audit-fixes/<lane>` patterns; use these as naming examples. Make your changes, push the branch to your fork, and open a pull request targeting `main` in `Pr3eve6ti2o/bawa`. CI runs on pushes and pull requests.
+Fork [`Pr3eve6ti2o/bawa`](https://github.com/Pr3eve6ti2o/bawa) on GitHub and create a working branch from `main` in your fork. All work builds from `main`. Existing branches use `panel-rebuild/<topic>`, `redesign/<topic>` and `usable-<topic>` patterns; use these as naming examples. Make your changes, push the branch to your fork, and open a pull request targeting `main` in `Pr3eve6ti2o/bawa`. CI runs on pushes and pull requests.
 
-These are the repository's rules: open an issue before starting work (see "Before starting work" above); contribute through a fork and a pull request targeting `main`; branch names follow the `feature/<topic>` and `audit-fixes/<lane>` patterns.
+These are the repository's rules: open an issue before starting work (see "Before starting work" above); contribute through a fork and a pull request targeting `main`; branch names follow the `panel-rebuild/<topic>`, `redesign/<topic>` and `usable-<topic>` patterns.
 
 ## Code style
 

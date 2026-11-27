@@ -92,7 +92,7 @@ All links checked: **2026-11-08**.
    |---|---|---|
    | Node | `>=22 <23` | Declared range. The observed verification ran on Node v24.22.2, which is outside this range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). |
    | Python | `>=3.11` | Observed version: 3.12.3. |
-   | Trust Wallet Core (`@trustwallet/wallet-core`) | `4.9.2` | Exact pin: no `^` or `~`. Published 2026-11-06. |
+   | Trust Wallet Core (`@trustwallet/wallet-core`) | `4.9.3` | Exact pin: no `^` or `~`. Published 2026-11-11. |
    | esbuild — dev dependency | `0.25.5` | Exact pin: no `^` or `~`. |
    | http-server — dev dependency | `14.1.1` (pin dated 2026-11-17) | Install `http-server@14.1.1`, record this exact version in `package.json` without `^` or `~`, and commit the lockfile with it. Verified first-hand from the npm registry as the latest version as of 2026-11-17; this is not a 2026-11-08 validation record, since no installed version was recorded during that validation. |
 

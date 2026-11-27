@@ -6,7 +6,7 @@ Bawa (`Pr3eve6ti2o/bawa`, `main` branch) is a practical open-source reference fo
 
 Verified snapshot (2026-11-20): main at `667527e`. Earlier snapshot (2026-11-14): main at `16c074e`. Separate later update (2026-11-18): the engine was re-pinned from 4.8.4 to Trust Wallet Core **4.9.3** WASM on owner order; the qualification run passed. The tools suite (`npm --prefix tools/hdwallet-gen test`) records 136 checks, 0 fail. This is supplied baseline evidence, not a new test run or evidence for untested capabilities.
 
-There is NO signing, broadcast or transaction-construction code on this branch, and send/sign/broadcast has never been exercised on any network. **Do not mark mainnet/production readiness as PASS.** The full AI Wallet Builder — profiles, registry, starters, mainnet tools, TON watch-only derivation — lives on the `feature/ai-wallet-builder` branch, not here.
+There is NO signing, broadcast or transaction-construction code on this branch, and send/sign/broadcast has never been exercised on any network. **Do not mark mainnet/production readiness as PASS.** The full AI Wallet Builder — profiles, registry, starters, mainnet tools, TON watch-only derivation — lives on the `panel-rebuild/token-gaps` branch, not here.
 
 ## Read order
 
@@ -62,4 +62,4 @@ Do not invent filenames for numbered guides or treat documentation as execution 
 
 ## Changelog note
 
-`docs/README-FULL.md` is the frozen 2026-11-08 archive (1,285 lines, 81,316 bytes) whose header names the `e3b65fb8` snapshot; it is not a verbatim copy of that commit's root README (1,019 lines, 55,192 bytes). This `AGENTS.md` replaces the earlier feature-branch version for this branch; the feature-branch AGENTS.md (routing table, profiles, registry) remains on `feature/ai-wallet-builder`.
+`docs/README-FULL.md` is the frozen 2026-11-08 archive (1,285 lines, 81,316 bytes) whose header names the `e3b65fb8` snapshot; it is not a verbatim copy of that commit's root README (1,019 lines, 55,192 bytes). This `AGENTS.md` replaces the earlier feature-branch version for this branch; the feature-branch AGENTS.md (routing table, profiles, registry) remains on `panel-rebuild/token-gaps`.

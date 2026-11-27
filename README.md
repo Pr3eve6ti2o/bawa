@@ -246,7 +246,7 @@ Full record, gates and branch state:
 
 No code from the programme was merged into `adopt-proper` or `main`.
 The durable preview (GitHub Pages) still serves the saved
-adopt-proper-based build; to preview the programme, check out
+token-gaps-based build; to preview the programme, check out
 `panel-rebuild/token-gaps` and run the web starter locally.
 
 ## UI/UX Round 2 programme (2026-11-23)
@@ -261,7 +261,7 @@ complete and merged into `panel-rebuild/token-gaps` (merge commit
 
 No code from the programme was merged into `adopt-proper` or `main`.
 The durable preview (GitHub Pages) still serves the saved
-adopt-proper-based build; to preview the programme, check out
+token-gaps-based build; to preview the programme, check out
 `panel-rebuild/token-gaps` and run the web starter locally.
 
 ## Reverify + Professional Polish programme (2026-11-23)
@@ -280,5 +280,5 @@ record, gates and branch state:
 
 No code from the programme was merged into `adopt-proper` or `main`.
 The durable preview (GitHub Pages) still serves the saved
-adopt-proper-based build; to preview the programme, check out
+token-gaps-based build; to preview the programme, check out
 `panel-rebuild/token-gaps` and run the web starter locally.

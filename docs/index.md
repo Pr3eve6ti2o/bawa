@@ -10,7 +10,7 @@ This index maps Bawa's wallet reference and guide: where to start, where the imp
 
 - [AGENTS.md](../AGENTS.md) — `DOCUMENTED_NOT_TESTED`: read first for repository instructions.
 - [README](../README.md) — `DOCUMENTED_NOT_TESTED`: the front door — what Bawa is, quickstart, and where to go next.
-- [Full manual (preserved README)](README-FULL.md) — `DOCUMENTED_NOT_TESTED`: the previous 1,308-line README, preserved verbatim.
+- [Full manual (preserved README)](README-FULL.md) — `DOCUMENTED_NOT_TESTED`: the previous 1,285-line README, preserved as a frozen 2026-11-08 archive (not a verbatim copy of that commit's root README).
 
 ## Tutorials — learn by doing
 
@@ -72,4 +72,4 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 
 - [Mainnet activation](mainnet/MAINNET-GUIDE.md) — `EXTERNALLY_DEPENDENT`: activation remains gated.
 
-The registry covers 22 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom. Chain-level IMPLEMENTED_AND_VERIFIED means verified in at least one explicitly identified profile. Network operations are verified for btc, eth, trx, ton only. The 18 additional chains are scoped to the multichain-extended-wallet profile. The 13-chain registry in registry/capabilities.json (chainSupport) was merged into adopt-proper from panel-rebuild/multichain-create; the 9 newer EVM chains were added afterwards on panel-rebuild/token-gaps. It is not a separate branch.
+Note: the registry lives on `panel-rebuild/token-gaps`, not on `main` — there is no `registry/` directory on `main`. It covers 87 chains; network operations are verified for btc, eth, trx, ton only. See [Doc 12 — Chain Registry & Asset Metadata](12-chain-registry-and-assets/README.md), which interprets the upstream Trust Wallet Core registry.
