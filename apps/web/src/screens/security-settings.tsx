@@ -3,7 +3,6 @@ import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
 import { Button } from "../ui/components/button";
 import { BawaIcon } from "../ui/components/icons";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 import { deleteVault } from "../wallet/vault";
 import { AutoLockSetting } from "./auto-lock-setting";
 
@@ -12,6 +11,16 @@ import { AutoLockSetting } from "./auto-lock-setting";
 // a bump that forgets this line fails loudly instead of going stale.
 const APP_VERSION = "0.1.0";
 
+// P1 (S3-B, item 9 — F34): Security is a flat settings list, not nine
+// cards. The one real setting (auto-lock) is the first row; Mnemonic
+// backup and Backup shares are link rows; WalletConnect is one greyed
+// row, not a setup manual — it needs a Reown Cloud project ID that does
+// not exist. The Connected-wallets and Connections link-cards are gone
+// (the sidebar already links to Wallets and Networks), the version is
+// one line under the list, and "What this wallet does" is folded into
+// one short line: it no longer duplicates Welcome (P0 cut it there),
+// so the facts stay and the essay goes. Single column at every width;
+// rows are 12px vertical / 16px horizontal (plan §c).
 export function SecuritySettingsScreen() {
   const { vaultState, refreshVaultAccounts, resetReceiveRotation = () => {} } = useWallet();
   const [deleteArmed, setDeleteArmed] = useState(false);
@@ -20,166 +29,51 @@ export function SecuritySettingsScreen() {
     setDeleteArmed(false);
   }, [vaultState]);
 
-  // Lane 6 redesign (DESIGN-SYSTEM.md §6 Settings): sections in order —
-  // vault lock, mnemonic backup, connected wallets, connections
-  // (networks / devnet / prices), the WalletConnect note, about,
-  // then what the wallet does.
-  // Before, the reading panel came first and buried the one control
-  // (auto-lock) under it; the controls now come first and the reading
-  // stays, in full, below them. Desktop two-column grid, mobile single
-  // 480px column (the shell's isWideAtDesktop cap), unchanged.
   return (
     <section
-      className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0"
+      className="mx-auto w-full max-w-2xl"
       aria-labelledby="security-heading"
     >
-      <h1 id="security-heading" className="font-bold lg:col-span-2">
+      <h1 id="security-heading" className="font-bold">
         Security &amp; backup
       </h1>
 
-      <AutoLockSetting />
+      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-bawa border-2 border-ink bg-paper">
+        <li>
+          <AutoLockSetting />
+        </li>
 
-      <Card radius="xl">
-        <CardHeader>
-          <CardTitle>Connected wallets</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-base text-ink">
-            Your vault accounts and any watch-only wallets live on the
-            Wallets screen.
-          </p>
-          <Link
-            to="/wallets"
-            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
-          >
-            Open Wallets
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card radius="xl" className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle><span className="bawa-marker">Backup</span> procedure</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-base text-ink">
-            Your recovery phrase is stored encrypted in this browser&apos;s vault. Write it down on paper and keep it somewhere only you can reach. Anyone with the phrase can take the funds.
-          </p>
-          {/* Lane C (C-2): no backup gate exists — receiving addresses
-              show as soon as the vault exists, so this copy must not
-              promise one. A real gate (a backup flag, with receiving
-              addresses held back until the phrase is confirmed written
-              down) is a follow-up, not this fix. */}
-          <p className="max-w-[75ch] text-base text-ink">
-            Back up first. Receiving addresses show as soon as the wallet exists — nothing here stops you receiving funds before you back up. Write your recovery phrase down on paper now, while you still have it.
-          </p>
+        <li>
           <Link
             to="/mnemonic-backup"
-            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
+            className="flex min-h-11 items-center justify-between gap-4 px-4 py-3 text-base font-medium text-ink"
           >
-            View the backup procedure
+            Mnemonic backup
+            <BawaIcon name="chevron-down" className="size-5 shrink-0 -rotate-90" />
           </Link>
-        </CardContent>
-      </Card>
+        </li>
 
-      <Card radius="xl" className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle><span className="bawa-marker">Backup</span> shares</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-base text-ink">
-            Split the vault key into shares and store each one in a
-            separate place. Any 2 of 3 shares restore this vault — no
-            single share can.
-          </p>
+        <li>
           <Link
             to="/backup-shares"
-            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
+            className="flex min-h-11 items-center justify-between gap-4 px-4 py-3 text-base font-medium text-ink"
           >
-            Create or check backup shares
+            Backup shares
+            <BawaIcon name="chevron-down" className="size-5 shrink-0 -rotate-90" />
           </Link>
-        </CardContent>
-      </Card>
+        </li>
 
-      <Card radius="xl" className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Connections</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-base text-ink">
-            Which network the wallet talks to, devnet test mode, which
-            backup it uses, and where prices come from live on the
-            Networks screen — they are connection settings, not vault
-            settings.
-          </p>
-          <Link
-            to="/networks"
-            className="inline-block text-base font-medium text-ink bawa-squiggle-underline"
-          >
-            Open Networks
-          </Link>
-        </CardContent>
-      </Card>
+        <li
+          aria-disabled="true"
+          className="flex min-h-11 items-center justify-between gap-4 px-4 py-3 text-base text-muted-foreground"
+        >
+          WalletConnect
+          <span>Not set up</span>
+        </li>
 
-      <Card radius="xl" className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>WalletConnect</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-base text-ink">
-            WalletConnect — connecting Bawa to dApps — is not available in
-            this build. It needs a free Reown Cloud project ID, which has
-            not been set up. No keys or funds are affected.
-          </p>
-          <p className="max-w-[75ch] text-base text-ink">
-            To bring it back later: create a free account at{" "}
-            <a
-              href="https://cloud.reown.com"
-              className="font-medium text-ink bawa-squiggle-underline"
-            >
-              cloud.reown.com
-            </a>
-            , create a project, copy the project ID into{" "}
-            <code>VITE_WALLETCONNECT_PROJECT_ID</code>, and restore the
-            WalletConnect files from git history.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card radius="xl" className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>About</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="max-w-[75ch] text-base text-ink">
-            Bawa Web Wallet · Version {APP_VERSION}
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="rounded-bawa border-2 border-ink bg-paper p-6 lg:col-span-2">
-        <h2 className="flex items-center gap-2 font-semibold text-ink"><BawaIcon name="shield" className="size-6" /> What this wallet does</h2>
-        <ul className="mt-3 max-w-[75ch] list-disc space-y-2 pl-5 text-base text-ink">
-          <li>Your recovery phrase is created in this browser and kept encrypted in the vault on this device.</li>
-          <li>Your private keys stay in memory on this device while the wallet is open. They are never saved unencrypted, written to logs or sent online.</li>
-          <li>Signing happens offline on this device.</li>
-          <li>Sending funds is switched off until it is separately approved. Signing alone never moves your funds.</li>
-        </ul>
-      </div>
-
-      {/* P1 (desktop-layout-v2): the delete-vault card is full-width
-          on desktop like every other section card, not half-width
-          with an empty right half. */}
-      {vaultState !== 'no-vault' && (
-        <Card radius="xl" borderTone="destructive" className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Delete vault</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Deleting the vault removes the encrypted recovery phrase from this device. This cannot
-              be undone — make sure you have written down your recovery phrase first.
-            </p>
+        {vaultState !== 'no-vault' && (
+          <li className="flex min-h-11 flex-wrap items-center justify-between gap-4 px-4 py-3">
+            <span className="text-base font-medium text-ink">Delete vault</span>
             <Button
               type="button"
               variant="secondary"
@@ -197,9 +91,17 @@ export function SecuritySettingsScreen() {
             >
               {deleteArmed ? 'Tap again to confirm delete' : 'Delete vault'}
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          </li>
+        )}
+      </ul>
+
+      <p className="mt-4 text-sm text-muted-foreground">
+        Bawa Web Wallet · Version {APP_VERSION}
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Your phrase stays encrypted on this device. Keys never leave it.
+        Sending is off until approved. Offline signing only.
+      </p>
     </section>
   );
 }

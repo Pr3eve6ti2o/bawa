@@ -1,12 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '../ui/components/card';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { Switch } from '../ui/components/switch';
@@ -84,13 +78,13 @@ export function AutoLockSetting() {
     }
   }
 
+  // P1 (S3-B, item 9 — F34): no card of its own — Security is a flat
+  // list, so this is the first row in it (row padding 12px vertical /
+  // 16px horizontal, plan §c). The row label is the Auto-lock switch
+  // label below; the old CardTitle said the same word twice.
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Auto-lock</CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
+    <div className="px-4 py-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <Label htmlFor="auto-lock-enabled">Auto-lock</Label>
           <Switch
@@ -209,7 +203,7 @@ export function AutoLockSetting() {
             {errorMessage}
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

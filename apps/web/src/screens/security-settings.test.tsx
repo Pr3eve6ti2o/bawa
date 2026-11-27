@@ -68,16 +68,23 @@ async function mountScreen() {
 }
 
 describe('security settings screen', () => {
-  it('describes the real vault, never the watch-only starter copy', async () => {
+  it('keeps the safety facts in one short line, without the essay', async () => {
+    // P1 (S3-B, item 9 — F34): "What this wallet does" is folded into
+    // one line, not a four-bullet essay. The facts stay — the essay
+    // lived only here (P0 cut it from Welcome), so deleting it outright
+    // would leave the app saying nothing about keys staying on-device.
     setWallet('unlocked');
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
+      expect(text).not.toContain('What this wallet does');
       expect(text).not.toContain('What this starter does not do');
       expect(text).not.toContain('UI state only');
       expect(text).not.toContain('watch-only starter does not create');
-      expect(text).toContain('kept encrypted in the vault');
-      expect(text).toContain('Sending funds is switched off');
+      expect(text).not.toContain('kept encrypted in the vault');
+      expect(text).toContain('Your phrase stays encrypted on this device');
+      expect(text).toContain('Sending is off until approved');
+      expect(text).toContain('Offline signing only');
     } finally {
       await mounted.cleanup();
     }
@@ -107,7 +114,7 @@ describe('security settings screen', () => {
         'locks after 5 minutes without activity',
       );
     } finally {
-      await autoLockMounted.cleanup();
+      await mounted.cleanup();
     }
   });
 
@@ -136,13 +143,9 @@ describe('security settings screen', () => {
 
     try {
       expect(div.textContent).toContain('Delete vault');
-      const firstButton = div.querySelector('button');
-      const deleteButton =
-        firstButton?.textContent === 'Delete vault'
-          ? firstButton
-          : Array.from(div.querySelectorAll('button')).find(
-              (button) => button.textContent === 'Delete vault',
-            );
+      const deleteButton = Array.from(div.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Delete vault',
+      );
       expect(deleteButton?.textContent).toBe('Delete vault');
 
       await act(async () => {
@@ -164,20 +167,45 @@ describe('security settings screen', () => {
     }
   });
 
-  it('points at Networks for connections instead of duplicating the RPC screen', async () => {
-    // Lane F: the RPC manager lives on Networks, not here — Security
-    // carries one pointer to it, not a second copy of the controls.
+  it('shows no Delete vault row when there is no vault', async () => {
+    setWallet('no-vault');
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent ?? '').not.toContain('Delete vault');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('is one flat list: backup link rows, no Wallets/Networks link-cards', async () => {
+    // P1 (S3-B, item 9 — F34): the two-column card grid is gone. One
+    // single-column list; Backup and Backup shares are one-line link
+    // rows; the Connected-wallets and Connections link-cards are gone
+    // (the sidebar already links to Wallets and Networks).
     setWallet('unlocked');
     const mounted = await mountScreen();
     try {
-      const text = mounted.div.textContent ?? '';
-      expect(text).toContain('Connections');
-      expect(text).toContain('live on the Networks screen');
-      const link = mounted.div.querySelector(
-        'a[href="/networks"]',
+      const section = mounted.div.querySelector('section') as HTMLElement;
+      expect(section.className).not.toContain('lg:grid');
+      expect(section.className).not.toContain('lg:grid-cols-2');
+      expect(section.className).toContain('max-w-2xl');
+      expect(mounted.div.innerHTML).not.toContain('lg:col-span-2');
+      expect(mounted.div.querySelector('ul')).not.toBeNull();
+      const backupLink = mounted.div.querySelector(
+        'a[href="/mnemonic-backup"]',
       ) as HTMLAnchorElement | null;
-      expect(link).not.toBeNull();
-      expect(link?.textContent).toContain('Open Networks');
+      expect(backupLink).not.toBeNull();
+      expect(backupLink?.textContent).toContain('Mnemonic backup');
+      const sharesLink = mounted.div.querySelector(
+        'a[href="/backup-shares"]',
+      ) as HTMLAnchorElement | null;
+      expect(sharesLink).not.toBeNull();
+      expect(sharesLink?.textContent).toContain('Backup shares');
+      const text = mounted.div.textContent ?? '';
+      expect(text).not.toContain('Open Wallets');
+      expect(text).not.toContain('Open Networks');
+      expect(text).not.toContain('Connected wallets');
+      expect(text).not.toContain('live on the Networks screen');
       expect(text).not.toContain('RPC endpoints');
       expect(text).not.toContain('Use backup');
     } finally {
@@ -185,96 +213,41 @@ describe('security settings screen', () => {
     }
   });
 
-  it('says WalletConnect is not available in this build', async () => {
-    // Providers Phase 2, Lane A: the WalletConnect screen, client and
-    // dependencies were removed — no Reown Cloud projectId exists, and
-    // without one the relay never connects. Security carries the honest
-    // note instead of a dead screen.
+  it('shows WalletConnect as one greyed row, not a setup manual', async () => {
+    // P1 (S3-B, item 9 — F34): the WalletConnect card (developer setup
+    // instructions, VITE_WALLETCONNECT_PROJECT_ID, "restore files from
+    // git history") is one greyed row. No link — there is no in-app
+    // guide route to link to.
     setWallet('unlocked');
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
       expect(text).toContain('WalletConnect');
-      expect(text).toContain('not available in this build');
-      expect(text).toContain('Reown Cloud project ID');
-      expect(text).toContain('No keys or funds are affected');
-      expect(text).toContain('cloud.reown.com');
-      expect(text).toContain('VITE_WALLETCONNECT_PROJECT_ID');
+      expect(text).toContain('Not set up');
+      expect(text).not.toContain('not available in this build');
+      expect(text).not.toContain('Reown Cloud project ID');
+      expect(text).not.toContain('cloud.reown.com');
+      expect(text).not.toContain('VITE_WALLETCONNECT_PROJECT_ID');
+      expect(text).not.toContain('restore the WalletConnect files');
+      const walletConnectLink = [...mounted.div.querySelectorAll('a')].find(
+        (anchor) => anchor.textContent?.includes('WalletConnect'),
+      );
+      expect(walletConnectLink).toBeUndefined();
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('points at Wallets for connected wallets and shows the app version', async () => {
+  it('shows the app version as one line under the list', async () => {
+    // P1 (S3-B, item 9 — F34): the About card is gone; the version
+    // line stays, as one muted line under the list.
     setWallet('unlocked');
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).toContain('Connected wallets');
-      const link = mounted.div.querySelector(
-        'a[href="/wallets"]',
-      ) as HTMLAnchorElement | null;
-      expect(link).not.toBeNull();
-      expect(link?.textContent).toContain('Open Wallets');
       // The version line is a hardcoded string in the screen; it must
       // match package.json, or this fails on the next bump.
       expect(text).toContain(`Version ${packageJson.version}`);
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('lays out in two desktop columns with the reading panels spanning both', async () => {
-    setWallet('unlocked');
-    const mounted = await mountScreen();
-    try {
-      const section = mounted.div.querySelector('section') as HTMLElement;
-      expect(section.className).toContain('lg:grid-cols-2');
-      const heading = mounted.div.querySelector('#security-heading') as HTMLElement;
-      expect(heading.className).toContain('lg:col-span-2');
-      const intro = [...mounted.div.querySelectorAll('div')].find((el) =>
-        el.textContent?.includes('What this wallet does'),
-      ) as HTMLElement;
-      expect(intro.className).toContain('lg:col-span-2');
-      const backup = [...mounted.div.querySelectorAll('div')].find((el) =>
-        el.textContent?.includes('Backup procedure') &&
-        el.className.includes('rounded-xl'),
-      ) as HTMLElement;
-      expect(backup.className).toContain('lg:col-span-2');
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('spans Delete vault across both desktop columns, pairing Auto-lock with Connected wallets', async () => {
-    // P1 (partial): "Delete vault" sat at half width with an empty
-    // right half, so it now spans both desktop columns. "Auto-lock"
-    // and "Connected wallets" stay paired half-width — wrapping
-    // Auto-lock alone would orphan Connected wallets. Every other
-    // card spans both columns.
-    setWallet('unlocked');
-    const mounted = await mountScreen();
-    try {
-      const section = mounted.div.querySelector('section') as HTMLElement;
-      expect(section.className).toContain('lg:grid');
-      expect(section.className).toContain('lg:grid-cols-2');
-      const children = [...section.children] as HTMLElement[];
-      expect(children.length).toBeGreaterThan(0);
-      const deleteCard = children.find((child) =>
-        child.textContent?.includes('Delete vault'),
-      );
-      expect(deleteCard).not.toBeUndefined();
-      expect(deleteCard?.className).toContain('lg:col-span-2');
-      const autoLock = children.find((child) =>
-        child.textContent?.includes('Auto-lock'),
-      );
-      expect(autoLock).not.toBeUndefined();
-      expect(autoLock?.className).not.toContain('lg:col-span-2');
-      const connected = children.find((child) =>
-        child.textContent?.includes('Connected wallets'),
-      );
-      expect(connected).not.toBeUndefined();
-      expect(connected?.className).not.toContain('lg:col-span-2');
     } finally {
       await mounted.cleanup();
     }
