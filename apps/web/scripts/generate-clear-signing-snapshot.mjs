@@ -2,13 +2,20 @@
 // the ERC-7730 clear-signing registry.
 //
 // Usage:
-//   node scripts/generate-clear-signing-snapshot.mjs <registry-dir>
+//   node scripts/generate-clear-signing-snapshot.mjs [--check] <registry-dir>
 //
 // The registry checkout is the surveyed one (an okxlabs fork,
 // okxlabs/clear-signing-erc7730-registry, commit 3d60345, which merges
 // ethereum:master). The canonical upstream is the Ethereum Foundation
 // registry at https://github.com/ethereum/clear-signing-erc7730-registry
 // — a future refresh should pull from upstream and re-run this script.
+//
+// Refresh procedure (CI enforces it — see .github/workflows/ci.yml,
+// "Clear-signing snapshot drift check"): clone the pinned registry
+// checkout and run this script with --check from apps/web; a non-zero
+// exit means the committed snapshot drifted from the registry. To
+// refresh, re-run without --check and commit the result:
+//   npm run snapshot:clear-signing -- <registry-dir>
 //
 // Only a curated subset is vendored: the full registry is 6.1 MB
 // (814 calldata entries; the index alone is 88 KB) and the web bundle
@@ -23,7 +30,8 @@
 // bundle, so every byte counts); the schema is:
 //   { g: generic functions, c: contracts }
 //   function: { s: signature, i: intent, p: params }
-//   param:    { t: display type, l: label, m?: is the token amount }
+//   param:    { t: display type, l: label, m?: is the token amount,
+//               h?: hidden positional placeholder, never displayed }
 //   contract: { n: name, a: address, c: chain ids, f: functions }
 // Display types are address/uint only: the decoder in
 // clear-signing.ts decodes exactly those, and anything else resolves
@@ -43,10 +51,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const registryDir = process.argv[2];
+const args = process.argv.slice(2);
+const checkMode = args.includes('--check');
+const registryDir = args.find((arg) => arg !== '--check');
 if (!registryDir) {
   console.error(
-    'Usage: node scripts/generate-clear-signing-snapshot.mjs <registry-dir>',
+    'Usage: node scripts/generate-clear-signing-snapshot.mjs [--check] <registry-dir>',
   );
   process.exit(1);
 }
@@ -70,10 +80,13 @@ function canonicalDisplayType(type) {
 }
 // The emitted params carry no `name`: decoding is positional (param
 // order follows the signature), and only label/type/flags are shown.
-// Keeping names would cost bundle bytes for no runtime use.
+// Keeping names would cost bundle bytes for no runtime use. A param
+// marked skip stays in the list as a hidden positional placeholder
+// (h:true) so the positions still line up — it is never displayed.
 function emitParam(param) {
   const emitted = { t: param.displayType, l: param.label };
   if (param.amount === true) emitted.m = true;
+  if (param.skip === true) emitted.h = true;
   return emitted;
 }
 
@@ -157,13 +170,23 @@ function registryFunction(formats, definitions, signature, intent, params) {
     if (label) resolved[field.path] = label;
   }
   for (const param of params) {
+    // A param marked skip has no registry field by design (the
+    // registry never displays it) and is a hidden positional
+    // placeholder only — there is no label to check. Every other
+    // param must have a registry label; a missing one always fails.
+    if (param.skip === true) continue;
     const candidates = [
       param.name,
       `${param.name}.[-20:]`,
       `${param.name}.[-4:]`,
     ];
     const found = candidates.find((path) => resolved[path] !== undefined);
-    if (found === undefined && param.label !== param.name) {
+    // A missing registry label ALWAYS fails: a label that merely
+    // equals the parameter name is not a registry label. The old
+    // check let the 1inch `token` param through with the raw name
+    // "token" as its label, for a field the registry never displays
+    // (it appears only as tokenPath inside the amount field).
+    if (found === undefined) {
       fail(`${signature}: no registry label for ${param.name}`);
     }
     if (found !== undefined && resolved[found] !== param.label) {
@@ -184,11 +207,17 @@ function registryFunction(formats, definitions, signature, intent, params) {
 
 // 1inch AggregationRouterV6 — the registry's own test vectors
 // (testsv2/calldata-AggregationRouterV6.tests.json, unoswapTo) prove
-// the decoding. Its uint256 params pack addresses (to, token, dex);
+// the decoding. Its uint256 params pack addresses (to, dex);
 // the registry slices their low 20 bytes, so the snapshot records
 // display type address for them. Only unoswapTo is vendored (the
 // registry's proven vector): swap() takes a tuple, which the decoder
 // does not support, and every further function costs bundle bytes.
+// The `token` param is a hidden positional placeholder, not a row:
+// the registry has no field for it — it appears only as tokenPath
+// inside the amount field — so it stays in the snapshot (decoding is
+// positional) with h:true and is never displayed; the snapshot shows
+// the registry's 4 rows. Its label is the human Title Case "Token",
+// not the raw parameter name.
 // Safe 1.4.1 execTransaction is NOT vendored: it needs dynamic bytes
 // decoding and the bundle has no room for it — the generator can grow
 // a second contract entry when the decoder grows with it.
@@ -211,7 +240,7 @@ const contracts = [
         'Swap',
         [
           { name: 'to', type: 'uint256', displayType: 'address', label: 'Beneficiary' },
-          { name: 'token', type: 'uint256', displayType: 'address', label: 'token' },
+          { name: 'token', type: 'uint256', displayType: 'address', label: 'Token', skip: true },
           { name: 'amount', type: 'uint256', displayType: 'uint', label: 'Amount to Send' },
           { name: 'minReturn', type: 'uint256', displayType: 'uint', label: 'Minimum to Receive' },
           { name: 'dex', type: 'uint256', displayType: 'address', label: 'Last pool' },
@@ -227,7 +256,25 @@ const outPath = new URL(
   '../src/wallet/clear-signing-snapshot.json',
   import.meta.url,
 );
-writeFileSync(outPath, `${JSON.stringify(snapshot, null, 2)}\n`);
-console.log(
-  `wrote ${outPath.pathname} (${generic.length} generic functions, ${contracts.length} contracts)`,
-);
+const text = `${JSON.stringify(snapshot, null, 2)}\n`;
+if (checkMode) {
+  let committed;
+  try {
+    committed = readFileSync(outPath, 'utf8');
+  } catch {
+    fail(`committed snapshot is missing: ${outPath.pathname}`);
+  }
+  if (committed !== text) {
+    fail(
+      `snapshot drift: ${outPath.pathname} differs from the registry checkout — re-run without --check to refresh it`,
+    );
+  }
+  console.log(
+    `snapshot matches the registry checkout (${generic.length} generic functions, ${contracts.length} contracts)`,
+  );
+} else {
+  writeFileSync(outPath, text);
+  console.log(
+    `wrote ${outPath.pathname} (${generic.length} generic functions, ${contracts.length} contracts)`,
+  );
+}

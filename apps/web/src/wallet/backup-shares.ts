@@ -181,10 +181,14 @@ export async function reconstructKeyBytes(
   const shares = texts.map(decodeShare);
   // Interpolation needs distinct share numbers: two copies of one share
   // (or two shares with the same number) cannot rebuild anything.
-  // Identical shares share a number, so this covers both cases.
+  // Identical shares share a number, so this covers both cases. The
+  // share number is the LAST byte of the share (the library writes it
+  // at share[secretLength] in split() and reads share[shareLength - 1]
+  // in combine()); share[0] is the first payload byte, not the number,
+  // and two distinct shares collide on it with probability 1/256.
   const seenNumbers = new Set<number>();
   for (const share of shares) {
-    const number = share[0] as number;
+    const number = share[SHARE_BYTES - 1] as number;
     if (seenNumbers.has(number)) {
       throw new BackupSharesError(
         'Two of the shares are the same share. Enter a different share in each box.',
@@ -249,7 +253,15 @@ export async function checkBackupShares(
           : 'Those shares could not be checked.',
     };
   }
-  const valid = await verifyReconstructedKey(keyBytes);
+  // Wipe the reconstructed key bytes as soon as the trial decryption
+  // is done (or throws): this local is the only copy, and dropping
+  // the reference alone would leave the bytes in the buffer.
+  let valid: boolean;
+  try {
+    valid = await verifyReconstructedKey(keyBytes);
+  } finally {
+    keyBytes.fill(0);
+  }
   if (!valid) {
     return {
       ok: false,

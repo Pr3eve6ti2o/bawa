@@ -61,7 +61,8 @@
             },
             {
               "t": "address",
-              "l": "token"
+              "l": "Token",
+              "h": true
             },
             {
               "t": "uint",

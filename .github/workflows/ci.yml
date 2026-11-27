@@ -220,6 +220,18 @@ jobs:
         run: |
           cd apps/web && node scripts/generate-android-registry.mjs --check
 
+      # Bug-hunt v2 (Lane F, F4): the clear-signing snapshot is a
+      # curated copy of the ERC-7730 registry — without this step a
+      # registry change would silently stale it while the review
+      # screen kept presenting the old labels. The checkout is the
+      # pinned surveyed commit (okxlabs fork @ 3d60345); the
+      # generator fails on any drift.
+      - name: Clear-signing snapshot drift check (Lane F)
+        run: |
+          git clone https://github.com/okxlabs/clear-signing-erc7730-registry.git /tmp/clear-signing-registry
+          git -C /tmp/clear-signing-registry checkout 3d60345850337de3507c172db8d25b25052e6966
+          cd apps/web && node scripts/generate-clear-signing-snapshot.mjs --check /tmp/clear-signing-registry
+
       - name: Android registry tests
         run: node tests/android-registry.test.mjs
 
