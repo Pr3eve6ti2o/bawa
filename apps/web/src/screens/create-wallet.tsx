@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { WalletReadyActions } from './wallet-ready-actions';
 import { CopyButton } from '../ui/components/copy-button';
+import { RecoveryPhraseGrid } from '../ui/components/recovery-phrase-grid';
 import {
   Card,
   CardContent,
@@ -245,7 +246,7 @@ export function CreateWalletScreen() {
 
   return (
     <section aria-labelledby="create-wallet-title" className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
-      <Card radius="xl" className="lg:col-span-2 lg:sticky lg:top-6">
+      <Card radius="flat" borderWidth="hairline" className="lg:col-span-2 lg:sticky lg:top-6">
         <CardHeader>
           <CardTitle id="create-wallet-title">Create a wallet</CardTitle>
           <CardDescription>
@@ -261,7 +262,7 @@ export function CreateWalletScreen() {
                 className="flex flex-1 items-center last:flex-none"
               >
                 <span
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-base text-ink ${
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-base text-ink ${
                     progressStep < step
                       ? "bg-sun"
                       : progressStep === step
@@ -281,7 +282,7 @@ export function CreateWalletScreen() {
                 {progressStep < 4 && (
                   <span
                     aria-hidden="true"
-                    className="mx-2 flex-1 border-t-2 border-dashed border-ink"
+                    className="mx-2 flex-1 border-t border-border"
                   />
                 )}
               </li>
@@ -356,7 +357,7 @@ export function CreateWalletScreen() {
 
       <div className="space-y-6 lg:col-span-3">
       {error !== null && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" flat>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -424,7 +425,7 @@ export function CreateWalletScreen() {
 
 
       {step === 2 && mnemonic !== null && !riskAcknowledged && (
-        <Card radius="xl">
+        <Card radius="flat" borderWidth="hairline">
           <CardHeader>
             <CardTitle>Check the risks first</CardTitle>
             <CardDescription>
@@ -466,6 +467,7 @@ export function CreateWalletScreen() {
               type="button"
               disabled={!allRisksChecked}
               size="wrap"
+              flat
               onClick={() => setRiskAcknowledged(true)}
             >
               I understand — show my recovery phrase
@@ -474,6 +476,7 @@ export function CreateWalletScreen() {
               type="button"
               variant="secondary"
               size="wrap"
+              flat
               onClick={() => {
                 setMnemonic(null);
                 setRiskChecks([false, false, false]);
@@ -488,38 +491,35 @@ export function CreateWalletScreen() {
       )}
 
       {step === 2 && mnemonic !== null && riskAcknowledged && (
-        <Card radius="xl">
+        <Card radius="flat" borderWidth="hairline">
           <CardHeader>
-            <CardTitle><span className="bawa-marker">Write down</span> your recovery phrase</CardTitle>
+            <CardTitle>Write down your recovery phrase</CardTitle>
             <CardDescription>
               Write these 24 words down on paper, in order. This is the only
               time they are shown.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert>
+            {/* P3-A (style B): the warning box is flat, like the rest
+                of this screen. */}
+            <Alert flat>
               <AlertDescription>
                 Never photograph, share or store these words digitally. Anyone
                 with them can take your wallet. Never paste them into any app
                 or website.
               </AlertDescription>
             </Alert>
-            <ol aria-label="Recovery phrase" className="grid grid-cols-2 gap-2 lg:grid-cols-3">
-              {words.map((word, index) => (
-                <li
-                  key={index}
-                  className="flex h-12 min-w-0 items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-2"
-                >
-                  <span className="text-base font-medium text-ink">
-                    {index + 1}.
-                  </span>
-                  {' '}
-                  <span className="font-display text-base font-semibold text-ink">{word}</span>
-                </li>
-              ))}
-            </ol>
+            {/* P3-A (style B): flat, numbered, mono tiles — the shared
+                phrase grid. No wobbly radius, no 2px ink border, no
+                highlighter, no Baloo 2 on the words. */}
+            <RecoveryPhraseGrid words={words} />
             <div className="space-y-2">
-              <CopyButton value={mnemonic} label="Copy recovery phrase" />
+              <CopyButton
+                value={mnemonic}
+                label="Copy all 24 words"
+                copyLabel="Copy all 24 words"
+                flat
+              />
               <p className="text-sm text-muted-foreground">
                 Paper beats clipboard.
               </p>
@@ -527,6 +527,7 @@ export function CreateWalletScreen() {
             <Button
               type="button"
               size="wrap"
+              flat
               onClick={() => setStep(3)}
             >
               I have written them down

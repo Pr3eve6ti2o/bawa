@@ -9,26 +9,38 @@ import { cn } from "../lib/utils"
 // props, not a conflicting className. Lane T (P1, item 3): the old
 // size="sm" and padding="sm" props are deleted — one card padding
 // (16px mobile / 24px desktop, all round) and one inner gap (12px).
+// P3-A (style B): radius="flat" + borderWidth="hairline" is the flat
+// card the recovery-phrase screens use (uniform 12px radius, 1px
+// hairline border) — the wobbly radius + 2px ink border stay the
+// default everywhere else until P3-B restyles the remaining screens.
 function Card({
   className,
   radius = "bawa",
   tone = "paper",
   borderTone = "ink",
+  borderWidth = "thick",
   ...props
 }: React.ComponentProps<"div"> & {
-  /** Corner radius: "bawa" is the default; "xl" is the softer card used on detail screens. */
-  radius?: "bawa" | "xl"
+  /** Corner radius: "bawa" is the default; "xl" is the softer card used on detail screens; "flat" is the uniform 12px radius (P3-A, phrase screens). */
+  radius?: "bawa" | "xl" | "flat"
   /** Surface: "paper" is the default; "card" matches the theme card surface. */
   tone?: "paper" | "card"
   /** Border colour: "ink" is the default; "border" is the muted border; "destructive" is the delete-zone border, rendered in the link token (#C23A1D, 5.27:1 on paper) — the bright coral at 40% opacity was a faint peach far below the 3:1 non-text bar, and even full-strength coral is only 2.77:1 (same fix as the destructive icon, F4). */
   borderTone?: "ink" | "border" | "destructive"
+  /** Border width: "thick" is the 2px ink border; "hairline" is the 1px border (P3-A, phrase screens). */
+  borderWidth?: "thick" | "hairline"
 }) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "group/card flex flex-col gap-3 border-2",
-        radius === "xl" ? "rounded-xl" : "rounded-bawa",
+        "group/card flex flex-col gap-3",
+        borderWidth === "hairline" ? "border" : "border-2",
+        radius === "xl"
+          ? "rounded-xl"
+          : radius === "flat"
+            ? "rounded-flat-lg"
+            : "rounded-bawa",
         tone === "card" ? "bg-card text-foreground" : "bg-paper text-ink",
         borderTone === "border"
           ? "border-border"

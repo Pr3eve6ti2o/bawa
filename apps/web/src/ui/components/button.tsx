@@ -58,10 +58,18 @@ const buttonVariants = cva(
   },
 );
 
+// P3-A (style B): `flat` is the flat shape the recovery-phrase
+// screens use — a 1px hairline border + uniform 10px radius via the
+// .btn-flat utility (globals.css), no wavy press underline. It is a
+// prop, not a className, so no conflicting class is ever passed: the
+// variant utilities still emit their own radius/border and .btn-flat
+// (same layer, later in file) wins. Default stays wobbly until P3-B
+// restyles the remaining screens.
 function Button({
   className,
   variant,
   size,
+  flat = false,
   asChild = false,
   type = "button",
   children,
@@ -69,6 +77,8 @@ function Button({
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
+    /** Flat shape (P3-A): 1px hairline border, uniform 10px radius. */
+    flat?: boolean;
   }) {
   const Comp = asChild ? Slot : "button";
 
@@ -76,7 +86,10 @@ function Button({
     <Comp
       data-slot="button"
       type={type}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        flat ? "btn-flat" : undefined,
+      )}
       {...props}
     >
       {children}

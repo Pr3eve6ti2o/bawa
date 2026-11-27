@@ -18,16 +18,30 @@ const alertVariants = cva(
   }
 )
 
+// P3-A (style B): `flat` is the flat shape the recovery-phrase
+// screens use — a 1px hairline border + uniform 12px radius via the
+// .alert-flat utility (globals.css). It changes width + radius only,
+// never the border colour, so the destructive variant keeps its
+// coral border. Default stays wobbly until P3-B restyles the
+// remaining screens.
 function Alert({
   className,
   variant = "default",
+  flat = false,
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
+}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants> & {
+  /** Flat shape (P3-A): 1px hairline border, uniform 12px radius. */
+  flat?: boolean;
+}) {
   return (
     <div
       data-slot="alert"
       role="alert"
-      className={cn(alertVariants({ variant }), className)}
+      className={cn(
+        alertVariants({ variant }),
+        flat ? "alert-flat" : undefined,
+        className,
+      )}
       {...props}
     />
   )

@@ -4,16 +4,26 @@
 // button itself confirms with "Copied" (or "Copy failed"), so no
 // separate status line is needed. The value is never rendered by this
 // component — the caller renders it.
+// P3-A (style B): `copyLabel` is the visible idle label (default
+// "Copy" — the phrase screens pass "Copy all 24 words"); `label`
+// stays the accessible name and is unchanged. `flat` passes the
+// flat Button shape through.
 import { useEffect, useState } from 'react';
 import { Button } from './button';
 
 export function CopyButton({
   value,
   label,
+  copyLabel = 'Copy',
+  flat = false,
   className,
 }: {
   value: string;
   label: string;
+  /** Visible idle label. Default "Copy". */
+  copyLabel?: string;
+  /** Flat Button shape (P3-A). */
+  flat?: boolean;
   className?: string;
 }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -37,6 +47,7 @@ export function CopyButton({
       type="button"
       variant="secondary"
       aria-label={label}
+      flat={flat}
       onClick={() => void copy()}
       className={className}
     >
@@ -44,7 +55,7 @@ export function CopyButton({
         ? 'Copied'
         : status === 'failed'
           ? 'Copy failed'
-          : 'Copy'}
+          : copyLabel}
     </Button>
   );
 }
