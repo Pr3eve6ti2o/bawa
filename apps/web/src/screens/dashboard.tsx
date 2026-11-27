@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { BawaIcon, ScanIcon } from '../ui/components/icons';
+import { BawaIcon } from '../ui/components/icons';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import {
@@ -24,21 +24,15 @@ import { Skeleton } from '../ui/components/skeleton';
 import { useLivePrices } from './use-live-prices';
 import { useAnimatedHeroValue } from './use-hero-ticker';
 
-// Fourth action is Scan (Lane J): the dashboard's way into the Round 2
-// QR scanner. It links to /send?scan=1, which opens the scanner on
-// arrival — the welcome screen has no Scan tile because without a vault
-// there is nothing to send from. The icon is the ScanIcon SVG (the
-// owner-reference glyph), not a BawaIconName. Buy (Lane D,
-// usable-install) is the third action: fiat top-up via Coinbase
-// Onramp, opening the Receive screen's Buy panel
-// (/receive?buy=1, the /send?scan=1 precedent) — a separate /buy
-// route cannot fit the bundle budget (see onramp.ts).
-const ACTIONS = [
+// P1 item 6 (F1/F3): the four money actions — Send, Receive, Swap,
+// Copy (the hero's own address, one tap). Buy and Scan left this row:
+// Buy lives on Receive (?buy=1) and Scan on Send (?scan=1), and
+// Activity left it too — the one Activity destination is now the
+// link to /transactions in the Assets header below, not a tile.
+const ACTION_LINKS = [
   { to: '/send', icon: <BawaIcon name="send" className="size-6" />, label: 'Send' },
   { to: '/receive', icon: <BawaIcon name="receive" className="size-6" />, label: 'Receive' },
-  { to: '/receive?buy=1', icon: <BawaIcon name="card" className="size-6" />, label: 'Buy' },
-  { to: '/send?scan=1', icon: <ScanIcon className="size-6" />, label: 'Scan' },
-  { to: '/transactions', icon: <BawaIcon name="activity" className="size-6" />, label: 'Activity' },
+  { to: '/swap', icon: <BawaIcon name="swap" className="size-6" />, label: 'Swap' },
 ] as const;
 
 /**
@@ -62,7 +56,6 @@ export function DashboardScreen() {
   const isLocked = vaultState === 'locked';
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
-  const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
   // Hide-balance toggle (Rabby's DashboardPanel): masks the hero total
   // and the strip amounts. Local state only — it never hides a state
   // label such as "Unavailable". Persisted in localStorage (Rabby
@@ -538,8 +531,8 @@ export function DashboardScreen() {
           vertically centred they floated mid-air in the 5fr column next
           to the wide hero. Mobile is unchanged: the row follows the hero
           in the single column, balance first, actions second. */}
-      <div className="grid grid-cols-5 gap-2 lg:self-end">
-        {ACTIONS.map(({ to, icon, label }) => (
+      <div className="grid grid-cols-4 gap-2 lg:self-end">
+        {ACTION_LINKS.map(({ to, icon, label }) => (
           <Link
             key={to}
             to={to}
@@ -556,71 +549,36 @@ export function DashboardScreen() {
             <span className="text-xs leading-4 font-medium text-ink">{label}</span>
           </Link>
         ))}
+        {/* P1 item 6: the fourth money action copies the same primary
+            address as the hero Copy button above (same label flip to
+            "Copied!" — one shared state, one address). Disabled with
+            no address to copy (locked vault): 40% opacity, never
+            dashed, per the Lane T button system. */}
+        <button
+          type="button"
+          disabled={primaryAddress === undefined}
+          aria-live="polite"
+          onClick={() => void copyPrimaryAddress()}
+          className="flex cursor-pointer flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink max-[359px]:size-11">
+            <BawaIcon name="copy" className="size-6" />
+          </span>
+          <span className="text-xs leading-4 font-medium text-ink">
+            {copyLabel === 'copied' ? 'Copied!' : copyLabel === 'failed' ? "Couldn't copy" : 'Copy'}
+          </span>
+        </button>
       </div>
 
-      {/*
-        Tokens/Activity tabs. Two errors corrected hands-on: tx.amount ->
-        tx.amountBaseUnits (the real transaction field) and
-        chainConfig[chain] -> chainConfig(chain) (chainConfig is a function,
-        not a record). No NFTs tab: no NFT support exists, and unimplemented
-        features stay absent.
-      */}
-      <div
-        role="tablist"
-        aria-label="Wallet views"
-        className="sticky top-0 z-10 mb-4 flex w-fit gap-1 rounded-bawa border-2 border-ink bg-paper p-1 lg:col-span-2"
-      >
-        {(['tokens', 'activity'] as const).map((tab) => (
-          <button
-            key={tab}
-            id={`dashboard-assets-${tab}-tab`}
-            type="button"
-            role="tab"
-            aria-selected={assetsTab === tab}
-            aria-controls="dashboard-assets-panel"
-            tabIndex={assetsTab === tab ? 0 : -1}
-            onClick={() => setAssetsTab(tab)}
-            onKeyDown={(event) => {
-              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-
-              event.preventDefault();
-              const nextTab =
-                event.key === 'Home'
-                  ? 'tokens'
-                  : event.key === 'End'
-                    ? 'activity'
-                    : tab === 'tokens'
-                      ? 'activity'
-                      : 'tokens';
-
-              setAssetsTab(nextTab);
-              document.getElementById(`dashboard-assets-${nextTab}-tab`)?.focus();
-            }}
-            // UX-major Lane 2: min-h-11 (44 px tab) + rounded-bawa-sm
-            // (the old rounded-lg was a geometric radius, and py-2
-            // alone made a 36 px tab — below DESIGN-SYSTEM §2.5).
-            className={`min-h-11 rounded-bawa-sm px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
-              assetsTab === tab
-                ? 'bg-sun text-ink'
-                : 'text-ink hover:bg-sun'
-            }`}
-          >
-            {tab === 'tokens' ? 'Tokens' : 'Activity'}
-          </button>
-        ))}
-      </div>
-
-      <div
-        id="dashboard-assets-panel"
-        role="tabpanel"
-        aria-labelledby={`dashboard-assets-${assetsTab}-tab`}
-        className="lg:col-span-2"
-      >
-        {assetsTab === 'tokens' ? (
+      {/* P1 item 6 (F5): one Activity destination. The Activity tab is
+          gone — it is now a link to /transactions in the Assets header
+          below, and the inline activity feed with it. No NFTs tab: no
+          NFT support exists, and unimplemented features stay absent. */}
+      <div className="lg:col-span-2">
           <div className="lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 xl:grid-cols-[2fr_1fr]">
           <section aria-label="Assets">
             {/* UX-major Lane 2: the row wraps below 360 px — at 320 px
-                "Assets" + both pills are ~300 px against 280 px of
+                "Assets" + the three controls are ~300 px against 280 px of
                 room, and the row ran past the viewport edge (probe:
                 dashboard@320 overflow +14). */}
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -643,6 +601,12 @@ export function DashboardScreen() {
                 >
                   Hide zero balances
                 </Button>
+                {/* P1 item 6 (F5): the one Activity destination — the
+                    old Activity tab became this link to /transactions.
+                    Ghost is the Lane T navigation-only variant. */}
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/transactions">Activity</Link>
+                </Button>
               </div>
             </div>
             <Card className="mt-4">
@@ -656,14 +620,15 @@ export function DashboardScreen() {
               )}
               <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />
             </Card>
-            {/* Lane 4 (UX-major, data): portfolio breakdown — the unified
-                per-chain / per-token view of the total above. Funded
-                holdings only, largest first; an unpriced holding reads
-                "Value unavailable", never $0.00. NFTs have no indexer
-                configured, so they are named as unavailable rather than
-                listed with a fake value. */}
-            <section aria-label="Portfolio breakdown" className="mt-6">
-              <h2 className="font-semibold text-ink">Breakdown</h2>
+            {/* P1 item 6 (F1): the breakdown is a disclosure under the
+                list now, not a second copy of the holdings on the page
+                — the asset list above is the one list. Same content
+                inside (Lane 4, UX-major data): funded holdings only,
+                largest first; an unpriced holding reads "Value
+                unavailable", never $0.00. */}
+            <details aria-label="Portfolio breakdown" className="mt-6 rounded-bawa border-2 border-ink bg-paper">
+              <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">Breakdown</summary>
+              <div className="px-4 pb-4">
               {devnetEnabled ? (
                 <p className="mt-4 text-base text-ink">
                   Devnet test mode — test tokens have no market value, so
@@ -674,7 +639,7 @@ export function DashboardScreen() {
                   {/* h-[140px], not 68px: Skeleton embeds BawaLoading
                       (48px spinner + dots + 1.5rem label ≈ 130px tall),
                       so a 68px box lets "Loading…" overflow and paint
-                      over the NFT card below — seen in the CDP capture. */}
+                      over the content below — seen in the CDP capture. */}
                   <div role="status" className="mt-4">
                     <Skeleton className="h-[140px] w-full" />
                     <span className="sr-only">Loading portfolio breakdown…</span>
@@ -725,24 +690,23 @@ export function DashboardScreen() {
                   ) : null}
                 </>
               )}
-              <div className="mt-4 rounded-bawa border-2 border-dashed border-ink bg-paper p-4">
-                <p className="text-base font-semibold text-ink">NFTs — not connected yet</p>
-                <p className="mt-1 text-base text-ink">
-                  Bawa has no NFT indexer configured, so NFTs are not listed
-                  here and are never given a made-up value. Connecting one
-                  needs an NFT indexer provider and key — an owner decision.
-                </p>
               </div>
-            </section>
+            </details>
+            {/* P1 item 6 (F1): the NFT box is one line now, with a link
+                to the asset list — where NFTs would list once an indexer
+                exists. No owner-decision copy on user UI. */}
+            <p className="mt-4 text-base text-ink">
+              NFTs aren&apos;t listed yet — no indexer connected.{' '}
+              <Link to="/assets" className="font-semibold underline decoration-wavy decoration-coral underline-offset-4">
+                See assets
+              </Link>
+            </p>
             <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
           </section>
             <div className="hidden lg:block">
               <RecentActivity />
             </div>
           </div>
-        ) : (
-          <RecentActivity />
-        )}
       </div>
 
     </div>

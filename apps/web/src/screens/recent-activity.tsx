@@ -9,9 +9,10 @@ import { TxRow } from './tx-row';
  * Recent activity — the real per-chain transaction history, extracted
  * verbatim from the dashboard Activity tab (Lane F, 2026-11-20) so the
  * dashboard can show it beside the asset list on desktop widths without
- * rendering a duplicate feed: the Tokens view shows this in the right
- * column, the Activity view shows it as the full-width tab panel, and
- * only one instance is ever visible at a time.
+ * rendering a duplicate feed. P1 item 6 removed the Activity tab
+ * itself (the one Activity destination is /transactions now); this
+ * desktop column is the only inline rendering left, and only one
+ * instance is ever visible at a time.
  */
 export function RecentActivity() {
   const { history, refreshHistory, vaultState } = useWallet();

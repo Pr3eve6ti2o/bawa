@@ -19,6 +19,15 @@ vi.mock('../wallet/chains', () => {
   return {
     availableFor: vi.fn(),
     chainConfig,
+    // P1 Lane S1: add-token now statically imports the shared
+    // ChainSearchSelect, which reads SUPPORTED_CHAINS at module scope
+    // — the mock must provide it or the suite fails to collect. The
+    // dashboard's own 22-chain fixture set, not the full 87.
+    SUPPORTED_CHAINS: [
+      'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op',
+      'base', 'avax', 'gnosis', 'celo', 'linea', 'mantle', 'scroll',
+      'opbnb', 'metis', 'aurora', 'fantom', 'ltc', 'doge',
+    ],
     // Merge fix (Lane 5 moved filterChains here from
     // chain-search-select): the mock must provide it, because the
     // dashboard's import graph loads the picker, which re-exports it.
@@ -919,7 +928,11 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('shows real activity on the Activity tab', async () => {
+  it('links Activity to /transactions instead of an inline tab', async () => {
+    // P1 item 6 (F5): one Activity destination — the tab is gone, the
+    // Assets header carries a link to /transactions. The activity
+    // itself lives there (and in the desktop RecentActivity column);
+    // Home no longer renders an inline feed.
     setWallet(balancesFor({}), {
       history: {
         btc: { status: 'empty', txs: [] },
@@ -946,21 +959,27 @@ describe('dashboard screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      const tab = [...mounted.div.querySelectorAll('button')].find(
-        (candidate) => candidate.textContent === 'Activity',
-      );
-      expect(tab).not.toBeUndefined();
-      await act(async () => {
-        (tab as HTMLButtonElement).click();
-      });
+      const link = mounted.div.querySelector(
+        'a[href="/transactions"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toBe('Activity');
+      expect(
+        [...mounted.div.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === 'Activity',
+        ),
+      ).toBeUndefined();
+      expect(mounted.div.querySelector('[role="tablist"]')).toBeNull();
+      // The desktop RecentActivity column still shows the real tx.
       expect(mounted.div.textContent).toContain('Recent activity');
       expect(mounted.div.textContent).toContain('Sent');
       expect(mounted.div.textContent).toContain('0.25 ETH');
       expect(
         mounted.div.querySelector('a[href="/transactions/0xabc"]'),
       ).not.toBeNull();
-      // No NFTs tab: no NFT support exists.
-      expect(mounted.div.textContent).not.toContain('NFT');
+      // No NFTs tab: no NFT support exists — the NFT line is one line
+      // of text, not a tab.
+      expect(mounted.div.textContent).toContain("NFTs aren't listed yet");
     } finally {
       await mounted.cleanup();
     }
@@ -978,12 +997,8 @@ describe('dashboard screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      const tab = [...mounted.div.querySelectorAll('button')].find(
-        (candidate) => candidate.textContent === 'Activity',
-      );
-      await act(async () => {
-        (tab as HTMLButtonElement).click();
-      });
+      // P1 item 6: no Activity tab to open — the desktop
+      // RecentActivity column renders the empty state inline.
       expect(mounted.div.textContent).toContain('No activity yet');
     } finally {
       await mounted.cleanup();
@@ -1029,22 +1044,23 @@ describe('dashboard screen', () => {
       // Real balances from the context, formatted from base units.
       expect(text).toContain('1.5 ETH');
       expect(text).toContain('Zero balance');
-      // Real actions exist; no Swap/Buy (no engine/on-ramp).
+      // Real actions exist: Send / Receive / Swap / Copy (P1 item 6).
+      // No Buy tile — no on-ramp provider is configured.
       expect(text).toContain('Send');
       expect(text).toContain('Receive');
-      expect(text).not.toContain('Swap');
+      expect(text).toContain('Swap');
+      expect(mounted.div.querySelector('a[href="/swap"]')).not.toBeNull();
+      expect(text).not.toContain('Buy');
       // No fixture or demo content anywhere on the page.
       expect(text).not.toContain('$12,480');
       expect(text).not.toContain('Testnet');
       expect(text).not.toContain('TESTNET');
       expect(text).not.toContain('demo');
-      // Real history on the Activity tab, linked to the detail page.
-      const tab = [...mounted.div.querySelectorAll('button')].find(
-        (candidate) => candidate.textContent === 'Activity',
-      );
-      await act(async () => {
-        (tab as HTMLButtonElement).click();
-      });
+      // Real history, linked to the detail page, in the desktop
+      // RecentActivity column; the Activity link goes to /transactions.
+      expect(
+        mounted.div.querySelector('a[href="/transactions"]'),
+      ).not.toBeNull();
       expect(mounted.div.textContent).toContain('0.25 ETH');
       expect(
         mounted.div.querySelector('a[href="/transactions/0xabc"]'),
@@ -1087,12 +1103,13 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('shows a Scan action on the homepage that opens the QR scanner', async () => {
-    // Lane J: the Scan tile is the fourth action on the dashboard
-    // (Send / Receive / Buy / Scan / Activity) and links to /send?scan=1,
-    // which opens the Round 2 QR scanner on arrival. SVG icon only
-    // (ui-ux-pro-max checklist); no new colours. Buy is the third
-    // action (Lane D, usable-install): the Coinbase Onramp entry.
+  it('shows four money actions on the homepage: Send, Receive, Swap, Copy', async () => {
+    // P1 item 6 (F1/F3): the dashboard action row is the four money
+    // actions only. Buy left the row (no on-ramp provider is
+    // configured; the Buy panel still lives at /receive?buy=1), Scan
+    // left it (the scanner still opens from Send), and Activity left
+    // it (the one Activity destination is the /transactions link).
+    // Copy copies the hero's primary address in one tap.
     setWallet(
       balancesFor({
         btc: { status: 'available', value: '100000000' },
@@ -1103,27 +1120,39 @@ describe('dashboard screen', () => {
     );
     const mounted = await mountScreen();
     try {
-      const scan = mounted.div.querySelector(
-        'a[href="/send?scan=1"]',
+      const send = mounted.div.querySelector(
+        'a[href="/send"]',
       ) as HTMLAnchorElement | null;
-      expect(scan).not.toBeNull();
-      expect(scan?.textContent).toContain('Scan');
-      // Lane D: the Buy tile sits between Receive and Scan and
-      // links to the Buy panel (/receive?buy=1).
-      const buy = mounted.div.querySelector(
-        'a[href="/receive?buy=1"]',
+      expect(send).not.toBeNull();
+      expect(send?.textContent).toContain('Send');
+      const receive = mounted.div.querySelector(
+        'a[href="/receive"]',
       ) as HTMLAnchorElement | null;
-      expect(buy).not.toBeNull();
-      expect(buy?.textContent).toContain('Buy');
+      expect(receive).not.toBeNull();
+      expect(receive?.textContent).toContain('Receive');
+      const swap = mounted.div.querySelector(
+        'a[href="/swap"]',
+      ) as HTMLAnchorElement | null;
+      expect(swap).not.toBeNull();
+      expect(swap?.textContent).toContain('Swap');
+      expect(mounted.div.querySelector('a[href="/send?scan=1"]')).toBeNull();
+      expect(mounted.div.querySelector('a[href="/receive?buy=1"]')).toBeNull();
       const actions = [...mounted.div.querySelectorAll('a')].filter(
         (candidate) =>
           candidate.textContent === 'Send' ||
           candidate.textContent === 'Receive' ||
-          candidate.textContent === 'Buy' ||
-          candidate.textContent === 'Scan' ||
-          candidate.textContent === 'Activity',
+          candidate.textContent === 'Swap',
       );
-      expect(actions).toHaveLength(5);
+      expect(actions).toHaveLength(3);
+      // The fourth action is a Copy button, not a link — it copies
+      // the hero's primary address. Scoped to the actions grid: the
+      // hero carries its own Copy button above.
+      const actionsGrid = swap?.parentElement;
+      expect(actionsGrid?.className).toContain('grid-cols-4');
+      const copyTiles = [...(actionsGrid?.querySelectorAll('button') ?? [])].filter(
+        (candidate) => candidate.textContent === 'Copy',
+      );
+      expect(copyTiles).toHaveLength(1);
     } finally {
       await mounted.cleanup();
     }
@@ -1183,12 +1212,8 @@ describe('dashboard screen', () => {
     );
     const mounted = await mountScreen();
     try {
-      const tab = [...mounted.div.querySelectorAll('button')].find(
-        (candidate) => candidate.textContent === 'Activity',
-      );
-      await act(async () => {
-        (tab as HTMLButtonElement).click();
-      });
+      // P1 item 6: no Activity tab to open — the desktop
+      // RecentActivity column renders the empty state inline.
       expect(mounted.div.textContent).toContain('No activity yet');
       expect(mounted.div.textContent).not.toContain('history unavailable');
       const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
@@ -1225,12 +1250,8 @@ describe('dashboard screen', () => {
     );
     const mounted = await mountScreen();
     try {
-      const tab = [...mounted.div.querySelectorAll('button')].find(
-        (candidate) => candidate.textContent === 'Activity',
-      );
-      await act(async () => {
-        (tab as HTMLButtonElement).click();
-      });
+      // P1 item 6: no Activity tab to open — the desktop
+      // RecentActivity column renders the locked-history state inline.
       expect(mounted.div.textContent).toContain('Bitcoin history unavailable');
       const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
         (candidate) => candidate.textContent === 'Retry',
@@ -1399,7 +1420,12 @@ describe('dashboard screen', () => {
       expect(text).toContain('24h -1.00%');
       expect(text.indexOf('Bitcoin')).toBeLessThan(text.indexOf('Ethereum'));
       expect(text).toContain('2 assets at zero balance');
-      expect(text).toContain('NFTs — not connected yet');
+      // P1 item 6 (F1): the NFT box is one line under the list now,
+      // with a link to the asset list — no owner-decision copy.
+      expect(mounted.div.textContent).toContain(
+        "NFTs aren't listed yet — no indexer connected.",
+      );
+      expect(mounted.div.querySelector('a[href="/assets"]')).not.toBeNull();
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();
@@ -1441,6 +1467,42 @@ describe('dashboard screen', () => {
         await new Promise((resolve) => setTimeout(resolve, 2100));
       });
       expect(copy?.textContent).toBe('Copy');
+    } finally {
+      navigatorStub.clipboard = previousClipboard;
+      await mounted.cleanup();
+    }
+  });
+
+  it('copies the receiving address from the Copy action tile in one tap', async () => {
+    // P1 item 6: the fourth money action is a Copy tile — same
+    // address, same one-tap copy as the hero button, same "Copied!"
+    // flip. The tile is disabled with no address to copy.
+    const address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    type ClipboardStub = {
+      clipboard?: { writeText: (value: string) => Promise<void> };
+    };
+    const navigatorStub = navigator as unknown as ClipboardStub;
+    const previousClipboard = navigatorStub.clipboard;
+    navigatorStub.clipboard = { writeText };
+    setWallet(balancesFor({}), {
+      vaultAddresses: { eth: [address] },
+    });
+    const mounted = await mountScreen();
+    try {
+      const swap = mounted.div.querySelector('a[href="/swap"]');
+      const actionsGrid = swap?.parentElement;
+      const tile = [...(actionsGrid?.querySelectorAll('button') ?? [])].find(
+        (candidate) => candidate.textContent === 'Copy',
+      ) as HTMLButtonElement | undefined;
+      expect(tile).not.toBeUndefined();
+      expect(tile?.disabled).toBe(false);
+      await act(async () => {
+        tile?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(writeText).toHaveBeenCalledWith(address);
+      expect(tile?.textContent).toBe('Copied!');
     } finally {
       navigatorStub.clipboard = previousClipboard;
       await mounted.cleanup();
@@ -1564,7 +1626,7 @@ describe('dashboard screen', () => {
     // layout". HEAD already arranges the hero and the quick actions
     // side by side at lg in a 7fr/5fr grid — the actions are the
     // grid's second column, aligned to the hero's baseline — with
-    // five actions (Send / Receive / Buy / Scan / Activity) in one
+    // four money actions (Send / Receive / Swap / Copy) in one
     // row in that column, not the tag's three-link vertical rail
     // (grid-cols-3 / lg:grid-cols-1 / lg:flex-row). This pins HEAD's
     // two-column arrangement, which no HEAD test covers. Below lg the
@@ -1575,12 +1637,15 @@ describe('dashboard screen', () => {
       const sendLink = mounted.div.querySelector('a[href="/send"]');
       expect(sendLink).not.toBeNull();
       const actions = sendLink?.parentElement;
-      expect(actions?.className).toContain('grid-cols-5');
+      expect(actions?.className).toContain('grid-cols-4');
       expect(actions?.className).toContain('lg:self-end');
       const heroGrid = actions?.parentElement;
       expect(heroGrid?.className).toContain('lg:grid-cols-[7fr_5fr]');
-      // The whole actions column is still five links, nothing added or removed.
-      expect(actions?.querySelectorAll(':scope > a')).toHaveLength(5);
+      // The whole actions column is four money actions: three links
+      // plus the Copy button, nothing added or removed.
+      expect(actions?.querySelectorAll(':scope > a')).toHaveLength(3);
+      expect(actions?.querySelectorAll(':scope > button')).toHaveLength(1);
+      expect(actions?.children).toHaveLength(4);
     } finally {
       await mounted.cleanup();
     }

@@ -70,6 +70,14 @@ async function mountScreen() {
   };
 }
 
+// The Mainnet chain list, scoped: the page also carries the Devnet
+// switch and the RPC manager's own rows, which are not chain toggles.
+function chainList(mounted: { div: HTMLDivElement }): HTMLUListElement {
+  const list = mounted.div.querySelector('ul[aria-label="Chain list"]');
+  if (!list) throw new Error('chain list not found');
+  return list as HTMLUListElement;
+}
+
 // Lane 6 redesign: the RPC manager shows one chain at a time, picked
 // through the search picker. Open it and click the option by name.
 async function selectRpcChain(
@@ -96,7 +104,9 @@ describe('NetworkSelectionScreen', () => {
     vi.clearAllMocks();
   });
 
-  it('lists all thirteen registry chains with their enable state', async () => {
+  it('lists all 87 registry chains with a toggle each', async () => {
+    // P1 item 7 (F36): rows are logo + name + toggle only — no
+    // ticker, slug, ACTIVE/DISABLED pill, Enable/Disable or View.
     setWallet([...SUPPORTED_CHAINS].filter((chain) => chain !== 'sol'));
     const mounted = await mountScreen();
     try {
@@ -117,24 +127,64 @@ describe('NetworkSelectionScreen', () => {
       ]) {
         expect(mounted.div.textContent).toContain(name);
       }
-      expect(mounted.div.textContent).toContain('DISABLED');
-      expect(mounted.div.textContent).toContain('ACTIVE');
+      expect(mounted.div.textContent).not.toContain('DISABLED');
+      expect(mounted.div.textContent).not.toContain('ACTIVE');
+      expect(mounted.div.textContent).not.toContain('Last balance from');
+      // Scoped to the chain list: the page also carries the Devnet
+      // switch, which is not a chain toggle.
+      expect(
+        chainList(mounted).querySelectorAll('[role="switch"]'),
+      ).toHaveLength(87);
+      // Family tabs (M5) with registry counts.
+      const tabs = [...mounted.div.querySelectorAll('[role="tab"]')].map(
+        (tab) => tab.textContent,
+      );
+      expect(tabs).toEqual([
+        'All (87)',
+        'EVM (61)',
+        'Solana (1)',
+        'Bitcoin (3)',
+        'TON (1)',
+        'Other (21)',
+      ]);
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('disabling a chain calls setChainEnabled with false', async () => {
+  it('toggling a chain off calls setChainEnabled with false, exactly once', async () => {
     const wallet = setWallet([...SUPPORTED_CHAINS]);
     const mounted = await mountScreen();
     try {
-      const buttons = [...mounted.div.querySelectorAll('button')].filter(
-        (button) => button.textContent === 'Disable',
-      );
-      expect(buttons.length).toBe(87);
+      const switches = chainList(mounted).querySelectorAll('[role="switch"]');
+      expect(switches).toHaveLength(87);
+      const btc = chainList(mounted).querySelector(
+        '[aria-label="Bitcoin"]',
+      ) as HTMLButtonElement | null;
+      expect(btc).not.toBeNull();
+      expect(btc?.getAttribute('aria-checked')).toBe('true');
       await act(async () => {
-        buttons[0]!.click();
+        btc!.click();
       });
+      expect(wallet.setChainEnabled).toHaveBeenCalledTimes(1);
+      expect(wallet.setChainEnabled).toHaveBeenCalledWith('btc', false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('clicking a chain row toggles it once', async () => {
+    const wallet = setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      const row = chainList(mounted)
+        .querySelector('[aria-label="Bitcoin"]')
+        ?.closest('li');
+      expect(row).not.toBeNull();
+      await act(async () => {
+        (row as HTMLLIElement).click();
+      });
+      expect(wallet.setChainEnabled).toHaveBeenCalledTimes(1);
       expect(wallet.setChainEnabled).toHaveBeenCalledWith('btc', false);
     } finally {
       await mounted.cleanup();
@@ -145,14 +195,80 @@ describe('NetworkSelectionScreen', () => {
     const wallet = setWallet([...SUPPORTED_CHAINS].filter((chain) => chain !== 'sol'));
     const mounted = await mountScreen();
     try {
-      const buttons = [...mounted.div.querySelectorAll('button')].filter(
-        (button) => button.textContent === 'Enable',
+      const off = [...chainList(mounted).querySelectorAll('[role="switch"]')].filter(
+        (entry) => entry.getAttribute('aria-checked') === 'false',
       );
-      expect(buttons.length).toBe(1);
+      expect(off).toHaveLength(1);
+      const sol = chainList(mounted).querySelector(
+        '[aria-label="Solana"]',
+      ) as HTMLButtonElement | null;
+      expect(sol).not.toBeNull();
       await act(async () => {
-        buttons[0]!.click();
+        sol!.click();
       });
+      expect(wallet.setChainEnabled).toHaveBeenCalledTimes(1);
       expect(wallet.setChainEnabled).toHaveBeenCalledWith('sol', true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('the Bitcoin family tab shows only the three UTXO chains', async () => {
+    setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      const tab = [...mounted.div.querySelectorAll('[role="tab"]')].find(
+        (entry) => entry.textContent === 'Bitcoin (3)',
+      ) as HTMLButtonElement | undefined;
+      expect(tab).not.toBeUndefined();
+      await act(async () => {
+        tab!.click();
+      });
+      // Scoped to the chain list: the "Bitcoin (3)" tab label itself
+      // is outside it, and so is the Devnet switch.
+      const list = chainList(mounted);
+      expect(list.querySelectorAll('[role="switch"]')).toHaveLength(3);
+      expect(list.textContent).toContain('Bitcoin');
+      expect(list.textContent).toContain('Litecoin');
+      expect(list.textContent).toContain('Dogecoin');
+      expect(list.textContent).not.toContain('Ethereum');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('search filters inside the active family tab', async () => {
+    setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      const tab = [...mounted.div.querySelectorAll('[role="tab"]')].find(
+        (entry) => entry.textContent === 'EVM (61)',
+      ) as HTMLButtonElement | undefined;
+      expect(tab).not.toBeUndefined();
+      await act(async () => {
+        tab!.click();
+      });
+      const input = mounted.div.querySelector(
+        '#network-search',
+      ) as HTMLInputElement | null;
+      expect(input).not.toBeNull();
+      await act(async () => {
+        if (input) {
+          const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            'value',
+          )?.set;
+          setter?.call(input, 'arbi');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      expect(mounted.div.textContent).toContain('Arbitrum One');
+      expect(mounted.div.textContent).toContain('Arbitrum Nova');
+      // Scoped to the chain list: "Bitcoin" still appears in the
+      // family tab label and the RPC manager's Dogecoin note.
+      const list = chainList(mounted);
+      expect(list.querySelectorAll('[role="switch"]')).toHaveLength(2);
+      expect(list.textContent).not.toContain('Bitcoin');
     } finally {
       await mounted.cleanup();
     }
@@ -304,11 +420,12 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
     }
   });
 
-  it('marks a chain with a custom RPC on its Mainnet row', async () => {
-    // UX-major Lane 5: a custom RPC used to be visible only inside the
-    // RPC manager for the picked chain. The Mainnet list row now says
-    // 'Custom RPC', so the custom entry is not mixed silently into the
-    // curated list.
+  it('shows no custom-RPC marker on the Mainnet row', async () => {
+    // P1 item 7 (F36): the Mainnet row is logo + name + toggle only,
+    // so a custom RPC no longer shows there — this reverses the Lane 5
+    // marker the previous version of this test pinned. The custom
+    // entry is still marked 'Custom' on the RPC manager's own row
+    // (behind the "RPC endpoints" disclosure).
     setWallet([...SUPPORTED_CHAINS]);
     const mounted = await mountScreen();
     try {
@@ -339,7 +456,9 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
         }
       });
       await clickButton(add!);
-      expect(mainnetRow()?.textContent).toContain('Custom RPC');
+      expect(mainnetRow()?.textContent).not.toContain('Custom RPC');
+      const eth = rowFor(mounted, 'Ethereum');
+      expect(eth.textContent).toContain('Custom');
     } finally {
       await mounted.cleanup();
     }

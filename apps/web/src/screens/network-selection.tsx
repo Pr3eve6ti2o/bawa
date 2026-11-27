@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/components/card';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
+import { Switch } from '../ui/components/switch';
 import { ChainSearchSelect, filterChains } from './chain-search-select';
 import { ChainLogo } from './token-logo';
 import { useWallet } from '../state/wallet-context';
@@ -28,95 +28,76 @@ import { probeRpcEndpoint, type RpcProbeResult } from '../wallet/rpc-probe';
 import { loadCachedPrices, type PriceSource } from '../wallet/prices';
 import { DevnetSetting } from './devnet-setting';
 
-// The popular four — the same four chains Receive's picker puts first
-// (POPULAR_RECEIVE_CHAINS in ./receive.tsx) and the dashboard's Popular
-// strip used: the original adapter chains. Kept as a literal here so
-// this screen does not import the receive route's module graph.
-const POPULAR_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+// P1 item 7 (F36 / M5): chain families for the tabs — the mined
+// two-level pattern (family tabs filter the list; they don't switch a
+// provider connection). EVM is every chain with an EVM chain id;
+// Bitcoin is the UTXO Bitcoin family (Bitcoin, Litecoin, Dogecoin);
+// Solana and TON are single chains; everything else is Other.
+// Counts come from the registry, never hard-coded.
+type ChainFamily = 'evm' | 'solana' | 'bitcoin' | 'ton' | 'other';
 
-// One chain row in the Mainnet list: logo, name, chain ID and — where
-// the wallet has fetched one — the host that answered its last balance
-// (the row's current RPC status, DESIGN-SYSTEM.md §6 Networks), plus
-// the enable state and the two actions. Compact list rows, not cards:
-// a card per chain made this screen 31,140 px tall at 390 px.
+const BITCOIN_FAMILY: readonly ChainId[] = ['btc', 'ltc', 'doge'];
+
+function chainFamily(chain: ChainId): ChainFamily {
+  if (chain === 'sol') return 'solana';
+  if (chain === 'ton') return 'ton';
+  if (BITCOIN_FAMILY.includes(chain)) return 'bitcoin';
+  if (CHAINS[chain].evmChainId !== null) return 'evm';
+  return 'other';
+}
+
+const FAMILY_TABS: readonly { id: 'all' | ChainFamily; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'evm', label: 'EVM' },
+  { id: 'solana', label: 'Solana' },
+  { id: 'bitcoin', label: 'Bitcoin' },
+  { id: 'ton', label: 'TON' },
+  { id: 'other', label: 'Other' },
+];
+
+// One chain row in the Mainnet list: logo + name + toggle only. The
+// ticker, slug, ACTIVE/DISABLED pill, Enable/Disable + View buttons
+// and the "Last balance from <host>" line are gone (F36) — the toggle
+// is the state, and the switch is the control. Tapping anywhere on
+// the row toggles, except on the switch itself: the switch's own
+// onCheckedChange does that click, and the row skips clicks that
+// started on it, so a switch click toggles exactly once. (A capture
+// stopPropagation on the switch does NOT work here: React's capture
+// stop blocks the switch's own bubble-phase handler too, so its
+// onCheckedChange never fires.)
 function NetworkChainRow({
   chain,
   isEnabled,
-  customCount,
-  hasCustomRpc,
-  lastBalanceSource,
   onToggle,
 }: {
   chain: ChainId;
   isEnabled: boolean;
-  customCount: number;
-  hasCustomRpc: boolean;
-  lastBalanceSource: string | undefined;
   onToggle: (chain: ChainId, enabled: boolean) => void;
 }) {
   const config = CHAINS[chain];
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+    <li
+      onClick={(event) => {
+        if (
+          (event.target as HTMLElement).closest('[role="switch"]') !== null
+        ) {
+          return;
+        }
+        onToggle(chain, !isEnabled);
+      }}
+      className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2"
+    >
       <span className="flex min-w-0 items-center gap-3">
         <ChainLogo chain={chain} size={32} />
-        <span className="min-w-0">
-          <span className="block font-semibold">
-            {config.displayName}{' '}
-            <span className="text-sm font-normal text-muted-foreground">
-              {config.symbol}
-            </span>{' '}
-            <code className="text-sm font-normal text-muted-foreground">
-              {chain}
-            </code>
-          </span>
-          {(customCount > 0 || hasCustomRpc || lastBalanceSource !== undefined) && (
-            <span className="block text-sm text-muted-foreground">
-              {customCount > 0 &&
-                `${customCount} custom token${customCount === 1 ? '' : 's'}`}
-              {customCount > 0 && (hasCustomRpc || lastBalanceSource !== undefined) && ' · '}
-              {hasCustomRpc && 'Custom RPC'}
-              {hasCustomRpc && lastBalanceSource !== undefined && ' · '}
-              {lastBalanceSource !== undefined &&
-                `Last balance from ${lastBalanceSource}`}
-            </span>
-          )}
+        <span className="min-w-0 truncate font-semibold">
+          {config.displayName}
         </span>
       </span>
-      <span className="flex items-center gap-2">
-        {isEnabled ? (
-          <>
-            <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-xs font-bold text-panel-success-pill-text">
-              ACTIVE
-            </span>
-            <button
-              type="button"
-              className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
-              onClick={() => onToggle(chain, false)}
-            >
-              Disable
-            </button>
-          </>
-        ) : (
-          <>
-            <span className="flex h-6 items-center rounded-[12px] border px-3 text-xs font-bold text-muted-foreground">
-              DISABLED
-            </span>
-            <button
-              type="button"
-              className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
-              onClick={() => onToggle(chain, true)}
-            >
-              Enable
-            </button>
-          </>
-        )}
-        <Link
-          to={`/assets/${chain}`}
-          className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
-        >
-          View
-        </Link>
-      </span>
+      <Switch
+        checked={isEnabled}
+        onCheckedChange={(enabled) => onToggle(chain, enabled)}
+        aria-label={config.displayName}
+      />
     </li>
   );
 }
@@ -130,48 +111,44 @@ function NetworkChainRow({
 // Lane 6 redesign: the list was one flat 87-row run of tall cards
 // with the devnet switch, the RPC manager and prices buried below it.
 // Now the mode switch (devnet) is first, the list is searchable and
-// grouped (Popular first, then alphabetical), and the RPC manager
-// shows one chain at a time instead of repeating all 87 rows a
-// second time. The order on this screen is: mode, chains, RPC, prices.
+// grouped by chain family (P1 item 7, M5), and the RPC manager and
+// Prices live behind disclosures. The order on this screen is: mode,
+// chains, RPC, prices.
 export function NetworkSelectionScreen() {
-  const { enabledChains, setChainEnabled, customTokens, devnetEnabled, balances } = useWallet();
+  const { enabledChains, setChainEnabled, devnetEnabled } = useWallet();
   const enabled = new Set(enabledChains ?? SUPPORTED_CHAINS);
-  const customByChain = new Map<ChainId, number>();
-  for (const token of customTokens ?? []) {
-    customByChain.set(token.chain, (customByChain.get(token.chain) ?? 0) + 1);
-  }
   const [query, setQuery] = useState('');
+  const [family, setFamily] = useState<'all' | ChainFamily>('all');
   // Lane 5: bumped by the RPC manager after every mutation, so the
-  // Mainnet rows below re-read resolveRpcEndpoints and the 'Custom
-  // RPC' marker appears at once instead of after a remount.
+  // screen re-reads the RPC state at once instead of after a remount.
   const [rpcVersion, setRpcVersion] = useState(0);
   void rpcVersion;
   const needle = query.trim();
-  // A search replaces both groups with one flat filtered list (the
-  // same name/symbol/id filter Receive's chain picker uses); with no
-  // search the full list shows, Popular first, the rest alphabetical.
-  const searched = needle === '' ? null : filterChains(SUPPORTED_CHAINS, needle);
-  const popular = POPULAR_CHAINS.filter((chain) =>
-    SUPPORTED_CHAINS.includes(chain),
-  );
-  const others = useMemo(
-    () =>
-      SUPPORTED_CHAINS.filter((chain) => !POPULAR_CHAINS.includes(chain)).sort(
-        (a, b) =>
-          CHAINS[a].displayName.localeCompare(CHAINS[b].displayName, 'en-GB'),
-      ),
-    [],
-  );
+  // One alphabetical list per family, computed from the registry; the
+  // search filters inside the active family (the same name/symbol/id
+  // filter Receive's chain picker uses).
+  const familyLists = useMemo(() => {
+    const sorted = [...SUPPORTED_CHAINS].sort((a, b) =>
+      CHAINS[a].displayName.localeCompare(CHAINS[b].displayName, 'en-GB'),
+    );
+    const lists: Record<ChainFamily, ChainId[]> = {
+      evm: [],
+      solana: [],
+      bitcoin: [],
+      ton: [],
+      other: [],
+    };
+    for (const chain of sorted) lists[chainFamily(chain)].push(chain);
+    return { all: sorted, ...lists };
+  }, []);
+  const familyChains = familyLists[family];
+  const visible =
+    needle === '' ? familyChains : filterChains(familyChains, needle);
   const rowFor = (chain: ChainId) => (
     <NetworkChainRow
       key={chain}
       chain={chain}
       isEnabled={enabled.has(chain)}
-      customCount={customByChain.get(chain) ?? 0}
-      hasCustomRpc={resolveRpcEndpoints(chain).some(
-        (url) => !CHAINS[chain].rpcEndpoints.includes(url),
-      )}
-      lastBalanceSource={balances?.[chain]?.source}
       onToggle={setChainEnabled}
     />
   );
@@ -210,37 +187,88 @@ export function NetworkSelectionScreen() {
               autoComplete="off"
             />
           </div>
+          {/* P1 item 7 (M5): family tabs filter the list — one
+              alphabetical list per family, counts from the registry.
+              The search above filters inside the active family. */}
+          <div
+            role="tablist"
+            aria-label="Chain families"
+            className="flex flex-wrap gap-1 rounded-bawa border-2 border-ink bg-paper p-1"
+          >
+            {FAMILY_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                id={`networks-family-${tab.id}-tab`}
+                type="button"
+                role="tab"
+                aria-selected={family === tab.id}
+                tabIndex={family === tab.id ? 0 : -1}
+                onClick={() => setFamily(tab.id)}
+                onKeyDown={(event) => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+
+                  event.preventDefault();
+                  const index = FAMILY_TABS.findIndex((entry) => entry.id === tab.id);
+                  const next =
+                    event.key === 'Home'
+                      ? FAMILY_TABS[0]!
+                      : event.key === 'End'
+                        ? FAMILY_TABS[FAMILY_TABS.length - 1]!
+                        : FAMILY_TABS[
+                            (index + (event.key === 'ArrowRight' ? 1 : FAMILY_TABS.length - 1)) %
+                              FAMILY_TABS.length
+                          ]!;
+
+                  setFamily(next.id);
+                  document.getElementById(`networks-family-${next.id}-tab`)?.focus();
+                }}
+                // 44 px tabs, sun = selected — the same segmented
+                // pattern as the dashboard tabs were (Lane D §2).
+                className={`min-h-11 rounded-bawa-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
+                  family === tab.id
+                    ? 'bg-sun text-ink'
+                    : 'text-ink hover:bg-sun'
+                }`}
+              >
+                {`${tab.label} (${familyLists[tab.id].length})`}
+              </button>
+            ))}
+          </div>
           {/* Desktop layout (desktop-layout-v2): the Mainnet lists run
               in two columns at lg — a single 87-row column stretched
               the full width and left most of a desktop viewport empty.
               Below lg they stay single-column lists, so the mobile
-              layout is untouched. Rows wrap (flex-wrap) in the
-              narrower column. */}
-          {searched !== null ? (
-            searched.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No chains match &ldquo;{needle}&rdquo;. Try a name, symbol or
-                chain ID.
-              </p>
-            ) : (
-              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{searched.map(rowFor)}</ul>
-            )
+              layout is untouched. */}
+          {visible.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No chains match &ldquo;{needle}&rdquo;. Try a name, symbol or
+              chain ID.
+            </p>
           ) : (
-            <>
-              <h3 className="font-semibold">Popular</h3>
-              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{popular.map(rowFor)}</ul>
-              <h3 className="font-semibold">All chains</h3>
-              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{others.map(rowFor)}</ul>
-            </>
+            <ul aria-label="Chain list" className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{visible.map(rowFor)}</ul>
           )}
         </CardContent>
       </Card>
 
-      <RpcEndpointManager
-        onRpcChange={() => setRpcVersion((value) => value + 1)}
-      />
+      {/* P1 item 7 (F36): the RPC manager and the Prices card live
+          behind disclosures now — Networks is the toggle list first.
+          Native <details> keeps the content in the DOM while closed,
+          so the RPC manager's state keeps working. */}
+      <details className="rounded-bawa border-2 border-ink bg-paper">
+        <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">RPC endpoints</summary>
+        <div className="px-4 pb-4">
+          <RpcEndpointManager
+            onRpcChange={() => setRpcVersion((value) => value + 1)}
+          />
+        </div>
+      </details>
 
-      <PriceSourcesCard />
+      <details className="rounded-bawa border-2 border-ink bg-paper">
+        <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">How prices work</summary>
+        <div className="px-4 pb-4">
+          <PriceSourcesCard />
+        </div>
+      </details>
 
       <p className="text-sm text-muted-foreground">
         Your balances and history come from public blockchain networks.
@@ -413,12 +441,11 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
     (suggestion) => suggestion.chain === selectedChain,
   );
 
+  // P1 item 7: the manager renders without its own Card now — the
+  // <details> disclosure on the Networks screen is its frame, and
+  // "RPC endpoints" is the summary.
   return (
-    <Card radius="xl">
-      <CardHeader>
-        <CardTitle>RPC endpoints</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           When an RPC is down the wallet tries the next one automatically.
           Add your own RPC, or switch a chain to its backup. Every change
@@ -664,8 +691,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
             );
           })}
         </ul>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -717,12 +743,11 @@ function PriceSourcesCard() {
               `${counts.get(source)} chain${(counts.get(source) ?? 0) === 1 ? '' : 's'} priced by ${source}`,
           )
           .join(', ')}.`;
+  // P1 item 7: the card renders without its own Card now — the
+  // <details> disclosure on the Networks screen is its frame, and
+  // "How prices work" is the summary.
   return (
-    <Card radius="xl">
-      <CardHeader>
-        <CardTitle>Prices</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
           Prices come from CoinGecko first. If a price is stale or
           missing, the wallet tries the next source in line — never a
@@ -759,7 +784,6 @@ function PriceSourcesCard() {
         <p className="text-sm text-muted-foreground" role="status">
           {liveLine}
         </p>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
