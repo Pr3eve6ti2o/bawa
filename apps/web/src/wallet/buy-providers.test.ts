@@ -246,33 +246,21 @@ describe('Mercuryo URL builder', () => {
 });
 
 describe('openBuyProviderUrl', () => {
-  it('opens a blank pop-up synchronously, then navigates it', () => {
-    const popup = { location: { href: '' }, close: vi.fn() };
-    const openSpy = vi
-      .spyOn(window, 'open')
-      .mockReturnValue(popup as unknown as WindowProxy);
+  it('opens the URL directly with noopener, synchronously', () => {
+    // With noopener a real browser returns null even when the pop-up
+    // opens, so the function does not read the return value — it
+    // reports 'opened' for the synchronous request itself. Blocking
+    // is undetectable from the page under noopener, so there is no
+    // 'blocked' case to test here.
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
     try {
       expect(
         openBuyProviderUrl('https://app.ramp.network/?hostApiKey=k'),
       ).toBe('opened');
       expect(openSpy).toHaveBeenCalledWith(
-        'about:blank',
-        '_blank',
-        'width=430,height=600,noopener',
-      );
-      expect(popup.location.href).toBe(
         'https://app.ramp.network/?hostApiKey=k',
-      );
-    } finally {
-      openSpy.mockRestore();
-    }
-  });
-
-  it('reports blocked when the browser refuses the pop-up', () => {
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
-    try {
-      expect(openBuyProviderUrl('https://buy.moonpay.com/?apiKey=k')).toBe(
-        'blocked',
+        '_blank',
+        'noopener,width=430,height=600',
       );
     } finally {
       openSpy.mockRestore();
