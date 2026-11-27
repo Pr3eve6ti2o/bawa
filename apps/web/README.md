@@ -250,7 +250,7 @@ fetched and read). What Lane G applied, and where:
   for technical annotations) with a new `--bawa-shadow` token
   (`4px 4px 0 var(--bawa-ink)`, Tailwind `shadow-bawa`). The Popular
   chains cards use it, with a press state (translate + shadow off, the
-  OJO 8-state active state). No new colours: the 4-colour cap holds.
+  OJO 8-state active state). No new colours: the 4-colour cap holds. [Superseded 2026-11-27: the owner picked style B (polished financial style), which restores semantic colours and retires the 4-colour cap — see docs/DECISIONS.md §34.]
 - **Row anatomy** — Ivy Wallet `feature/accounts` (patterns only;
   Kotlin/Compose, GPL-3.0, no code copied): icon + name + balance, no
   Retry. Bawa's no-wallet rows follow it (zero balance, real logo, real

@@ -17,7 +17,7 @@ How it fits together — the full box-by-box trace is in [How Bawa works](docs/H
 
 **[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of this branch.
 
-**87 chains** in the example wallet (22 enabled by default) · **168 chains** in the guide · **21 default tokens** · **3,216 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
+**87 chains** in the example wallet (22 enabled by default) · **168 chains** in the guide · **21 default tokens** · **440 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
 
 ## Showcase
 
