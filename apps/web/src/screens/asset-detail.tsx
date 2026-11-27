@@ -87,14 +87,25 @@ function DerivedAddressItems({
  * address for the chain there is no Retry to offer — the balance
  * section shows zero instead (see effectiveBalance below) and the
  * history section shows its empty state — so this never renders a
- * dead Retry in the no-wallet state.
+ * dead Retry in the no-wallet state. Lane C (C-5): the balance
+ * section passes hideRetry when the reason is 'no-adapter' — a
+ * chain with no balance adapter can never succeed on refresh, so
+ * it gets no Retry (the dashboard rows show "Balance unavailable"
+ * with no Retry either).
  */
 function LockedOrRetry({
   lockedMessage,
   onRetry,
+  hideRetry = false,
 }: {
   lockedMessage: string;
   onRetry: () => void;
+  // Lane C (C-5): a refresh that can never succeed gets no Retry.
+  // Set for the balance section on a chain with no balance adapter
+  // (reason 'no-adapter'): the balance is blocked, never faked, so
+  // retrying only spins back to the same message. The locked branch
+  // still offers Unlock — that is not a Retry.
+  hideRetry?: boolean;
 }) {
   const { vaultState } = useWallet();
   if (vaultState === 'locked') {
@@ -107,6 +118,7 @@ function LockedOrRetry({
       </>
     );
   }
+  if (hideRetry) return null;
   return (
     <Button type="button" variant="outline" onClick={onRetry}>
       Retry
@@ -489,6 +501,7 @@ export function AssetDetailScreen() {
             <LockedOrRetry
               lockedMessage="Locked. Unlock to see balances."
               onRetry={() => void (isToken ? refreshTokenBalances() : refreshBalances())}
+              hideRetry={effectiveBalance.reason === 'no-adapter'}
             />
           </>
         )}

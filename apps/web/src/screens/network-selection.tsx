@@ -38,7 +38,7 @@ const POPULAR_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 // the wallet has fetched one — the host that answered its last balance
 // (the row's current RPC status, DESIGN-SYSTEM.md §6 Networks), plus
 // the enable state and the two actions. Compact list rows, not cards:
-// 84 cards made this screen 31,140 px tall at 390 px.
+// a card per chain made this screen 31,140 px tall at 390 px.
 function NetworkChainRow({
   chain,
   isEnabled,
@@ -85,7 +85,7 @@ function NetworkChainRow({
       <span className="flex items-center gap-2">
         {isEnabled ? (
           <>
-            <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+            <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[11px] font-bold text-panel-success-pill-text">
               ACTIVE
             </span>
             <button
@@ -98,7 +98,7 @@ function NetworkChainRow({
           </>
         ) : (
           <>
-            <span className="flex h-6 items-center rounded-[12px] border px-3 text-[10px] font-bold text-muted-foreground">
+            <span className="flex h-6 items-center rounded-[12px] border px-3 text-[11px] font-bold text-muted-foreground">
               DISABLED
             </span>
             <button
@@ -121,17 +121,17 @@ function NetworkChainRow({
   );
 }
 
-// The /networks screen reads the 84-chain registry directly and lets
+// The /networks screen reads the 87-chain registry directly and lets
 // the owner enable or disable each chain (token-discovery programme).
 // A disabled chain's rows are hidden from /assets and the dashboard;
 // its derived addresses stay in the vault, so re-enabling restores
 // them without any re-derivation. Nothing is deleted here.
 //
-// Lane 6 redesign: the list was one flat 84-row run of tall cards
+// Lane 6 redesign: the list was one flat 87-row run of tall cards
 // with the devnet switch, the RPC manager and prices buried below it.
 // Now the mode switch (devnet) is first, the list is searchable and
 // grouped (Popular first, then alphabetical), and the RPC manager
-// shows one chain at a time instead of repeating all 84 rows a
+// shows one chain at a time instead of repeating all 87 rows a
 // second time. The order on this screen is: mode, chains, RPC, prices.
 export function NetworkSelectionScreen() {
   const { enabledChains, setChainEnabled, customTokens, devnetEnabled, balances } = useWallet();
@@ -516,7 +516,7 @@ function RpcEndpointManager({ onRpcChange }: { onRpcChange: () => void }) {
           </p>
         )}
 
-        {/* Lane 6 redesign: this list repeated all 84 chains a second
+        {/* Lane 6 redesign: this list repeated all 87 chains a second
             time (the Mainnet list above already shows every chain).
             It now shows the one chain picked above; the global
             actions (switch all, reset all, check all) still cover
@@ -728,7 +728,7 @@ function PriceSourcesCard() {
             every chain.
           </li>
           <li>
-            <span className="font-medium">CoinLore</span> — next for 19
+            <span className="font-medium">CoinLore</span> — next for 75
             chains.
           </li>
           <li>
@@ -737,14 +737,18 @@ function PriceSourcesCard() {
           </li>
           <li>
             <span className="font-medium">TonAPI</span> for TON,{' '}
-            <span className="font-medium">Coinbase</span> for Litecoin and{' '}
+            <span className="font-medium">Coinbase</span> for Litecoin, Monad
+            and ZetaChain, and{' '}
             <span className="font-medium">DexScreener</span> for Polygon —
-            the three chains CoinLore cannot cover.
+            the five of the twelve chains CoinLore cannot cover that still
+            have a second source.
           </li>
         </ol>
         <p className="text-sm text-muted-foreground">
-          Every chain has a second source — no chain is CoinGecko-alone.
-          Each asset row also names the source that priced it.
+          Seven chains are CoinGecko-alone — Fraxtal, Velas, Telos,
+          Songbird, Rootstock, PulseChain and XDC — with no second
+          source. Every other chain has a second source. Each asset row
+          also names the source that priced it.
         </p>
         <p className="text-sm text-muted-foreground" role="status">
           {liveLine}

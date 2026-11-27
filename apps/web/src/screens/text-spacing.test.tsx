@@ -276,7 +276,7 @@ describe('text spacing', () => {
       );
       expect(mounted.div.textContent).not.toContain('Receiveon 87 chains');
       expect(mounted.div.textContent).toContain(
-        'Real balances and prices. Balances from public blockchains, prices from CoinGecko — no made-up numbers.',
+        'Real balances and prices. Balances from public blockchains, prices from CoinGecko first, then CoinLore, DexScreener, TonAPI and Coinbase — no made-up numbers.',
       );
       expect(mounted.div.textContent).toContain(
         'Watch any wallet. Follow balances and history from an extended public key, without ever holding its keys.',

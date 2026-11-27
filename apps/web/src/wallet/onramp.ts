@@ -66,7 +66,7 @@ import type { ChainId } from '../engine/boundary';
 import type { DerivedAddress } from '@bawa/contracts';
 
 /** Build-time env name for the public Coinbase Onramp project ID. */
-export const COINBASE_ONRAMP_APP_ID_ENV = 'VITE_COINBASE_ONRAMP_APP_ID';
+const COINBASE_ONRAMP_APP_ID_ENV = 'VITE_COINBASE_ONRAMP_APP_ID';
 
 /** The configured public Onramp project ID, or null when unset/blank. */
 export function coinbaseOnrampAppId(): string | null {
@@ -87,7 +87,7 @@ export function isCoinbaseOnrampConfigured(): boolean {
  * Bawa chain -> Coinbase Onramp network slug, for the chains
  * Coinbase lists as buy destinations. Absent = not offered.
  */
-export const COINBASE_NETWORK_BY_CHAIN: Readonly<
+const COINBASE_NETWORK_BY_CHAIN: Readonly<
   Partial<Record<ChainId, string>>
 > = {
   btc: 'bitcoin',
@@ -186,9 +186,9 @@ export function buildOnrampAddresses(
 }
 
 /** The Onramp widget host. */
-export const COINBASE_ONRAMP_HOST = 'https://pay.coinbase.com';
+const COINBASE_ONRAMP_HOST = 'https://pay.coinbase.com';
 
-export type BuildOnrampUrlOptions = {
+type BuildOnrampUrlOptions = {
   appId: string;
   addresses: Record<string, string[]>;
   defaultNetwork?: string;
@@ -236,9 +236,9 @@ export function buildOnrampUrl({
   return url.toString();
 }
 
-export type OnrampOpenOutcome = 'opened' | 'load-failed' | 'blocked';
+type OnrampOpenOutcome = 'opened' | 'load-failed' | 'blocked';
 
-export type OpenCoinbaseOnrampOptions = {
+type OpenCoinbaseOnrampOptions = {
   appId: string;
   addresses: Record<string, string[]>;
   defaultNetwork?: string;
@@ -259,7 +259,7 @@ export function openCoinbaseOnramp({
   addresses,
   defaultNetwork,
 }: OpenCoinbaseOnrampOptions): OnrampOpenOutcome {
-  const popup = window.open('about:blank', '_blank', 'width=430,height=600');
+  const popup = window.open('about:blank', '_blank', 'width=430,height=600,noopener');
   if (popup === null) return 'blocked';
   let url: string;
   try {

@@ -17,8 +17,9 @@ import {
 //
 // The identity block below states the honest shape of that one wallet:
 // one 24-word recovery phrase, one account, every address derived from
-// that phrase — with one address shared across all sixteen
-// Ethereum-style chains, and a different address on every other chain.
+// that phrase — with one address shared across the 57 chains on the
+// default Ethereum derivation path, and a different address on every
+// other chain.
 // There is no single address that works on every chain, and nothing
 // here claims there is: Bitcoin, Ethereum, Solana and TON use different
 // key types and address formats, so each chain needs its own address.
@@ -43,12 +44,6 @@ const comingSoon: readonly {
     description:
       'A shared wallet where several owners must approve each transaction.',
     icon: 'shield',
-  },
-  {
-    name: 'Connect an existing wallet',
-    description:
-      'Connect a wallet you already have to an app, without importing its keys.',
-    icon: 'import',
   },
 ];
 
@@ -109,41 +104,10 @@ export function CreateScreen() {
           </li>
           <li>
             <strong>One shared address on Ethereum-style chains.</strong>{' '}
-            {/* Lane 5: the sixteen chains as chips, not one run-on
-                sentence — same words, same order, same separators, so
-                the text reads identically (and the honest copy is
-                untouched); the chips just make the list scannable. */}
-            {[
-              'Ethereum',
-              'BNB Smart Chain',
-              'Polygon',
-              'Arbitrum',
-              'Optimism',
-              'Base',
-              'Avalanche',
-              'Gnosis',
-              'Celo',
-              'Linea',
-              'Mantle',
-              'Scroll',
-              'opBNB',
-              'Metis',
-              'Aurora',
-              'Fantom',
-            ].map((chain, index, list) => (
-              <span key={chain}>
-                <span className="mr-0 inline-flex items-center rounded-bawa-sm border-2 border-ink bg-paper px-2 py-0.5 text-[13px] font-medium text-ink">
-                  {chain}
-                </span>
-                {index < list.length - 2
-                  ? ', '
-                  : index === list.length - 2
-                    ? ' and '
-                    : ' '}
-              </span>
-            ))}
-            all use the same address — they share one derivation path,
-            so one key opens all of them.
+            The 57 chains on the default Ethereum derivation path all use
+            the same address — they share one derivation path, so one key
+            opens all of them. A chain on a different derivation path has
+            a different address.
           </li>
           <li>
             <strong>A different address everywhere else.</strong> Bitcoin,

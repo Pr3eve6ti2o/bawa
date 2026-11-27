@@ -103,7 +103,7 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
 
 const preloadedRoutes = new Set<string>();
 
-export function preloadRoute(to: string): void {
+function preloadRoute(to: string): void {
   const firstSegment = `/${to.split('/').filter(Boolean)[0] ?? ''}`;
   const loader = ROUTE_PRELOADERS[to] ?? ROUTE_PRELOADERS[firstSegment];
   if (!loader || preloadedRoutes.has(to)) return;
@@ -194,6 +194,7 @@ function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { vaultState, vaultAccount } = useWallet();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   // Escape closes the More menu and returns focus to its trigger.
   useEffect(() => {
     if (!moreOpen) return;
@@ -205,6 +206,16 @@ function AppLayout() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
+  }, [moreOpen]);
+  // A4: opening the More menu moves focus to its first item, so
+  // keyboard users land in the menu instead of tabbing past it
+  // (the menu used to sit before the nav in DOM order, so Tab from
+  // the trigger never reached it).
+  useEffect(() => {
+    if (!moreOpen) return;
+    moreMenuRef.current
+      ?.querySelector<HTMLElement>('[role="menuitem"]')
+      ?.focus();
   }, [moreOpen]);
   const location = useLocation();
   const pathname = location.pathname;
@@ -390,8 +401,66 @@ function AppLayout() {
             )}
           </main>
 
+          {!isFocusedFlow && (
+            <nav
+              aria-label="Main navigation"
+            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] desktop:hidden"
+          >
+            <div className="grid grid-cols-5">
+              {tabs.map(({ to, label, icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  onClick={() => setMoreOpen(false)}
+                  onMouseEnter={() => preloadRoute(to)}
+                  onFocus={() => preloadRoute(to)}
+                  className={({ isActive }) =>
+                    `flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
+                      isActive ? 'text-ink bawa-squiggle-underline' : 'text-ink'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
+                          isActive ? 'bg-sun text-ink' : 'bg-paper text-ink'
+                        }`}
+                      >
+                        <BawaIcon name={icon} className="size-4" aria-hidden="true" />
+                      </span>
+                      {label}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+              <button
+                type="button"
+                ref={moreButtonRef}
+                aria-expanded={moreOpen}
+                aria-label="More"
+                onClick={() => setMoreOpen((open) => !open)}
+                className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
+                  moreOpen ? 'text-ink bawa-squiggle-underline' : 'text-ink'
+                }`}
+              >
+                <span
+                  className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
+                    moreOpen ? 'bg-sun text-ink' : 'bg-paper text-ink'
+                  }`}
+                >
+                  <BawaIcon name="more" className="size-4" aria-hidden="true" />
+                </span>
+                More
+              </button>
+            </div>
+            </nav>
+          )}
+
           {!isFocusedFlow && moreOpen && (
             <div
+              ref={moreMenuRef}
               role="menu"
               aria-label="More"
               // Mobile sheet (mobile-native §7): bottom clears the bottom
@@ -417,63 +486,6 @@ function AppLayout() {
             ))}
           </div>
         )}
-
-          {!isFocusedFlow && (
-            <nav
-              aria-label="Main navigation"
-            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] desktop:hidden"
-          >
-            <div className="grid grid-cols-5">
-              {tabs.map(({ to, label, icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === '/'}
-                  onClick={() => setMoreOpen(false)}
-                  onMouseEnter={() => preloadRoute(to)}
-                  onFocus={() => preloadRoute(to)}
-                  className={({ isActive }) =>
-                    `flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                      isActive ? 'text-ink bawa-squiggle-underline' : 'text-ink'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span
-                        className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
-                          isActive ? 'bg-sun text-ink' : 'bg-paper text-ink'
-                        }`}
-                      >
-                        <BawaIcon name={icon} className="size-4" aria-hidden="true" />
-                      </span>
-                      {label}
-                    </>
-                  )}
-                </NavLink>
-              ))}
-              <button
-                type="button"
-                ref={moreButtonRef}
-                aria-expanded={moreOpen}
-                aria-label="More"
-                onClick={() => setMoreOpen((open) => !open)}
-                className={`flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                  moreOpen ? 'text-ink bawa-squiggle-underline' : 'text-ink'
-                }`}
-              >
-                <span
-                  className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
-                    moreOpen ? 'bg-sun text-ink' : 'bg-paper text-ink'
-                  }`}
-                >
-                  <BawaIcon name="more" className="size-4" aria-hidden="true" />
-                </span>
-                More
-              </button>
-            </div>
-            </nav>
-          )}
           <Toaster />
         </div>
       </div>

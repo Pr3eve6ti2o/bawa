@@ -65,8 +65,13 @@ export function SecuritySettingsScreen() {
           <p className="max-w-[75ch] text-sm text-ink">
             Your recovery phrase is stored encrypted in this browser&apos;s vault. Write it down on paper and keep it somewhere only you can reach. Anyone with the phrase can take the funds.
           </p>
+          {/* Lane C (C-2): no backup gate exists — receiving addresses
+              show as soon as the vault exists, so this copy must not
+              promise one. A real gate (a backup flag, with receiving
+              addresses held back until the phrase is confirmed written
+              down) is a follow-up, not this fix. */}
           <p className="max-w-[75ch] text-sm text-ink">
-            Back up first. This wallet shows no receiving address and cannot receive funds until you have written down your recovery phrase.
+            Back up first. Receiving addresses show as soon as the wallet exists — nothing here stops you receiving funds before you back up. Write your recovery phrase down on paper now, while you still have it.
           </p>
           <Link
             to="/mnemonic-backup"

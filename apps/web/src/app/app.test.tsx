@@ -200,7 +200,7 @@ describe.sequential('App', () => {
     await withRenderedApp('/create', (div) => {
       expect(div.querySelector('#create-title')?.textContent).toBe('Create');
       // Finish-product Lane I: one wallet, one button. The Web wallet
-      // card is gone — the web wallet is this app — and the four
+      // card is gone — the web wallet is this app — and the three
       // not-yet-available tools are a plain list, not peer cards.
       expect(div.textContent).toContain('Create a wallet');
       expect(div.textContent).toContain('One wallet, one identity');
@@ -210,7 +210,6 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Android wallet');
       expect(div.textContent).toContain('Smart contract creator');
       expect(div.textContent).toContain('Multi-signature wallet');
-      expect(div.textContent).toContain('Connect an existing wallet');
       expect(div.textContent).toContain('Coming soon');
     });
   });

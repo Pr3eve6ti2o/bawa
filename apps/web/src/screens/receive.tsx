@@ -61,7 +61,7 @@ type QrTemplate = 'address' | 'payment' | 'link';
 // Lane H: the popular networks — the same four the dashboard's
 // PopularChainsStrip uses (the four original adapter chains). They
 // are the picker's first section, so the chains people actually
-// receive on are one tap away without scrolling through all 84.
+// receive on are one tap away without scrolling through all 87.
 export const POPULAR_RECEIVE_CHAINS: readonly ChainId[] = [
   'btc',
   'eth',
@@ -223,14 +223,19 @@ function BuyProviderRow({
   isActive: boolean;
   buyStatus: BuyStatus;
 }) {
+  // Lane C (C-11): the rank tag only shows on a usable row. A row
+  // with no button is not configured, and a "Recommended" on it reads
+  // as an endorsement of an option that does not work yet.
   const tag =
-    provider.id === 'ramp'
-      ? 'Recommended'
-      : provider.id === 'banxa'
-        ? 'Link only'
-        : provider.id === 'transak'
-          ? 'Needs a backend'
-          : null;
+    buttonLabel === null
+      ? null
+      : provider.id === 'ramp'
+        ? 'Recommended'
+        : provider.id === 'banxa'
+          ? 'Link only'
+          : provider.id === 'transak'
+            ? 'Needs a backend'
+            : null;
   return (
     <Card radius="xl">
       <div className="flex flex-col items-start gap-2 p-4">
@@ -575,7 +580,7 @@ export function ReceiveScreen() {
         return {
           destination: null,
           buttonLabel: 'Buy with Mercuryo',
-          note: 'Your address can’t be pre-filled yet — address signing needs the server-side widget secret, and the exact signature scheme is unresolved. You’ll paste your own address inside Mercuryo.',
+          note: 'Your address can’t be pre-filled yet — you’ll paste your own address inside Mercuryo.',
         };
       }
       case 'coinbase': {
@@ -639,7 +644,7 @@ export function ReceiveScreen() {
   // Lane H: the picker's sections. Popular first (only the ones this
   // screen can receive on), the rest grouped behind "All networks".
   // A search query replaces both sections with a flat filtered list
-  // across all 84 — the same filterChains the watch-only chain
+  // across all 87 — the same filterChains the watch-only chain
   // search uses (name, symbol or id, case-insensitive).
   const popularChains = POPULAR_RECEIVE_CHAINS.filter((entry) =>
     chains.includes(entry),
@@ -1078,12 +1083,12 @@ export function ReceiveScreen() {
         <h2 id="receive-addresses-heading" className="sr-only">
           Choose a network
         </h2>
-        {/* Lane H: a sleek network picker, not the 84-button grid.
+        {/* Lane H: a sleek network picker, not the 87-button grid.
             Search at the top; Popular first as full-width rows with
             the real chain marks (names never truncated); the rest
             grouped behind "All networks", collapsed by default, so
             the popular chains are reachable without scrolling
-            through all 84. Searching replaces both sections with a
+            through all 87. Searching replaces both sections with a
             flat filtered list. Built on the watch-only chain search
             (filterChains), not a second copy of it. */}
         <div className="space-y-1">

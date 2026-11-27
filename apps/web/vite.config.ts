@@ -55,9 +55,11 @@ export default defineConfig({
         if (ctx.server) return html
         const meta =
           `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY_META}">`
-        return html
-          .replace('<base href="/" />', `<base href="${resolvedBase}" />`)
-          .replace('</head>', `${meta}\n  </head>`)
+        const withBase = html.replace('<base href="/" />', `<base href="${resolvedBase}" />`)
+        // Insert before the LAST </head>: a first-occurrence replace breaks
+        // if any earlier literal (e.g. a comment) contains the string.
+        const headClose = withBase.lastIndexOf('</head>')
+        return headClose === -1 ? withBase : withBase.slice(0, headClose) + meta + '\n  ' + withBase.slice(headClose)
       },
     },
   ],

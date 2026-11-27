@@ -77,7 +77,7 @@ export function DevnetSetting() {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[15px] border border-border bg-card p-3"
                 >
                   <span>{DEVNET_CHAIN_CONFIGS[chain].devnetName}</span>
-                  <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+                  <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-xs font-bold text-panel-success-pill-text">
                     ACTIVE
                   </span>
                 </li>

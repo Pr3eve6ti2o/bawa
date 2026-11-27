@@ -88,7 +88,7 @@ describe('CreateScreen', () => {
     expect(container.textContent).toContain('One account');
     expect(container.textContent).toContain('One shared address');
     expect(container.textContent).toContain(
-      'Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora and Fantom all use the same address',
+      'The 57 chains on the default Ethereum derivation path all use the same address',
     );
     expect(container.textContent).toContain(
       'There is no single address that works on every chain.',
@@ -107,12 +107,11 @@ describe('CreateScreen', () => {
     expect(elementsWithExactText('Available')).toHaveLength(0);
   });
 
-  it('lists the four not-yet-available tools as plain text, with no actions', () => {
+  it('lists the three not-yet-available tools as plain text, with no actions', () => {
     const names = [
       'Android wallet',
       'Smart contract creator',
       'Multi-signature wallet',
-      'Connect an existing wallet',
     ];
     names.forEach((name) => {
       expect(elementsWithExactText(name)).toHaveLength(1);

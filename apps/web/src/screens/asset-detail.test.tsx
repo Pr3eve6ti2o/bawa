@@ -438,6 +438,30 @@ describe('asset detail screen', () => {
     }
   });
 
+  it('while unlocked, a no-adapter balance shows no Retry', async () => {
+    // Lane C (C-5): a chain with no balance adapter can never succeed
+    // on refresh, so the balance section shows "Balance unavailable"
+    // with no Retry — the same as the dashboard rows.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'unavailable', reason: 'no-adapter' },
+      },
+      perChain(emptyHistory),
+      { vaultState: 'unlocked' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('Balance unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('while locked, unavailable history offers Unlock instead of a dead Retry', async () => {
     setWallet(
       {

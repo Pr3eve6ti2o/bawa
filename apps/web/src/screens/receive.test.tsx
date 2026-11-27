@@ -253,7 +253,7 @@ describe('receive screen', () => {
       expect(openSpy).toHaveBeenCalledWith(
         'about:blank',
         '_blank',
-        'width=430,height=600',
+        'width=430,height=600,noopener',
       );
       const url = new URL(popup.location.href);
       expect(url.origin).toBe('https://pay.coinbase.com');
@@ -371,7 +371,7 @@ describe('receive screen', () => {
       expect(openSpy).toHaveBeenCalledWith(
         'about:blank',
         '_blank',
-        'width=430,height=600',
+        'width=430,height=600,noopener',
       );
       const url = new URL(popup.location.href);
       expect(url.origin).toBe('https://app.ramp.network');

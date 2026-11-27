@@ -65,7 +65,7 @@ export function expandUniquePrefix(value: string): string {
 // into the single chain the watch-only picker needs. Behaviour is
 // preserved exactly — the differential test in
 // wallet/address-detection-differential.test.ts pins it:
-//   - a 0x address is the same address on all 59 EVM chains, so the
+//   - a 0x address is the same address on all 60 EVM chains, so the
 //     picker keeps its legacy reading of 'eth';
 //   - bare base58 (32-44 chars) is deliberately NOT detected as
 //     Solana here: too many chains share the shape, so the picker

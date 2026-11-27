@@ -64,7 +64,8 @@ export function WelcomeScreen() {
           </li>
           <li>
             <strong>Real balances and prices</strong>. Balances from public
-            blockchains, prices from CoinGecko — no made-up numbers.
+            blockchains, prices from CoinGecko first, then CoinLore,
+            DexScreener, TonAPI and Coinbase — no made-up numbers.
           </li>
           <li>
             <strong>Watch any wallet</strong>. Follow balances and history

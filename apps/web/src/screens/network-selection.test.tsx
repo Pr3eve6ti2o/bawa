@@ -622,7 +622,10 @@ describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
       expect(mounted.div.textContent).toContain('TonAPI');
       expect(mounted.div.textContent).toContain('Coinbase');
       expect(mounted.div.textContent).toContain(
-        'Every chain has a second source — no chain is CoinGecko-alone.',
+        'Seven chains are CoinGecko-alone — Fraxtal, Velas, Telos, Songbird, Rootstock, PulseChain and XDC — with no second source.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Every other chain has a second source.',
       );
       expect(mounted.div.textContent).toContain('No prices fetched yet');
     } finally {

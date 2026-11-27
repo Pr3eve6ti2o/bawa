@@ -49,7 +49,7 @@ export const ERROR_MESSAGES: Readonly<Record<WalletErrorCode, string>> = {
   [WalletErrorCodes.VAULT_BACKUP_CORRUPTED]: 'Vault backup is corrupted.',
   [WalletErrorCodes.PROVIDER_NETWORK]:
     'Network error: the provider could not be reached.',
-  [WalletErrorCodes.PROVIDER_TIMEOUT]: 'Network error: request timed out',
+  [WalletErrorCodes.PROVIDER_TIMEOUT]: 'Network error: request timed out.',
   [WalletErrorCodes.PROVIDER_RATE_LIMITED]: 'Provider rate limit reached.',
   [WalletErrorCodes.PROVIDER_INVALID_RESPONSE]:
     'Invalid response: the provider returned an unexpected shape.',
