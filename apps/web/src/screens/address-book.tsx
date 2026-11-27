@@ -20,6 +20,7 @@ import { ChainSearchSelect, readLastUsedChain } from './chain-search-select';
 import { ChainLogo } from './token-logo';
 import { chainConfig, SUPPORTED_CHAINS, type ChainId } from '../wallet/chains';
 import { validateRecipient } from '../wallet/send';
+import { isEvmTxChain } from '../wallet/watch-only-families';
 import {
   MAX_ADDRESS_BOOK_ENTRIES,
   newAddressBookId,
@@ -83,10 +84,16 @@ export function AddressBookScreen() {
         setError(result.reason);
         return;
       }
+      // P2-A, M1: the address book shares the Send recipient field —
+      // a `.eth` name validates to its address, and the book saves
+      // the resolved address, never the name. The note says which
+      // address was saved, so a name does not silently become a
+      // different-looking entry.
+      const addressToSave = result.resolvedAddress ?? cleanAddress;
       if (editingId !== null) {
         const next = entries.map((entry) =>
           entry.id === editingId
-            ? { id: entry.id, label: cleanLabel, address: cleanAddress, chain }
+            ? { id: entry.id, label: cleanLabel, address: addressToSave, chain }
             : entry,
         );
         persist(next);
@@ -95,11 +102,15 @@ export function AddressBookScreen() {
         const entry: AddressBookEntry = {
           id: newAddressBookId(),
           label: cleanLabel,
-          address: cleanAddress,
+          address: addressToSave,
           chain,
         };
         persist([...entries, entry]);
-        setNote(cleanLabel + ' saved to your address book.');
+        setNote(
+          result.resolvedAddress !== undefined
+            ? cleanLabel + ' saved to your address book as ' + addressToSave + '.'
+            : cleanLabel + ' saved to your address book.',
+        );
       }
       resetForm();
     } finally {
@@ -175,7 +186,7 @@ export function AddressBookScreen() {
                   'Enter ' +
                   (/^[AEIOU]/i.test(chainConfig(chain).displayName) ? 'an ' : 'a ') +
                   chainConfig(chain).displayName +
-                  ' address'
+                  (isEvmTxChain(chain) ? ' address or .eth name' : ' address')
                 }
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
@@ -193,7 +204,7 @@ export function AddressBookScreen() {
               </p>
             )}
             {note !== null && (
-              <p role="status" className="text-sm text-muted-foreground">
+              <p role="status" className="break-all text-sm text-muted-foreground">
                 {note}
               </p>
             )}

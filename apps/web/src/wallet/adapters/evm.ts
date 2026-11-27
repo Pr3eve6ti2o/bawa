@@ -39,6 +39,7 @@ import {
   type ChainAdapter,
   type EndpointList,
   type FeeEstimate,
+  type FeeTierData,
   type FetchTransport,
   type TxInput,
 } from './types';
@@ -380,6 +381,49 @@ export function createEvmAdapter(
     }
   };
 
+  // P2-A, M2: live fee data for the Slow / Standard / Fast tiers.
+  // estimateFeesPerGas reads the chain's fee market (eth_feeHistory
+  // + priority-fee estimation) on the same healthy client the flat
+  // fee uses. A chain without EIP-1559 fees throws there, so fall
+  // back to the gas price as the max fee with a zero priority fee —
+  // the tier still varies a real number, and the priority row is
+  // omitted downstream rather than shown as a fake 0. Both reads
+  // failing means the tiers are unavailable, never guessed.
+  const estimateFeeTiers = async (): Promise<
+    AdapterResult<FeeTierData>
+  > => {
+    try {
+      const { value, source } = await runOnHealthyClient(async (client) => {
+        try {
+          const fees = await client.estimateFeesPerGas();
+          return {
+            maxFeePerGasWei: fees.maxFeePerGas.toString(),
+            maxPriorityFeePerGasWei: fees.maxPriorityFeePerGas.toString(),
+          };
+        } catch {
+          const gasPrice = await client.getGasPrice();
+          return {
+            maxFeePerGasWei: gasPrice.toString(),
+            maxPriorityFeePerGasWei: '0',
+          };
+        }
+      });
+      return {
+        status: 'ok',
+        data: {
+          chain: config.chain,
+          networkId,
+          maxFeePerGasWei: value.maxFeePerGasWei,
+          maxPriorityFeePerGasWei: value.maxPriorityFeePerGasWei,
+        },
+        source,
+        fetchedAt: Date.now(),
+      };
+    } catch (error: unknown) {
+      return toAdapterError(error);
+    }
+  };
+
   const getTxInputs = async (
     address: string,
   ): Promise<AdapterResult<TxInput>> => {
@@ -418,6 +462,7 @@ export function createEvmAdapter(
     getBalance,
     getHistory,
     estimateFee,
+    estimateFeeTiers,
     getTxInputs,
     broadcast,
   };

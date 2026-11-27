@@ -55,6 +55,22 @@ export interface FeeEstimate {
   fetchedAt: number;
 }
 
+/**
+ * Live EVM fee data for the Slow / Standard / Fast tiers (P2-A, M2):
+ * the max fee per gas and max priority fee per gas the chain's RPC
+ * reports right now (viem estimateFeesPerGas), in wei. A legacy chain
+ * with no EIP-1559 fees reports the gas price as the max fee and '0'
+ * for the priority fee — the tier still varies the max fee, and the
+ * priority row is omitted from the breakdown rather than shown as a
+ * fake 0. Tiers are derived from this in wallet/fee-tiers.ts.
+ */
+export interface FeeTierData {
+  chain: ChainId;
+  networkId: string;
+  maxFeePerGasWei: string;
+  maxPriorityFeePerGasWei: string;
+}
+
 export interface UtxoInput {
   txid: string;
   vout: number;
@@ -172,6 +188,13 @@ export interface ChainAdapter {
     limit?: number,
   ): Promise<AdapterResult<AdapterTx[]>>;
   estimateFee(): Promise<AdapterResult<FeeEstimate>>;
+  /**
+   * Live fee data for the Slow / Standard / Fast tiers (P2-A, M2).
+   * Optional: only the EVM adapter implements it. Absent, the send
+   * screen shows the single flat fee exactly as before — tiers are
+   * never derived from a guessed number.
+   */
+  estimateFeeTiers?: () => Promise<AdapterResult<FeeTierData>>;
   getTxInputs(address: string): Promise<AdapterResult<TxInput>>;
   /**
    * Mainnet adapters: built but DISABLED, always throws

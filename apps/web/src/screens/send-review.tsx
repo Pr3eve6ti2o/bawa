@@ -14,6 +14,7 @@ import {
   isSameAddress,
   shortenAddress,
 } from '../wallet/address-detection';
+import type { FeeBreakdownRow } from '../wallet/fee-display';
 import {
   resolveContractCall,
   type ClearSigningInput,
@@ -30,6 +31,15 @@ export type SendReviewProps = {
   fee: string;
   total: string;
   feeNote: string;
+  /**
+   * P2-A, M3: the fee's composition — gas limit, max fee and priority
+   * fee (EVM), fee rate + planned fee (Bitcoin family), base fee +
+   * rent (Solana), energy (TRON). Shown as a <details> under the
+   * Estimated fee row: the total stays visible by default, the
+   * breakdown opens on expand. Empty or absent when the fee is
+   * unknown (TON) — no breakdown is shown, never a guessed one.
+   */
+  feeBreakdown?: FeeBreakdownRow[];
   /** Fiat equivalent of the amount, when the price feed has one
       ("≈ $1,000.00"). Omitted in devnet (test tokens have no value)
       and when the feed has no fresh quote — the coin amounts are the
@@ -98,6 +108,7 @@ export function SendReview({
   fee,
   total,
   feeNote,
+  feeBreakdown,
   fiatAmount,
   tokenContract,
   tokenWarning,
@@ -204,6 +215,38 @@ export function SendReview({
               {fee}
             </dd>
           </div>
+
+          {/* P2-A, M3: the fee's composition — total by default,
+              breakdown on expand. Fees in the native token, not
+              Gwei, except the EVM max/priority fees, which are
+              the gas price itself. The breakdown is its own
+              full-width row, not nested in the fee value column:
+              nested, the value column was ~50 px wide and a
+              priority fee like "0.000000906 Gwei" broke mid-number. */}
+          {feeBreakdown !== undefined && feeBreakdown.length > 0 && (
+            <div className="py-3">
+              <details className="text-sm">
+                <summary className="cursor-pointer text-muted-foreground">
+                  Fee breakdown
+                </summary>
+                <dl className="mt-1 space-y-1">
+                  {feeBreakdown.map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-start justify-between gap-4"
+                    >
+                      <dt className="shrink-0 text-muted-foreground">
+                        {row.label}
+                      </dt>
+                      <dd className="min-w-0 break-words text-right tabular-nums">
+                        {row.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
+            </div>
+          )}
 
           <div className="flex items-start justify-between gap-4 pt-3 font-semibold">
             <dt className="shrink-0">Total</dt>

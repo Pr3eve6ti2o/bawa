@@ -45,6 +45,8 @@ import {
   type UtxoInput,
 } from './adapters/types';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from './chain-amount-format';
+import { isEnsName, resolveEnsName } from './ens';
+import { formatGwei, type FeeTierSelection } from './fee-tiers';
 import { isTestVault } from './vault';
 import type { KeyProvenance } from './vault';
 import {
@@ -75,6 +77,14 @@ import { tokenStandardFor, type TokenRecord } from './tokens';
 type SendDevnetOptions = {
   devnet?: boolean;
   /**
+   * P2-A, M2: the fee tier the user picked on the Send screen
+   * (Slow / Standard / Fast). Only EVM chains use it: the preview
+   * quotes the tier's max fee x the gas limit instead of the flat
+   * gas-price quote, so the reviewed fee is the fee that signs.
+   * Absent, the flat adapter quote applies exactly as before.
+   */
+  feeTier?: FeeTierSelection;
+  /**
    * The signer's message hash (0x-prefixed hex), when the signer
    * computed one. TON's jsonRPC sendBoc returns no hash, so the TON
    * devnet broadcast identifies the transaction by this hash instead.
@@ -92,7 +102,14 @@ type SendDevnetOptions = {
 };
 
 type RecipientValidation =
-  | { ok: true }
+  | {
+      ok: true;
+      /**
+       * P2-A, M1: the address an ENS name resolved to. Callers send
+       * to this, never to the name itself.
+       */
+      resolvedAddress?: `0x${string}`;
+    }
   | { ok: false; reason: string };
 
 const CHAIN_NAMES: Record<ChainId, string> = {
@@ -232,6 +249,18 @@ export async function validateRecipient(
   } else if (chain === 'ton' && !/^(?:EQ|UQ)[A-D]/.test(recipient)) {
     // EQ/UQ require mainnet; the third Base64 character ensures workchain 0.
     return invalid;
+  }
+
+  // P2-A, M1: an ENS name on an EVM chain resolves to its address
+  // (mainnet registry — the resolved address is the same hex on every
+  // EVM chain, devnet included). The caller sends to the resolved
+  // address, never to the name. An unregistered name, or a read
+  // failure, is "Invalid address." — the mined pattern's wording.
+  if (isEvmTxChain(chain) && isEnsName(recipient)) {
+    const resolved = await resolveEnsName(recipient);
+    return resolved.ok
+      ? { ok: true, resolvedAddress: resolved.address }
+      : { ok: false, reason: 'Invalid address.' };
   }
 
   try {
@@ -582,13 +611,29 @@ export async function previewSendAmount(
     return sendPreviewOk(amount, planned.feeBaseUnits, `Planned fee at ${fee.data.feeBaseUnits} sat/vB from the live UTXO set.`);
   }
 
+  // P2-A, M2: the picked fee tier replaces the flat gas-price quote
+  // on EVM chains — the tier's max fee x 21,000 gas, so the reviewed
+  // fee is the fee that signs (the signer recovers the gas price by
+  // the same exact division). The flat adapter quote is still read:
+  // it is the liveness check, and the fallback when no tier is picked.
+  // Non-EVM chains never carry a tier, so their branch is untouched.
+  let feeBaseUnits = fee.data.feeBaseUnits;
+  let feeNote = fee.data.note;
+  if (options?.feeTier !== undefined && isEvmTxChain(chain)) {
+    feeBaseUnits = (
+      BigInt(options.feeTier.maxFeePerGasWei) * 21000n
+    ).toString();
+    feeNote =
+      `${options.feeTier.label} tier at ${formatGwei(options.feeTier.maxFeePerGasWei)} Gwei max fee, 21000 gas; not a final fee`;
+  }
+
   const shortfall = sendPreviewFeeShortfall(
     balance.data.valueBaseUnits,
     amount,
-    fee.data.feeBaseUnits,
+    feeBaseUnits,
   );
   if (shortfall !== null) return shortfall;
-  return sendPreviewOk(amount, fee.data.feeBaseUnits, fee.data.note);
+  return sendPreviewOk(amount, feeBaseUnits, feeNote);
 }
 
 type SimulationError = {
@@ -3487,6 +3532,22 @@ export async function estimateTokenSendFee(
     };
   }
   const gasPrice = nativeFee / 21000n;
+  // P2-A, M2: the picked fee tier replaces the recovered gas price
+  // on EVM chains — the tier's max fee x 100000 gas. The flat quote
+  // is still read and still must divide exactly: it is the liveness
+  // check, and the fallback when no tier is picked.
+  if (options?.feeTier !== undefined && isEvmTxChain(chain)) {
+    return {
+      ok: true,
+      feeBaseUnits: (
+        BigInt(options.feeTier.maxFeePerGasWei) * ERC20_GAS_LIMIT
+      ).toString(),
+      rentBaseUnits: '0',
+      attachedBaseUnits: '0',
+      feeNote:
+        `${options.feeTier.label} tier at ${formatGwei(options.feeTier.maxFeePerGasWei)} Gwei max fee, 100000 gas; not a final fee`,
+    };
+  }
   return {
     ok: true,
     feeBaseUnits: (gasPrice * ERC20_GAS_LIMIT).toString(),
