@@ -26,16 +26,23 @@
  * add does not lose its verified mark.
  *
  * Built on the existing dialog.tsx / Button / Input / Label primitives
- * and the 4-colour drawing-illustration style; the chain picker is a
- * native <select> (the auto-lock-setting precedent — no screen uses the
- * Radix Select, and the native control is fully keyboard-accessible).
+ * and the 4-colour drawing-illustration style; the chain picker is the
+ * shared searchable ChainSearchSelect (P1 Lane S1) — search, family
+ * grouping, logo + name, last-used pre-selected — and the Add Chain
+ * list reuses its family grouping.
  * The dialog content portals to document.body, as DialogContent does
  * for every dialog in this codebase.
  */
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ChainId } from '../engine/boundary';
 import { availableFor, chainConfig, filterChains } from '../wallet/chains';
 import { ChainLogo } from './token-logo';
+import {
+  ChainSearchSelect,
+  groupChainsByFamily,
+  readLastUsedChain,
+  recordLastUsedChain,
+} from './chain-search-select';
 import { Badge } from '../ui/components/badge';
 import { BawaIcon } from '../ui/components/icons';
 import { useWallet } from '../state/wallet-context';
@@ -180,7 +187,7 @@ export function AddTokenDialog({
   useEffect(() => {
     if (!open) return;
     setMode('token');
-    setChain('eth');
+    setChain(readLastUsedChain(availableFor('derive')) ?? 'eth');
     setContract('');
     setError(null);
     setStatus(null);
@@ -203,6 +210,15 @@ export function AddTokenDialog({
   const enabledChains = wallet.enabledChains ?? [...addableChains];
   const chainDisplayName = chainConfig(chain).displayName;
   const filteredAddChains = filterChains(addableChains, chainQuery);
+  // P1 (Lane S1): the Add Chain list reuses the shared picker's
+  // family grouping, with the last-used chain first.
+  const lastUsedAddChain = readLastUsedChain(addableChains);
+  const addChainGroups = groupChainsByFamily(
+    filteredAddChains,
+    lastUsedAddChain !== null && filteredAddChains.includes(lastUsedAddChain)
+      ? [lastUsedAddChain]
+      : [],
+  );
 
   const switchMode = (next: 'token' | 'chain') => {
     setMode(next);
@@ -212,6 +228,7 @@ export function AddTokenDialog({
 
   const onAddChain = (chainId: ChainId) => {
     wallet.setChainEnabled(chainId, true);
+    recordLastUsedChain(chainId);
     setStatus(`${chainConfig(chainId).displayName} added`);
   };
 
@@ -558,36 +575,46 @@ export function AddTokenDialog({
               inputMode="text"
             />
           <ul className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
-            {filteredAddChains.map((chainId) => {
-              const config = chainConfig(chainId);
-              const enabled = enabledChains.includes(chainId);
-              return (
+            {addChainGroups.map((group) => (
+              <Fragment key={group.heading}>
                 <li
-                  key={chainId}
-                  className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-3 py-2"
+                  aria-hidden="true"
+                  className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-ink/70"
                 >
-                  <ChainLogo chain={chainId} size={40} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base font-medium text-ink">
-                      {config.displayName}
-                    </span>
-                    <span className="block text-xs text-ink/70">{config.symbol}</span>
-                  </span>
-                  {enabled ? (
-                    <span className="shrink-0 text-sm font-medium text-ink/70">Enabled</span>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => onAddChain(chainId)}
-                    >
-                      Add
-                    </Button>
-                  )}
+                  {group.heading}
                 </li>
-              );
-            })}
+                {group.chains.map((chainId) => {
+                  const config = chainConfig(chainId);
+                  const enabled = enabledChains.includes(chainId);
+                  return (
+                    <li
+                      key={chainId}
+                      className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-3 py-2"
+                    >
+                      <ChainLogo chain={chainId} size={40} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-base font-medium text-ink">
+                          {config.displayName}
+                        </span>
+                        <span className="block text-xs text-ink/70">{config.symbol}</span>
+                      </span>
+                      {enabled ? (
+                        <span className="shrink-0 text-sm font-medium text-ink/70">Enabled</span>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => onAddChain(chainId)}
+                        >
+                          Add
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </Fragment>
+            ))}
             {filteredAddChains.length === 0 && (
               <li className="px-3 py-2 text-base text-ink">
                 No chains match &ldquo;{chainQuery.trim()}&rdquo;.
@@ -689,32 +716,21 @@ export function AddTokenDialog({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="add-token-chain">Chain</Label>
-              <select
-                id="add-token-chain"
-                value={chain}
-                onChange={(event) => {
-                  setChain(event.target.value as ChainId);
-                  setError(null);
-                }}
-                className="h-11 rounded-bawa border-2 border-ink bg-paper px-3 text-base font-medium text-ink"
-              >
-                {addableChains.map((chainId) => {
-                  const config = chainConfig(chainId);
-                  const standard = tokenStandardFor(chainId);
-                  const disabled = standard.standard === null;
-                  const label = disabled
-                    ? `${config.displayName} — ${standard.reason ?? 'Not supported'}`
-                    : config.displayName;
-                  return (
-                    <option key={chainId} value={chainId} disabled={disabled}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+            <ChainSearchSelect
+              chains={addableChains}
+              value={chain}
+              onChange={(next) => {
+                setChain(next);
+                setError(null);
+              }}
+              id="add-token-chain"
+              isDisabled={(chainId) => {
+                const standard = tokenStandardFor(chainId);
+                return standard.standard === null
+                  ? (standard.reason ?? 'Not supported')
+                  : null;
+              }}
+            />
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="add-token-contract">

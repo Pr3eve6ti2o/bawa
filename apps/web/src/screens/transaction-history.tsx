@@ -5,6 +5,7 @@ import { availableFor, chainConfig } from '../wallet/chains';
 import type { ChainId } from '../engine/boundary';
 import type { AdapterTx } from '../wallet/adapters/types';
 import { Button } from '../ui/components/button';
+import { ChainSearchSelect } from './chain-search-select';
 import { TxRow } from './tx-row';
 import { Skeleton } from '../ui/components/skeleton';
 
@@ -68,7 +69,7 @@ export function TransactionHistoryScreen() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-bold tracking-tight text-panel-text">Transactions</h1>
+      <h1 className="font-bold tracking-tight text-panel-text">Activity</h1>
       <p className="text-sm text-panel-text-muted">
         <Link to="/track" className="text-panel-accent underline underline-offset-4">
           Look up a transaction by hash
@@ -102,34 +103,19 @@ export function TransactionHistoryScreen() {
             filter was 17 symbol-only buttons — five of them labelled
             "ETH" (Ethereum, Arbitrum One, OP Mainnet, Base, Linea,
             Scroll, Aurora…), with no way to tell which was which, and
-            it ate ~40% of the phone viewport before any content. A
-            labelled select shows the chain's display name (unique per
-            chain) and takes one row at every width. Same filter state,
-            same "All" default — the control changed, the function did
-            not.
+            it ate ~40% of the phone viewport before any content. P1
+            (Lane S1): the filter is the shared searchable chain
+            picker now — logo + name + family grouping, with an All
+            chains row. Same filter state, same "All" default — the
+            control changed, the function did not.
           */}
-          <div className="flex items-center gap-3">
-            <label
-              htmlFor="history-chain-filter"
-              className="shrink-0 text-base font-medium"
-            >
-              Chain
-            </label>
-            <select
-              id="history-chain-filter"
-              aria-label="Filter by chain"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value as Filter)}
-              className="h-11 min-w-0 flex-1 rounded-bawa-sm border-2 border-ink bg-paper px-3 text-base font-medium sm:max-w-64"
-            >
-              <option value="all">All chains</option>
-              {chains.map((chain) => (
-                <option key={chain} value={chain}>
-                  {chainConfig(chain).displayName}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ChainSearchSelect
+            chains={chains}
+            value={filter}
+            onChange={setFilter}
+            id="history-chain-filter"
+            allowAll
+          />
 
           {anyLoading && rows.length === 0 ? (
             // P0-6: the bare skeleton loaded for 10–35 s with no words

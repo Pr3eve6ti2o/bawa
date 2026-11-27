@@ -25,8 +25,12 @@ async function mountApp(path: string) {
     if (
       text.includes('Recent transactions') ||
       text.includes('Portfolio balance') ||
-      text.includes('Create wallet') ||
-      text.includes('No wallet yet')
+      text.includes('Create a wallet') ||
+      text.includes('No wallet yet') ||
+      // P1 (Lane S1): the old sidebar carried a literal 'Create wallet'
+      // link that used to trip this wait on every screen; with the link
+      // gone, the not-found screen needs its own marker too.
+      text.includes('Page not found')
     ) {
       break;
     }
@@ -123,7 +127,7 @@ describe('app routing — asset detail (Lane B)', () => {
   it('renders the welcome screen at /, not the asset detail', async () => {
     const mounted = await mountApp('/');
     try {
-      expect(mounted.div.textContent).toContain('Create wallet');
+      expect(mounted.div.textContent).toContain('Create a wallet');
       expect(mounted.div.textContent).not.toContain('Recent transactions');
     } finally {
       await mounted.cleanup();

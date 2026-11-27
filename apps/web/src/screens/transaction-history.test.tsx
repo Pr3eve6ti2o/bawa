@@ -15,10 +15,17 @@ vi.mock('../state/wallet-context', async (importOriginal) => ({
   useWallet: vi.fn(),
 }));
 
-vi.mock('../wallet/chains', () => ({
-  availableFor: vi.fn(),
-  chainConfig: vi.fn(),
-}));
+vi.mock('../wallet/chains', async (importOriginal) => {
+  // P1 (Lane S1): the chain filter is the shared search picker now,
+  // which reads the real filterChains and SUPPORTED_CHAINS — only
+  // chainConfig and availableFor stay stubbed.
+  const actual = await importOriginal<typeof import('../wallet/chains')>();
+  return {
+    ...actual,
+    availableFor: vi.fn(),
+    chainConfig: vi.fn(),
+  };
+});
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -114,11 +121,21 @@ async function mountScreen() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // P1 (Lane S1): the filter starts at the last-used chain now, so a
+  // pick in one test must not leak into the next.
+  localStorage.clear();
   mockRefreshHistory.mockResolvedValue(undefined);
   vi.mocked(availableFor).mockReturnValue(['btc', 'eth', 'trx', 'ton']);
-  vi.mocked(chainConfig).mockImplementation(
-    (chain: ChainId) => CHAINS[chain as ChainKey] as unknown as ReturnType<typeof chainConfig>,
-  );
+  vi.mocked(chainConfig).mockImplementation((chain: ChainId) => {
+    const known = CHAINS[chain as ChainKey];
+    if (known) return known as unknown as ReturnType<typeof chainConfig>;
+    // The filter is the shared picker over all 87 chains now; chains
+    // outside this test's 22 get a plain label.
+    return {
+      displayName: chain,
+      symbol: chain.toUpperCase(),
+    } as unknown as ReturnType<typeof chainConfig>;
+  });
 });
 
 const emptyHistory: HistoryState = { status: 'empty', txs: [] };
@@ -160,7 +177,7 @@ describe('transaction history screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Transactions');
+      expect(mounted.div.textContent).toContain('Activity');
       expect(mounted.div.textContent).toContain('Loading your activity…');
       expect(mounted.div.querySelector('[data-slot="skeleton"]')).not.toBeNull();
     } finally {
@@ -193,18 +210,26 @@ describe('transaction history screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      // Lane 2: the filter is a select of chain display names now —
-      // the old pill wall had five identical "ETH" buttons. Pick
-      // Ethereum by value and the Bitcoin row must go.
-      const select = mounted.div.querySelector('select');
-      expect(select).not.toBeNull();
+      // P1 (Lane S1): the filter is the shared search picker now, not
+      // a native select — open it and pick Ethereum by label; the
+      // Bitcoin row must go.
+      const input = mounted.div.querySelector<HTMLInputElement>(
+        '#history-chain-filter',
+      );
+      expect(input).not.toBeNull();
       await act(async () => {
-        const setter = Object.getOwnPropertyDescriptor(
-          window.HTMLSelectElement.prototype,
-          'value',
-        )?.set;
-        setter?.call(select, 'eth');
-        select?.dispatchEvent(new Event('change', { bubbles: true }));
+        input?.focus();
+        input?.click();
+      });
+      const option = [...mounted.div.querySelectorAll('[role="option"]')].find(
+        (candidate) =>
+          candidate
+            .querySelector('[data-chain-option-name]')
+            ?.textContent?.startsWith('Ethereum '),
+      );
+      expect(option).not.toBeUndefined();
+      await act(async () => {
+        (option as HTMLElement).click();
       });
       expect(mounted.div.textContent).toContain('0xeth1');
       expect(mounted.div.textContent).not.toContain('btctx1');
@@ -298,15 +323,25 @@ describe('transaction history screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      const select = mounted.div.querySelector('select');
-      expect(select).not.toBeNull();
+      // P1 (Lane S1): the filter is the shared search picker now, not
+      // a native select — open it and pick Ethereum by label.
+      const input = mounted.div.querySelector<HTMLInputElement>(
+        '#history-chain-filter',
+      );
+      expect(input).not.toBeNull();
       await act(async () => {
-        const setter = Object.getOwnPropertyDescriptor(
-          window.HTMLSelectElement.prototype,
-          'value',
-        )?.set;
-        setter?.call(select, 'eth');
-        select?.dispatchEvent(new Event('change', { bubbles: true }));
+        input?.focus();
+        input?.click();
+      });
+      const option = [...mounted.div.querySelectorAll('[role="option"]')].find(
+        (candidate) =>
+          candidate
+            .querySelector('[data-chain-option-name]')
+            ?.textContent?.startsWith('Ethereum '),
+      );
+      expect(option).not.toBeUndefined();
+      await act(async () => {
+        (option as HTMLElement).click();
       });
       expect(mounted.div.textContent).not.toContain('No transactions yet');
       expect(mounted.div.textContent).not.toContain('history unavailable');

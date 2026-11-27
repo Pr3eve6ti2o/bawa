@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import { LAST_USED_CHAIN_KEY } from './chain-search-select';
 import { SendScreen } from './send';
 import { signEvmOffline } from '../wallet/send';
 import { useWallet } from '../state/wallet-context';
@@ -329,7 +330,15 @@ async function openChainPicker(div: HTMLDivElement): Promise<void> {
   // Redesign Lane 3: the chain step is a search picker (role=
   // "combobox" + listbox), not a chip row. Focus (and click, for the
   // already-focused case) opens the list.
-  const input = div.querySelector('#chain-search') as HTMLInputElement | null;
+  // P1 (Lane S1): Send opens on the amount form now, so the picker is
+  // not on screen at mount — step back to it first (details → token
+  // → chain) when it is not there yet.
+  let input = div.querySelector('#chain-search') as HTMLInputElement | null;
+  if (input === null) {
+    await click(div, 'Change');
+    await click(div, 'Change');
+    input = div.querySelector('#chain-search') as HTMLInputElement | null;
+  }
   expect(input).not.toBeNull();
   await act(async () => {
     input?.focus();
@@ -339,8 +348,12 @@ async function openChainPicker(div: HTMLDivElement): Promise<void> {
 
 function chainOptionNames(div: HTMLDivElement): string[] {
   // The option label reads "<Display name> <CHAIN ID>"; strip the id.
+  // (P1 Lane S1: the label span carries data-chain-option-name, so the
+  // row's other spans — logo, symbol, Selected — cannot be mistaken
+  // for the name.)
   return [...div.querySelectorAll('[role="option"]')].map((candidate) => {
-    const label = candidate.querySelector('span')?.textContent ?? '';
+    const label =
+      candidate.querySelector('[data-chain-option-name]')?.textContent ?? '';
     return label.replace(/\s+[A-Z0-9]+$/, '').trim();
   });
 }
@@ -357,11 +370,10 @@ async function pickChain(div: HTMLDivElement, name: string): Promise<void> {
 }
 
 async function reachReview(div: HTMLDivElement): Promise<void> {
-  // Round 2, item 8: chain step, then token step, then the merged
-  // address + amount step — pick the native asset first, which lands
-  // on the details step with recipient and amount together.
-  await pickChain(div, 'Ethereum');
-  await clickContaining(div, 'Ethereum · ETH');
+  // Round 2, item 8: chain → token → details → review. The recipient
+  // and amount share the details step; Review follows.
+  // P1 (Lane S1): Send opens straight on the amount form with the
+  // last-used chain pre-selected — no chain or token pick first.
   const recipient = div.querySelector(
     '#send-recipient',
   ) as HTMLInputElement;
@@ -383,6 +395,13 @@ beforeEach(() => {
   // tests (a Recent row changes what the chain step shows).
   localStorage.clear();
   setPrices();
+  // P1 (Lane S1): Send mounts on the details step now, so the screen
+  // calls getAdapterForMode more than once per mount — a one-shot fee
+  // override is consumed before the fee estimate the test waits for.
+  // Fee tests set a persistent override; restore the stub adapter here
+  // so it cannot leak into the next test (clearAllMocks keeps
+  // implementations).
+  vi.mocked(getAdapterForMode).mockReturnValue(ethAdapter);
 });
 
 describe('send screen', () => {
@@ -610,9 +629,11 @@ describe('send screen', () => {
       // Redesign Lane 3: the picker is a search listbox now — open it
       // and read its options instead of the old chip row.
       await openChainPicker(mounted.div);
+      // P1 (Lane S1): the list is family-grouped now — EVM first, then
+      // Bitcoin, TRON, TON.
       expect(chainOptionNames(mounted.div)).toEqual([
-        'Bitcoin',
         'Ethereum',
+        'Bitcoin',
         'TRON',
         'TON',
       ]);
@@ -1209,7 +1230,10 @@ describe('send screen', () => {
       ...ethAdapter,
       estimateFee: async () => ({ status: 'error', reason: 'HTTP 429' }),
     };
-    vi.mocked(getAdapterForMode).mockReturnValueOnce(
+    // Persistent, not once: the mount itself calls the adapter for
+    // the details step, so a one-shot override would be spent before
+    // the fee estimate this test waits for. (P1 Lane S1.)
+    vi.mocked(getAdapterForMode).mockReturnValue(
       failingAdapter as unknown as ChainAdapter,
     );
     const mounted = await mountScreen();
@@ -1271,7 +1295,8 @@ describe('send screen', () => {
         fetchedAt: 0,
       }),
     };
-    vi.mocked(getAdapterForMode).mockReturnValueOnce(
+    // Persistent, not once — same reason as the 429 test above.
+    vi.mocked(getAdapterForMode).mockReturnValue(
       rateAdapter as unknown as ChainAdapter,
     );
     const mounted = await mountScreen();
@@ -1287,19 +1312,22 @@ describe('send screen', () => {
     }
   });
 
-  it('shows only the chain step on mount — no token list, recipient, amount or action below it', async () => {
+  it('opens straight on the amount form — no chain or token step first', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      // Round 2, item 8: chain is step 1 of 6; the token list, the
-      // recipient input, the amount input and the send action must not
-      // be on the page until a chain is picked.
-      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
-      expect(mounted.div.querySelector('#send-recipient')).toBeNull();
-      expect(mounted.div.querySelector('#send-amount')).toBeNull();
-      // Redesign Lane 3: the listbox is closed on mount, so the chain
-      // names live in the picker's options, not the page text — open
-      // it and Bitcoin is offered; no token list yet either way.
+      // P1 (Lane S1): Send opens on the amount form with the last-used
+      // chain pre-selected; the chain and token steps sit behind
+      // Change, not in front of the form.
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(mounted.div.querySelector('#send-recipient')).not.toBeNull();
+      expect(mounted.div.querySelector('#send-amount')).not.toBeNull();
+      expect(mounted.div.textContent).not.toContain('USD Coin');
+      // The chain step is two Change taps back, and the picker still
+      // offers every chain there.
+      await click(mounted.div, 'Change');
+      await click(mounted.div, 'Change');
+      expect(mounted.div.querySelector('#send-chain-heading')).not.toBeNull();
       await openChainPicker(mounted.div);
       expect(chainOptionNames(mounted.div)).toContain('Bitcoin');
       expect(mounted.div.textContent).not.toContain('USD Coin');
@@ -1308,13 +1336,49 @@ describe('send screen', () => {
     }
   });
 
-  it('shows recipient and amount together on step 3, with no separate amount step', async () => {
-    // Round 2, item 8: chain → token → address + amount in one place.
-    // Picking a token lands on the merged details step: both inputs are
-    // present at once, and the step label says so.
+  it('pre-selects the last-used chain on entry', async () => {
+    // P1 (Lane S1): the last chain picked anywhere is the chain Send
+    // opens on — here the mock wallet holds ETH only, and the last-used
+    // pick was Ethereum, so the amount form opens on Ethereum.
+    window.localStorage.setItem(LAST_USED_CHAIN_KEY, JSON.stringify('eth'));
     setWallet();
     const mounted = await mountScreen();
     try {
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(mounted.div.textContent).toContain('Ethereum · ETH');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('falls back to the wallet-context chain when the last-used chain has no wallet here', async () => {
+    // The last-used pick was Bitcoin, but the mock wallet holds ETH
+    // only — Send opens on Ethereum (the context selection) instead.
+    window.localStorage.setItem(LAST_USED_CHAIN_KEY, JSON.stringify('btc'));
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(mounted.div.textContent).toContain('Ethereum · ETH');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows recipient and amount together on step 3, with no separate amount step', async () => {
+    // Round 2, item 8: chain → token → address + amount in one place.
+    // P1 (Lane S1): Send opens on the merged details step already;
+    // stepping back walks token then chain, and picking a token lands
+    // back on the details step.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(mounted.div.querySelector('#send-recipient')).not.toBeNull();
+      expect(mounted.div.querySelector('#send-amount')).not.toBeNull();
+      await click(mounted.div, 'Change');
+      expect(mounted.div.textContent).toContain('Step 2 of 6: Token');
+      await click(mounted.div, 'Change');
       expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
       await pickChain(mounted.div, 'Ethereum');
       expect(mounted.div.textContent).toContain('Step 2 of 6: Token');
@@ -1534,6 +1598,10 @@ describe('send screen', () => {
       expect(rail).not.toBeUndefined();
       expect(rail?.querySelector('[aria-label="Send progress"]')).not.toBeNull();
       expect(rail?.className).toContain('lg:sticky');
+      // P1 (Lane S1): Send opens on the amount form; step back to the
+      // chain step for the heading check.
+      await click(mounted.div, 'Change');
+      await click(mounted.div, 'Change');
       const steps = [...mounted.div.querySelectorAll('div')].find((el) =>
         el.className.includes('lg:col-span-3'),
       );

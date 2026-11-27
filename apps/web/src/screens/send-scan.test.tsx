@@ -258,18 +258,29 @@ async function waitForInput(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // P1 (Lane S1): scans record the last-used chain, so a scan in one
+  // test must not change the entry chain of the next.
+  localStorage.clear();
 });
 
-describe('send screen — scanning a QR from the chain step (Round 2, item 1)', () => {
-  it('offers the scanner before any chain or token is picked', async () => {
+describe('send screen — scanning a QR from the amount form (Round 2, item 1)', () => {
+  it('offers the scanner on the amount form, before any amount is entered', async () => {
+    // P1 (Lane S1): Send opens on the amount form with the last-used
+    // chain pre-selected, and the scanner is offered there — the icon
+    // button beside Paste (the chain step's 'Scan a QR code' card is
+    // gone with the chain-first entry). Opening it shows the scanner.
     setWallet();
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
       expect(
         mounted.div.querySelector('button[aria-label="Scan QR code"]'),
       ).not.toBeNull();
-      expect(mounted.div.textContent).toContain('Scan a QR code');
+      await clickLabel(mounted.div, 'Scan QR code');
+      const simulate = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Simulate Base USDC scan',
+      );
+      expect(simulate).not.toBeUndefined();
     } finally {
       await mounted.cleanup();
     }
@@ -337,8 +348,14 @@ describe('send screen — scanning a QR from the chain step (Round 2, item 1)', 
         mounted.div,
         'This QR is for Solana, which has no wallet here yet.',
       );
-      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
-      expect(mounted.div.querySelector('#send-amount')).toBeNull();
+      // P1 (Lane S1): the scan starts on the amount form now, so
+      // staying put means staying on the form — nothing prefilled,
+      // nothing advanced.
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      expect(recipient.value).toBe('');
     } finally {
       await mounted.cleanup();
     }
@@ -355,7 +372,9 @@ describe('send screen — scanning a QR from the chain step (Round 2, item 1)', 
         (candidate) => candidate.textContent === 'Simulate Base USDC scan',
       );
       expect(simulate).not.toBeUndefined();
-      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
+      // P1 (Lane S1): ?scan=1 opens the scanner from the amount form
+      // now (the entry step).
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
     } finally {
       await mounted.cleanup();
     }

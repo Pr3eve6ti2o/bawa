@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { AddTokenDialog } from './add-token';
+import { LAST_USED_CHAIN_KEY } from './chain-search-select';
 import { useWallet } from '../state/wallet-context';
 import {
   resolveTokenCoingeckoId,
@@ -121,14 +122,26 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   });
 }
 
-function setSelectValue(select: HTMLSelectElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    'value',
-  )!.set!;
+function pickChain(root: ParentNode, name: string): void {
+  // P1 (Lane S1): the chain is picked through the shared search picker
+  // now, not a native select. Focus opens the list; the option is
+  // matched on its label (display name only).
+  const input = root.querySelector<HTMLInputElement>('#add-token-chain');
+  expect(input).not.toBeNull();
   act(() => {
-    setter.call(select, value);
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    input!.focus();
+    input!.click();
+  });
+  const option = [...root.querySelectorAll('[role="option"]')].find((candidate) => {
+    const label =
+      candidate.querySelector('[data-chain-option-name]')?.textContent ?? '';
+    // The label span reads "<Display name> <CHAIN ID>".
+    return label.startsWith(`${name} `);
+  }) as HTMLElement | undefined;
+  expect(option, `chain picker offers ${name}`).not.toBeUndefined();
+  act(() => {
+    option!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    option!.click();
   });
 }
 
@@ -152,6 +165,9 @@ async function submitForm(root: ParentNode): Promise<void> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // P1 (Lane S1): the chain starts at the last-used chain now, so a
+  // pick in one test must not leak into the next.
+  localStorage.clear();
   mockAddCustomToken.mockReturnValue({ ok: true });
   vi.mocked(resolveTokenCoingeckoId).mockResolvedValue({ id: 'usd-coin', image: null });
   vi.mocked(isBannedToken).mockResolvedValue(false);
@@ -192,8 +208,15 @@ describe('AddTokenDialog — add chain mode', () => {
       expect(document.body.textContent).toContain('Solana');
       expect(document.body.textContent).toContain('Dogecoin');
       // Solana is disabled in the mock wallet; Ethereum is enabled.
-      const solanaRow = [...document.querySelectorAll('li')].find((li) =>
-        li.textContent?.includes('Solana'),
+      // P1 (Lane S1): the list is family-grouped now, so a 'Solana'
+      // group heading precedes the row — match the row (the li with
+      // the Add button), not the heading.
+      const solanaRow = [...document.querySelectorAll('li')].find(
+        (li) =>
+          li.textContent?.includes('Solana') &&
+          [...li.querySelectorAll('button')].some(
+            (button) => button.textContent?.trim() === 'Add',
+          ),
       );
       expect(solanaRow).not.toBeUndefined();
       const addButton = [...(solanaRow?.querySelectorAll('button') ?? [])].find(
@@ -230,6 +253,20 @@ describe('AddTokenDialog — add chain mode', () => {
 });
 
 describe('AddTokenDialog — add token mode', () => {
+  it('pre-selects the last-used chain when the dialog opens', async () => {
+    // P1 (Lane S1): the chain starts at the last-used chain, not
+    // always Ethereum.
+    window.localStorage.setItem(LAST_USED_CHAIN_KEY, JSON.stringify('ton'));
+    const mounted = await mountDialog();
+    try {
+      const input = document.querySelector<HTMLInputElement>('#add-token-chain');
+      expect(input).not.toBeNull();
+      expect(input!.value).toBe('TON');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('rejects a short contract address with a specific inline error and adds nothing', async () => {
     const mounted = await mountDialog();
     try {
@@ -318,9 +355,7 @@ describe('AddTokenDialog — add token mode', () => {
     });
     const mounted = await mountDialog();
     try {
-      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
-      expect(select).not.toBeNull();
-      setSelectValue(select!, 'ton');
+      pickChain(document, 'TON');
       const input = document.querySelector<HTMLInputElement>('#add-token-contract');
       setInputValue(input!, NOT_MASTER);
       await submitForm(document);
@@ -431,8 +466,7 @@ describe('AddTokenDialog — add token mode', () => {
     vi.mocked(isBannedToken).mockResolvedValue(true);
     const mounted = await mountDialog();
     try {
-      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
-      setSelectValue(select!, 'sol');
+      pickChain(document, 'Solana');
       const input = document.querySelector<HTMLInputElement>('#add-token-contract');
       setInputValue(input!, BANNED_MINT);
       await submitForm(document);
@@ -523,9 +557,7 @@ describe('AddTokenDialog — add token mode', () => {
   it('adds a TRC-20 token by contract on TRON', async () => {
     const mounted = await mountDialog();
     try {
-      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
-      expect(select).not.toBeNull();
-      setSelectValue(select!, 'trx');
+      pickChain(document, 'TRON');
       expect(document.querySelector('label[for="add-token-contract"]')?.textContent).toContain('TRON');
       const input = document.querySelector<HTMLInputElement>('#add-token-contract');
       setInputValue(input!, TRON_USDT);
@@ -549,19 +581,34 @@ describe('AddTokenDialog — add token mode', () => {
   it('shows native-coin-only chains as disabled options with the reason, and SPL/Jetton chains as enabled', async () => {
     const mounted = await mountDialog();
     try {
-      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
-      for (const value of ['btc', 'ltc', 'doge']) {
-        const option = [...(select?.options ?? [])].find(
-          (candidate) => candidate.value === value,
+      // P1 (Lane S1): the chain is the shared search picker now, not
+      // a native select — open it and read the rows: a disabled row
+      // carries aria-disabled and its reason, an enabled row neither.
+      const input = document.querySelector<HTMLInputElement>('#add-token-chain');
+      expect(input).not.toBeNull();
+      act(() => {
+        input!.focus();
+        input!.click();
+      });
+      const rows = [...document.querySelectorAll('[role="option"]')];
+      const rowFor = (name: string) =>
+        rows.find((candidate) =>
+          candidate
+            .querySelector('[data-chain-option-name]')
+            ?.textContent?.startsWith(`${name} `),
         );
-        expect(option?.disabled).toBe(true);
-        expect(option?.textContent).toContain('Native coin only');
+      for (const name of ['Bitcoin', 'Litecoin', 'Dogecoin']) {
+        const row = rowFor(name);
+        expect(row, `picker offers ${name}`).not.toBeUndefined();
+        expect(row?.getAttribute('aria-disabled')).toBe('true');
+        expect(row?.textContent).toContain('Native coin only');
       }
       // UI/UX fixes, item 13: Solana (SPL) and TON (Jetton) are selectable.
-      const tonOption = [...(select?.options ?? [])].find((option) => option.value === 'ton');
-      expect(tonOption?.disabled).toBe(false);
-      const solOption = [...(select?.options ?? [])].find((option) => option.value === 'sol');
-      expect(solOption?.disabled).toBe(false);
+      for (const name of ['TON', 'Solana']) {
+        const row = rowFor(name);
+        expect(row, `picker offers ${name}`).not.toBeUndefined();
+        expect(row?.getAttribute('aria-disabled')).toBeNull();
+      }
     } finally {
       await mounted.cleanup();
     }
@@ -587,8 +634,7 @@ describe('AddTokenDialog — add token mode', () => {
     });
     const mounted = await mountDialog();
     try {
-      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
-      setSelectValue(select!, 'sol');
+      pickChain(document, 'Solana');
       const input = document.querySelector<HTMLInputElement>('#add-token-contract');
       setInputValue(input!, SOL_USDC_MINT);
       await submitForm(document);
@@ -637,8 +683,7 @@ describe('AddTokenDialog — add token mode', () => {
     });
     const mounted = await mountDialog();
     try {
-      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
-      setSelectValue(select!, 'ton');
+      pickChain(document, 'TON');
       const input = document.querySelector<HTMLInputElement>('#add-token-contract');
       setInputValue(input!, TON_USDT_MASTER);
       await submitForm(document);

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { App } from './app';
-import { MORE_LINKS } from './sidebar-nav';
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -107,38 +106,28 @@ describe('app nav — focused flows and sidebar collapse (Lane A)', () => {
     }
   });
 
-  it('keeps the bottom nav and shows the More menu with all destinations, which navigate', async () => {
+  it('shows the 5-slot bottom nav — Home, Assets, Receive, Send, Activity — and no More button', async () => {
+    // P1 (Lane S1): the More button and its sheet are gone; Activity
+    // (Transactions, renamed) takes the fifth slot.
     const mounted = await mountApp('/', 'Welcome to Bawa');
     try {
       // Two navs share the label: the desktop sidebar (first in the DOM)
-      // and the mobile bottom nav (second). The More button lives only in
-      // the bottom nav.
+      // and the mobile bottom nav (second).
       const navs = mounted.div.querySelectorAll(
         'nav[aria-label="Main navigation"]',
       );
       expect(navs).toHaveLength(2);
       const nav = navs[1] as Element;
-      expect(nav?.textContent).toContain('Home');
-      expect(nav?.textContent).toContain('More');
-      const moreButton = mounted.div.querySelector(
-        'button[aria-label="More"]',
-      );
-      expect(moreButton).not.toBeNull();
-      await click(moreButton as Element);
-      const menu = mounted.div.querySelector('[role="menu"]');
-      expect(menu).not.toBeNull();
-      const items = mounted.div.querySelectorAll('[role="menuitem"]');
-      expect(items).toHaveLength(MORE_LINKS.length);
-      for (const { label } of MORE_LINKS) {
-        expect(menu?.textContent).toContain(label);
+      for (const label of ['Home', 'Assets', 'Receive', 'Send', 'Activity']) {
+        expect(nav?.textContent).toContain(label);
       }
-      const networksItem = Array.from(items).find(
-        (item) => item.getAttribute('href') === '/networks',
-      );
-      expect(networksItem).not.toBeUndefined();
-      await click(networksItem as Element);
-      expect(window.location.pathname).toBe('/networks');
+      expect(nav?.textContent).not.toContain('More');
+      expect(mounted.div.querySelector('button[aria-label="More"]')).toBeNull();
       expect(mounted.div.querySelector('[role="menu"]')).toBeNull();
+      const activity = nav.querySelector('a[href="/transactions"]');
+      expect(activity).not.toBeNull();
+      await click(activity as Element);
+      expect(window.location.pathname).toBe('/transactions');
     } finally {
       await mounted.cleanup();
     }

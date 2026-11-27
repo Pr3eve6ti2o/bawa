@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/components/card'
 import { CopyButton } from '../ui/components/copy-button';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
-import { ChainSearchSelect } from './chain-search-select';
+import { ChainSearchSelect, readLastUsedChain } from './chain-search-select';
 import { ChainLogo } from './token-logo';
 import { chainConfig, SUPPORTED_CHAINS, type ChainId } from '../wallet/chains';
 import { validateRecipient } from '../wallet/send';
@@ -33,7 +33,8 @@ const RECENT_KEY = 'bawa:address-book-recent-chains';
 export function AddressBookScreen() {
   const [entries, setEntries] = useState<AddressBookEntry[]>(() => readAddressBook());
   const [label, setLabel] = useState('');
-  const [chain, setChain] = useState<ChainId>('eth');
+  // P1 (Lane S1): the chain starts at the last-used chain.
+  const [chain, setChain] = useState<ChainId>(() => readLastUsedChain(SUPPORTED_CHAINS) ?? 'eth');
   const [address, setAddress] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

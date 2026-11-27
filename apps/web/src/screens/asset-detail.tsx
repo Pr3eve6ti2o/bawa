@@ -34,6 +34,7 @@ import { CopyButton } from '../ui/components/copy-button';
 import { Skeleton } from '../ui/components/skeleton';
 import { usePriceFeedAutoRefresh } from './use-live-prices';
 import { ChainLogo, TokenLogo } from './token-logo';
+import { recordLastUsedChain } from './chain-search-select';
 import type { BalanceState } from '../state/wallet-context';
 
 // Lane 4 (UX-major, data): the 7-day price chart is lazy-loaded —
@@ -534,7 +535,13 @@ export function AssetDetailScreen() {
         {/* No Send for tokens: no token send exists in this wallet. */}
         {!isToken && (
           <Button asChild size="sm">
-            <Link to="/send" onClick={() => setSelectedChain(chainId)}>
+            <Link
+              to="/send"
+              onClick={() => {
+                setSelectedChain(chainId);
+                recordLastUsedChain(chainId);
+              }}
+            >
               Send
             </Link>
           </Button>

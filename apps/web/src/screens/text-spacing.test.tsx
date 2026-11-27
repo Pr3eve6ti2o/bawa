@@ -40,10 +40,17 @@ vi.mock('../state/wallet-context', async (importOriginal) => ({
   useWallet: vi.fn(),
 }));
 
-vi.mock('../wallet/chains', () => ({
-  availableFor: vi.fn(),
-  chainConfig: vi.fn(),
-}));
+vi.mock('../wallet/chains', async (importOriginal) => {
+  // P1 (Lane S1): the import graph loads the shared chain picker,
+  // which reads SUPPORTED_CHAINS at module level — the mock must
+  // carry the real module underneath the stubbed helpers.
+  const actual = await importOriginal<typeof import('../wallet/chains')>();
+  return {
+    ...actual,
+    availableFor: vi.fn(),
+    chainConfig: vi.fn(),
+  };
+});
 
 // Disposable test mnemonic — never a real secret.
 const TEST_MNEMONIC = [...Array(23).fill('abandon'), 'about'].join(' ');

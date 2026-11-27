@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
-import { MORE_LINKS, SIDEBAR_LINKS, SidebarNav } from './sidebar-nav';
+import { SIDEBAR_GROUPS, SIDEBAR_LINKS, SidebarNav } from './sidebar-nav';
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -124,42 +124,44 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
     }
   });
 
-  it('keeps the More menu destinations unchanged (11 links)', () => {
-    // UX-major Lane 5: Address book joins the More menu after Wallets.
-    // UX-major Lane 6: Swap joins the More menu first.
-    expect(MORE_LINKS).toHaveLength(11);
-    expect(MORE_LINKS.map(({ to }) => to)).toEqual([
+  it('groups the destinations — Money, Wallets, Settings — with no Welcome, no Track, no Create', () => {
+    // P1 (Lane S1): the 15-link flat sidebar is grouped; the More
+    // menu is gone, so Swap and Activity (Transactions, renamed)
+    // move into Money, Track lives inside Transactions only, and
+    // Create/Import live on the Wallets screen as one Add wallet.
+    expect(SIDEBAR_GROUPS.map(({ heading }) => heading)).toEqual([
+      'Money',
+      'Wallets',
+      'Settings',
+    ]);
+    expect(SIDEBAR_LINKS.map(({ to }) => to)).toEqual([
+      '/',
+      '/assets',
+      '/receive',
+      '/send',
       '/swap',
+      '/transactions',
       '/wallets',
       '/address-book',
-      '/transactions',
-      '/track',
-      '/import-wallet',
-      '/create-wallet',
       '/security',
       '/networks',
       '/mnemonic-backup',
-      '/welcome',
     ]);
+    const labels = SIDEBAR_LINKS.map(({ label }) => label);
+    expect(labels).toContain('Activity');
+    expect(labels).not.toContain('Welcome');
+    expect(labels).not.toContain('Track a transaction');
+    expect(labels).not.toContain('Create wallet');
+    expect(labels).not.toContain('Import wallet');
   });
 
-  it('has exactly one Create wallet button, in the Create button’s place and layout', async () => {
-    // Token gaps, item 9: the duplicate 'create wallet' entry is gone;
-    // the 'Create' entry was renamed to 'Create wallet' and keeps its
-    // /create-wallet target and plus icon.
-    expect(
-      MORE_LINKS.filter(({ label }) => label === 'Create wallet'),
-    ).toHaveLength(1);
-    expect(
-      MORE_LINKS.find(({ label }) => label === 'Create wallet'),
-    ).toEqual({ to: '/create-wallet', label: 'Create wallet', icon: 'plus' });
+  it('renders the group headings expanded', async () => {
     const mounted = await mountNav({});
     try {
-      const links = [...mounted.div.querySelectorAll('nav a')].filter(
-        (link) => link.textContent?.includes('Create wallet'),
-      );
-      expect(links).toHaveLength(1);
-      expect(links[0]?.getAttribute('href')).toBe('/create-wallet');
+      const text = mounted.div.textContent ?? '';
+      for (const heading of ['Money', 'Wallets', 'Settings']) {
+        expect(text).toContain(heading);
+      }
     } finally {
       await mounted.cleanup();
     }
@@ -167,22 +169,17 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
 
   it('lets long active labels wrap instead of truncating them', async () => {
     // P3: the active item adds a coral square (~18px) beside the label,
-    // so at 224px "Track a transaction" and "Mnemonic backup" clipped
-    // to "Track a transact…" / "Mnemonic back…". The labels are copy
-    // and must not be shortened; the item lets them wrap instead.
-    for (const [path, label] of [
-      ['/track', 'Track a transaction'],
-      ['/mnemonic-backup', 'Mnemonic backup'],
-    ] as const) {
-      const mounted = await mountNav({}, path);
-      try {
-        const link = mounted.div.querySelector(`a[href="${path}"]`);
-        expect(link).not.toBeNull();
-        expect(link?.textContent).toContain(label);
-        expect(link?.querySelector('.truncate')).toBeNull();
-      } finally {
-        await mounted.cleanup();
-      }
+    // so at 224px "Mnemonic backup" clipped to "Mnemonic back…". The
+    // labels are copy and must not be shortened; the item lets them wrap
+    // instead.
+    const mounted = await mountNav({}, '/mnemonic-backup');
+    try {
+      const link = mounted.div.querySelector('a[href="/mnemonic-backup"]');
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain('Mnemonic backup');
+      expect(link?.querySelector('.truncate')).toBeNull();
+    } finally {
+      await mounted.cleanup();
     }
   });
 });

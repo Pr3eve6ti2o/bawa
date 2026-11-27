@@ -101,7 +101,12 @@ import {
   type SigningIntent,
 } from '../wallet/signing-intent';
 import { normalizeEvmAddress } from '../wallet/adapters/evm';
-import { ChainSearchSelect, SEND_RECENT_CHAINS_KEY } from './chain-search-select';
+import {
+  ChainSearchSelect,
+  readLastUsedChain,
+  recordLastUsedChain,
+  SEND_RECENT_CHAINS_KEY,
+} from './chain-search-select';
 import type { ClearSigningInput } from '../wallet/clear-signing';
 import {
   describeRecipientDetection,
@@ -219,12 +224,32 @@ export function SendScreen() {
   const chainsWithWallet: ChainId[] = offeredChains.filter(
     (chain) => (vaultAddresses[chain] ?? []).length > 0,
   );
-  const [chain, setChain] = useState<ChainId>(
-    chainsWithWallet.includes(selectedChain)
-      ? selectedChain
-      : (chainsWithWallet[0] ?? 'eth'),
-  );
-  const [step, setStep] = useState<Step>('chain');
+  // P1 (Lane S1): the starting chain is the last-used chain — the
+  // shared last-used pick the picker records on every selection,
+  // then the wallet-context selection (the asset-detail shortcut and
+  // Receive both set it), then the first chain with a wallet.
+  const lastUsedChain = readLastUsedChain(offeredChains);
+  const initialChain: ChainId =
+    lastUsedChain !== null && chainsWithWallet.includes(lastUsedChain)
+      ? lastUsedChain
+      : chainsWithWallet.includes(selectedChain)
+        ? selectedChain
+        : (chainsWithWallet[0] ?? 'eth');
+  const [chain, setChain] = useState<ChainId>(initialChain);
+  // P1 (Lane S1): the common case needs no chain step — when the
+  // starting chain has a wallet, Send opens straight on the amount
+  // form (details) with the native coin selected, so the flow is
+  // Send, type, Review (2 taps). A pending link, or a starting chain
+  // with no wallet, keeps the chain step; the link apply effect and
+  // the no-wallet gate still own those cases.
+  const initialStep: Step =
+    pendingLink === null && chainsWithWallet.includes(initialChain)
+      ? 'details'
+      : 'chain';
+  const [step, setStep] = useState<Step>(initialStep);
+  // The step the flow entered on: the "sending is off" banner shows
+  // once, at entry, whichever step that is.
+  const [entryStep] = useState<Step>(initialStep);
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
   // Address book (UX-major Lane 5): entries saved on the Address book
@@ -554,6 +579,7 @@ export function SendScreen() {
               token.contract.toLowerCase() === prefill.tokenContract!.toLowerCase(),
           ) ?? null;
     setChain(prefill.chain);
+    recordLastUsedChain(prefill.chain);
     setSelectedToken(tokenRecord);
     setRecipient(prefill.to);
     if (prefill.amount !== undefined) setAmount(prefill.amount);
@@ -1670,7 +1696,7 @@ export function SendScreen() {
             three lines on every step cost ~100 px of form space. In
             devnet the details step keeps a one-line test-network note
             (the banner was its only devnet indicator there). */}
-        {step === 'chain' && (
+        {step === entryStep && (
         <p
           role="note"
           className="rounded-bawa border-2 border-ink bg-sun p-4 text-base text-ink"
@@ -1682,7 +1708,7 @@ export function SendScreen() {
             : 'Sending funds is switched off until it is separately approved. This flow signs offline only. Nothing here sends cryptocurrency anywhere.'}
         </p>
         )}
-        {step === 'details' && devnetEnabled && (
+        {step === 'details' && devnetEnabled && entryStep === 'chain' && (
           <p className="text-sm text-muted-foreground">
             {devnetName
               ? `Devnet test mode — broadcasts to the ${devnetName} test network only.`
@@ -1915,7 +1941,11 @@ export function SendScreen() {
                 ))}
             </span>
           </span>
-          <Button type="button" variant="secondary" onClick={() => setStep('chain')}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setStep(step === 'details' ? 'token' : 'chain')}
+          >
             Change
           </Button>
         </p>

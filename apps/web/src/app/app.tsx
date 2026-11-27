@@ -118,13 +118,19 @@ import { appBasePath } from '../wallet/payment-links';
 import { accountName } from '../wallet/vault';
 import { ErrorBoundary } from './error-boundary';
 import { Toaster } from '../ui/components/sonner';
-import { MORE_LINKS, SidebarNav } from './sidebar-nav';
+import { SidebarNav } from './sidebar-nav';
 
+// P1 (Lane S1): the bottom nav is 5 slots — Home, Assets, Receive,
+// Send, Activity — and the More button is gone. Activity is the
+// Transactions screen, renamed to match the dashboard's word for it.
+// The More menu's remaining items live under the header
+// "Account 1 ›" → Wallets screen; Track lives inside Transactions.
 const tabs: ReadonlyArray<{ to: string; label: string; icon: BawaIconName }> = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/assets', label: 'Assets', icon: 'coins' },
   { to: '/receive', label: 'Receive', icon: 'receive' },
   { to: '/send', label: 'Send', icon: 'arrow-up-right' },
+  { to: '/transactions', label: 'Activity', icon: 'activity' },
 ];
 
 function HomeScreen() {
@@ -230,33 +236,8 @@ export function NetworkModePill() {
 }
 
 function AppLayout() {
-  const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { vaultState, vaultAccount } = useWallet();
-  const moreButtonRef = useRef<HTMLButtonElement>(null);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
-  // Escape closes the More menu and returns focus to its trigger.
-  useEffect(() => {
-    if (!moreOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMoreOpen(false);
-        moreButtonRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [moreOpen]);
-  // A4: opening the More menu moves focus to its first item, so
-  // keyboard users land in the menu instead of tabbing past it
-  // (the menu used to sit before the nav in DOM order, so Tab from
-  // the trigger never reached it).
-  useEffect(() => {
-    if (!moreOpen) return;
-    moreMenuRef.current
-      ?.querySelector<HTMLElement>('[role="menuitem"]')
-      ?.focus();
-  }, [moreOpen]);
   const location = useLocation();
   const pathname = location.pathname;
   const navigate = useNavigate();
@@ -439,7 +420,6 @@ function AppLayout() {
                   key={to}
                   to={to}
                   end={to === '/'}
-                  onClick={() => setMoreOpen(false)}
                   onMouseEnter={() => preloadRoute(to)}
                   onFocus={() => preloadRoute(to)}
                   className={({ isActive }) =>
@@ -462,57 +442,10 @@ function AppLayout() {
                   )}
                 </NavLink>
               ))}
-              <button
-                type="button"
-                ref={moreButtonRef}
-                aria-expanded={moreOpen}
-                aria-label="More"
-                onClick={() => setMoreOpen((open) => !open)}
-                className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
-                  moreOpen ? 'text-ink bawa-squiggle-underline' : 'text-ink'
-                }`}
-              >
-                <span
-                  className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
-                    moreOpen ? 'bg-sun text-ink' : 'bg-paper text-ink'
-                  }`}
-                >
-                  <BawaIcon name="more" className="size-4" aria-hidden="true" />
-                </span>
-                More
-              </button>
             </div>
             </nav>
           )}
 
-          {!isFocusedFlow && moreOpen && (
-            <div
-              ref={moreMenuRef}
-              role="menu"
-              aria-label="More"
-              // Mobile sheet (mobile-native §7): bottom clears the bottom
-              // nav PLUS the home-indicator inset — the nav grows by the
-              // inset (its pb-[env(safe-area-inset-bottom)]), so a fixed
-              // 76 px offset would overlap it on notched phones.
-              // overscroll-contain keeps the sheet's own scroll from
-              // chaining to the page behind it (§6).
-              className="overscroll-contain rounded-bawa border-2 border-ink bg-paper p-2 max-desktop:fixed max-desktop:bottom-[calc(76px+env(safe-area-inset-bottom))] max-desktop:left-1/2 max-desktop:z-20 max-desktop:max-h-[60vh] max-desktop:w-[calc(100%-2rem)] max-desktop:max-w-[398px] max-desktop:-translate-x-1/2 max-desktop:overflow-y-auto desktop:hidden"
-            >
-              {MORE_LINKS.map(({ to, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  role="menuitem"
-                  onClick={() => setMoreOpen(false)}
-                  onMouseEnter={() => preloadRoute(to)}
-                  onFocus={() => preloadRoute(to)}
-                className="block rounded-bawa-sm px-3 py-3 text-sm font-semibold text-ink hover:bg-sun"
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-        )}
           <Toaster />
         </div>
       </div>

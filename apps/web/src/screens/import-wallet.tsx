@@ -23,7 +23,7 @@ import {
   splitMnemonicAndPassphrase,
 } from '../wallet/bip39-validation';
 import { chainConfig, profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
-import { ChainSearchSelect } from './chain-search-select';
+import { ChainSearchSelect, readLastUsedChain } from './chain-search-select';
 import { WalletReadyActions } from './wallet-ready-actions';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Tabs, TabsList, TabsTrigger } from '../ui/components/tabs';
@@ -282,7 +282,8 @@ export function ImportWalletScreen() {
   );
 
   // Mode B (watch-only) state — existing behaviour, unchanged.
-  const [chain, setChain] = useState<ChainId>('btc');
+  // P1 (Lane S1): the chain starts at the last-used chain.
+  const [chain, setChain] = useState<ChainId>(() => readLastUsedChain(chains) ?? 'btc');
   const [xpub, setXpub] = useState('');
   const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);

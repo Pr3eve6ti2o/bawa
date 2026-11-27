@@ -13,9 +13,14 @@ vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
 }));
 
-vi.mock('../wallet/chains', () => {
+vi.mock('../wallet/chains', async (importOriginal) => {
+  // P1 (Lane S1): the import graph loads the shared chain picker,
+  // which reads SUPPORTED_CHAINS at module level — the mock must
+  // carry the real module underneath the stubbed helpers.
+  const actual = await importOriginal<typeof import('../wallet/chains')>();
   const chainConfig = vi.fn();
   return {
+    ...actual,
     availableFor: vi.fn(),
     chainConfig,
     // Merge fix (Lane 5 moved filterChains here from

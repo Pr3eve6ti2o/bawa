@@ -5,11 +5,16 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  chainFamily,
   ChainSearchSelect,
   filterChains,
+  groupChainsByFamily,
+  LAST_USED_CHAIN_KEY,
   MAX_RECENT_CHAINS,
+  readLastUsedChain,
   readRecentChains,
   RECENT_CHAINS_KEY,
+  recordLastUsedChain,
   SEND_RECENT_CHAINS_KEY,
 } from './chain-search-select';
 import type { ChainId } from '../engine/boundary';
@@ -303,7 +308,10 @@ describe('ChainSearchSelect', () => {
     const onChange = vi.fn();
     renderSelect('btc', onChange);
     openList();
-    // Focus opens with the current chain active; one ArrowDown moves to ETH.
+    // Focus opens with the current chain active; one ArrowDown moves to
+    // the next chain in group order — EVM first, then Solana, then
+    // Bitcoin — so BTC is followed by LTC, not ETH.
+    // (P1 Lane S1: the list is family-grouped now.)
     act(() => {
       input().dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
@@ -314,7 +322,7 @@ describe('ChainSearchSelect', () => {
         new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
       );
     });
-    expect(onChange).toHaveBeenCalledWith('eth');
+    expect(onChange).toHaveBeenCalledWith('ltc');
     expect(container.querySelector('[role="listbox"]')).toBeNull();
 
     // Escape closes the open list without picking anything.
@@ -327,5 +335,125 @@ describe('ChainSearchSelect', () => {
     });
     expect(container.querySelector('[role="listbox"]')).toBeNull();
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('groups the list by chain family, Recent first', () => {
+    window.localStorage.setItem(RECENT_CHAINS_KEY, JSON.stringify(['sol', 'eth']));
+    renderSelect('btc');
+    openList();
+    const headings = [...container.querySelectorAll('[role="presentation"]')].map(
+      (el) => el.textContent,
+    );
+    expect(headings).toEqual(['Recent', 'EVM', 'Bitcoin', 'TRON', 'TON']);
+    // The Recent group leads with the recent picks, newest first, and
+    // a recent chain never repeats in its family group.
+    const texts = [...container.querySelectorAll('[role="option"]')].map(
+      (option) => option.textContent,
+    );
+    expect(texts[0]).toBe('Solana SOL');
+    expect(texts[1]).toBe('Ethereum ETH');
+    expect(texts.filter((text) => text === 'Solana SOL')).toHaveLength(1);
+  });
+
+  it('shows the real chain logo on every row', () => {
+    renderSelect();
+    openList();
+    const solana = options().find((option) => option.textContent === 'Solana SOL');
+    expect(solana).not.toBeUndefined();
+    const img = solana!.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('alt')).toBe('Solana logo');
+  });
+
+  it('records the last-used chain on every pick', () => {
+    const onChange = vi.fn();
+    renderSelect('btc', onChange);
+    openList();
+    const solana = options().find((option) => option.textContent === 'Solana SOL');
+    expect(solana).not.toBeUndefined();
+    act(() => {
+      solana!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (solana as HTMLElement).click();
+    });
+    expect(onChange).toHaveBeenCalledWith('sol');
+    expect(readLastUsedChain()).toBe('sol');
+    expect(JSON.parse(window.localStorage.getItem(LAST_USED_CHAIN_KEY) ?? '[]')).toBe(
+      'sol',
+    );
+  });
+
+  it('drops a stale last-used chain', () => {
+    window.localStorage.setItem(LAST_USED_CHAIN_KEY, JSON.stringify('not-a-chain'));
+    expect(readLastUsedChain()).toBeNull();
+    window.localStorage.setItem(LAST_USED_CHAIN_KEY, JSON.stringify(['sol']));
+    expect(readLastUsedChain()).toBeNull();
+    recordLastUsedChain('eth');
+    expect(readLastUsedChain()).toBe('eth');
+    expect(readLastUsedChain(['btc', 'sol'])).toBeNull();
+    expect(readLastUsedChain(['btc', 'eth'])).toBe('eth');
+  });
+
+  it('groups chains by family, EVM first', () => {
+    expect(chainFamily('eth')).toBe('EVM');
+    expect(chainFamily('sol')).toBe('Solana');
+    expect(chainFamily('btc')).toBe('Bitcoin');
+    expect(chainFamily('trx')).toBe('TRON');
+    expect(chainFamily('ton')).toBe('TON');
+    expect(
+      groupChainsByFamily(['ton', 'btc', 'eth', 'sol']).map((group) => group.heading),
+    ).toEqual(['EVM', 'Solana', 'Bitcoin', 'TON']);
+  });
+
+  it('offers an All chains row when allowAll', () => {
+    const onChange = vi.fn();
+    act(() => {
+      root.render(
+        <ChainSearchSelect
+          chains={CHAINS}
+          value="all"
+          onChange={onChange}
+          id="test-chain-search"
+          allowAll
+        />,
+      );
+    });
+    expect(input().value).toBe('All chains');
+    openList();
+    const all = options().find((option) =>
+      option.textContent?.startsWith('All chains'),
+    );
+    expect(all).not.toBeUndefined();
+    act(() => {
+      all!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (all as HTMLElement).click();
+    });
+    expect(onChange).toHaveBeenCalledWith('all');
+  });
+
+  it('shows a disabled chain with its reason and never picks it', () => {
+    const onChange = vi.fn();
+    act(() => {
+      root.render(
+        <ChainSearchSelect
+          chains={CHAINS}
+          value="btc"
+          onChange={onChange}
+          id="test-chain-search"
+          isDisabled={(chain) => (chain === 'sol' ? 'No token standard' : null)}
+        />,
+      );
+    });
+    openList();
+    const solana = options().find((option) =>
+      option.textContent?.includes('Solana'),
+    );
+    expect(solana).not.toBeUndefined();
+    expect(solana?.getAttribute('aria-disabled')).toBe('true');
+    expect(solana?.textContent).toContain('No token standard');
+    act(() => {
+      solana!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (solana as HTMLElement).click();
+    });
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

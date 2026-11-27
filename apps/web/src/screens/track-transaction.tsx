@@ -14,7 +14,7 @@ import {
 import { Button } from '../ui/components/button';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
-import { ChainSearchSelect } from './chain-search-select';
+import { ChainSearchSelect, readLastUsedChain } from './chain-search-select';
 import { Card, CardContent } from '../ui/components/card';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { BawaLoading } from '../ui/components/loading';
@@ -197,8 +197,13 @@ export function TransactionDetails({ data, chain, checkedAt }: {
 export function TrackTransactionScreen() {
   const { devnetEnabled } = useWallet();
   const [searchParams] = useSearchParams();
+  // P1 (Lane S1): the chain starts at the last-used chain — the
+  // shared last-used pick — unless the URL names one (?chain=).
   const [chain, setChain] = useState<ChainId>(
-    () => SUPPORTED_CHAINS.find((id) => id === searchParams.get('chain')) ?? 'btc',
+    () =>
+      SUPPORTED_CHAINS.find((id) => id === searchParams.get('chain')) ??
+      readLastUsedChain(SUPPORTED_CHAINS) ??
+      'btc',
   );
   const [hash, setHash] = useState(() => searchParams.get('hash') ?? '');
   const [tonAddress, setTonAddress] = useState('');

@@ -1,8 +1,6 @@
-import { Fragment } from "react";
 import { NavLink } from "react-router";
 
 import { BawaIcon, type BawaIconName } from "../ui/components/icons";
-import { SquiggleDivider } from "../ui/components/squiggle-divider";
 
 type NavItem = {
   to: string;
@@ -17,35 +15,53 @@ type SidebarNavProps = {
   onPreloadRoute?: (to: string) => void;
 };
 
-export const MORE_LINKS: NavItem[] = [
-  // Lane 6 (UX-major programme): Swap first in the More sheet — a
-  // money action like Send/Receive — and the desktop sidebar spreads
-  // MORE_LINKS after Send, so it sits there too. Quotes only.
-  { to: "/swap", label: "Swap", icon: "swap" },
-  { to: "/wallets", label: "Wallets", icon: "wallet" },
-  { to: "/address-book", label: "Address book", icon: "book" },
-  { to: "/transactions", label: "Transactions", icon: "activity" },
-  { to: "/track", label: "Track a transaction", icon: "search" },
-  { to: "/import-wallet", label: "Import wallet", icon: "import" },
-  // Token gaps, item 9: the duplicate 'create wallet' entry is gone.
-  // The 'Create' entry was renamed to 'Create wallet' and keeps its
-  // place and its plus icon — exactly one 'Create wallet' button
-  // remains, opening the create flow. P0 (plan P0-3): the /create hub
-  // is deleted, so the entry points straight at /create-wallet.
-  { to: "/create-wallet", label: "Create wallet", icon: "plus" },
-  { to: "/security", label: "Security", icon: "shield" },
-  { to: "/networks", label: "Networks", icon: "network" },
-  { to: "/mnemonic-backup", label: "Mnemonic backup", icon: "key" },
-  { to: "/welcome", label: "Welcome", icon: "door" },
+export type SidebarNavGroup = {
+  heading: string;
+  items: NavItem[];
+};
+
+// P1 (Lane S1): the 15-link flat sidebar is grouped — Money / Wallets /
+// Settings, no Welcome. The More menu is gone; its remaining items live
+// under the header "Account 1 ›" → Wallets screen, and the grouped
+// sidebar mirrors that split: Money holds the daily actions (Swap and
+// Activity promoted out of More), Wallets holds account management,
+// Settings holds Security, Networks and Mnemonic backup. Track lives
+// inside Transactions only (linked from there), and Add wallet
+// (Create + Import merged) lives on the Wallets screen itself, which
+// already offers both. No route is deleted — only nav entries.
+export const SIDEBAR_GROUPS: SidebarNavGroup[] = [
+  {
+    heading: "Money",
+    items: [
+      { to: "/", label: "Home", icon: "home", end: true },
+      { to: "/assets", label: "Assets", icon: "coins" },
+      { to: "/receive", label: "Receive", icon: "receive" },
+      { to: "/send", label: "Send", icon: "send" },
+      { to: "/swap", label: "Swap", icon: "swap" },
+      { to: "/transactions", label: "Activity", icon: "activity" },
+    ],
+  },
+  {
+    heading: "Wallets",
+    items: [
+      { to: "/wallets", label: "Wallets", icon: "wallet" },
+      { to: "/address-book", label: "Address book", icon: "book" },
+    ],
+  },
+  {
+    heading: "Settings",
+    items: [
+      { to: "/security", label: "Security", icon: "shield" },
+      { to: "/networks", label: "Networks", icon: "network" },
+      { to: "/mnemonic-backup", label: "Mnemonic backup", icon: "key" },
+    ],
+  },
 ];
 
-export const SIDEBAR_LINKS: NavItem[] = [
-  { to: "/", label: "Home", icon: "home", end: true },
-  { to: "/assets", label: "Assets", icon: "coins" },
-  { to: "/receive", label: "Receive", icon: "receive" },
-  { to: "/send", label: "Send", icon: "send" },
-  ...MORE_LINKS,
-];
+/** Every sidebar destination, flat, in display order. */
+export const SIDEBAR_LINKS: NavItem[] = SIDEBAR_GROUPS.flatMap(
+  (group) => group.items,
+);
 
 export function SidebarNav({
   collapsed = false,
@@ -79,7 +95,7 @@ export function SidebarNav({
             tile and the header only the account link. The wordmark
             renders only when expanded; collapsed stays icon-only, and
             it is a plain label, not a nav item (no route or order
-            change — the 13 links below are untouched). */}
+            change — the 11 links below are untouched). */}
         {!collapsed && (
           <span className="ml-3 truncate font-display text-xl font-bold tracking-tight text-ink">
             Bawa
@@ -91,64 +107,68 @@ export function SidebarNav({
         aria-label="Main navigation"
         className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4"
       >
-        {SIDEBAR_LINKS.map((item) => (
-          <Fragment key={item.to}>
-            <NavLink
-              to={item.to}
-              end={item.end}
-              title={collapsed ? item.label : undefined}
-              onMouseEnter={() => onPreloadRoute?.(item.to)}
-              onFocus={() => onPreloadRoute?.(item.to)}
-              className={({ isActive }) =>
-                [
-                  // UX-major Lane 2: py-3 (44 px row) — the old py-2
-                  // rows were 36 px, below the DESIGN-SYSTEM §2.5
-                  // touch rule for nav items.
-                  "flex w-full items-center gap-3 rounded-bawa px-3 py-3 text-sm font-semibold transition-colors",
-                  collapsed ? "justify-center" : "",
-                  isActive
-                    ? "bg-sun font-semibold text-ink"
-                    : "bg-paper text-ink hover:bg-sun",
-                ].join(" ")
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span aria-hidden="true" className="shrink-0 text-ink">
-                    <BawaIcon name={item.icon} className="size-5" />
-                  </span>
-
-                  <span
-                    className={
-                      collapsed
-                        ? "sr-only"
-                        : "flex min-w-0 items-center gap-2"
-                    }
-                  >
-                    {isActive && (
-                      <span
-                        aria-hidden="true"
-                        className="size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink bg-coral"
-                      />
-                    )}
-                    {/* P3: the active item's coral square steals ~18px
-                        from the label, so at 224px "Track a
-                        transaction" and "Mnemonic backup" clipped to
-                        "Track a transact…" / "Mnemonic back…". The
-                        labels are copy and must not be shortened; the
-                        label wraps to two lines instead. */}
-                    <span className="min-w-0 leading-snug">{item.label}</span>
-                  </span>
-                </>
-              )}
-            </NavLink>
-
-            {item.to === "/send" && (
-              <div aria-hidden="true" className="py-3 text-ink">
-                <SquiggleDivider className="w-full text-ink" />
-              </div>
+        {SIDEBAR_GROUPS.map((group) => (
+          <div key={group.heading} role="group" aria-label={group.heading}>
+            {!collapsed && (
+              <p
+                aria-hidden="true"
+                className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-ink/70"
+              >
+                {group.heading}
+              </p>
             )}
-          </Fragment>
+            {group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                title={collapsed ? item.label : undefined}
+                onMouseEnter={() => onPreloadRoute?.(item.to)}
+                onFocus={() => onPreloadRoute?.(item.to)}
+                className={({ isActive }) =>
+                  [
+                    // UX-major Lane 2: py-3 (44 px row) — the old py-2
+                    // rows were 36 px, below the DESIGN-SYSTEM §2.5
+                    // touch rule for nav items.
+                    "flex w-full items-center gap-3 rounded-bawa px-3 py-3 text-sm font-semibold transition-colors",
+                    collapsed ? "justify-center" : "",
+                    isActive
+                      ? "bg-sun font-semibold text-ink"
+                      : "bg-paper text-ink hover:bg-sun",
+                  ].join(" ")
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span aria-hidden="true" className="shrink-0 text-ink">
+                      <BawaIcon name={item.icon} className="size-5" />
+                    </span>
+
+                    <span
+                      className={
+                        collapsed
+                          ? "sr-only"
+                          : "flex min-w-0 items-center gap-2"
+                      }
+                    >
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink bg-coral"
+                        />
+                      )}
+                      {/* P3: the active item's coral square steals ~18px
+                          from the label, so at 224px "Mnemonic backup"
+                          clipped to "Mnemonic back…". The labels are
+                          copy and must not be shortened; the label wraps
+                          to two lines instead. */}
+                      <span className="min-w-0 leading-snug">{item.label}</span>
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 

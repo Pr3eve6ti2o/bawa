@@ -5,6 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TrackTransactionScreen } from './track-transaction';
+import { LAST_USED_CHAIN_KEY } from './chain-search-select';
 import { getRecentActivity, lookupTransaction } from '../wallet/tracker';
 import { ensureAdapters, useWallet } from '../state/wallet-context';
 
@@ -50,7 +51,7 @@ const btcTx = {
 } as const;
 const btcAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
 
-function mount() {
+function mount(entries: string[] = ['/track']) {
   const div = document.createElement('div');
   document.body.appendChild(div);
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -58,7 +59,7 @@ function mount() {
 
   act(() => {
     root.render(
-      <MemoryRouter initialEntries={['/track']}>
+      <MemoryRouter initialEntries={entries}>
         <TrackTransactionScreen />
       </MemoryRouter>,
     );
@@ -76,6 +77,9 @@ function mount() {
 let mounted: ReturnType<typeof mount> | undefined;
 
 beforeEach(() => {
+  // P1 (Lane S1): the chain starts at the last-used chain now, so a
+  // pick in one test must not leak into the next.
+  localStorage.clear();
   // afterEach resets all mocks, so restore the devnet-off default here.
   vi.mocked(useWallet).mockReturnValue({
     devnetEnabled: false,
@@ -407,5 +411,23 @@ describe('TrackTransactionScreen', () => {
       findButton(div, 'Look up').click();
     });
     expect(lookupTransaction).toHaveBeenCalledWith('btc', btcHash, { address: undefined, devnet: true });
+  });
+
+  it('pre-selects the last-used chain', () => {
+    // P1 (Lane S1): the tracker opens on the last chain picked anywhere.
+    window.localStorage.setItem(LAST_USED_CHAIN_KEY, JSON.stringify('eth'));
+    mounted = mount();
+    const input = mounted.div.querySelector<HTMLInputElement>('#track-chain');
+    expect(input).not.toBeNull();
+    expect(input!.value).toBe('Ethereum');
+  });
+
+  it('lets the ?chain= parameter win over the last-used chain', () => {
+    // The URL is the explicit choice; last-used is only the default.
+    window.localStorage.setItem(LAST_USED_CHAIN_KEY, JSON.stringify('eth'));
+    mounted = mount(['/track?chain=sol']);
+    const input = mounted.div.querySelector<HTMLInputElement>('#track-chain');
+    expect(input).not.toBeNull();
+    expect(input!.value).toBe('Solana');
   });
 });
