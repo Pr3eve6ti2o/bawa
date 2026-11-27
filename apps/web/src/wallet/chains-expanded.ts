@@ -5,6 +5,17 @@
  * price, adapter or UI code was touched. A later lane wires these facts into
  * the wallet (derivation, RPC failover, explorers, price sources, icons).
  *
+ * STATUS (Lane D, 2026-11-27): the wiring the header awaited has
+ * happened — all 65 chains now live in production in chains.ts
+ * (CHAINS / SUPPORTED_CHAINS), with prices, adapters and icons
+ * wired through (chains-expanded-wiring.test.ts proves the
+ * production values match this dataset). This file is KEPT as the
+ * verified dataset and cross-check oracle: the Android registry
+ * generator (scripts/generate-android-registry.mjs) and its test
+ * (tests/android-registry.test.mjs) read it, so dropping it would
+ * break that pipeline. Do not import it into the app — the facts
+ * already ship from chains.ts.
+ *
  * Coverage: 65 NEW chains (45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other)
  * + 3 OKX lanes — Cardano, Starknet, Kaspa), taking the wallet from
  * 22 chains to 87. Every chain was cross-checked against
@@ -88,7 +99,7 @@
 /** Trust Wallet Assets commit pin — verified 2026-11-24 (see header). */
 export const TRUST_WALLET_ASSETS_PIN = "e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e";
 
-export interface ExpandedChainPriceSources {
+interface ExpandedChainPriceSources {
   /** CoinGecko /coins/list id — present on every chain. */
   coingeckoId: string;
   /** CoinLore ticker id (top-2000 tickers), or null when absent. */
@@ -99,7 +110,7 @@ export interface ExpandedChainPriceSources {
   dexScreenerChainId: string | null;
 }
 
-export interface ExpandedChainFacts {
+interface ExpandedChainFacts {
   /** Stable chain key, unique across the expanded set. */
   key: string;
   displayName: string;
@@ -1905,69 +1916,3 @@ export const EXPANDED_CHAIN_COUNT = 65;
 export const expandedChainByKey: Record<string, ExpandedChainFacts> =
   Object.fromEntries(EXPANDED_CHAINS.map((c) => [c.key, c]));
 
-export type ExpandedChainKey =
-  | "zksync"
-  | "cronos"
-  | "kava"
-  | "filecoin"
-  | "zora"
-  | "mode"
-  | "fraxtal"
-  | "berachain"
-  | "sei"
-  | "arbnova"
-  | "worldchain"
-  | "manta"
-  | "unichain"
-  | "ink"
-  | "abstract"
-  | "soneium"
-  | "apechain"
-  | "sonic"
-  | "hyperevm"
-  | "monad"
-  | "ronin"
-  | "immutable"
-  | "fuse"
-  | "velas"
-  | "syscoin"
-  | "theta"
-  | "iotex"
-  | "xlayer"
-  | "boba"
-  | "taiko"
-  | "astar"
-  | "telos"
-  | "conflux"
-  | "core"
-  | "songbird"
-  | "rootstock"
-  | "pulsechain"
-  | "xdc"
-  | "chiliz"
-  | "etc"
-  | "flare"
-  | "zetachain"
-  | "hemi"
-  | "bob"
-  | "flowevm"
-  | "cosmos"
-  | "osmosis"
-  | "xrp"
-  | "stellar"
-  | "polkadot"
-  | "near"
-  | "aptos"
-  | "tezos"
-  | "algorand"
-  | "hedera"
-  | "injective"
-  | "celestia"
-  | "dydx"
-  | "seicosmos"
-  | "axelar"
-  | "noble"
-  | "juno"
-  | "cardano"
-  | "kaspa"
-  | "starknet";

@@ -9,6 +9,7 @@
     "build": "node scripts/copy-wasm.mjs && tsc --noEmit && vite build && npm run palette-audit",
     "build:e2e": "node scripts/copy-wasm.mjs && tsc --noEmit && vite build --base / && npm run palette-audit",
     "palette-audit": "node scripts/palette-audit.mjs",
+    "snapshot:clear-signing": "node scripts/generate-clear-signing-snapshot.mjs",
     "preview": "vite preview",
     "preview:e2e": "vite preview --base /",
     "typecheck": "tsc --noEmit",

@@ -13,17 +13,21 @@ import {
   STONFI_SDK_EXACT_VERSION,
   STONFI_SDK_PACKAGE,
   buildStonfiQuoteRequest,
+  buildStonfiTonOrderTx,
   fetchStonfiQuote,
+  hashHtlcSecret,
   parseStonfiQuote,
   stonfiAssetFor,
   stonfiCoversPair,
 } from './stonfi-quotes';
 import type {
+  StonfiOrderBuilderClient,
   StonfiQuoteInput,
   StonfiRfqClient,
   StonfiRfqEvent,
 } from './stonfi-quotes';
-import type { Quote } from '@ston-fi/omniston-sdk';
+import type { Quote, TonTransaction } from '@ston-fi/omniston-sdk';
+import { hexToBytes, keccak256 } from 'viem';
 import type { SwapTokenChoice } from './swap-quotes';
 
 const TON_USDT: SwapTokenChoice = {
@@ -243,7 +247,10 @@ function orderQuote(overrides: Record<string, unknown> = {}): Quote {
     estimatedSettlementDuration: 13,
     settlementData: {
       $case: 'order',
-      value: { tradeStartDeadline: 4102444800 },
+      value: {
+        tradeStartDeadline: 4102444800,
+        htlcHashingFunction: 'HASHING_FUNCTION_KECCAK256',
+      },
     },
     ...overrides,
   } as unknown as Quote;
@@ -593,5 +600,268 @@ describe('fetchStonfiQuote', () => {
       status: 'unavailable',
       reason: expect.stringContaining('unavailable right now'),
     });
+  });
+});
+
+describe('parseStonfiQuote settlement', () => {
+  it("marks an order quote 'order' and a swap quote 'swap'", () => {
+    expect(parseStonfiQuote(orderQuote())?.settlement).toBe('order');
+    expect(parseStonfiQuote(swapQuote())?.settlement).toBe('swap');
+    expect(parseStonfiQuote(orderQuote())?.htlcHashingFunction).toBe(
+      'HASHING_FUNCTION_KECCAK256',
+    );
+    expect(parseStonfiQuote(swapQuote())?.htlcHashingFunction).toBeNull();
+  });
+
+  it('hashes a secret with keccak256 and SHA-256', async () => {
+    const secret = new Uint8Array(32).fill(7);
+    expect(await hashHtlcSecret(secret, 'HASHING_FUNCTION_KECCAK256')).toEqual(
+      hexToBytes(keccak256(secret)),
+    );
+    expect(await hashHtlcSecret(secret, 'HASHING_FUNCTION_SHA256')).toEqual(
+      new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', secret)),
+    );
+    expect(
+      await hashHtlcSecret(secret, 'UNRECOGNIZED' as never),
+    ).toBeNull();
+  });
+});
+
+describe('buildStonfiTonOrderTx', () => {
+  const TON_ADDRESS = 'UQAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-RKY';
+  const BASE_ADDRESS = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+
+  function makeFakeOrderBuilder(
+    overrides: Partial<StonfiOrderBuilderClient> = {},
+  ) {
+    const calls: { method: 'swap' | 'escrow'; request: unknown }[] = [];
+    let closed = false;
+    const fakeTx = {
+      validUntil: 4102444800,
+      messages: [
+        {
+          address: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',
+          amount: '100000000',
+          payload: 'te6ccgEBAgEA',
+        },
+      ],
+    } as unknown as TonTransaction;
+    const client: StonfiOrderBuilderClient = {
+      transport: {
+        close: () => {
+          closed = true;
+        },
+      },
+      tonBuildSwap: async (request) => {
+        calls.push({ method: 'swap', request });
+        return fakeTx;
+      },
+      tonBuildEscrowTransfer: async (request) => {
+        calls.push({ method: 'escrow', request });
+        return fakeTx;
+      },
+      ...overrides,
+    };
+    return {
+      client,
+      calls,
+      fakeTx,
+      get closed() {
+        return closed;
+      },
+    };
+  }
+
+  it('builds an escrow transfer for an order quote and closes the transport', async () => {
+    const fake = makeFakeOrderBuilder();
+    const result = await buildStonfiTonOrderTx(
+      {
+        fromChain: 'ton',
+        toChain: 'base',
+        quoteId: 'quote-1',
+        settlement: 'order',
+        htlcHashingFunction: 'HASHING_FUNCTION_KECCAK256',
+        fromAddress: TON_ADDRESS,
+        toAddress: BASE_ADDRESS,
+      },
+      { createClient: () => fake.client },
+    );
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.orderTx).toBe(fake.fakeTx);
+    expect(fake.calls).toHaveLength(1);
+    expect(fake.calls[0]?.method).toBe('escrow');
+    const request = fake.calls[0]?.request as {
+      quoteId: string;
+      ownerSrcAddress: { chain: { $case: string; value: string } };
+      traderDstAddress: { chain: { $case: string; value: string } };
+      htlcSecrets: {
+        secretMode: {
+          $case: string;
+          value: { hashes: Uint8Array[] };
+        };
+      };
+    };
+    expect(request.quoteId).toBe('quote-1');
+    expect(request.ownerSrcAddress.chain).toEqual({
+      $case: 'ton',
+      value: TON_ADDRESS,
+    });
+    expect(request.traderDstAddress.chain).toEqual({
+      $case: 'base',
+      value: BASE_ADDRESS,
+    });
+    // Exactly one hash (one execution per HTLC order), provided mode,
+    // and it is the keccak256 of the returned secret.
+    expect(request.htlcSecrets.secretMode.$case).toBe('provided');
+    expect(request.htlcSecrets.secretMode.value.hashes).toHaveLength(1);
+    const secretHex = result.htlcSecretHex;
+    expect(secretHex).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(request.htlcSecrets.secretMode.value.hashes[0]).toEqual(
+      hexToBytes(keccak256(hexToBytes(secretHex as `0x${string}`))),
+    );
+    expect(fake.closed).toBe(true);
+  });
+
+  it('builds an escrow transfer with a SHA-256 hash when the quote says so', async () => {
+    const fake = makeFakeOrderBuilder();
+    const result = await buildStonfiTonOrderTx(
+      {
+        fromChain: 'ton',
+        toChain: 'base',
+        quoteId: 'quote-1b',
+        settlement: 'order',
+        htlcHashingFunction: 'HASHING_FUNCTION_SHA256',
+        fromAddress: TON_ADDRESS,
+        toAddress: BASE_ADDRESS,
+      },
+      { createClient: () => fake.client },
+    );
+    if (!result.ok) throw new Error('expected ok');
+    const request = fake.calls[0]?.request as {
+      htlcSecrets: {
+        secretMode: { value: { hashes: Uint8Array[] } };
+      };
+    };
+    const secretHex = result.htlcSecretHex as `0x${string}`;
+    expect(request.htlcSecrets.secretMode.value.hashes[0]).toEqual(
+      new Uint8Array(
+        await globalThis.crypto.subtle.digest(
+          'SHA-256',
+          new Uint8Array(hexToBytes(secretHex)),
+        ),
+      ),
+    );
+  });
+
+  it('refuses an order build when the quote carries no hashing function', async () => {
+    const fake = makeFakeOrderBuilder();
+    const result = await buildStonfiTonOrderTx(
+      {
+        fromChain: 'ton',
+        toChain: 'base',
+        quoteId: 'quote-1c',
+        settlement: 'order',
+        htlcHashingFunction: null,
+        fromAddress: TON_ADDRESS,
+        toAddress: BASE_ADDRESS,
+      },
+      { createClient: () => fake.client },
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: expect.stringContaining('hashing function'),
+    });
+    expect(fake.calls).toHaveLength(0);
+  });
+
+  it('builds a swap for a swap settlement', async () => {
+    const fake = makeFakeOrderBuilder();
+    const result = await buildStonfiTonOrderTx(
+      {
+        fromChain: 'ton',
+        toChain: 'ton',
+        quoteId: 'quote-2',
+        settlement: 'swap',
+        htlcHashingFunction: null,
+        fromAddress: TON_ADDRESS,
+        toAddress: TON_ADDRESS,
+      },
+      { createClient: () => fake.client },
+    );
+    expect(result).toMatchObject({ ok: true, htlcSecretHex: null });
+    expect(fake.calls[0]?.method).toBe('swap');
+    expect(
+      'htlcSecrets' in (fake.calls[0]?.request as Record<string, unknown>),
+    ).toBe(false);
+    expect(fake.closed).toBe(true);
+  });
+
+  it('rejects a non-TON source without creating a client', async () => {
+    const result = await buildStonfiTonOrderTx(
+      {
+        fromChain: 'eth',
+        toChain: 'ton',
+        quoteId: 'quote-3',
+        settlement: 'order',
+        htlcHashingFunction: 'HASHING_FUNCTION_KECCAK256',
+        fromAddress: BASE_ADDRESS,
+        toAddress: TON_ADDRESS,
+      },
+      {
+        createClient: () => {
+          throw new Error('must not create a client');
+        },
+      },
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: expect.stringContaining('TON-source'),
+    });
+  });
+
+  it('rejects an unsupported destination chain without calling the builder', async () => {
+    const fake = makeFakeOrderBuilder();
+    const result = await buildStonfiTonOrderTx(
+      {
+        fromChain: 'ton',
+        toChain: 'kaspa',
+        quoteId: 'quote-4',
+        settlement: 'order',
+        htlcHashingFunction: 'HASHING_FUNCTION_KECCAK256',
+        fromAddress: TON_ADDRESS,
+        toAddress: 'kaspa:qz0x',
+      },
+      { createClient: () => fake.client },
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: expect.stringContaining('unsupported chain'),
+    });
+    expect(fake.calls).toHaveLength(0);
+  });
+
+  it('returns unavailable when the builder throws, and still closes the transport', async () => {
+    const fake = makeFakeOrderBuilder({
+      tonBuildEscrowTransfer: async () => {
+        throw new Error('boom');
+      },
+    });
+    const result = await buildStonfiTonOrderTx(
+      {
+        fromChain: 'ton',
+        toChain: 'base',
+        quoteId: 'quote-5',
+        settlement: 'order',
+        htlcHashingFunction: 'HASHING_FUNCTION_KECCAK256',
+        fromAddress: TON_ADDRESS,
+        toAddress: BASE_ADDRESS,
+      },
+      { createClient: () => fake.client },
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: expect.stringContaining('unavailable right now'),
+    });
+    expect(fake.closed).toBe(true);
   });
 });

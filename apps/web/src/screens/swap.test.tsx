@@ -10,6 +10,8 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { SwapScreen } from './swap';
 import { useWallet } from '../state/wallet-context';
+import type { StonfiQuoteInput } from '../wallet/stonfi-quotes';
+import type { ChainId } from '../engine/boundary';
 
 vi.mock('../state/wallet-context', async (importOriginal) => {
   const actual =
@@ -20,12 +22,94 @@ vi.mock('../state/wallet-context', async (importOriginal) => {
   };
 });
 
+// D-16 sign flow: the STON.fi quote is canned (real coverage check),
+// the order builder returns a canned unsigned transaction, and the
+// vault + TON adapter are stubbed — signing runs end to end on the
+// screen with no network and no real key.
+vi.mock('../wallet/stonfi-quotes', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../wallet/stonfi-quotes')>();
+  return {
+    ...actual,
+    fetchStonfiQuote: vi.fn(async (input: StonfiQuoteInput) => {
+      const coverage = actual.stonfiCoversPair(
+        input.fromChain,
+        input.fromToken,
+        input.toChain,
+        input.toToken,
+      );
+      if (!coverage.covered) {
+        return { status: 'not-covered', reason: coverage.reason };
+      }
+      return {
+        status: 'ok',
+        quote: {
+          quoteId: 'quote-test-1',
+          settlement: 'order',
+          toAmountBaseUnits: '972487',
+          toAmountMinBaseUnits: null,
+          estimatedSettlementDurationSeconds: 13,
+          tradeStartDeadlineMs: 4102444800 * 1000,
+          fetchedAtMs: Date.now(),
+        },
+      };
+    }),
+    buildStonfiTonOrderTx: vi.fn(async () => ({
+      ok: true,
+      orderTx: { validUntil: 4102444800, messages: [] },
+      htlcSecretHex: `0x${'ab'.repeat(32)}`,
+    })),
+  };
+});
+
+vi.mock('../wallet/stonfi-signing', () => ({
+  signStonfiOrderTonOffline: vi.fn(async () => ({
+    ok: true,
+    messageHash: 'aabbccddeeff',
+    messageCount: 1,
+    validUntil: 4102444800,
+    from: 'UQAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-RKY',
+  })),
+}));
+
+vi.mock('../wallet/vault', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../wallet/vault')>();
+  return {
+    ...actual,
+    withMnemonicAsync: vi.fn(
+      async (fn: (mnemonic: string) => unknown) =>
+        fn(
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        ),
+    ),
+    getSessionPassphrase: vi.fn(() => ''),
+  };
+});
+
+vi.mock('../wallet/adapters', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../wallet/adapters')>();
+  return {
+    ...actual,
+    getAdapterForMode: vi.fn((chain: ChainId, devnet: boolean) => {
+      if (chain !== 'ton') return actual.getAdapterForMode(chain, devnet);
+      return {
+        getTxInputs: async () => ({
+          status: 'ok' as const,
+          data: { kind: 'seqno' as const, seqno: 7 },
+        }),
+      };
+    }),
+  };
+});
+
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
 
 const FROM = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
 const RECIPIENT = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+const TON_ADDRESS = 'UQAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-RKY';
 
 const LIFI_OK_FIXTURE = {
   type: 'lifi',
@@ -272,6 +356,26 @@ async function pickToken(
   expect(chip).not.toBeUndefined();
   await act(async () => {
     (chip as HTMLButtonElement).click();
+  });
+}
+
+async function pickChain(
+  div: HTMLDivElement,
+  selectId: string,
+  chain: string,
+  query: string,
+): Promise<void> {
+  const input = div.querySelector(`#${selectId}`) as HTMLInputElement | null;
+  expect(input).not.toBeNull();
+  await act(async () => {
+    setInputValue(input as HTMLInputElement, query);
+  });
+  const option = div.querySelector(
+    `#${selectId}-option-${chain}`,
+  ) as HTMLElement | null;
+  expect(option).not.toBeNull();
+  await act(async () => {
+    (option as HTMLElement).click();
   });
 }
 
@@ -625,6 +729,85 @@ describe('SwapScreen', () => {
         'Above the $50.00 maximum per destination chain.',
       );
       expect(findButton(mounted.div, 'Get refuel quote').disabled).toBe(true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('discloses quote data sharing on the Swap screen', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Getting a quote sends your from and to addresses to LI.FI',
+      );
+      expect(mounted.div.textContent).toContain(
+        'STON.fi receives no wallet address',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Relay receives none today because no proxy is set up',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('signs a TON-source STON.fi order offline and shows the signed BoC, never sending it', async () => {
+    setWallet({
+      vaultAddresses: { ton: [TON_ADDRESS], base: [RECIPIENT] },
+      balances: {
+        ton: { status: 'available', value: '10000000000' },
+        base: { status: 'available', value: '1000000000000000000' },
+      },
+    });
+    stubFetch(LIFI_OK_FIXTURE);
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'swap-from-chain', 'ton', 'TON');
+      await pickToken(mounted.div, 'Token on TON', 'USD₮');
+      await pickChain(mounted.div, 'swap-to-chain', 'base', 'Base');
+      await pickToken(mounted.div, 'Token on Base', 'USDC');
+      await enterAmount(mounted.div, '1');
+      await click(mounted.div, 'Get quote');
+      await waitForText(mounted.div, 'Compare providers');
+      await waitForText(mounted.div, 'TON signing for STON.fi orders is wired');
+      expect(findButton(mounted.div, 'Sign order')).not.toBeUndefined();
+      await click(mounted.div, 'Sign order');
+      await waitForText(mounted.div, 'Signed, not broadcast');
+      expect(mounted.div.textContent).toContain(`signed from ${TON_ADDRESS}`);
+      expect(mounted.div.textContent).toContain('Message hash aabbccddeeff');
+      expect(mounted.div.textContent).toContain('nothing was sent');
+      expect(mounted.div.textContent).toContain(
+        'held in memory for this session only',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('offers no signing when TON is only the destination leg', async () => {
+    setWallet({
+      vaultAddresses: { base: [RECIPIENT], ton: [TON_ADDRESS] },
+      balances: {
+        base: { status: 'available', value: '1000000000000000000' },
+        ton: { status: 'available', value: '10000000000' },
+      },
+    });
+    stubFetch(LIFI_OK_FIXTURE);
+    const mounted = await mountScreen();
+    try {
+      await pickChain(mounted.div, 'swap-from-chain', 'base', 'Base');
+      await pickToken(mounted.div, 'Token on Base', 'USDC');
+      await pickChain(mounted.div, 'swap-to-chain', 'ton', 'TON');
+      await pickToken(mounted.div, 'Token on TON', 'USD₮');
+      await enterAmount(mounted.div, '1');
+      await click(mounted.div, 'Get quote');
+      await waitForText(mounted.div, 'Compare providers');
+      await waitForText(mounted.div, 'STON.fi');
+      expect(mounted.div.textContent).not.toContain('Sign order');
+      expect(mounted.div.textContent).not.toContain(
+        'TON signing for STON.fi orders is wired',
+      );
     } finally {
       await mounted.cleanup();
     }

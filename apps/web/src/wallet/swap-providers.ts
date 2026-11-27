@@ -50,7 +50,7 @@ export const PROVIDER_INFO: Record<
 };
 
 /** Preference order for route selection (cheapest wins first). */
-export const PROVIDER_PREFERENCE: readonly SwapProviderId[] = [
+const PROVIDER_PREFERENCE: readonly SwapProviderId[] = [
   'relay',
   'stonfi',
   'lifi',
@@ -91,7 +91,7 @@ export function uncoveredReasonFor(chain: ChainId): string {
   return `No swap provider covers ${chainConfig(chain).displayName} yet.`;
 }
 
-export type ProviderPairStatus =
+type ProviderPairStatus =
   | { provider: SwapProviderId; status: 'covered' }
   | { provider: SwapProviderId; status: 'not-covered'; reason: string };
 

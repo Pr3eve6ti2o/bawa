@@ -23,9 +23,12 @@
 // USDC on Base) and compete in the comparison where the corridor
 // covers the pair (see wallet/stonfi-quotes.ts). There is no
 // execution path here: the LI.FI response's `transactionRequest` is
-// never read, nothing signs, and mainnet broadcast stays DISABLED
-// until separately authorised. The "What happens next" card says so
-// plainly. A pair no provider covers shows "no route", never a
+// never read, and mainnet broadcast stays DISABLED until separately
+// authorised. One signing step IS wired (Lane D, 2026-11-27): a
+// STON.fi quote whose source is TON can be signed offline — the
+// screen builds the order transaction and signs it with the vault
+// key, returning a signed BoC only. Nothing is sent, registered or
+// broadcast. The "What happens next" card says so plainly. A pair no provider covers shows "no route", never a
 // guessed number; a failed fetch shows an honest unavailable
 // message. Quotes go stale in about a minute, so changing the
 // amount, either side, or the recipient clears the quote and a fresh
@@ -100,6 +103,7 @@ import {
 import {
   STONFI_SDK_EXACT_VERSION,
   STONFI_TON_SIGNING_MESSAGE,
+  buildStonfiTonOrderTx,
   fetchStonfiQuote,
   type StonfiQuoteResult,
 } from '../wallet/stonfi-quotes';
@@ -112,6 +116,9 @@ import {
   type ComparableQuote,
   type SwapProviderId,
 } from '../wallet/swap-providers';
+import { signStonfiOrderTonOffline } from '../wallet/stonfi-signing';
+import { getAdapterForMode } from '../wallet/adapters';
+import { getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import type { ChainId } from '../engine/boundary';
 
 /** Native coin of a chain, as a swap choice. */
@@ -300,6 +307,21 @@ type RelayState = RelayQuoteResult | null;
 /** STON.fi quote result for the comparison (null until a quote is attempted). */
 type StonfiState = StonfiQuoteResult | null;
 
+/** STON.fi TON order signing: sign-only, never broadcast. */
+type StonfiSignState =
+  | { status: 'idle' }
+  | { status: 'signing' }
+  | {
+      status: 'signed';
+      messageHash: string;
+      messageCount: number;
+      validUntil: number;
+      from: string;
+      /** Hex of the generated HTLC secret, held in memory for this session only — never shown or stored. Execution + disclosure are not wired yet. */
+      htlcSecretHex: string | null;
+    }
+  | { status: 'error'; reason: string };
+
 type RefuelChainsState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -314,7 +336,7 @@ type RefuelQuoteState =
   | { status: 'unavailable'; reason: string };
 
 export function SwapScreen() {
-  const { vaultState, vaultAddresses, balances, tokenBalances, devnetEnabled } =
+  const { vaultState, vaultAddresses, vaultAccount, balances, tokenBalances, devnetEnabled } =
     useWallet();
   const [fromChain, setFromChain] = useState<ChainId>('eth');
   const [toChain, setToChain] = useState<ChainId>('matic');
@@ -329,6 +351,8 @@ export function SwapScreen() {
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: 'idle' });
   const [relayState, setRelayState] = useState<RelayState>(null);
   const [stonfiState, setStonfiState] = useState<StonfiState>(null);
+  const [stonfiSignState, setStonfiSignState] =
+    useState<StonfiSignState>({ status: 'idle' });
   const [refuelOpen, setRefuelOpen] = useState(false);
   const [refuelChainsState, setRefuelChainsState] =
     useState<RefuelChainsState>({ status: 'idle' });
@@ -366,6 +390,7 @@ export function SwapScreen() {
     setQuoteState({ status: 'idle' });
     setRelayState(null);
     setStonfiState(null);
+    setStonfiSignState({ status: 'idle' });
   }, [fromChain, toChain, fromToken, toToken, amount, recipient]);
 
   // A refuel quote belongs to one exact request too: changing either
@@ -487,6 +512,114 @@ export function SwapScreen() {
     } else {
       setQuoteState({ status: 'unavailable', reason: result.reason });
     }
+  }
+
+  /**
+   * Sign a STON.fi TON-source order offline (Lane D, 2026-11-27):
+   * build the unsigned order transaction from the live quote, fetch
+   * the wallet's TON seqno, sign with the vault key. Sign-only: the
+   * signed BoC is shown, never sent, registered or broadcast —
+   * execution needs the owner's separate broadcast authorisation.
+   */
+  async function handleSignStonfiOrder(): Promise<void> {
+    if (stonfiState?.status !== 'ok' || fromChain !== 'ton') return;
+    if (stonfiSignState.status === 'signing') return;
+    if (fromAddress === null) return;
+    if (recipientError !== null) return;
+    const quote = stonfiState.quote;
+    if (
+      quote.settlement === 'order' &&
+      quote.tradeStartDeadlineMs !== null &&
+      quote.tradeStartDeadlineMs <= Date.now()
+    ) {
+      setStonfiSignState({
+        status: 'error',
+        reason:
+          'This STON.fi quote has passed its trade-start deadline — fetch a fresh quote and sign that one.',
+      });
+      return;
+    }
+    setStonfiSignState({ status: 'signing' });
+    const built = await buildStonfiTonOrderTx({
+      fromChain,
+      toChain,
+      quoteId: quote.quoteId,
+      settlement: quote.settlement,
+      htlcHashingFunction: quote.htlcHashingFunction,
+      fromAddress,
+      toAddress: recipient.trim(),
+    });
+    if (!built.ok) {
+      setStonfiSignState({ status: 'error', reason: built.reason });
+      return;
+    }
+    const adapter = getAdapterForMode('ton', devnetEnabled);
+    if (!adapter) {
+      setStonfiSignState({
+        status: 'error',
+        reason: 'The TON adapter is not available, so the order cannot be signed.',
+      });
+      return;
+    }
+    let seqno: number;
+    try {
+      const inputs = await adapter.getTxInputs(fromAddress);
+      if (inputs.status !== 'ok') {
+        setStonfiSignState({ status: 'error', reason: inputs.reason });
+        return;
+      }
+      if (inputs.data.kind !== 'seqno') {
+        setStonfiSignState({
+          status: 'error',
+          reason: 'The TON adapter did not return a seqno, so the order cannot be signed.',
+        });
+        return;
+      }
+      seqno = inputs.data.seqno;
+    } catch (error: unknown) {
+      setStonfiSignState({
+        status: 'error',
+        reason:
+          error instanceof Error
+            ? error.message
+            : 'Could not read the TON seqno.',
+      });
+      return;
+    }
+    let signed: Awaited<ReturnType<typeof signStonfiOrderTonOffline>>;
+    try {
+      signed = await withMnemonicAsync((mnemonic) =>
+        signStonfiOrderTonOffline(
+          mnemonic,
+          getSessionPassphrase(),
+          built.orderTx,
+          seqno,
+          { account: vaultAccount?.account ?? 0 },
+        ),
+      );
+    } catch (error: unknown) {
+      setStonfiSignState({
+        status: 'error',
+        reason:
+          error instanceof Error &&
+          error.message === 'Vault is not unlocked.'
+            ? 'Your wallet is locked. Unlock it to sign the order.'
+            : 'The order could not be signed.',
+      });
+      return;
+    }
+    if (!signed.ok) {
+      setStonfiSignState({ status: 'error', reason: signed.reason });
+      return;
+    }
+    setStonfiSignState({
+      status: 'signed',
+      messageHash: signed.messageHash,
+      messageCount: signed.messageCount,
+      validUntil: signed.validUntil,
+      from: signed.from,
+      htlcSecretHex: built.htlcSecretHex,
+    });
   }
 
   function handleFlip(): void {
@@ -882,7 +1015,7 @@ export function SwapScreen() {
       {quoteState.status === 'idle' && (
         <p className="text-sm text-muted-foreground">
           No quote yet — enter an amount and get a quote. Quotes are live
-          from LI.FI and free to check; getting one signs and sends nothing.
+          from LI.FI and free to check; getting one signs nothing and moves no funds.
         </p>
       )}
       {quoteState.status === 'loading' && (
@@ -1080,8 +1213,68 @@ export function SwapScreen() {
                     — fetch a fresh one before acting on it.
                   </p>
                 )}
-                {(fromChain === 'ton' || toChain === 'ton') && (
-                  <p>{STONFI_TON_SIGNING_MESSAGE}</p>
+                {fromChain === 'ton' && (
+                  <>
+                    <p>{STONFI_TON_SIGNING_MESSAGE}</p>
+                    {stonfiSignState.status === 'idle' && (
+                      <>
+                        <p>
+                          Signing the order returns a signed BoC only —
+                          nothing is sent, registered or broadcast.
+                          Execution still needs the owner&apos;s separate
+                          broadcast authorisation.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="lg"
+                          onClick={() => void handleSignStonfiOrder()}
+                        >
+                          Sign order
+                        </Button>
+                      </>
+                    )}
+                    {stonfiSignState.status === 'signing' && (
+                      <p aria-live="polite">Signing the order…</p>
+                    )}
+                    {stonfiSignState.status === 'signed' && (
+                      <>
+                        <p role="status">
+                          Signed, not broadcast. The order is signed from{' '}
+                          {stonfiSignState.from} ({stonfiSignState.messageCount}{' '}
+                          message{stonfiSignState.messageCount === 1 ? '' : 's'},
+                          valid until{' '}
+                          {new Date(
+                            stonfiSignState.validUntil * 1000,
+                          ).toLocaleTimeString('en-GB')}
+                          . Execution needs the owner&apos;s separate broadcast
+                          authorisation — nothing was sent.
+                        </p>
+                        <p className="break-all">
+                          Message hash {stonfiSignState.messageHash}
+                        </p>
+                        <p>
+                          The order&apos;s HTLC secret is held in memory
+                          for this session only — it is never shown or
+                          stored. Execution and secret disclosure are not
+                          wired yet.
+                        </p>
+                      </>
+                    )}
+                    {stonfiSignState.status === 'error' && (
+                      <>
+                        <p role="alert">{stonfiSignState.reason}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="lg"
+                          onClick={() => void handleSignStonfiOrder()}
+                        >
+                          Try signing again
+                        </Button>
+                      </>
+                    )}
+                  </>
                 )}
               </>
             ) : stonfiState.status === 'no-quote' ? (
@@ -1227,7 +1420,7 @@ export function SwapScreen() {
             {refuelQuoteState.status === 'idle' && (
               <p className="text-sm text-muted-foreground">
                 No refuel quote yet — enter an amount and get one. Getting
-                one signs and sends nothing.
+                one signs nothing and moves no funds.
               </p>
             )}
             {refuelQuoteState.status === 'loading' && (
@@ -1329,7 +1522,15 @@ export function SwapScreen() {
           installed for the TON corridor, and TON order signing is
           wired. Executing a quote needs the owner&apos;s separate
           broadcast authorisation, which stays switched off until
-          approved. Nothing on this screen signs or sends anything.
+          approved. A STON.fi order whose source is TON can be signed
+          offline here — the signed BoC is shown and nothing is sent.
+          Nothing else on this screen signs or sends anything.
+        </p>
+        <p className="leading-relaxed text-muted-foreground">
+          Getting a quote sends your from and to addresses to LI.FI so it
+          can price the pair — and to gas.zip for a refuel quote. STON.fi
+          receives no wallet address, and Relay receives none today
+          because no proxy is set up.
         </p>
         <Link
           to="/send"

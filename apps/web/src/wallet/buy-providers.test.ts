@@ -258,7 +258,7 @@ describe('openBuyProviderUrl', () => {
       expect(openSpy).toHaveBeenCalledWith(
         'about:blank',
         '_blank',
-        'width=430,height=600',
+        'width=430,height=600,noopener',
       );
       expect(popup.location.href).toBe(
         'https://app.ramp.network/?hostApiKey=k',

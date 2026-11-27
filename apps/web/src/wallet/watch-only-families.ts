@@ -172,11 +172,3 @@ export function watchOnlyValueKind(
 function looksLikeExtendedKey(value: string): boolean {
   return /^(?:xpub|ypub|zpub|Ltub|dpub|dgub)[1-9A-HJ-NP-Za-km-z]{100,120}$/.test(value);
 }
-
-/** True when the stored watch-only value is a plain public address. */
-export function isWatchOnlyAddressValue(
-  chain: ChainId,
-  value: string,
-): boolean {
-  return watchOnlyValueKind(chain, value) === 'address';
-}

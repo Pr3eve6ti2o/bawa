@@ -63,40 +63,38 @@ import { isRecord, ownValue } from './guards';
 import type { ChainId } from '../engine/boundary';
 import type { SwapTokenChoice } from './swap-quotes';
 
-/** Relay public API base. Only used through the proxy — never directly. */
-export const RELAY_API_BASE_URL = 'https://api.relay.link';
 /** Build-time env name for the Relay proxy base URL (no key in the app). */
 export const RELAY_PROXY_URL_ENV = 'VITE_RELAY_PROXY_URL';
 /** One quote attempt gets 15 s; a hung provider must not hang the form. */
-export const RELAY_QUOTE_TIMEOUT_MS = 15_000;
+const RELAY_QUOTE_TIMEOUT_MS = 15_000;
 /** Native-token placeholder Relay expects on EVM chains. */
-export const RELAY_NATIVE_EVM_ADDRESS =
+const RELAY_NATIVE_EVM_ADDRESS =
   '0x0000000000000000000000000000000000000000';
 /** Native SOL, from Relay's live /chains (same value LI.FI uses). */
-export const RELAY_NATIVE_SOL_ADDRESS = '11111111111111111111111111111111';
+const RELAY_NATIVE_SOL_ADDRESS = '11111111111111111111111111111111';
 /** Native BTC, from Relay's live /chains (its placeholder address). */
-export const RELAY_NATIVE_BTC_ADDRESS =
+const RELAY_NATIVE_BTC_ADDRESS =
   'bc1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmql8k8';
 /** Native Toncoin (GRAM), from Relay's live /chains. */
-export const RELAY_NATIVE_TON_ADDRESS =
+const RELAY_NATIVE_TON_ADDRESS =
   'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
 /** Native TRX, from Relay's live /chains. */
-export const RELAY_NATIVE_TRX_ADDRESS =
+const RELAY_NATIVE_TRX_ADDRESS =
   'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
 /** USDT on TRON (TRC-20), from Relay's live /chains. */
-export const RELAY_TRON_USDT_ADDRESS =
+const RELAY_TRON_USDT_ADDRESS =
   'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 /** Native XRP, from Relay's live /chains. */
-export const RELAY_NATIVE_XRP_ADDRESS = 'xrp';
+const RELAY_NATIVE_XRP_ADDRESS = 'xrp';
 /** Relay's own chain ids for the non-EVM chains (live /chains). */
-export const RELAY_BITCOIN_CHAIN_ID = 8253038;
-export const RELAY_SOLANA_CHAIN_ID = 792703809;
-export const RELAY_TON_CHAIN_ID = 224235520;
-export const RELAY_TRON_CHAIN_ID = 728126428;
-export const RELAY_XRP_CHAIN_ID = 537724;
+const RELAY_BITCOIN_CHAIN_ID = 8253038;
+const RELAY_SOLANA_CHAIN_ID = 792703809;
+const RELAY_TON_CHAIN_ID = 224235520;
+const RELAY_TRON_CHAIN_ID = 728126428;
+const RELAY_XRP_CHAIN_ID = 537724;
 
 /** Bawa EVM chains in Relay's live /chains (verified 2026-11-26). */
-export const RELAY_EVM_CHAINS: ReadonlySet<ChainId> = new Set<ChainId>([
+const RELAY_EVM_CHAINS: ReadonlySet<ChainId> = new Set<ChainId>([
   'eth', 'op', 'cronos', 'bsc', 'gnosis', 'unichain', 'matic', 'monad',
   'sonic', 'manta', 'xlayer', 'boba', 'zksync', 'worldchain', 'flowevm',
   'hyperevm', 'metis', 'soneium', 'ronin', 'abstract', 'mantle', 'base',
@@ -104,7 +102,7 @@ export const RELAY_EVM_CHAINS: ReadonlySet<ChainId> = new Set<ChainId>([
   'berachain', 'scroll', 'zora',
 ]);
 
-export const RELAY_NOT_CONFIGURED_MESSAGE =
+const RELAY_NOT_CONFIGURED_MESSAGE =
   'Relay quotes need a proxy or access-token endpoint — not set up yet';
 const RELAY_UNAVAILABLE_MESSAGE =
   'Relay quotes are unavailable right now. Check your connection and try again.';
@@ -184,7 +182,7 @@ export function relayCurrencyAddress(
 }
 
 /** A live Relay quote, parsed down to what the screen shows. */
-export interface RelayQuote {
+interface RelayQuote {
   /** Top-level requestId, for status tracking (never executed here). */
   requestId: string;
   /** Amount the recipient would get, in the destination token's units. */
@@ -224,7 +222,7 @@ export interface RelayQuoteInput {
   toAddress: string;
 }
 
-export interface RelayQuoteDeps {
+interface RelayQuoteDeps {
   fetchFn?: typeof fetch;
   /** Proxy base URL override (tests); otherwise the env is read. */
   proxyUrl?: string | null;
@@ -387,7 +385,7 @@ export async function fetchRelayQuote(
 }
 
 /** Minimal per-chain record from the live `GET /chains` response. */
-export interface RelayChainRecord {
+interface RelayChainRecord {
   id: number;
   name: string;
   vmType: string;

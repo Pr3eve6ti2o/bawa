@@ -63,7 +63,7 @@ const STONFI_TON_SEND_MODE = 3;
 /** Default validity window, seconds (same as signTonOffline). */
 const STONFI_TON_DEFAULT_VALIDITY_SECONDS = 600;
 
-export type StonfiTonSignedOrder =
+type StonfiTonSignedOrder =
   | {
       ok: true;
       /** Signed external-message BoC, standard base64. Sign only — never sent. */

@@ -413,10 +413,10 @@ Track confirmations and chain reorganisations (reorgs). Account for the possibil
 - Free: keyless default 1 request/second (the docs disagree with each other — 1 request per 4 seconds in one place, 1 per second in another — unresolved); a free key (Start plan) gives 1 request/second. TonAPI is also the price fallback for TON; its tiers are listed in full in [ADR-0007](../adr/0007-price-feed-provider.md).
 - Paid: Lite $9.90/month, 10 requests/second; Standard $95/month, 100; Plus $290/month, 300; Heavy $890/month, 1,000. Source: console.tonapi.io pricing.
 
-**Solana Vibe Station** — a public Solana RPC. The wallet uses it only as the Solana backup (`https://public.rpc.solanavibestation.com`).
+**Solana PublicNode** — a public Solana RPC. The wallet uses it only as the Solana backup (`https://solana.publicnode.com`).
 
 - Free: public, no key.
-- Paid / limits: no published limit or paid tier found — unverified. A third-party measurement (November 2026) held about 1 request/second, which is why it is the backup, not the primary.
+- Paid / limits: no published limit or paid tier found — unverified.
 
 **mempool.space** — the open-source Bitcoin explorer and Esplora-compatible REST API. The wallet uses it as the primary Bitcoin balance and history source (`https://mempool.space/api`). Links: <https://mempool.space>, <https://mempool.space/docs/api/rest>.
 
@@ -451,7 +451,7 @@ Per-chain endpoint table (registry order is primary first; the adapter tries the
 | Ethereum (eth) | 1 | `https://ethereum-rpc.publicnode.com`, `https://1rpc.io/eth` |
 | TRON (trx) | — | `https://api.trongrid.io` |
 | TON (ton) | — | `https://toncenter.com/api/v2/jsonRPC` (+ TonAPI balance fallback) |
-| Solana (sol) | — | `https://solana-rpc.publicnode.com`, `https://public.rpc.solanavibestation.com` |
+| Solana (sol) | — | `https://solana-rpc.publicnode.com`, `https://solana.publicnode.com` |
 | BNB Smart Chain (bsc) | 56 | `https://bsc-rpc.publicnode.com`, `https://bsc-dataseed.binance.org` |
 | Polygon (matic) | 137 | `https://polygon-bor-rpc.publicnode.com` |
 | Arbitrum One (arb) | 42161 | `https://arbitrum-rpc.publicnode.com` |
@@ -470,7 +470,7 @@ Per-chain endpoint table (registry order is primary first; the adapter tries the
 | Aurora (aurora) | 1313161554 | `https://mainnet.aurora.dev`, `https://1rpc.io/aurora` |
 | Fantom (fantom) | 250 | `https://rpc.fantom.network`, `https://rpc2.fantom.network` |
 
-Two cross-checks against the code: the adapters hardcode the same defaults as the registry (ETH adapter pins `ethereum-rpc.publicnode.com`, the BTC adapter pins mempool.space then Blockstream, the Solana adapter pins PublicNode then Vibe Station) — registry and adapter agree. And `https://ethereum.publicnode.com` appears only in a comment (`apps/web/src/engine/destination.ts:548`, a chain-id probe note) — it is **not** a configured endpoint, so it is not listed above. The owner can add a custom endpoint per chain in the RPC manager; `validateRpcEndpoint` (`chains.ts`) requires https only, no embedded credentials, no query or fragment, at most 3 endpoints per chain (`MAX_RPC_ENDPOINTS_PER_CHAIN`), and registry endpoints can never be removed — only demoted.
+Two cross-checks against the code: the adapters hardcode the same defaults as the registry (ETH adapter pins `ethereum-rpc.publicnode.com`, the BTC adapter pins mempool.space then Blockstream, the Solana adapter pins PublicNode for both endpoints (solana-rpc.publicnode.com primary, solana.publicnode.com backup)) — registry and adapter agree. And `https://ethereum.publicnode.com` appears only in a comment (`apps/web/src/engine/destination.ts:548`, a chain-id probe note) — it is **not** a configured endpoint, so it is not listed above. The owner can add a custom endpoint per chain in the RPC manager; `validateRpcEndpoint` (`chains.ts`) requires https only, no embedded credentials, no query or fragment, at most 3 endpoints per chain (`MAX_RPC_ENDPOINTS_PER_CHAIN`), and registry endpoints can never be removed — only demoted.
 
 #### History indexers — summary
 

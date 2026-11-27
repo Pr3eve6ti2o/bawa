@@ -74,37 +74,31 @@ function readEnv(name: string): string | null {
 }
 
 /** Ramp production key. Public by Ramp's own design (support article, updated 2026-11-12): "disclosing your API key within the URL is completely safe … it's specifically designed to be placed on the front end." */
-export const RAMP_HOST_API_KEY_ENV = 'VITE_RAMP_HOST_API_KEY';
+const RAMP_HOST_API_KEY_ENV = 'VITE_RAMP_HOST_API_KEY';
 export function rampHostApiKey(): string | null {
   return readEnv(RAMP_HOST_API_KEY_ENV);
 }
 
-/** Optional Ramp branding logo URL (Ramp's hostLogoUrl). No value is shipped; the owner may set one. */
-export const RAMP_HOST_LOGO_URL_ENV = 'VITE_RAMP_HOST_LOGO_URL';
-export function rampHostLogoUrl(): string | null {
-  return readEnv(RAMP_HOST_LOGO_URL_ENV);
-}
-
 /** MoonPay publishable key (pk_live_…). Safe in the app. The secret key (sk_live_…) is NEVER read here. */
-export const MOONPAY_API_KEY_ENV = 'VITE_MOONPAY_API_KEY';
+const MOONPAY_API_KEY_ENV = 'VITE_MOONPAY_API_KEY';
 export function moonpayPublishableKey(): string | null {
   return readEnv(MOONPAY_API_KEY_ENV);
 }
 
 /** Onramper API key. A public identifier in the widget URL. */
-export const ONRAMPER_API_KEY_ENV = 'VITE_ONRAMPER_API_KEY';
+const ONRAMPER_API_KEY_ENV = 'VITE_ONRAMPER_API_KEY';
 export function onramperApiKey(): string | null {
   return readEnv(ONRAMPER_API_KEY_ENV);
 }
 
 /** Banxa partner subdomain (partnerRef). The only thing the Referral path needs — no key at all. */
-export const BANXA_PARTNER_REF_ENV = 'VITE_BANXA_PARTNER_REF';
+const BANXA_PARTNER_REF_ENV = 'VITE_BANXA_PARTNER_REF';
 export function banxaPartnerRef(): string | null {
   return readEnv(BANXA_PARTNER_REF_ENV);
 }
 
 /** Mercuryo widget ID. Public, in the redirect URL. */
-export const MERCURYO_WIDGET_ID_ENV = 'VITE_MERCURYO_WIDGET_ID';
+const MERCURYO_WIDGET_ID_ENV = 'VITE_MERCURYO_WIDGET_ID';
 export function mercuryoWidgetId(): string | null {
   return readEnv(MERCURYO_WIDGET_ID_ENV);
 }
@@ -210,7 +204,7 @@ export function moonpayCurrencyFor(chain: ChainId): string | null {
  * more networks than this pre-fill map; the map gates only the
  * address/asset pre-fill, never the redirect itself.
  */
-export const BANXA_COIN_BY_CHAIN: Readonly<
+const BANXA_COIN_BY_CHAIN: Readonly<
   Partial<Record<ChainId, { coinType: string; blockchain: string }>>
 > = {
   btc: { coinType: 'BTC', blockchain: 'BTC' },
@@ -263,7 +257,7 @@ export function onramperSupportsChain(chain: ChainId): boolean {
 // ---------------------------------------------------------------------------
 
 /** Stablecoins Ramp does not sell in the EU/EEA under MiCA. */
-export const RAMP_EU_EEA_BLOCKED_STABLECOINS: readonly string[] = [
+const RAMP_EU_EEA_BLOCKED_STABLECOINS: readonly string[] = [
   'USDT',
   'USDT0',
   'DAI',
@@ -271,7 +265,7 @@ export const RAMP_EU_EEA_BLOCKED_STABLECOINS: readonly string[] = [
 ];
 
 /** US states (plus Puerto Rico) Ramp does not serve. */
-export const RAMP_UNSERVED_US_STATES: readonly string[] = [
+const RAMP_UNSERVED_US_STATES: readonly string[] = [
   'LA',
   'MN',
   'NV',
@@ -284,7 +278,7 @@ export const RAMP_UNSERVED_US_STATES: readonly string[] = [
 ];
 
 /** Stablecoins (Ramp sells none of these in Texas). */
-export const RAMP_STABLECOINS: readonly string[] = [
+const RAMP_STABLECOINS: readonly string[] = [
   ...RAMP_EU_EEA_BLOCKED_STABLECOINS,
   'USDC',
   'USDC.E',
@@ -323,7 +317,7 @@ export function isRampStablecoinBlockedInTexas(
   );
 }
 
-export type RampRegion = {
+type RampRegion = {
   /** US state code, e.g. 'TX'. Omit when unknown. */
   usState?: string;
   /** True when the buyer is in the EU/EEA. Omit when unknown. */
@@ -365,13 +359,13 @@ export function rampEnabledAssetsFor(
 // never invented. Mirrors onrampDestinations (wallet/onramp.ts).
 // ---------------------------------------------------------------------------
 
-export type BuyAddressMaps = {
+type BuyAddressMaps = {
   receiveAddresses?: Partial<Record<ChainId, string | null>> | null;
   vaultAddresses?: Partial<Record<ChainId, string[]>> | null;
   watchAddresses?: Partial<Record<ChainId, DerivedAddress[]>> | null;
 };
 
-export type BuyDestination = {
+type BuyDestination = {
   chain: ChainId;
   /** The provider's asset id for this chain (Ramp asset id / MoonPay currency code). */
   asset: string;
@@ -411,7 +405,7 @@ export function buyDestinationsFor(
   return destinations;
 }
 
-export type BanxaDestination = {
+type BanxaDestination = {
   chain: ChainId;
   coinType: string;
   blockchain: string;
@@ -456,9 +450,9 @@ export function banxaDestinations(
 // ---------------------------------------------------------------------------
 
 /** The Ramp hosted widget host (docs.rampnetwork.com; the Android browser tutorial uses the app.rampnetwork.com alias — both answer 200). */
-export const RAMP_WIDGET_HOST = 'https://app.ramp.network';
+const RAMP_WIDGET_HOST = 'https://app.ramp.network';
 
-export type BuildRampUrlOptions = {
+type BuildRampUrlOptions = {
   hostApiKey: string;
   /** The single destination address the purchase is sent to. */
   userAddress: string;
@@ -514,9 +508,9 @@ export function buildRampUrl({
 }
 
 /** The MoonPay buy widget host. */
-export const MOONPAY_WIDGET_HOST = 'https://buy.moonpay.com';
+const MOONPAY_WIDGET_HOST = 'https://buy.moonpay.com';
 
-export type BuildMoonpayUrlOptions = {
+type BuildMoonpayUrlOptions = {
   /** Publishable key (pk_live_…). The secret key is never a parameter here. */
   apiKey: string;
   /** Preferred crypto (user may still change it inside the widget). NOT `currencyCode`, which would lock the choice. */
@@ -558,9 +552,9 @@ export function buildMoonpayUrl({
 }
 
 /** The Onramper buy widget host. */
-export const ONRAMPER_WIDGET_HOST = 'https://buy.onramper.com';
+const ONRAMPER_WIDGET_HOST = 'https://buy.onramper.com';
 
-export type BuildOnramperUrlOptions = {
+type BuildOnramperUrlOptions = {
   /** Public API key (public identifier in the URL). */
   apiKey: string;
 };
@@ -583,7 +577,7 @@ export function buildOnramperUrl({ apiKey }: BuildOnramperUrlOptions): string {
   return url.toString();
 }
 
-export type BuildBanxaUrlOptions = {
+type BuildBanxaUrlOptions = {
   /** Partner subdomain (partnerRef). */
   partnerRef: string;
   walletAddress?: string;
@@ -626,9 +620,9 @@ export function buildBanxaUrl({
 }
 
 /** The Mercuryo exchange host for the redirect flow. */
-export const MERCURYO_WIDGET_HOST = 'https://exchange.mercuryo.io';
+const MERCURYO_WIDGET_HOST = 'https://exchange.mercuryo.io';
 
-export type BuildMercuryoUrlOptions = {
+type BuildMercuryoUrlOptions = {
   /** Public widget ID. */
   widgetId: string;
 };
@@ -656,7 +650,7 @@ export function buildMercuryoUrl({ widgetId }: BuildMercuryoUrlOptions): string 
 // valid 5 minutes, sessionId single-use). There is no client-side
 // path to build.
 
-export type BuyOpenOutcome = 'opened' | 'blocked';
+type BuyOpenOutcome = 'opened' | 'blocked';
 
 /**
  * Open a provider widget URL as a pop-up, the same way
@@ -667,7 +661,7 @@ export type BuyOpenOutcome = 'opened' | 'blocked';
  * completed inside the pop-up.
  */
 export function openBuyProviderUrl(url: string): BuyOpenOutcome {
-  const popup = window.open('about:blank', '_blank', 'width=430,height=600');
+  const popup = window.open('about:blank', '_blank', 'width=430,height=600,noopener');
   if (popup === null) return 'blocked';
   popup.location.href = url;
   return 'opened';
@@ -688,7 +682,7 @@ export type BuyProviderId =
   | 'mercuryo'
   | 'coinbase';
 
-export type BuyProviderReadiness =
+type BuyProviderReadiness =
   | 'ready'
   | 'ready-no-prefill'
   | 'not-configured'

@@ -61,38 +61,6 @@ function Dialog({
   return <DialogContext.Provider value={value}>{children}</DialogContext.Provider>
 }
 
-function DialogTrigger({
-  ...props
-}: React.ComponentProps<"button">) {
-  const ctx = useDialogContext()
-  return (
-    <button
-      type="button"
-      data-slot="dialog-trigger"
-      onClick={() => ctx?.setOpen(true)}
-      {...props}
-    />
-  )
-}
-
-function DialogPortal({ children }: { children?: React.ReactNode }) {
-  return <>{children}</>
-}
-
-function DialogClose({
-  ...props
-}: React.ComponentProps<"button">) {
-  const ctx = useDialogContext()
-  return (
-    <button
-      type="button"
-      data-slot="dialog-close"
-      onClick={() => ctx?.setOpen(false)}
-      {...props}
-    />
-  )
-}
-
 function DialogOverlay({
   className,
   ...props
@@ -197,7 +165,7 @@ function DialogContent({
           <button
             type="button"
             data-slot="dialog-close"
-            className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-bawa-sm text-ink transition-colors hover:bg-sun disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0"
+            className="absolute top-4 right-4 inline-flex size-11 items-center justify-center rounded-bawa-sm text-ink transition-colors hover:bg-sun disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0"
             onClick={() => ctx.setOpen(false)}
           >
             <BawaIcon name="close" className="size-4" aria-hidden="true" />
@@ -219,22 +187,6 @@ function DialogHeader({
       data-slot="dialog-header"
       className={cn(
         "flex flex-col gap-2 text-center sm:text-left",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function DialogFooter({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="dialog-footer"
-      className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
@@ -277,13 +229,9 @@ function DialogDescription({
 
 export {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogOverlay,
-  DialogPortal,
   DialogTitle,
-  DialogTrigger,
 }
