@@ -17,7 +17,7 @@ How it fits together — the full box-by-box trace is in [How Bawa works](docs/H
 
 **[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of this branch.
 
-**87 chains** in the example wallet (22 enabled by default) · **168 chains** in the guide · **21 default tokens** · **440 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
+**87 chains** in the example wallet (22 enabled by default) · **168 chains** in the guide · **21 default tokens** · **3,216 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
 
 ## Showcase
 
@@ -106,10 +106,12 @@ All register-links checks passed
 The web wallet in `apps/web` is a fully functional example wallet built using this guide. It runs entirely in the browser: create or import a wallet, add a watch-only wallet, and see real balances. Broadcast stays disabled, so it cannot send funds.
 
 - Create, import (24/25 words) and watch-only wallets; multiple accounts from one phrase; bulk account creation.
-- 22 native assets plus 21 default tokens (43 rows), with live prices.
+- 22 native assets plus 21 default tokens (43 rows), with live prices and 24h change on every row.
+- The dashboard hero shows the wallet's primary address with a one-tap Copy button (flips to "Copied!" for 2 s).
 - Receive with a QR card — three QR modes (address, payment request, share link) and seven card templates — plus copy and share.
 - Add Token adds a token by contract address, and can enable any of the 87 chains.
 - Send walks through a stepped flow, but broadcast stays disabled, so nothing is ever sent.
+- Buy lists Ramp, MoonPay, Onramper, Banxa, Transak, Mercuryo and Coinbase on Receive — but none is set up yet, and each row says so plainly; no provider key has been configured. Swap shows live quotes only (LI.FI, STON.fi); swap execution is not implemented and broadcast stays disabled.
 
 To run it, follow [docs/CREATE-EXAMPLE-WALLET.md](docs/CREATE-EXAMPLE-WALLET.md). To understand how it fits together, read [How Bawa works](docs/HOW-IT-WORKS.md) — two Mermaid diagrams (how it starts, what it can do), each box traced to a real file.
 
@@ -174,6 +176,8 @@ Use the starters:
 ![Bawa Balanced UI direction for builder output](docs/ui-ux-assets/direction-04-bawa-balanced.png)
 
 *Bawa Balanced UI direction for builder output — not a screenshot of the running starter.*
+
+Design direction (owner decision, 2026-11-27): style B — polished financial style everywhere, illustration only for brand moments (the QR share-card templates, the Welcome illustration), with a tiny fraction of the paper/comic theme kept. The P0 build live now is the first style-B pass; the full restyle is in progress on this branch, and the design system ([docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md)) is being reworked to style B alongside it.
 
 ## Security and honest limits
 
@@ -240,5 +244,9 @@ Recent programmes, each with its full record, gates and branch state in `docs/`:
 - **Token Verify programme (2026-11-24)** — token verification by contract address, new-chains bug hunt, bundle gate kept under budget, npm audit 9 → 0, all 28 icon-less chains get real icons; merged into `token-gaps` (commit `7f12de4`); Pages republished from the final tip. Record: [docs/TOKEN-VERIFY-PROGRAMME.md](docs/TOKEN-VERIFY-PROGRAMME.md).
 - **CI budget align (2026-11-25)** — CI bundle budget aligned to `CONSTRAINTS.md` (4,177,711); merged into `token-gaps` (commit `6a91cbd`). Superseded the same day by the owner-ordered re-baseline below.
 - **Bundle budget re-baseline (2026-11-25)** — budget re-baselined to 4,650,000 by owner order; merged tree measures 4,648,952 total JS, passing by 1,048 bytes (commit `7a170f4`). Record: [docs/DECISIONS.md](docs/DECISIONS.md) §27.
+- **Providers programme (2026-11-26)** — WalletConnect fully removed; Buy picker on Receive (Ramp, MoonPay, Onramper, Banxa, Transak, Mercuryo, Coinbase — none set up yet, no key invented); Swaps button with gas.zip refuel and Relay quotes-first; STON.fi as the TON corridor (SDK 0.8.13, live quote on screen); LI.FI stays as the broadest aggregator; merged into `token-gaps` (commit `e9d3d3d`). Swap execution is not implemented and broadcast stays disabled.
+- **Bundle budget re-baseline to 6,000,000 (2026-11-26)** — budget re-baselined to 6,000,000 by owner order (commit `2a0fa75`); the P0 build below measures 4,473,583 total JS. Record: [docs/DECISIONS.md](docs/DECISIONS.md).
+- **Desktop-layout merge + bug hunt (2026-11-27)** — desktop layout merged into `token-gaps` (merge commit `34849a2`, then `b65e8c3`); full-repo bug hunt, 69 findings fixed (commit `7efba14`); Android registry export (commit `58d85c5`).
+- **UI/UX style-B P0 build (2026-11-27)** — hero Copy button, 24h change on asset rows, no-wallet $0.00 rows hidden on /assets, /create hub deleted, Welcome shortened to one headline + one line + two cards, one error pattern everywhere (reason + gated Retry), Wallets desktop grid fixed at 1280 px, tx-detail resolves any real hash; merged into `token-gaps` (commit `33f1ff1`); live on GitHub Pages (Pages `4d8a98f`, serving `index-Bri-_XH1.js`). Gates at the push: typecheck 0, lint 0, build 0, vitest 3,216 passed + 5 skipped, diagram test 5/5, bundle 4,473,583 / 6,000,000.
 
-No code from these programmes was merged into `adopt-proper`. Lanes E and F (captcha generalisation, FuckCaptcha guides) merged into `main` at `7f9d364`. The durable preview (GitHub Pages) serves the latest `token-gaps` build; to preview this branch, check out `panel-rebuild/token-gaps` and run the web starter locally.
+No code from these programmes was merged into `adopt-proper`. Lanes E and F (captcha generalisation, FuckCaptcha guides) merged into `main` at `7f9d364`. The durable preview (GitHub Pages) serves the latest `token-gaps` build — currently the P0 build (`33f1ff1`); to preview this branch, check out `panel-rebuild/token-gaps` and run the web starter locally.

@@ -29,7 +29,7 @@ Bawa keeps the wallet reference and the project builder together. Sections 2–1
 
 Sample requests are in [`docs/sample-requests.md`](sample-requests.md). The implementation plan is [`docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md).
 
-[`registry/`](../registry/) contains seven profiles alongside the capabilities, engines and UI registries. These provide the selection data for the builder rather than leaving the agent to invent a stack.
+[`registry/`](../registry/) contains eight profiles alongside the capabilities, engines and UI registries. These provide the selection data for the builder rather than leaving the agent to invent a stack.
 
 Two real, buildable starters are checked in:
 
@@ -65,8 +65,8 @@ A BIP-39 passphrase changes the derived seed; it is not the same thing as a pass
 
 - **No hosted service or custody.** Bawa is not a hosted wallet, custodian or exchange. It does not hold your keys. You are responsible for recovery material generated or restored through the reference workflows.
 - **Watch-only starters.** Both starters validate extended public keys and derive and display addresses. They do not hold secrets and cannot spend. The reference's wallet-generation examples do not make the starters secret-holding wallets.
-- **No transactions.** There is no signing, transaction-construction or broadcast code anywhere in this repo. Send/sign/broadcast has never been exercised.
-- **No mainnet.** Testnet is the default; mainnet use is out of scope for both the reference and the builder.
+- **No transactions.** The reference generation tools contain no signing, transaction-construction or broadcast code. Signing exists in the built apps only, offline: EVM signing via `signEvmOffline` (`apps/web/src/wallet/send.ts`), SOL signing via the minimal Solana module (`apps/web/src/wallet/solana-tx.ts`), STON.fi order signing (signed BoC only). Broadcast stays disabled and nothing has ever been sent: send/sign/broadcast has never been exercised on any network.
+- **No mainnet send.** Testnet is the default for the reference workflows; mainnet send is out of scope for both the reference and the builder. The example web wallet reads mainnet balances and prices, but it cannot send.
 - **No production or security assurance.** Bawa is not production-ready, secure or audited. Use throwaway test material, not real funds or production recovery phrases.
 
 A documented workflow is not automatically a verified one. The table above and §18 record what has actually been run and what remains unresolved.
@@ -83,8 +83,8 @@ A documented workflow is not automatically a verified one. The table above and �
 | Recover a wallet | §12 | Have the seed bundle (`seed.enc.json`) and the decryption inputs specified in §12. |
 | Fix a failed step | §13 | Identify the failed step and its error message or symptom. |
 | Check whether Bawa is ready for real money | §18 | Review the security posture in §17 and the evidence needed to assess the readiness gates. |
-| Build a Web wallet | Web guide, sections A–K | Complete §3, §4, §6 and §7 first; Node 22, Core 4.9.2 WASM. |
-| Build an Android wallet | Android guide, sections A–K | Complete §3 and §4 first; JDK 21, Android SDK 34, Core 4.9.2. |
+| Build a Web wallet | Web guide, sections A–K | Complete §3, §4, §6 and §7 first; Node 22, Core 4.9.3 WASM. |
+| Build an Android wallet | Android guide, sections A–K | Complete §3 and §4 first; JDK 17, Android SDK 35, Core 4.9.3. |
 
 Learn from scratch — reading order:
 
@@ -201,12 +201,12 @@ bip-utils==2.12.3
 Confirm the Wallet Core release in the npm registry.
 
 ```sh
-npm view @trustwallet/wallet-core@4.9.2 version
+npm view @trustwallet/wallet-core@4.9.3 version
 ```
 
 **Expected result**
 ```text
-4.9.2
+4.9.3
 ```
 
 Treat these registry queries as availability checks, not verification of installed dependencies. Confirm the installed pins in §§6–7.
@@ -321,11 +321,11 @@ The contracts below are defined once, in their home sections, and used everywher
 
 ### 5.1 Shared security baseline
 
-No signing in the repo. Filesystem rules: `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600. Never-claim rules apply throughout. The derivation policy (`bawa-derivation-policy-v1`) is part of this baseline: account 0, receiving branch 0 only; paths BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` (account node, one deposit address, no xpub); BIP-39 passphrase empty by policy. The testnet4 mainnet-derivation deviation is documented in §9: Bawa pins Core's mainnet segwit derivation (`m/84'/0'/0'/0/i`, zpub) on testnet4 — the standards-conformant testnet pair is `m/84'/1'/0'/0/i` with vpub `0x045f1cf6`. A standard testnet wallet will not find Bawa funds; the implementation is not changed. Home: §9 (derivation policy) and §17 (security posture).
+No signing in the reference generation tools; signing exists in the built apps, offline only (see §1). Filesystem rules: `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600. Never-claim rules apply throughout. The derivation policy (`bawa-derivation-policy-v1`) is part of this baseline: account 0, receiving branch 0 only; paths BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` (account node, one deposit address, no xpub); BIP-39 passphrase empty by policy. The testnet4 mainnet-derivation deviation is documented in §9: Bawa pins Core's mainnet segwit derivation (`m/84'/0'/0'/0/i`, zpub) on testnet4 — the standards-conformant testnet pair is `m/84'/1'/0'/0/i` with vpub `0x045f1cf6`. A standard testnet wallet will not find Bawa funds; the implementation is not changed. Home: §9 (derivation policy) and §17 (security posture).
 
 ### 5.2 Supported capabilities
 
-What Bawa owns and does not own; mainnet is absent; no production-ready claims. Home: §1.
+What Bawa owns and does not own; mainnet send is absent (the example wallet reads mainnet balances and prices but cannot send); no production-ready claims. Home: §1.
 
 **OI-062 — Supported-capabilities contract not established.** Supported-capabilities contract not established. Record support per surface and operation with cited verification; the V3 TON fixture alone does not establish application support. Owner: W1; evidence contributors: W3, W4 and W5.
 
@@ -349,7 +349,7 @@ Record full observed tool versions separately from these declared values.
 | Python | Python runtime | `>=3.11` | An exact full version satisfying `>=3.11` | Open — exact pin not recorded. |
 | cryptography | Python dependency | `cryptography==50.0.2` | `cryptography==50.0.2` | Release verification not recorded. |
 | bip-utils | Python dependency | `bip-utils==2.12.3` | `bip-utils==2.12.3` | Release verification not recorded. |
-| Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.9.3` (published 2026-11-11) | `4.9.3` | Demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.9.3` (published 2026-11-11) | `4.9.3` | Demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08); in-browser offline signing has since been demonstrated in the built apps (EVM via `signEvmOffline`, SOL via the minimal Solana module); send and broadcast remain open — broadcast stays disabled. |
 | npm | JavaScript dependency installation | No version specified | An exact full npm version | **Release blocker** — no version specified. |
 
 
@@ -388,7 +388,13 @@ Do not continue unless `which node` points to the selected Node 22 installation'
 
 **Step 1 — root install**
 
-The repository root has no dependencies: `npm install` at the root installs nothing, and `npm ls --depth=0` cannot check a lockfile's selected package and version against the root because no root lockfile exists. Skip this step and proceed to Step 2.
+The repository root has devDependencies (eslint) and a committed `package-lock.json` (added 2026-11-23, commit `7328f93`). Install them first:
+
+```sh
+npm ci
+```
+
+Then proceed to Step 2.
 
 **Step 2 — tools install**
 
@@ -420,11 +426,11 @@ test "$?" -eq 0
 
 Read the following as the status of the supplied commit, not any uncommitted lockfiles created by your local installs.
 
-The repository root has no lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.9.3 exact). The missing root lockfile is a release blocker.
+The repository root has a lockfile (`package-lock.json`, added 2026-11-23, commit `7328f93`); the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.9.3 exact). The missing-root-lockfile release blocker is closed; the Python side still has no lockfile.
 
-Version pins are not a lockfile; no root `package-lock.json` exists, but `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph.
+Version pins are not a lockfile; a root `package-lock.json` now exists, and `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph.
 
-To close this release blocker, resolve the npm version and commit `package-lock.json` generated from a clean install. Choose `package-lock.json`, not `npm-shrinkwrap.json`: they are alternatives, not a pair to commit together.
+What remains open from this blocker is the unresolved npm version: resolve it and record it. Choose `package-lock.json`, not `npm-shrinkwrap.json`: they are alternatives, not a pair to commit together.
 
 ## 7. Python venv and requirements
 
@@ -1020,7 +1026,7 @@ This is the canonical home for repo-level troubleshooting; the Web and Android g
 
 | Symptom | What to check or do |
 | --- | --- |
-| `npm install` fails | Check your Node and npm versions against §3. If the failure names `EBADENGINE`, the Node release is outside the declared `>=22 <23` range: the repository enforces the range, so switch to Node 22 (§6) — the install cannot proceed on another Node. No root lockfile exists, so the check of the lockfile’s selected package/version cannot run against the repository root; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`. |
+| `npm install` fails | Check your Node and npm versions against §3. If the failure names `EBADENGINE`, the Node release is outside the declared `>=22 <23` range: the repository enforces the range, so switch to Node 22 (§6) — the install cannot proceed on another Node. A root lockfile exists (`package-lock.json`), so the check of the lockfile’s selected package/version can run against the repository root; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`. |
 | No-TTY refusal | `FATAL: no controlling terminal — refusing to run; generate the wallet interactively`, exit 1. This is expected. Run from a real interactive terminal; never defeat the check. |
 | Derived address mismatch | Follow the ordered comparison below. |
 
@@ -1070,8 +1076,8 @@ Known gaps:
 
 - Live wallet creation and restore were performed on the pushed head under a real pty on 2026-11-08 (completion message, four public values, seed.enc.json 0600, dirs 0700, backup byte-identical; decrypt round trip byte-identical, 24 words). That run used Node v24.22.2, outside the repository's declared Node `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). No live testnet spend has been made from this wallet.
 - The Core side of the differential comparison is open (§11).
-- No root dependency lockfile exists (the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`).
-- No secret or dependency scanning has run.
+- A root dependency lockfile now exists (`package-lock.json`, added 2026-11-23, commit `7328f93`); the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`.
+- Dependency scanning has run: `npm audit` went 9 → 0 in the token-verify programme (commit `cc52085`, validated 0 vulnerabilities). No secret scanning has run.
 - No reproducible-build procedure exists.
 - No external security review has run.
 - No vulnerability-disclosure channel exists; this is an open item owned by the maintainers.
@@ -1172,7 +1178,7 @@ Do not claim SemVer adherence: it is not established by the available evidence, 
 
 **Release tags**
 
-There are zero tags as of this rewrite.
+There were zero tags as of this rewrite (2026-11-08). Tags have since been created (for example `save/mobile-2026-11-26`, 2026-11-26).
 
 For each release, create an annotated tag in the form `vX.Y.Z`. In the annotation, record what was built from that tag and where the checksums are recorded. A tag is the immutable record of a release; do not move or replace it.
 
@@ -1209,7 +1215,7 @@ Keep `@hdwallet/core` as a research-only reference. An automated check on npm re
 
 ## 17. Security posture
 
-Bawa is a wallet reference project. It is not a hosted wallet, a custodian, an exchange, or a production-ready wallet. Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2 — the dedicated EIP-1559 construction/signing demonstration was verified on Core 4.9.2 (D21, 2026-11-08); browser send/sign was not exercised and nothing was broadcast.
+Bawa is a wallet reference project. It is not a hosted wallet, a custodian, an exchange, or a production-ready wallet. The reference generation tools contain no transaction construction or signing implementation. Signing exists in the built apps: EVM signing via `signEvmOffline` (`apps/web/src/wallet/send.ts`), SOL signing via the minimal Solana module (`apps/web/src/wallet/solana-tx.ts`), STON.fi order signing (signed BoC only) — all offline, via Trust Wallet Core 4.9.3. The dedicated EIP-1559 construction/signing demonstration was verified on Core 4.9.2 (D21, 2026-11-08); browser send and broadcast have not been exercised and nothing was broadcast.
 
 What Bawa protects, and what it does not: Bawa's trusted, offline side creates the mnemonic, seed, private material and account-level public roots. The online RPC and indexer receive only the public information needed to watch accounts. Treat that online environment as something an attacker might inspect, collect logs from, repeatedly restart or take over; it must not receive seed material. The generator sends the mnemonic and data-encryption key to its controlling terminal rather than ordinary subprocess stdout/stderr — this reduces incidental logging; it does not defeat a hostile OS or terminal, a debugger, crash dumps, swap or memory snapshots. JavaScript and WebAssembly cannot promise that every secret copy has been securely erased; encrypting saved material also leaves plaintext exposed while a mnemonic is created or recovered.
 
@@ -1217,11 +1223,11 @@ Assets: the mnemonic (24 words, BIP-39), the seed (64 bytes), the data key (256-
 
 Filesystem rules: secrets/ 0700; seed.enc.json 0600; seed-backup/ 0700; backup copy 0600; .env 0600. The seed bundle is verified with tools/decrypt_seed.py plus the separate offline data key — never with a vault unlock passphrase. Keep seed words, private signing keys and their extended forms out of public commits, issues, screenshots and support logs; the same applies to keys used to decrypt recovery data, .env files used in production, wallet-backup artefacts, account/service credentials.
 
-Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.9.3, cryptography==50.0.2, bip-utils==2.12.3, Node >=22 <23, Python >=3.11. Wallet Core 4.9.2 was demonstrated (D21, 2026-11-08) but the repository has since been re-pinned to 4.9.3 (E02, 2026-11-13). Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; no root `package-lock.json` exists, but `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph. The missing root `package-lock.json` is a release blocker (see §18). Review every dependency change; do not add a dependency without a stated reason and a pinned version.
+Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.9.3, cryptography==50.0.2, bip-utils==2.12.3, Node >=22 <23, Python >=3.11. Wallet Core 4.9.2 was demonstrated (D21, 2026-11-08) but the repository has since been re-pinned to 4.9.3 (E02, 2026-11-13). Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; a root `package-lock.json` now exists (added 2026-11-23, commit `7328f93`), and `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph. Review every dependency change; do not add a dependency without a stated reason and a pinned version.
 
-Limitations, stated plainly: no zeroisation guarantee; no protection from a compromised OS, debugger, core dump, swap or memory capture, or a malicious terminal; no claim that the Android vault, Keystore or signing flows are verified on device (only 55 pure-module tests); no claim that any pinned dependency graph or lockfile exists that the repo does not have; never describe a value, timeout or policy as "repository-defined" without a cited file:line — the Web vault's 10-minute auto-lock comes from the validation draft (`app-web/src/vault.js:110`, local unpushed draft — not part of this repository), not the repo; never claim the repo signs, constructs or broadcasts transactions; never claim TON compatibility with any specific wallet; never claim recovery is tested until a rehearsal has been executed on a clean install and recorded (see §18 — the rehearsal is still open).
+Limitations, stated plainly: no zeroisation guarantee; no protection from a compromised OS, debugger, core dump, swap or memory capture, or a malicious terminal; no claim that the Android vault, Keystore or signing flows are verified on device (57 unit tests — see §18); no claim that any pinned dependency graph or lockfile exists that the repo does not have; never describe a value, timeout or policy as "repository-defined" without a cited file:line — auto-lock in the web wallet is now an optional setting, off by default, with a duration choice on /security (`apps/web/src/wallet/auto-lock.ts`); never claim the repo broadcasts transactions or sends funds — offline signing in the built apps is the limit; never claim TON compatibility with any specific wallet; never claim recovery is tested until a rehearsal has been executed on a clean install and recorded (see §18 — the rehearsal is still open).
 
-Never publish: seed words, private keys, data keys, vault unlock passphrases, .env files used in production, wallet-backup artefacts, account/service credentials. Never claim "secure", "safe", "secure because encrypted", "production-ready", "ready" or "ready for real money" about anything unverified. Never claim "audited" or "reviewed" without scope, reviewer, date and evidence. Never claim mainnet: mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
+Never publish: seed words, private keys, data keys, vault unlock passphrases, .env files used in production, wallet-backup artefacts, account/service credentials. Never claim "secure", "safe", "secure because encrypted", "production-ready", "ready" or "ready for real money" about anything unverified. Never claim "audited" or "reviewed" without scope, reviewer, date and evidence. Never claim mainnet send: mainnet send is absent from this guide set; the example wallet reads mainnet balances and prices but cannot send; any mainnet-send work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
 
 Incident response (per-scenario playbook): lost or stolen device — revoke the device's access, change the vault unlock passphrase, and move funds to a fresh wallet if the device held signing ability; a changed vault password cannot secure an exposed phrase — only a fresh seed and migration can. Compromised vault — treat the phrase as exposed: create a fresh wallet, move everything, retire the old wallet. Disclosed phrase — the same: fresh wallet, move everything, retire the old wallet. In every case, record what happened, what was moved, and what was retired, without recording secrets.
 
@@ -1237,7 +1243,7 @@ Docs/08 is the security reference for this guide set: it carries the full postur
 
 ## 18. Gates
 
-A gate is a check that must pass before the guide set can claim the thing it guards. A gate that has not passed is FAIL — not "pending", not "in progress". Passing a gate does not prove the guide is safe, production-ready, or authorised for mainnet: mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
+A gate is a check that must pass before the guide set can claim the thing it guards. A gate that has not passed is FAIL — not "pending", not "in progress". Passing a gate does not prove the guide is safe, production-ready, or authorised for mainnet send: mainnet send is absent from this guide set; any mainnet-send work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
 
 Readiness gates (repo):
 
@@ -1255,18 +1261,18 @@ Release gates (five of six unmet):
 
 | Gate | Status | What it needs |
 |---|---|---|
-| Lockfile | FAIL (Node side resolved at e3b65fb832db287fdc8d54794980dd0b3456cc12 — see note below) | A lockfile generated from a clean install, committed with package.json; until then, no install reproduces the exact dependency graph that was tested; `npm ci` runs in `tools/hdwallet-gen` (lockfile present) but not at the repository root (no lockfile) |
+| Lockfile | FAIL (Node side partly resolved — see note below) | A lockfile generated from a clean install, committed with package.json; until then, no install reproduces the exact dependency graph that was tested; `npm ci` runs in `tools/hdwallet-gen` (lockfile present) and at the repository root (lockfile present since 2026-11-23) |
 | Full published-vector coverage | FAIL | Vectors covering TRX and indices 1–2, not only BTC/ETH index 0 |
 | Chain-specific fixtures, including TON | PASS at e3b65fb832db287fdc8d54794980dd0b3456cc12 | A TON fixture was derived and independently verified on 2026-11-08 (see §11) and is written into docs/11 and Android D.7 |
 | Secret and dependency scanning | FAIL | Named scanners, an owner, and redacted reports retained alongside ci-evidence.json; a missing or erroring scan must never be read as "clean" |
 | Reproducible releases | FAIL | A reproducible-build procedure: source and submodule SHAs, dependency locks, checksums, toolchain and image identities, two independent builders, same SHA, separate clean environments, whole-file SHA-256 comparison of agreed unsigned artefacts |
 | External security review | FAIL | A review with defined scope (seed handling, derivation paths, signing, recovery, dependencies), named components at a stated revision, recorded exclusions, and a follow-up review of fixes |
 
-Pin note: this rewrite is pinned to e3b65fb832db287fdc8d54794980dd0b3456cc12. The phase-1 repair has since been pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12 (2026-11-08): on that head, the Node setup gate and the Public derivations gate pass (the three JavaScript files pass node --check; compare.js runs), and the Node lockfile gate passes (tools/hdwallet-gen/package-lock.json now exists, Core 4.8.4 exactly). The watch-only results were verified live on the repaired copy before the push: derive 9/9, compare 9/9, smoke 28/28 — all three FAIL on the pushed head 082f7915. The Python side still has no lockfile; the root still has none. CI's single job now passes on e3b65fb832db287fdc8d54794980dd0b3456cc12: the workflow runs `npm run check`, `npm test` and the differential test, and CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09). This guide set re-pinned to e3b65fb832db287fdc8d54794980dd0b3456cc12 on 2026-11-09 (user decision); the gate statuses above are the statuses at e3b65fb832db287fdc8d54794980dd0b3456cc12, verified 2026-11-08; the former-pin statuses are retained in the merge record.
+Pin note: this rewrite is pinned to e3b65fb832db287fdc8d54794980dd0b3456cc12. The phase-1 repair has since been pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12 (2026-11-08): on that head, the Node setup gate and the Public derivations gate pass (the three JavaScript files pass node --check; compare.js runs), and the Node lockfile gate passes (tools/hdwallet-gen/package-lock.json now exists, Core 4.8.4 exactly). The watch-only results were verified live on the repaired copy before the push: derive 9/9, compare 9/9, smoke 28/28 — all three FAIL on the pushed head 082f7915. The Python side still has no lockfile; the root has had one since 2026-11-23 (`package-lock.json`, commit `7328f93`) — but its clean-install provenance is not recorded here, so the Lockfile gate above stays FAIL until that is evidenced. CI's single job now passes on e3b65fb832db287fdc8d54794980dd0b3456cc12: the workflow runs `npm run check`, `npm test` and the differential test, and CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09). This guide set re-pinned to e3b65fb832db287fdc8d54794980dd0b3456cc12 on 2026-11-09 (user decision); the gate statuses above are the statuses at e3b65fb832db287fdc8d54794980dd0b3456cc12, verified 2026-11-08; the former-pin statuses are retained in the merge record.
 
 What passing does NOT prove: passing the readiness gates does not prove the guide is safe; passing the release gates does not prove it is production-ready; passing any gate does not authorise mainnet use; a successful build or testnet send does not replace the release gates. No gate may be marked passed on the basis of a check that was not run, a file that does not exist in the pinned tree, or a count that combines test layers (never combine counts — no "86/86").
 
-Platform gates (mapped from the Web and Android guides): Web fixture gate — enforced in-engine plus offline engine tests; no live-network gate run (the integrated browser flow was run end to end on 2026-11-08: 14 PASS, 0 FAIL, 3 INFO across 17 steps; send, sign and broadcast were not exercised — no testnet funds). Android fixture gate — defined, pure-logic half checked (55 pure-module tests); the on-device gate has never run: no Core 4.8.4 AAR has been built and no device run has happened. Android debug APK — no debug APK has ever been built; the build steps are an unexecuted procedure, not a verified path.
+Platform gates (mapped from the Web and Android guides): Web fixture gate — enforced in-engine plus offline engine tests; no live-network gate run (the integrated browser flow was run end to end on 2026-11-08: 14 PASS, 0 FAIL, 3 INFO across 17 steps; send, sign and broadcast were not exercised — no testnet funds). Android fixture gate — defined, pure-logic half checked (57 unit tests); the on-device gate has never run: no Core 4.8.4 AAR has been built and no device run has happened. Android debug APK — a debug APK has been built: `./gradlew assembleDebug` succeeded on 2026-11-27 (1m 49s, 33 tasks) on loud-stone, so the build steps are a verified path for a debug APK; the on-device install/launch half of the gate has not run since.
 
 ## 19. About this guide and the builder programme
 
