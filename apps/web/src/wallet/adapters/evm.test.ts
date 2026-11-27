@@ -550,3 +550,55 @@ describe('evm adapter — history source labels (Lane B)', () => {
     }
   });
 });
+
+// P2-A, M2: live fee data for the Slow / Standard / Fast tiers.
+describe('evm adapter — estimateFeeTiers', () => {
+  it('returns the live max fee and priority fee from estimateFeesPerGas', async () => {
+    const adapter = createEvmAdapter(BSC, {
+      client: mockClient({
+        estimateFeesPerGas: vi.fn(async () => ({
+          maxFeePerGas: 50000000000n,
+          maxPriorityFeePerGas: 50000000n,
+        })),
+      }),
+    });
+    const result = await adapter.estimateFeeTiers?.();
+    expect(result?.status).toBe('ok');
+    if (result?.status === 'ok') {
+      expect(result.data.chain).toBe('bsc');
+      expect(result.data.maxFeePerGasWei).toBe('50000000000');
+      expect(result.data.maxPriorityFeePerGasWei).toBe('50000000');
+    }
+  });
+
+  it('falls back to the gas price with a zero priority fee when EIP-1559 fees are unsupported', async () => {
+    const adapter = createEvmAdapter(BSC, {
+      client: mockClient({
+        estimateFeesPerGas: vi.fn(async () => {
+          throw new Error('EIP-1559 fees are not supported');
+        }),
+      }),
+    });
+    const result = await adapter.estimateFeeTiers?.();
+    expect(result?.status).toBe('ok');
+    if (result?.status === 'ok') {
+      expect(result.data.maxFeePerGasWei).toBe('3000000000');
+      expect(result.data.maxPriorityFeePerGasWei).toBe('0');
+    }
+  });
+
+  it('errors when both fee reads fail, never guessing tiers', async () => {
+    const adapter = createEvmAdapter(BSC, {
+      client: mockClient({
+        estimateFeesPerGas: vi.fn(async () => {
+          throw new Error('fee history down');
+        }),
+        getGasPrice: vi.fn(async () => {
+          throw new Error('gas price down');
+        }),
+      }),
+    });
+    const result = await adapter.estimateFeeTiers?.();
+    expect(result?.status).toBe('error');
+  });
+});

@@ -34,7 +34,16 @@ import {
 } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { fiatMinorUnits, formatFeePreview, formatFiatUSD } from '../wallet/money';
-import { describeFeeEstimate } from '../wallet/fee-display';
+import { describeFeeEstimate, buildFeeBreakdown } from '../wallet/fee-display';
+import { isEnsName, resolveEnsName } from '../wallet/ens';
+import {
+  deriveFeeTiers,
+  formatGwei,
+  type FeeTier,
+  type FeeTierBase,
+  type FeeTierId,
+  type FeeTierSelection,
+} from '../wallet/fee-tiers';
 import {
   isFreshQuote,
   usdPriceToMinorUnitsPerWhole,
@@ -252,6 +261,17 @@ export function SendScreen() {
   const [entryStep] = useState<Step>(initialStep);
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
+  // P2-A, M1: ENS resolution for the recipient field. `resolvedRecipient`
+  // is the address a `.eth` name resolved to; the send always uses
+  // `effectiveRecipient` below, never the raw name. `ensName` is the
+  // name that resolved, shown next to the shortened address.
+  const [resolvedRecipient, setResolvedRecipient] = useState<string | null>(null);
+  const [ensStatus, setEnsStatus] = useState<'idle' | 'resolving' | 'resolved' | 'invalid'>('idle');
+  const [ensName, setEnsName] = useState('');
+  const effectiveRecipient =
+    ensStatus === 'resolved' && resolvedRecipient !== null
+      ? resolvedRecipient
+      : recipient;
   // Address book (UX-major Lane 5): entries saved on the Address book
   // screen, read once here; picking one fills the recipient below.
   const [bookEntries] = useState(() => readAddressBook());
@@ -285,6 +305,28 @@ export function SendScreen() {
 
   const from = (vaultAddresses[chain] ?? [])[0] ?? '';
   const config = chainConfig(chain);
+  // P2-A, M2: fee tiers. `feeTierBase` is the live base fee data from
+  // the adapter (null when the chain has no tiers); the three tiers
+  // are derived in render — the gas limit depends on the selected
+  // token, so the derivation re-runs when the token changes. Memoised:
+  // the fee effect depends on this array's identity, and a fresh
+  // array every render would re-run it in a loop.
+  const [feeTierBase, setFeeTierBase] = useState<FeeTierBase | null>(null);
+  const [feeTierId, setFeeTierId] = useState<FeeTierId>('standard');
+  const feeTiers = useMemo<FeeTier[] | null>(
+    () =>
+      feeTierBase === null || !isEvmTxChain(chain)
+        ? null
+        : deriveFeeTiers(
+            feeTierBase,
+            selectedToken !== null ? ERC20_GAS_LIMIT : 21000n,
+          ),
+    [feeTierBase, chain, selectedToken],
+  );
+  const selectedFeeTier: FeeTier | null =
+    feeTiers?.find((tier) => tier.id === feeTierId) ?? feeTiers?.[1] ?? null;
+  const feeTierSelection: FeeTierSelection | undefined =
+    selectedFeeTier ?? undefined;
   // Lane 3 (UX-major): smart detection for the recipient field — what
   // the pasted value looks like, and whether it belongs to this
   // network. Pure and synchronous, so it updates as the user types;
@@ -309,6 +351,51 @@ export function SendScreen() {
     selectedToken === null
       ? null
       : findVerifiedNamesake(selectedToken, allTokens);
+  // P2-A, M1: debounced ENS resolution while typing (600 ms, the
+  // mined pattern's delay). Shows "Resolving…" then the resolved name
+  // + shortened address below the field; a bad name shows "Invalid
+  // address". The submit path (handleDetailsNext) resolves inline
+  // through validateRecipient, so Review never waits on this timer —
+  // this effect is the live display only. Non-EVM chains never
+  // resolve: a name there is just an invalid address. A name that
+  // already resolved (paste, scan, submit) is not re-resolved.
+  useEffect(() => {
+    if (!isEvmTxChain(chain) || !isEnsName(recipient)) {
+      setEnsStatus('idle');
+      setEnsName('');
+      setResolvedRecipient(null);
+      return;
+    }
+    const name = recipient.trim();
+    if (
+      ensStatus === 'resolved' &&
+      ensName === name &&
+      resolvedRecipient !== null
+    ) {
+      return;
+    }
+    let cancelled = false;
+    setEnsStatus('resolving');
+    setEnsName(name);
+    const timer = setTimeout(() => {
+      void resolveEnsName(name).then((result) => {
+        if (cancelled) return;
+        if (result.ok) {
+          setResolvedRecipient(result.address);
+          setEnsStatus('resolved');
+          setRecipientError(null);
+        } else {
+          setResolvedRecipient(null);
+          setEnsStatus('invalid');
+          setRecipientError('Invalid address.');
+        }
+      });
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [recipient, chain, ensStatus, ensName, resolvedRecipient]);
   // Devnet test-network name, or undefined when this chain has no
   // test network. The picker never offers such a chain, but a shared
   // send link can force one (applyPrefill sets the chain and jumps to
@@ -600,6 +687,12 @@ export function SendScreen() {
     const result = await validateRecipient(prefill.chain, prefill.to);
     if (result.ok) {
       setRecipientError(null);
+      // P2-A, M1: a prefilled ENS name validates to its address.
+      if (result.resolvedAddress !== undefined) {
+        setResolvedRecipient(result.resolvedAddress);
+        setEnsStatus('resolved');
+        setEnsName(prefill.to.trim());
+      }
     } else {
       setRecipientError(result.reason);
     }
@@ -739,6 +832,20 @@ export function SendScreen() {
       return;
     }
     setRecipientError(null);
+    // P2-A, M1: an ENS name validated to its address — the rest of
+    // the flow sends to the resolved address, never to the name. The
+    // local `to` is passed down (state would not have settled yet);
+    // the state mirror is for the review/sign steps below.
+    const to = recipientResult.resolvedAddress ?? recipient;
+    if (recipientResult.resolvedAddress !== undefined) {
+      setResolvedRecipient(recipientResult.resolvedAddress);
+      setEnsStatus('resolved');
+      setEnsName(recipient.trim());
+    } else {
+      setResolvedRecipient(null);
+      setEnsStatus('idle');
+      setEnsName('');
+    }
     // Inline insufficient-balance: no preview call — the amount cannot
     // be covered, and the preview would only repeat the same failure
     // below the fold.
@@ -747,7 +854,7 @@ export function SendScreen() {
       setSummaryVisible(true);
       return;
     }
-    await handleAmountNext();
+    await handleAmountNext(to);
   }
 
   // Redesign Lane 3: validate on blur, once the user has entered
@@ -759,6 +866,11 @@ export function SendScreen() {
     const trimmed = recipient.trim();
     if (trimmed !== recipient) setRecipient(trimmed);
     if (trimmed === '') return;
+    // P2-A, M1: a name is validated by the resolver (the debounced
+    // effect above), not by the raw-address check — validating it
+    // here would wrongly flag it as an invalid address while it is
+    // still resolving.
+    if (isEvmTxChain(chain) && isEnsName(trimmed)) return;
     const result = await validateRecipient(chain, trimmed, { devnet: devnetEnabled });
     setRecipientError(result.ok ? null : result.reason);
   }
@@ -768,6 +880,13 @@ export function SendScreen() {
   // again, not only on the next Review press.
   function handleRecipientChange(next: string): void {
     setRecipient(next);
+    // P2-A, M1: a name's validation is the resolver's job — clear
+    // any stale error while it resolves instead of re-running the
+    // raw-address check on it.
+    if (isEvmTxChain(chain) && isEnsName(next)) {
+      setRecipientError(null);
+      return;
+    }
     if (recipientError === null) return;
     void validateRecipient(chain, next, { devnet: devnetEnabled }).then((result) => {
       setRecipientError(result.ok ? null : result.reason);
@@ -795,6 +914,14 @@ export function SendScreen() {
       setRecipient(pasted);
       const result = await validateRecipient(chain, pasted, { devnet: devnetEnabled });
       setRecipientError(result.ok ? null : result.reason);
+      // P2-A, M1: a pasted ENS name validates to its address — the
+      // send uses the resolved address, and the display effect shows
+      // the name + shortened address instead of re-resolving.
+      if (result.ok && result.resolvedAddress !== undefined) {
+        setResolvedRecipient(result.resolvedAddress);
+        setEnsStatus('resolved');
+        setEnsName(pasted);
+      }
     } catch {
       setPasteNote('Could not read the clipboard — allow clipboard access, or paste the address yourself.');
     }
@@ -860,6 +987,12 @@ export function SendScreen() {
     setRecipient(value);
     const result = await validateRecipient(chain, value, { devnet: devnetEnabled });
     setRecipientError(result.ok ? null : result.reason);
+    // P2-A, M1: a scanned ENS name validates to its address — see handlePaste.
+    if (result.ok && result.resolvedAddress !== undefined) {
+      setResolvedRecipient(result.resolvedAddress);
+      setEnsStatus('resolved');
+      setEnsName(value.trim());
+    }
     // The recipient and amount inputs only render on the details step,
     // so a scan from the chain step must advance there — otherwise the
     // scanner closes with nothing visibly changed (Lane 7: a bare
@@ -876,10 +1009,12 @@ export function SendScreen() {
   // carries '' there and does not pin it. EVM values use the same
   // canonical form the signer asserts against: a `ronin:` recipient
   // is stripped, and a token recipient is lowercased to match the
-  // ERC-20 calldata.
+  // ERC-20 calldata. `to` is the effective recipient — the resolved
+  // address when the user typed an ENS name (P2-A, M1).
   function buildReviewIntent(
     token: TokenRecord | null,
     amountBaseUnits: string,
+    to: string,
   ): SigningIntent {
     if (token !== null) {
       if (tokenStandardFor(chain).standard === 'erc20') {
@@ -888,7 +1023,7 @@ export function SendScreen() {
           token.contract,
           amountBaseUnits,
           '',
-          normalizeEvmAddress(recipient).toLowerCase(),
+          normalizeEvmAddress(to).toLowerCase(),
         );
       }
       return createTransactionIntent(
@@ -896,18 +1031,18 @@ export function SendScreen() {
         token.contract,
         amountBaseUnits,
         '',
-        recipient,
+        to,
       );
     }
     if (isEvmTxChain(chain)) {
       return createTransactionIntent(
         chain,
-        normalizeEvmAddress(recipient),
+        normalizeEvmAddress(to),
         amountBaseUnits,
         '',
       );
     }
-    return createTransactionIntent(chain, recipient, amountBaseUnits, '');
+    return createTransactionIntent(chain, to, amountBaseUnits, '');
   }
 
   // A-7: entering review snapshots the reviewed send into the
@@ -919,9 +1054,10 @@ export function SendScreen() {
   function enterReview(
     token: TokenRecord | null,
     result: { amountBaseUnits: string },
+    to: string,
   ): void {
     try {
-      setReviewIntent(buildReviewIntent(token, result.amountBaseUnits));
+      setReviewIntent(buildReviewIntent(token, result.amountBaseUnits, to));
       setStep('review');
     } catch {
       setReviewIntent(null);
@@ -935,12 +1071,19 @@ export function SendScreen() {
     }
   }
 
-  async function handleAmountNext(): Promise<void> {
+  async function handleAmountNext(to: string): Promise<void> {
     // A token send previews against the cached token balance (the
     // sign step re-reads it live — see handleSign). Native sends on
     // chains without offline signing are not built: say so here
     // instead of previewing a native send the user did not ask for
-    // (token gaps, item 4).
+    // (token gaps, item 4). `to` is the effective recipient — the
+    // resolved address when the user typed an ENS name (P2-A, M1).
+    // P2-A, M2: the picked fee tier rides in the preview options, so
+    // the reviewed fee is the tier's fee, not the flat quote.
+    const previewOptions =
+      feeTierSelection !== undefined
+        ? { devnet: devnetEnabled, feeTier: feeTierSelection }
+        : { devnet: devnetEnabled };
     if (selectedToken !== null) {
       setPreviewBusy(true);
       try {
@@ -956,16 +1099,16 @@ export function SendScreen() {
           chain,
           token,
           from,
-          recipient,
+          to,
           amount,
           tokenBalance !== undefined &&
             (tokenBalance.status === 'available' || tokenBalance.status === 'zero')
             ? tokenBalance.value ?? null
             : null,
-          { devnet: devnetEnabled },
+          previewOptions,
         );
         setPreview(result);
-        if (result.ok) enterReview(token, result);
+        if (result.ok) enterReview(token, result, to);
         else setSummaryVisible(true);
       } finally {
         setPreviewBusy(false);
@@ -990,9 +1133,9 @@ export function SendScreen() {
         setSummaryVisible(true);
         return;
       }
-      const result = await previewSendAmount(chain, from, recipient, amount, { devnet: devnetEnabled });
+      const result = await previewSendAmount(chain, from, to, amount, previewOptions);
       setPreview(result);
-      if (result.ok) enterReview(null, result);
+      if (result.ok) enterReview(null, result, to);
       else setSummaryVisible(true);
     } finally {
       setPreviewBusy(false);
@@ -1041,9 +1184,17 @@ export function SendScreen() {
       return;
     }
     setApprovalStage('simulating');
+    // P2-A, M1: the simulation and every signer below use the
+    // effective recipient — the resolved address when the user typed
+    // an ENS name. P2-A, M2: the simulation re-previews with the
+    // picked tier, so it checks the same fee the review showed.
+    const simulationOptions =
+      feeTierSelection !== undefined
+        ? { devnet: devnetEnabled, feeTier: feeTierSelection }
+        : { devnet: devnetEnabled };
     const simulation = token !== null
-      ? await simulateTokenSend(chain, token, from, recipient, amount, { devnet: devnetEnabled })
-      : await simulateSend(chain, from, recipient, amount, { devnet: devnetEnabled });
+      ? await simulateTokenSend(chain, token, from, effectiveRecipient, amount, simulationOptions)
+      : await simulateSend(chain, from, effectiveRecipient, amount, simulationOptions);
     if (!simulation.ok) {
       setSignState({ status: 'error', reason: simulation.reason });
       setApprovalStage('review');
@@ -1083,7 +1234,7 @@ export function SendScreen() {
           mnemonic,
           getSessionPassphrase(),
           tokenToSend.contract,
-          recipient,
+          effectiveRecipient,
           previewOk.amountBaseUnits,
           String(inputs.data.nonce),
           gasPrice,
@@ -1103,7 +1254,7 @@ export function SendScreen() {
           mnemonic,
           getSessionPassphrase(),
           tokenToSend.contract,
-          recipient,
+          effectiveRecipient,
           previewOk.amountBaseUnits,
           header.data,
           { devnet: devnetEnabled },
@@ -1124,7 +1275,7 @@ export function SendScreen() {
           throw new Error(`We couldn't prepare your ${config.displayName} transaction. Please retry.`);
         }
         const recipientAta = deriveAssociatedTokenAddress(
-          recipient,
+          effectiveRecipient,
           tokenToSend.contract,
         );
         if (recipientAta === null) {
@@ -1136,7 +1287,7 @@ export function SendScreen() {
           mnemonic,
           getSessionPassphrase(),
           tokenToSend.contract,
-          recipient,
+          effectiveRecipient,
           previewOk.amountBaseUnits,
           tokenToSend.decimals,
           inputs.data.blockhash,
@@ -1165,7 +1316,7 @@ export function SendScreen() {
           mnemonic,
           getSessionPassphrase(),
           jettonWallet,
-          recipient,
+          effectiveRecipient,
           previewOk.amountBaseUnits,
           inputs.data.seqno,
           { devnet: devnetEnabled, account: vaultAccount.account },
@@ -1200,7 +1351,7 @@ export function SendScreen() {
             chain,
             mnemonic,
             getSessionPassphrase(),
-            recipient,
+            effectiveRecipient,
             previewOk.amountBaseUnits,
             String(inputs.data.nonce),
             gasPrice,
@@ -1220,7 +1371,7 @@ export function SendScreen() {
           const result = await signBtcOffline(
             mnemonic,
             getSessionPassphrase(),
-            recipient,
+            effectiveRecipient,
             previewOk.amountBaseUnits,
             inputs.data.utxos,
             fee.data.feeBaseUnits,
@@ -1240,7 +1391,7 @@ export function SendScreen() {
           const result = await signTrxOffline(
             mnemonic,
             getSessionPassphrase(),
-            recipient,
+            effectiveRecipient,
             previewOk.amountBaseUnits,
             header.data,
             { devnet: devnetEnabled },
@@ -1257,7 +1408,7 @@ export function SendScreen() {
           const result = await signSolOffline(
             mnemonic,
             getSessionPassphrase(),
-            recipient,
+            effectiveRecipient,
             previewOk.amountBaseUnits,
             inputs.data.blockhash,
             { devnet: devnetEnabled, account: vaultAccount.account, intent: reviewIntent ?? undefined },
@@ -1273,7 +1424,7 @@ export function SendScreen() {
         const result = await signTonOffline(
           mnemonic,
           getSessionPassphrase(),
-          recipient,
+          effectiveRecipient,
           previewOk.amountBaseUnits,
           inputs.data.seqno,
           { devnet: devnetEnabled, account: vaultAccount.account },
@@ -1358,10 +1509,65 @@ export function SendScreen() {
     | null
   >(null);
 
+  // P2-A, M2: live fee data for the tier selector. The adapter reads
+  // estimateFeesPerGas on the chain's RPC; a chain without tiers (or
+  // a failed read) leaves the selector off and the flat fee stands —
+  // tiers are never derived from a guessed number.
+  useEffect(() => {
+    // P2-A, M2/M3: tiers are fetched on the details step, but the last
+    // fetched tiers are KEPT when the flow moves to review — the
+    // review fee was quoted from that tier, so the breakdown's Max /
+    // Priority rows must read the same tier instead of falling back
+    // to a gas price recovered by division (which has no priority
+    // component). A non-EVM chain clears them; picking a chain or
+    // returning to details re-fetches.
+    if (!isEvmTxChain(chain)) {
+      setFeeTierBase(null);
+      return;
+    }
+    if (step !== 'details') return;
+    let cancelled = false;
+    setFeeTierBase(null);
+    void (async () => {
+      const adapter = getAdapterForMode(chain, devnetEnabled);
+      if (adapter?.estimateFeeTiers === undefined) {
+        if (!cancelled) setFeeTierBase(null);
+        return;
+      }
+      const result = await adapter.estimateFeeTiers();
+      if (cancelled) return;
+      setFeeTierBase(
+        result.status === 'ok'
+          ? {
+              maxFeePerGasWei: result.data.maxFeePerGasWei,
+              maxPriorityFeePerGasWei: result.data.maxPriorityFeePerGasWei,
+            }
+          : null,
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, chain, devnetEnabled]);
+
   useEffect(() => {
     if (step !== 'details') return;
     let cancelled = false;
     setFeeEstimate(null);
+    // P2-A, M2: when tiers are loaded for an EVM chain, the selected
+    // tier IS the fee — its max fee x the gas limit, no adapter call
+    // needed. The fee line, Max and the preview all read this one
+    // estimate, so they agree. Native and token alike: the tier's
+    // feeBaseUnits already carries the right gas limit.
+    if (feeTiers !== null && selectedFeeTier !== null) {
+      setFeeEstimate({
+        ok: true,
+        feeBaseUnits: selectedFeeTier.feeBaseUnits,
+        note: `${selectedFeeTier.label} tier at ${formatGwei(selectedFeeTier.maxFeePerGasWei)} Gwei max fee; it may change before signing.`,
+        unit: 'wei',
+      });
+      return;
+    }
     if (selectedToken !== null) {
       // Token sends: the fee is native (gas / energy / SOL signatures
       // / unknown for TON) — estimateTokenSendFee quotes it per
@@ -1423,7 +1629,7 @@ export function SendScreen() {
     return () => {
       cancelled = true;
     };
-  }, [step, chain, selectedToken, devnetEnabled, recipient]);
+  }, [step, chain, selectedToken, devnetEnabled, recipient, feeTiers, feeTierId, selectedFeeTier]);
 
   // Max preserves the fee reserve. Only ETH has a flat native fee estimate
   // (gasPrice x 21000): BTC quotes a sat/vB rate, TRX quotes SUN per unit
@@ -1534,6 +1740,34 @@ export function SendScreen() {
         )
       : null;
 
+  // P2-A, M3: the review fee breakdown — total by default, the
+  // composition on expand (see send-review.tsx). The BTC/TRX rate
+  // comes from the details-step estimate, which is still in state on
+  // the review step; the SOL rent from the preview; the EVM tier
+  // from the picked tier. Empty when the fee is unknown (TON) or the
+  // preview failed — the review then shows no breakdown, never a
+  // guessed one.
+  const reviewFeeRate =
+    feeEstimate !== null &&
+    feeEstimate.ok &&
+    (feeEstimate.unit === 'sat/vB' ||
+      feeEstimate.unit.toLowerCase().includes('energy'))
+      ? { rateBaseUnits: feeEstimate.feeBaseUnits, rateUnit: feeEstimate.unit }
+      : null;
+  const reviewFeeBreakdown =
+    preview !== null && preview.ok && !preview.feeUnknown
+      ? buildFeeBreakdown({
+          chain,
+          isToken: selectedToken !== null,
+          tier: isEvmTxChain(chain) ? selectedFeeTier : null,
+          feeBaseUnits: preview.feeBaseUnits,
+          rentBaseUnits:
+            'rentBaseUnits' in preview ? preview.rentBaseUnits : undefined,
+          rateBaseUnits: reviewFeeRate?.rateBaseUnits,
+          rateUnit: reviewFeeRate?.rateUnit,
+        })
+      : [];
+
   // Contract call for the review screen's clear-signing section: an
   // ERC-20 token send calls the token contract with
   // transfer(recipient, amount) calldata — the same calldata the
@@ -1553,7 +1787,7 @@ export function SendScreen() {
         reviewContractCall = {
           chainId: evmChainId,
           contract: selectedToken.contract,
-          data: buildErc20TransferData(recipient, preview.amountBaseUnits),
+          data: buildErc20TransferData(effectiveRecipient, preview.amountBaseUnits),
           token: {
             decimals: selectedToken.decimals,
             symbol: selectedToken.symbol,
@@ -2066,33 +2300,39 @@ export function SendScreen() {
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="send-recipient">Recipient address</Label>
-              {/* Redesign Lane 3: Paste and Scan are visible text/icon
-                  controls beside the field now, not a hidden long-press
-                  menu and an unexplained icon (DESIGN-SYSTEM §6). The
-                  scan button keeps its aria-label, so the existing
-                  scan tests still find it. */}
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void handlePaste()}
-                >
-                  Paste
-                </Button>
-                <button
-                  type="button"
-                  aria-label="Scan QR code"
-                  aria-expanded={showScanner}
-                  title="Scan QR code"
-                  onClick={() => {
-                    setShowScanner((current) => !current);
-                  }}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
-                >
-                  <ScanIcon className="h-11 w-11 text-ink" />
-                </button>
-              </div>
+            </div>
+            {/* P2-A, M7: Scan OR paste in one row at the recipient
+                entry — the two ways in are offered together, with an
+                explicit OR between them, so the user never has to
+                discover that pasting or scanning is possible. The
+                scan button keeps its aria-label, so the existing
+                scan tests still find it. */}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-label="Scan QR code"
+                aria-expanded={showScanner}
+                title="Scan QR code"
+                onClick={() => {
+                  setShowScanner((current) => !current);
+                }}
+              >
+                <ScanIcon className="h-5 w-5 text-ink" />
+                Scan
+              </Button>
+              <span aria-hidden="true" className="text-sm text-muted-foreground">
+                OR
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void handlePaste()}
+              >
+                Paste
+              </Button>
             </div>
             <Input
               id="send-recipient"
@@ -2100,7 +2340,11 @@ export function SendScreen() {
               value={recipient}
               onChange={(event) => handleRecipientChange(event.target.value)}
               onBlur={() => void handleRecipientBlur()}
-              placeholder={`Enter ${/^[AEIOU]/.test(config.displayName) ? 'an' : 'a'} ${config.displayName} address`}
+              placeholder={
+                isEvmTxChain(chain)
+                  ? `Enter ${/^[AEIOU]/.test(config.displayName) ? 'an' : 'a'} ${config.displayName} address or .eth name`
+                  : `Enter ${/^[AEIOU]/.test(config.displayName) ? 'an' : 'a'} ${config.displayName} address`
+              }
               autoComplete="off"
               aria-invalid={recipientError !== null}
               aria-describedby={recipientError !== null ? 'send-recipient-error' : undefined}
@@ -2108,6 +2352,20 @@ export function SendScreen() {
             {recipientError && (
               <p id="send-recipient-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
                 {recipientError}
+              </p>
+            )}
+            {/* P2-A, M1: the ENS resolution state — "Resolving…" while
+                the name resolves, then the name + shortened resolved
+                address, so the user sees what the name means before
+                Review. A bad name reports "Invalid address" above. */}
+            {ensStatus === 'resolving' && (
+              <p aria-live="polite" className="text-base text-ink">
+                Resolving…
+              </p>
+            )}
+            {ensStatus === 'resolved' && resolvedRecipient !== null && (
+              <p aria-live="polite" className="text-base text-ink">
+                {ensName} → {shortAddress(resolvedRecipient)}
               </p>
             )}
             {/* Lane 3 (UX-major): what the pasted value looks like — the
@@ -2272,24 +2530,52 @@ export function SendScreen() {
                 {`Fee estimate unavailable: ${feeEstimate.reason}`}
               </p>
             )}
+            {/* P2-A, M2: fee tiers — Slow / Standard / Fast, each with
+                its time estimate and cost in Gwei, from the live fee
+                data. The selected tier is the fee the line above
+                shows, the fee the review shows, and the fee that
+                signs. Hidden when the chain has no tier data: the
+                flat fee above stands instead. */}
+            {feeTiers !== null && selectedFeeTier !== null && feeEstimate?.ok && (
+              <div className="space-y-2">
+                <p id="send-fee-tier-label" className="text-sm text-muted-foreground">
+                  Fee speed
+                </p>
+                <div role="group" aria-labelledby="send-fee-tier-label" className="flex gap-2">
+                  {feeTiers.map((tier) => {
+                    const active = tier.id === selectedFeeTier.id;
+                    return (
+                      <button
+                        key={tier.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setFeeTierId(tier.id)}
+                        className={`flex min-h-11 flex-1 flex-col items-center justify-center rounded-bawa-sm border-2 border-ink p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'bg-paper hover:bg-sun'}`}
+                      >
+                        <span className="font-semibold">{tier.label}</span>
+                        <span>{tier.estimatedLabel}</span>
+                        <span>{formatGwei(tier.maxFeePerGasWei)} Gwei</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {/* Lane 6: what the fee does NOT offer, stated once in a
-                disclosure instead of cluttering the line. Slow /
-                standard / fast speeds do not exist here: the adapters
-                quote one live gas price per network, and a speed menu
-                would need invented multipliers. Fee-token payment is
-                not supported on any network here either — the fee is
-                always paid in the native coin. */}
+                disclosure instead of cluttering the line. Fee-token
+                payment is not supported on any network here — the fee
+                is always paid in the native coin. On EVM networks the
+                speed choice above is live (Slow / Standard / Fast);
+                other networks quote one live fee, and a speed menu
+                there would need invented multipliers. */}
             <details className="text-sm text-muted-foreground">
               <summary className="cursor-pointer py-2 font-medium text-ink">
                 About this fee
               </summary>
               <p className="leading-relaxed">
-                The wallet quotes one live gas price per network — there
-                is no slow/standard/fast choice yet. The fee is paid in{' '}
-                {config.symbol}; paying it in another token is not
-                supported on any network here. TON has no fee estimate
-                in advance: the network charges the fee when the
-                transaction is broadcast.
+                {feeTiers !== null
+                  ? `The fee speed above is live for this network: Slow, Standard and Fast are derived from the network's current fee data. The fee is paid in ${config.symbol}; paying it in another token is not supported on any network here. TON has no fee estimate in advance: the network charges the fee when the transaction is broadcast.`
+                  : `The wallet quotes one live gas price per network — there is no slow/standard/fast choice yet. The fee is paid in ${config.symbol}; paying it in another token is not supported on any network here. TON has no fee estimate in advance: the network charges the fee when the transaction is broadcast.`}
               </p>
             </details>
             {/* Redesign Lane 3: the Max-disabled reason and the fee
@@ -2323,7 +2609,7 @@ export function SendScreen() {
             chainName={config.displayName}
             symbol={config.symbol}
             from={from}
-            recipient={recipient}
+            recipient={effectiveRecipient}
             amount={reviewAmountText}
             fiatAmount={reviewFiatAmount ?? undefined}
             fee={
@@ -2338,6 +2624,7 @@ export function SendScreen() {
             }
             total={reviewTotalText}
             feeNote={preview.feeNote}
+            feeBreakdown={reviewFeeBreakdown}
             tokenContract={selectedToken?.contract}
             contractCall={reviewContractCall}
             tokenWarning={

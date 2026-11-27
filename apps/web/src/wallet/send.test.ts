@@ -289,6 +289,33 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
     });
   });
 
+  // P2-A, M2: a picked fee tier replaces the flat quote — the tier's
+  // max fee x 21000 gas, so the reviewed fee is the fee that signs.
+  it('previews 0.5 ETH with the Fast tier fee (40 gwei x 21000 gas)', async () => {
+    expect(
+      await previewSendAmount(
+        'eth',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        '0.5',
+        {
+          feeTier: {
+            id: 'fast',
+            label: 'Fast',
+            maxFeePerGasWei: '40000000000',
+            maxPriorityFeePerGasWei: '2000000000',
+          },
+        },
+      ),
+    ).toEqual({
+      ok: true,
+      amountBaseUnits: '500000000000000000',
+      feeBaseUnits: '840000000000000',
+      totalBaseUnits: '500840000000000000',
+      feeNote: 'Fast tier at 40 Gwei max fee, 21000 gas; not a final fee',
+    });
+  });
+
   it('previews 0.0005 BTC with the real planned fee, not the sat/vB rate', async () => {
     expect(
       await previewSendAmount(
@@ -3564,6 +3591,38 @@ describe('previewTokenSendAmount / simulateTokenSend (Lane 2)', () => {
       attachedBaseUnits: '0',
       feeNote:
         'Token-transfer estimate at current gas price, 100000 gas; not a final fee',
+    });
+  });
+
+  // P2-A, M2: a picked fee tier replaces the recovered gas price —
+  // the tier's max fee x 100000 gas.
+  it('previews a 25 USDC send with the Fast tier fee (40 gwei x 100000 gas)', async () => {
+    registerAdapter(
+      tokenStub(
+        'eth',
+        '1000000000000000000',
+        18,
+        okFee('eth', '420000000000000'),
+        okInputs({ kind: 'nonce', nonce: 5 }),
+      ),
+    );
+    await expect(
+      previewTokenSendAmount('eth', usdc, ethFrom, ethTo, '25', '100000000', {
+        feeTier: {
+          id: 'fast',
+          label: 'Fast',
+          maxFeePerGasWei: '40000000000',
+          maxPriorityFeePerGasWei: '2000000000',
+        },
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      token: usdc,
+      amountBaseUnits: '25000000',
+      feeBaseUnits: '4000000000000000',
+      rentBaseUnits: '0',
+      attachedBaseUnits: '0',
+      feeNote: 'Fast tier at 40 Gwei max fee, 100000 gas; not a final fee',
     });
   });
 

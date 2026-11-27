@@ -190,6 +190,45 @@ describe('AddressBookScreen', () => {
     }
   });
 
+  // P2-A, M1: the book shares Send's recipient field — a `.eth`
+  // name validates to its address, and the book saves the resolved
+  // address, never the name.
+  it('saves the resolved address when an ENS name is entered', async () => {
+    vi.mocked(validateRecipient).mockResolvedValue({
+      ok: true,
+      resolvedAddress: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+    });
+    const mounted = await mountScreen();
+    try {
+      const label = mounted.div.querySelector(
+        '#address-book-label',
+      ) as HTMLInputElement;
+      const address = mounted.div.querySelector(
+        '#address-book-address',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(label, 'Vitalik');
+        setInputValue(address, 'vitalik.eth');
+      });
+      await act(async () => {
+        findButton(mounted.div, 'Save address').click();
+      });
+      expect(mounted.div.textContent).toContain(
+        'Vitalik saved to your address book as 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045.',
+      );
+      expect(readAddressBook()).toEqual([
+        expect.objectContaining({
+          label: 'Vitalik',
+          address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+          chain: 'eth',
+        }),
+      ]);
+      expect(mounted.div.textContent).not.toContain('vitalik.eth');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the validation error inline, saves nothing, and keeps the typed values', async () => {
     vi.mocked(validateRecipient).mockResolvedValue({
       ok: false,
