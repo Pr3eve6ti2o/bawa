@@ -587,6 +587,17 @@ export function AssetDetailScreen() {
       </Suspense>
 
       {/*
+        Desktop layout (desktop-layout-v2): below the sticky actions,
+        Details + Recent transactions sit in the left column and
+        Derived addresses + the import source in the right one. The
+        wrapper is still a single-column stack below lg (space-y-6, no
+        bare grid class), so the mobile layout is untouched. The sticky
+        bar stays outside the grid, full-width above it, so its pinning
+        behaviour is unchanged.
+      */}
+      <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
+        <div className="space-y-6">
+      {/*
         Details block, in MetaMask's market position (after the actions,
         before activity). The per-unit price comes from the same live
         price feed as the dashboard strip and the asset list; the
@@ -749,6 +760,8 @@ export function AssetDetailScreen() {
         )}
       </section>
 
+        </div>
+        <div className="space-y-6">
       <section aria-labelledby="derived-addresses-heading" className="space-y-3">
         <h2 id="derived-addresses-heading" className="text-lg font-semibold">
           {chain === 'ton' ? 'Imported address' : 'Derived addresses'}
@@ -836,6 +849,8 @@ export function AssetDetailScreen() {
           </dl>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 }

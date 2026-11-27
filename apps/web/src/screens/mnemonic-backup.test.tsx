@@ -235,6 +235,39 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
     }
   });
 
+  it('lays the screen in two columns on desktop widths, keeping profiles and guidance as single-column stacks', async () => {
+    // Desktop layout (desktop-layout-v2): the screen lays out in two
+    // columns at lg. The recovery profiles and guidance checklist stay
+    // single-column divide-y stacks — gridding them would break their
+    // dividers — so only the screen root is a grid. Below lg the
+    // blocks stack in one column (space-y-4), so the mobile layout is
+    // untouched.
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const main = div.querySelector('main');
+      expect(main).not.toBeNull();
+      const outlet = main?.children[0] as Element | undefined;
+      const root = outlet?.children[0] as Element | undefined;
+      expect(root?.className).toContain('lg:grid');
+      expect(root?.className).toContain('lg:grid-cols-2');
+      const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
+      const list = profiles?.querySelector('ul');
+      expect(list).not.toBeNull();
+      expect(list?.className).toContain('divide-y');
+      expect(list?.className).not.toContain('lg:grid');
+      const guidance = div.querySelector('[aria-label="Backup guidance"]');
+      const guideList = [...(guidance?.querySelectorAll('ul') ?? [])].find((el) =>
+        el.className.includes('divide-y'),
+      );
+      expect(guideList).not.toBeUndefined();
+      expect(guideList?.className).toContain('divide-y');
+      expect(guideList?.className).not.toContain('lg:grid-cols-2');
+    } finally {
+      await cleanup();
+    }
+  });
+
   it('hides the reveal section without a vault', async () => {
     const { div, cleanup } = await mountBackupScreen();
     try {
@@ -348,4 +381,66 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       await cleanup();
     }
   }, 30000);
+
+  // Password verification runs a 600k-iteration PBKDF2 trial decrypt,
+  // which can take several seconds while the full suite runs in parallel
+  // workers.
+  it('shows the revealed words four across on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): the revealed 24-word grid is
+    // four across at lg (six rows) instead of three across at every
+    // width. Below lg it stays two across, then three at sm.
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      await openPasswordStage(div);
+      await verifyPassword(div, TEST_PASSWORD);
+      await waitForText(div, 'Answer all three questions correctly');
+      await act(async () => {
+        findButton(div, 'Spend from this wallet').click();
+        findButton(div, 'On paper, stored offline').click();
+        findButton(div, 'Paste them into any app or website').click();
+      });
+      await act(async () => {
+        findButton(div, 'Show recovery phrase').click();
+      });
+      await waitForText(div, 'Hide recovery phrase');
+      const words = [...div.querySelectorAll('ol')].find((el) =>
+        el.textContent?.includes('abandon'),
+      );
+      expect(words?.className).toContain('lg:grid-cols-4');
+      expect(words?.className).toContain('sm:grid-cols-3');
+      expect(words?.className).toContain('grid-cols-2');
+    } finally {
+      await cleanup();
+    }
+  }, 30000);
+
+  it('lays the intro, profiles and guidance in two columns on desktop widths', async () => {
+    // Follow-up: the screen was wrapped in a centered 720px column,
+    // which reads as a phone column on a 1440px main. The intro spans
+    // both columns at lg, the profiles and guidance sit left and the
+    // reveal section right, and the back link spans both. Below lg the
+    // same blocks stack in one column in the same order (space-y-4,
+    // no bare grid-cols-2), so the mobile layout is untouched. This
+    // mounts with no vault, so only the always-visible blocks are
+    // asserted here.
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const main = div.querySelector('main');
+      expect(main).not.toBeNull();
+      const outlet = main?.children[0] as Element | undefined;
+      const root = outlet?.children[0] as Element | undefined;
+      expect(root?.className).toContain('space-y-4');
+      expect(root?.className).toContain('lg:grid');
+      expect(root?.className).toContain('lg:grid-cols-2');
+      expect(root?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      const intro = [...root?.querySelectorAll('div[data-slot="card"]') ?? []].find((el) =>
+        el.textContent?.includes('Mnemonic backup'),
+      ) as HTMLElement | undefined;
+      expect(intro).not.toBeUndefined();
+      expect(intro?.className).toContain('lg:col-span-2');
+    } finally {
+      await cleanup();
+    }
+  });
 });

@@ -715,4 +715,59 @@ describe('asset detail screen', () => {
       await mountedWithout.cleanup();
     }
   });
+
+  it('lays Details and activity beside addresses on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): below the sticky actions,
+    // Details + Recent transactions sit in the left column and Derived
+    // addresses + the import source in the right one — an lg
+    // two-column grid. Below lg the same sections stack in one column
+    // (space-y-6, no bare grid/grid-cols-2), so the mobile layout is
+    // untouched. The sticky bar itself is not part of the grid: it stays
+    // full-width above it.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      {
+        ...perChain(emptyHistory),
+        eth: {
+          status: 'loaded',
+          txs: [
+            {
+              hash: '0xabc',
+              chain: 'eth',
+              networkId: 'eip155:1',
+              direction: 'in',
+              amountBaseUnits: '1000000000000000000',
+              counterparty: '0xSender',
+              timestamp: 1700000000000,
+              status: 'confirmed',
+              explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
+            },
+          ],
+        },
+      },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      const details = mounted.div.querySelector('#asset-details-heading');
+      expect(details).not.toBeNull();
+      const grid = details?.closest('section')?.parentElement
+        ?.parentElement as Element | null;
+      expect(grid?.className).toContain('lg:grid');
+      expect(grid?.className).toContain('lg:grid-cols-2');
+      // Mobile stacking is preserved: the wrapper is still a vertical
+      // stack below lg, with no unprefixed grid class.
+      expect(grid?.className).toContain('space-y-6');
+      expect(grid?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      expect(grid?.className).not.toMatch(/(^|\s)grid(\s|$)/);
+      // The sticky actions bar sits outside the grid, above it.
+      const sticky = mounted.div.querySelector('.sticky');
+      expect(sticky).not.toBeNull();
+      expect(grid?.contains(sticky)).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

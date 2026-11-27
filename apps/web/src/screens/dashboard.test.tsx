@@ -1157,66 +1157,6 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('retries unavailable history while unlocked when the wallet has activity', async () => {
-    // Zero balances, so no balance Retry exists: the only Retry on
-    // the page is the failed history's — and it appears because the
-    // wallet HAS activity (a loaded ETH transaction), so the failed
-    // Bitcoin fetch is a real failure worth retrying.
-    const mockRefreshHistory = vi.fn().mockResolvedValue(undefined);
-    setWallet(
-      balancesFor({
-        btc: { status: 'zero', value: '0' },
-        eth: { status: 'zero', value: '0' },
-        trx: { status: 'zero', value: '0' },
-        ton: { status: 'zero', value: '0' },
-      }),
-      {
-        history: {
-          btc: { status: 'unavailable', reason: 'no-address', txs: [] },
-          eth: {
-            status: 'loaded',
-            txs: [
-              {
-                hash: '0xabc',
-                chain: 'eth',
-                networkId: 'eip155:1',
-                direction: 'out',
-                amountBaseUnits: '250000000000000000',
-                counterparty: '0xRecipient',
-                timestamp: 1700000000000,
-                status: 'confirmed',
-                explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
-              },
-            ],
-          },
-          trx: { status: 'empty', txs: [] },
-          ton: { status: 'empty', txs: [] },
-        },
-        refreshHistory: mockRefreshHistory,
-      },
-    );
-    const mounted = await mountScreen();
-    try {
-      const tab = [...mounted.div.querySelectorAll('button')].find(
-        (candidate) => candidate.textContent === 'Activity',
-      );
-      await act(async () => {
-        (tab as HTMLButtonElement).click();
-      });
-      expect(mounted.div.textContent).toContain('Bitcoin history unavailable');
-      const retry = [...mounted.div.querySelectorAll('button')].find(
-        (candidate) => candidate.textContent === 'Retry',
-      ) as HTMLButtonElement;
-      expect(retry).not.toBeUndefined();
-      await act(async () => {
-        retry.click();
-      });
-      expect(mockRefreshHistory).toHaveBeenCalled();
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
   it('shows only the empty state for unavailable history when the wallet has no activity', async () => {
     // Marketing fix, Lane 1: a fresh wallet with no transactions must
     // not show "history unavailable" + a dead Retry for a 429 that
@@ -1460,6 +1400,35 @@ describe('dashboard screen', () => {
       expect(text).toContain('NFTs — not connected yet');
     } finally {
       vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('lays the hero and quick actions out in two columns on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2), adapted from the tag's rail
+    // test: the dashboard was md5-identical to the saved build on
+    // desktop, which is what the owner reported as "still mobile
+    // layout". HEAD already arranges the hero and the quick actions
+    // side by side at lg in a 7fr/5fr grid — the actions are the
+    // grid's second column, aligned to the hero's baseline — with
+    // five actions (Send / Receive / Buy / Scan / Activity) in one
+    // row in that column, not the tag's three-link vertical rail
+    // (grid-cols-3 / lg:grid-cols-1 / lg:flex-row). This pins HEAD's
+    // two-column arrangement, which no HEAD test covers. Below lg the
+    // grid collapses to one column, so the mobile layout is untouched.
+    setWallet(balancesFor({}));
+    const mounted = await mountScreen();
+    try {
+      const sendLink = mounted.div.querySelector('a[href="/send"]');
+      expect(sendLink).not.toBeNull();
+      const actions = sendLink?.parentElement;
+      expect(actions?.className).toContain('grid-cols-5');
+      expect(actions?.className).toContain('lg:self-end');
+      const heroGrid = actions?.parentElement;
+      expect(heroGrid?.className).toContain('lg:grid-cols-[7fr_5fr]');
+      // The whole actions column is still five links, nothing added or removed.
+      expect(actions?.querySelectorAll(':scope > a')).toHaveLength(5);
+    } finally {
       await mounted.cleanup();
     }
   });

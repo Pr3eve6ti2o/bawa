@@ -1063,15 +1063,21 @@ export function ReceiveScreen() {
     );
   }
 
+  // Desktop layout (desktop-layout-v2): the heading spans both
+  // columns; the chain/token pickers sit left and, on the details
+  // step, the amount + QR card sit right, sticky while the left
+  // column scrolls. Below lg the same blocks stack in one column
+  // in the same order (space-y-3, no bare grid class), so the
+  // mobile layout is untouched.
   return (
-    <div className="space-y-3">
-      <h1 className="text-2xl font-semibold text-ink">Receive</h1>
+    <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start lg:space-y-0">
+      <h1 className="text-2xl font-semibold text-ink lg:col-span-2">Receive</h1>
       {/* Lane 7: no step line on the details step — the user has
           completed steps 1–2 and the QR screen says where they are.
           The line's 32 px is what the template row needs to sit
           above the fold at 390 px. Steps 1–2 keep their lines. */}
       {step !== 'details' && (
-        <p className="text-body-sm font-medium text-panel-text-muted">
+        <p className="text-body-sm font-medium text-panel-text-muted lg:col-span-2">
           {step === 'chain' ? 'Step 1 of 3: Network' : 'Step 2 of 3: Token'}
         </p>
       )}
@@ -1289,6 +1295,7 @@ export function ReceiveScreen() {
       )}
 
       {step === 'details' && (
+        <>
         <div className="space-y-2">
       <p className="flex items-center justify-between gap-3 text-sm text-ink">
         <span>
@@ -1327,6 +1334,8 @@ export function ReceiveScreen() {
         </Alert>
       )}
 
+      </div>
+      <div className="space-y-2 lg:sticky lg:top-6">
       <Card radius="xl" tone="card" borderTone="border" padding="sm">
         {address ? (
           <div className="flex flex-col items-center gap-1.5">
@@ -1562,7 +1571,8 @@ export function ReceiveScreen() {
           This address can only receive TON. To send or withdraw TON, you need an external wallet.
         </p>
       )}
-        </div>
+      </div>
+      </>
       )}
     </div>
   );

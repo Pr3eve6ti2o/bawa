@@ -142,7 +142,11 @@ export function TransactionDetailScreen() {
   })();
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 text-foreground">
+    // Desktop layout (desktop-layout-v2): the detail lays out in two
+    // columns at lg (the wrapper below), so the outer cap no longer
+    // constrains it there. Below lg it stays a single max-w-2xl
+    // column, so the mobile layout is untouched.
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 text-foreground lg:max-w-none">
       <header className="mb-6">
         <Link
           to="/transactions"
@@ -164,93 +168,106 @@ export function TransactionDetailScreen() {
       )}
 
       {found ? (
-        <dl className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-          <DetailRow label="Chain">
-            {`${chainConfig(found.chain).displayName} mainnet`}
-          </DetailRow>
-
-          <DetailRow label="Direction">
-            <span className="capitalize">
-              {directionLabel(found.tx.direction)}
-            </span>
-          </DetailRow>
-
-          <DetailRow label="Amount">
-            <span className="font-semibold">
-              {formatNativeWithSymbol(
-                found.tx.amountBaseUnits,
-                CHAIN_DECIMALS[found.chain],
-                chainConfig(found.chain).symbol,
-              )}
-            </span>
-          </DetailRow>
-
-          <DetailRow label="Counterparty">
-            <span className="break-all font-mono">
-              {found.tx.counterparty || '—'}
-            </span>
-          </DetailRow>
-
-          <DetailRow label="Date">
-            {formatTransactionDate(found.tx.timestamp)}
-          </DetailRow>
-
-          <DetailRow label="Status">
-            <div aria-live="polite">
-              <p
-                className={`font-medium ${STATUS_CLASSES[found.tx.status]}`}
-              >
-                {`${found.tx.status} as reported by the network.`}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                <CheckedAt check={check} />
-              </p>
-            </div>
-          </DetailRow>
-
-          <DetailRow label="Transaction hash">
-            <span className="flex items-start justify-between gap-3">
-              <span className="min-w-0 break-all font-mono">{found.tx.hash}</span>
-              <CopyButton value={found.tx.hash} label="Copy transaction hash" />
-            </span>
-          </DetailRow>
-
-          {found.tx.explorerUrl && (
-            <DetailRow label="Explorer">
-              <a
-                href={found.tx.explorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
-              >
-                View on explorer
-              </a>
+        // Two detail columns at lg (left: chain/direction/amount/
+        // counterparty; right: date/status/hash/explorer). Below lg the
+        // wrapper carries the card chrome and the two lists read as
+        // one continuous card — the same 1px separators as the single
+        // list it replaces — so the mobile layout is untouched.
+        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card lg:grid lg:grid-cols-2 lg:gap-6 lg:divide-y-0 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent">
+          <dl className="divide-y divide-border lg:overflow-hidden lg:rounded-2xl lg:border lg:border-border lg:bg-card">
+            <DetailRow label="Chain">
+              {`${chainConfig(found.chain).displayName} mainnet`}
             </DetailRow>
-          )}
-        </dl>
-      ) : (
-        <section className="rounded-2xl border border-border bg-card p-5">
-          <p>
-            This transaction is not in the loaded history. Its status is
-            unknown.
-          </p>
-          <dl className="mt-3 space-y-1">
-            <dt className="text-sm font-medium text-muted-foreground">
-              Requested ID
-            </dt>
-            <dd className="break-all">
-              <code className="text-sm">{id ?? 'No ID supplied'}</code>
-            </dd>
+
+            <DetailRow label="Direction">
+              <span className="capitalize">
+                {directionLabel(found.tx.direction)}
+              </span>
+            </DetailRow>
+
+            <DetailRow label="Amount">
+              <span className="font-semibold">
+                {formatNativeWithSymbol(
+                  found.tx.amountBaseUnits,
+                  CHAIN_DECIMALS[found.chain],
+                  chainConfig(found.chain).symbol,
+                )}
+              </span>
+            </DetailRow>
+
+            <DetailRow label="Counterparty">
+              <span className="break-all font-mono">
+                {found.tx.counterparty || '—'}
+              </span>
+            </DetailRow>
           </dl>
-          <p className="mt-3 text-xs text-muted-foreground">
-            <CheckedAt check={check} />
-          </p>
-          <Link
-            to="/transactions"
-            className="mt-5 inline-block text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
-          >
-            Back to transactions
-          </Link>
+
+          <dl className="divide-y divide-border lg:overflow-hidden lg:rounded-2xl lg:border lg:border-border lg:bg-card">
+            <DetailRow label="Date">
+              {formatTransactionDate(found.tx.timestamp)}
+            </DetailRow>
+
+            <DetailRow label="Status">
+              <div aria-live="polite">
+                <p
+                  className={`font-medium ${STATUS_CLASSES[found.tx.status]}`}
+                >
+                  {`${found.tx.status} as reported by the network.`}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  <CheckedAt check={check} />
+                </p>
+              </div>
+            </DetailRow>
+
+            <DetailRow label="Transaction hash">
+              <span className="flex items-start justify-between gap-3">
+                <span className="min-w-0 break-all font-mono">{found.tx.hash}</span>
+                <CopyButton value={found.tx.hash} label="Copy transaction hash" />
+              </span>
+            </DetailRow>
+
+            {found.tx.explorerUrl && (
+              <DetailRow label="Explorer">
+                <a
+                  href={found.tx.explorerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                >
+                  View on explorer
+                </a>
+              </DetailRow>
+            )}
+          </dl>
+        </div>
+      ) : (
+        <section className="rounded-2xl border border-border bg-card p-5 lg:grid lg:grid-cols-2 lg:gap-6">
+          <div>
+            <p>
+              This transaction is not in the loaded history. Its status is
+              unknown.
+            </p>
+            <dl className="mt-3 space-y-1">
+              <dt className="text-sm font-medium text-muted-foreground">
+                Requested ID
+              </dt>
+              <dd className="break-all">
+                <code className="text-sm">{id ?? 'No ID supplied'}</code>
+              </dd>
+            </dl>
+          </div>
+          <div>
+            <p className="mt-3 text-xs text-muted-foreground lg:mt-0">
+              <CheckedAt check={check} />
+            </p>
+            <Link
+              to="/transactions"
+              className="mt-5 inline-block text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+            >
+              Back to transactions
+            </Link>
+          </div>
         </section>
       )}
     </div>

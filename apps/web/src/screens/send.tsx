@@ -1638,7 +1638,16 @@ export function SendScreen() {
   }
 
   return (
-    <div className="space-y-3">
+    // Desktop layout (desktop-layout-v2): the header and progress form a
+    // sticky left rail (2 of 5 columns) and the current step renders in
+    // the right column (3 of 5) — the same rail pattern as
+    // create-wallet. The chain picker is now the chain step itself, so
+    // it lives in the right column with the other steps. Below lg the
+    // same blocks stack in one column in the same order, so the mobile
+    // flow is untouched. Wrappers use space-y-3 to match this screen's
+    // mobile spacing (not the tag's space-y-6).
+    <div className="space-y-3 lg:grid lg:grid-cols-5 lg:min-h-[calc(100vh-7.5rem)] lg:content-center lg:gap-8 lg:items-start lg:space-y-0">
+      <div className="space-y-3 lg:col-span-2 lg:sticky lg:top-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
         {/* Redesign Lane 3: the full banner sets expectations once, at
@@ -1721,6 +1730,9 @@ export function SendScreen() {
           </div>
         );
       })()}
+
+      </div>
+      <div className="space-y-3 lg:col-span-3">
 
       {step === 'chain' && (
         <section aria-labelledby="send-chain-heading" className="space-y-3">
@@ -2384,6 +2396,7 @@ export function SendScreen() {
           Receive
         </Link>
       )}
+      </div>
     </div>
   );
 }

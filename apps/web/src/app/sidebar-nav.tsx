@@ -130,7 +130,13 @@ export function SidebarNav({
                         className="size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink bg-coral"
                       />
                     )}
-                    <span className="truncate">{item.label}</span>
+                    {/* P3: the active item's coral square steals ~18px
+                        from the label, so at 224px "Track a
+                        transaction" and "Mnemonic backup" clipped to
+                        "Track a transact…" / "Mnemonic back…". The
+                        labels are copy and must not be shortened; the
+                        label wraps to two lines instead. */}
+                    <span className="min-w-0 leading-snug">{item.label}</span>
                   </span>
                 </>
               )}

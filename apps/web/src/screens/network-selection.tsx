@@ -210,6 +210,12 @@ export function NetworkSelectionScreen() {
               autoComplete="off"
             />
           </div>
+          {/* Desktop layout (desktop-layout-v2): the Mainnet lists run
+              in two columns at lg — a single 87-row column stretched
+              the full width and left most of a desktop viewport empty.
+              Below lg they stay single-column lists, so the mobile
+              layout is untouched. Rows wrap (flex-wrap) in the
+              narrower column. */}
           {searched !== null ? (
             searched.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -217,14 +223,14 @@ export function NetworkSelectionScreen() {
                 chain ID.
               </p>
             ) : (
-              <ul className="space-y-2">{searched.map(rowFor)}</ul>
+              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{searched.map(rowFor)}</ul>
             )
           ) : (
             <>
               <h3 className="text-sm font-semibold">Popular</h3>
-              <ul className="space-y-2">{popular.map(rowFor)}</ul>
+              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{popular.map(rowFor)}</ul>
               <h3 className="text-sm font-semibold">All chains</h3>
-              <ul className="space-y-2">{others.map(rowFor)}</ul>
+              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">{others.map(rowFor)}</ul>
             </>
           )}
         </CardContent>

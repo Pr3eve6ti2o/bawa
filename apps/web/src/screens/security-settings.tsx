@@ -167,8 +167,11 @@ export function SecuritySettingsScreen() {
         </ul>
       </div>
 
+      {/* P1 (desktop-layout-v2): the delete-vault card is full-width
+          on desktop like every other section card, not half-width
+          with an empty right half. */}
       {vaultState !== 'no-vault' && (
-        <Card radius="xl" borderTone="destructive">
+        <Card radius="xl" borderTone="destructive" className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Delete vault</CardTitle>
           </CardHeader>

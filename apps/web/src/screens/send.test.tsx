@@ -1456,4 +1456,39 @@ describe('send screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('lays the progress rail beside the step form on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): the header, progress and
+    // chain picker form a sticky left rail (2 of 5 columns) and the
+    // current step renders in the right column (3 of 5). Below lg the
+    // same blocks stack in one column in the same order (space-y-3,
+    // no bare grid-cols-5), so the mobile flow is untouched.
+    // Follow-up (P5): the rail and the step content are vertically
+    // centred in the viewport at lg, so step 2 no longer ends a
+    // third of the way down a tall screen with empty paper below.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const root = mounted.div.firstElementChild as Element | null;
+      expect(root?.className).toContain('lg:grid');
+      expect(root?.className).toContain('lg:grid-cols-5');
+      expect(root?.className).toContain('space-y-3');
+      expect(root?.className).not.toMatch(/(^|\s)grid-cols-5(\s|$)/);
+      expect(root?.className).toContain('lg:min-h-[calc(100vh-7.5rem)]');
+      expect(root?.className).toContain('lg:content-center');
+      const rail = [...mounted.div.querySelectorAll('div')].find((el) =>
+        el.className.includes('lg:col-span-2'),
+      );
+      expect(rail).not.toBeUndefined();
+      expect(rail?.querySelector('[aria-label="Send progress"]')).not.toBeNull();
+      expect(rail?.className).toContain('lg:sticky');
+      const steps = [...mounted.div.querySelectorAll('div')].find((el) =>
+        el.className.includes('lg:col-span-3'),
+      );
+      expect(steps).not.toBeUndefined();
+      expect(steps?.querySelector('#send-chain-heading')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

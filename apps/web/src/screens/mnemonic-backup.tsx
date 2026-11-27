@@ -183,9 +183,16 @@ export function MnemonicBackupScreen() {
   // the Reveal section two screens down on a phone. They now live in
   // the guidance section below the reveal, where they still read
   // before anyone acts — the card keeps only the short line.
+  //
+  // Desktop layout (desktop-layout-v2): at lg this stacks into two
+  // columns — intro spanning both, profiles + guidance left, reveal
+  // right, back link spanning both. The lg:order-* classes place the
+  // columns; the plain order-* classes below still govern the mobile
+  // stack (intro, reveal, profiles, guidance, back), so the mobile
+  // layout is untouched.
   return (
-    <div className="flex flex-col space-y-4">
-      <Card radius="xl" className="order-1">
+    <div className="flex flex-col space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start lg:space-y-0">
+      <Card radius="xl" className="order-1 lg:col-span-2">
         <CardHeader>
           <CardTitle>Mnemonic backup</CardTitle>
           <CardDescription>
@@ -233,96 +240,96 @@ export function MnemonicBackupScreen() {
       </Card>
 
       {profiles !== null && (
-        <section aria-labelledby="backup-profiles" className="order-3 space-y-2">
-          <h2 id="backup-profiles" className="text-lg font-semibold">
-            Recovery profiles
-          </h2>
-          {/* Lane 5: the 24-row profile list used to sit between the
-              intro and the Reveal section, pushing the reveal two
-              screens down. The rows are internal derivation ids the
-              user cannot act on without the words, so they collapse
-              into a disclosure; the heading and the list stay in the
-              DOM, unchanged. */}
-          <details className="rounded-bawa border-2 border-ink bg-paper p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-ink">
-              Show the derivation profiles
-            </summary>
-            <p className="mt-2 text-sm leading-relaxed text-ink">
-              This vault was created with the recovery profiles below. Restoring
-              with a different profile recovers different addresses — back up
-              the profile names with the words.
+        <div className="order-3 space-y-4 lg:order-2">
+          <section aria-labelledby="backup-profiles" className="space-y-2">
+            <h2 id="backup-profiles" className="text-lg font-semibold">
+              Recovery profiles
+            </h2>
+            {/* Lane 5: the 24-row profile list used to sit between the
+                intro and the Reveal section, pushing the reveal two
+                screens down. The rows are internal derivation ids the
+                user cannot act on without the words, so they collapse
+                into a disclosure; the heading and the list stay in the
+                DOM, unchanged. */}
+            <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-ink">
+                Show the derivation profiles
+              </summary>
+              <p className="mt-2 text-sm leading-relaxed text-ink">
+                This vault was created with the recovery profiles below. Restoring
+                with a different profile recovers different addresses — back up
+                the profile names with the words.
+              </p>
+            <ul className="mt-2 divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+              {BACKUP_PROFILES.map((profileId) => {
+                const stored = profiles.includes(profileId);
+                return (
+                  <li
+                    key={profileId}
+                    className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2"
+                  >
+                    <span className="text-sm font-semibold text-ink">
+                      {PROFILE_LABELS[profileId] ?? profileId}
+                    </span>
+                    <span className="text-xs leading-relaxed text-ink">
+                      {stored
+                        ? 'Stored with this vault.'
+                        : 'Not stored with this vault. Restoring with this profile would recover different addresses.'}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            </details>
+          </section>
+
+          <section aria-label="Backup guidance" className="space-y-2">
+            <p className="text-sm text-ink">
+              These are reminders, not proof that the steps are done. This
+              app cannot verify that you have followed them.
             </p>
-          <ul className="mt-2 divide-y rounded-bawa-sm border-2 border-ink bg-paper">
-            {BACKUP_PROFILES.map((profileId) => {
-              const stored = profiles.includes(profileId);
-              return (
-                <li
-                  key={profileId}
-                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2"
-                >
-                  <span className="text-sm font-semibold text-ink">
-                    {PROFILE_LABELS[profileId] ?? profileId}
-                  </span>
-                  <span className="text-xs leading-relaxed text-ink">
-                    {stored
-                      ? 'Stored with this vault.'
-                      : 'Not stored with this vault. Restoring with this profile would recover different addresses.'}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          </details>
-        </section>
-      )}
-
-      {profiles !== null && (
-        <section aria-label="Backup guidance" className="order-4 space-y-2">
-          <p className="text-sm text-ink">
-            These are reminders, not proof that the steps are done. This
-            app cannot verify that you have followed them.
-          </p>
-          {/* Lane 5: the four safety facts, moved here from the top
-              card so the Reveal section comes first. Same four facts,
-              same words. */}
-          <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
-            <li>
-              The 24 words you wrote down when the wallet was created are
-              the only backup. Write them on paper and store the paper
-              offline in two places.
-            </li>
-            <li>
-              If you lose these words, the wallet cannot be recovered —
-              Bawa cannot reset your recovery phrase.
-            </li>
-            <li>
-              Never photograph the words, share them or paste them into any
-              app or website.
-            </li>
-            <li>
-              An extended public key alone cannot recover spending access —
-              it only restores watch-only monitoring. Spending access is
-              restored from the 24 words.
-            </li>
-          </ul>
-          {/* Round 2: one compact list, not four cards. No check mark:
-              these are reminders, not completed steps. */}
-          <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
-            {guidanceItems.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-baseline gap-2 px-3 py-2 text-sm text-ink"
-              >
-                <span aria-hidden="true" className="text-muted-foreground">–</span>
-                {item.label}
+            {/* Lane 5: the four safety facts, moved here from the top
+                card so the Reveal section comes first. Same four facts,
+                same words. */}
+            <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
+              <li>
+                The 24 words you wrote down when the wallet was created are
+                the only backup. Write them on paper and store the paper
+                offline in two places.
               </li>
-            ))}
-          </ul>
-        </section>
+              <li>
+                If you lose these words, the wallet cannot be recovered —
+                Bawa cannot reset your recovery phrase.
+              </li>
+              <li>
+                Never photograph the words, share them or paste them into any
+                app or website.
+              </li>
+              <li>
+                An extended public key alone cannot recover spending access —
+                it only restores watch-only monitoring. Spending access is
+                restored from the 24 words.
+              </li>
+            </ul>
+            {/* Round 2: one compact list, not four cards. No check mark:
+                these are reminders, not completed steps. */}
+            <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+              {guidanceItems.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-baseline gap-2 px-3 py-2 text-sm text-ink"
+                >
+                  <span aria-hidden="true" className="text-muted-foreground">–</span>
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       )}
 
       {profiles !== null && (
-        <section aria-labelledby="reveal-heading" className="order-2 space-y-3">
+        <section aria-labelledby="reveal-heading" className="order-2 space-y-3 lg:order-3">
           <h2 id="reveal-heading" className="text-lg font-semibold">
             Reveal recovery phrase
           </h2>
@@ -429,7 +436,7 @@ export function MnemonicBackupScreen() {
                 Write these words down in order, then hide them. Never
                 photograph, share, or paste them anywhere.
               </p>
-              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {words.map((word, index) => (
                   <li
                     key={`${index}-${word}`}
@@ -448,7 +455,7 @@ export function MnemonicBackupScreen() {
         </section>
       )}
 
-      <Link to="/" className="order-5 inline-block text-sm underline underline-offset-4">
+      <Link to="/" className="order-5 inline-block text-sm underline underline-offset-4 lg:order-4 lg:col-span-2">
         Back to wallet
       </Link>
     </div>

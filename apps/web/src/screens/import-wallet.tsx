@@ -544,7 +544,13 @@ export function ImportWalletScreen() {
   }
 
   return (
-    <div className="space-y-6">
+    // Follow-up (desktop-layout-v2): the screen was wrapped in a centered 720px column,
+    // which reads as a phone column on a 1440px main. The intro now
+    // sits left (5 of 12) and the mode-specific form right (7 of 12)
+    // at lg. Below lg the same blocks stack in one column in the same
+    // order (space-y-6, no bare grid class), so the mobile layout is
+    // untouched.
+    <div className="space-y-6 lg:grid lg:grid-cols-[5fr_7fr] lg:gap-6 lg:items-start lg:space-y-0">
       <Card radius="xl">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -567,6 +573,11 @@ export function ImportWalletScreen() {
         </CardContent>
       </Card>
 
+      {/* Right column at lg: every mode-specific block lives in this
+          one wrapper so the intro keeps the left column to itself.
+          The wrapper is a plain div below lg, so the mobile order and
+          spacing are unchanged. */}
+      <div className="space-y-6">
       {mode === 'phrase' && vaultExists && (
         <Alert>
           <AlertDescription>
@@ -1022,6 +1033,8 @@ export function ImportWalletScreen() {
           </details>
         </>
       )}
+
+      </div>
 
       <Link to="/" className="inline-block text-sm underline underline-offset-4">
         Back to wallet

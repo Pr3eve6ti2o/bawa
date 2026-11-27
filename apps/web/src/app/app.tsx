@@ -135,6 +135,48 @@ function HomeScreen() {
   return vaultState === 'no-vault' ? <WelcomeScreen /> : <DashboardScreen />;
 }
 
+// Outlet wrapper class for a route path, or null when the screen
+// renders directly in <main> with no wrapper. Narrow task screens get
+// a local 480px cap inside the content frame; /assets itself stays
+// full-width, only /assets/<chain> is narrow. Welcome self-caps in
+// welcome.tsx (it also renders on the home route).
+// Desktop (desktop-layout-v2 + follow-up): the screens below widen to
+// full content width at desktop: (980px, the shell breakpoint), where
+// each lays out in two columns
+// (/assets/:chain, /send, /receive, /import-wallet,
+// /mnemonic-backup, alongside the existing /create-wallet, /security,
+// /lock). Below desktop: every one of them keeps the 480px cap: the mobile
+// layout is untouched.
+// /swap and /backup-shares (added after the tag) keep HEAD's 480px cap
+// at desktop: too — they were never widened there.
+// P10: matching runs on the path with trailing slashes stripped.
+// GitHub Pages redirects /bawa/assets to /bawa/assets/, and the
+// trailing slash used to match startsWith('/assets/') and wrap the
+// asset LIST in the 480px cap. Exported so unit tests can pin the
+// classification without mounting the app.
+export function outletWrapperClass(pathname: string): string | null {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  const isChainDetail = /^\/assets\/[^/]+$/.test(normalized);
+  const isNarrow =
+    ['/send', '/receive', '/swap', '/import-wallet', '/mnemonic-backup', '/backup-shares'].includes(
+      normalized,
+    ) || isChainDetail;
+  const isWideAtDesktop =
+    [
+      '/create-wallet',
+      '/security',
+      '/lock',
+      '/send',
+      '/receive',
+      '/import-wallet',
+      '/mnemonic-backup',
+    ].includes(normalized) || isChainDetail;
+  if (!isNarrow && !isWideAtDesktop) return null;
+  return isWideAtDesktop
+    ? 'mx-auto w-full max-w-[480px] desktop:max-w-none'
+    : 'mx-auto w-full max-w-[480px]';
+}
+
 // The header network pill (UI/UX fixes, item 2): the Mainnet/Devnet
 // indicator in the app header is a button, not a label. Tapping it
 // switches the wallet between mainnet and devnet — the same mode flag
@@ -263,17 +305,10 @@ function AppLayout() {
     pathname === '/create-wallet' ||
     pathname === '/send' ||
     pathname === '/mnemonic-backup';
-  // Narrow task screens get a local 480px cap inside the content frame;
-  // /assets itself stays full-width, only /assets/<chain> is narrow.
-  // Welcome self-caps in welcome.tsx (it also renders on the home route).
-  // /create-wallet and /security keep the 480px cap below desktop:
-  // only: at desktop: they go full content width so the screens can
-  // lay out in two columns (create-wallet, security).
-  const isNarrow =
-    ['/send', '/receive', '/swap', '/import-wallet', '/mnemonic-backup', '/backup-shares'].includes(
-      pathname,
-    ) || pathname.startsWith('/assets/');
-  const isWideAtDesktop = ['/create-wallet', '/security', '/lock'].includes(pathname);
+  // The outlet wrapper class for this route (see outletWrapperClass):
+  // null when the screen renders directly in <main>, otherwise the
+  // 480px phone cap that widens at desktop: for the task screens.
+  const wrapperClass = outletWrapperClass(pathname);
 
   return (
     <div className="min-h-dvh bg-paper sm:py-6 desktop:py-0">
@@ -386,14 +421,8 @@ function AppLayout() {
               isFocusedFlow ? 'pb-0' : 'pb-24'
             }`}
           >
-            {isNarrow || isWideAtDesktop ? (
-              <div
-                className={
-                  isWideAtDesktop
-                    ? 'mx-auto w-full max-w-[480px] desktop:max-w-none'
-                    : 'mx-auto w-full max-w-[480px]'
-                }
-              >
+            {wrapperClass !== null ? (
+              <div className={wrapperClass}>
                 <Outlet />
               </div>
             ) : (

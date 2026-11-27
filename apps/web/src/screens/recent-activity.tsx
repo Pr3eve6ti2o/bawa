@@ -19,7 +19,9 @@ export function RecentActivity() {
   // refreshHistory in state/wallet-context) — the same dead-Retry
   // mechanism as the balance rows. The per-chain Retry is suppressed
   // while locked and one Unlock prompt replaces it. 'no-vault' keeps
-  // its Retry: a watch-only xpub address can still load history.
+  // its Retry: a watch-only xpub address can still load history. A
+  // chain whose own reason is no-address has no Retry either — with no
+  // address to fetch for, a refetch cannot run.
   const isLocked = vaultState === 'locked';
 
   // `history` is optional-chained throughout: the dashboard tests mock a
@@ -155,7 +157,7 @@ export function RecentActivity() {
                 <p className="text-sm text-panel-text-soft">
                   {`${chainConfig(chain).displayName} history unavailable`}
                 </p>
-                {!isLocked && (
+                {!isLocked && history?.[chain]?.reason !== 'no-address' && (
                   <Button
                     type="button"
                     variant="outline"

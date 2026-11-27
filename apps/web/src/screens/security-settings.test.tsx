@@ -243,4 +243,38 @@ describe('security settings screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('spans Delete vault across both desktop columns, pairing Auto-lock with Connected wallets', async () => {
+    // P1 (partial): "Delete vault" sat at half width with an empty
+    // right half, so it now spans both desktop columns. "Auto-lock"
+    // and "Connected wallets" stay paired half-width — wrapping
+    // Auto-lock alone would orphan Connected wallets. Every other
+    // card spans both columns.
+    setWallet('unlocked');
+    const mounted = await mountScreen();
+    try {
+      const section = mounted.div.querySelector('section') as HTMLElement;
+      expect(section.className).toContain('lg:grid');
+      expect(section.className).toContain('lg:grid-cols-2');
+      const children = [...section.children] as HTMLElement[];
+      expect(children.length).toBeGreaterThan(0);
+      const deleteCard = children.find((child) =>
+        child.textContent?.includes('Delete vault'),
+      );
+      expect(deleteCard).not.toBeUndefined();
+      expect(deleteCard?.className).toContain('lg:col-span-2');
+      const autoLock = children.find((child) =>
+        child.textContent?.includes('Auto-lock'),
+      );
+      expect(autoLock).not.toBeUndefined();
+      expect(autoLock?.className).not.toContain('lg:col-span-2');
+      const connected = children.find((child) =>
+        child.textContent?.includes('Connected wallets'),
+      );
+      expect(connected).not.toBeUndefined();
+      expect(connected?.className).not.toContain('lg:col-span-2');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

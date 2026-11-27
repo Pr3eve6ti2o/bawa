@@ -58,6 +58,14 @@ export function TransactionHistoryScreen() {
       history[chain].status === 'loaded' || history[chain].status === 'empty',
   );
 
+  // Retry only when at least one failed chain has an address to refetch:
+  // a chain that failed with no-address cannot load history however often
+  // it is retried, so a Retry there would be dead (same gate as the
+  // balance rows and the asset detail screen).
+  const retryableFailed = failedChains.filter(
+    (chain) => history[chain].reason !== 'no-address',
+  );
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight text-panel-text">Transactions</h1>
@@ -242,9 +250,11 @@ export function TransactionHistoryScreen() {
                   </p>
                 );
               })}
-              <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
-                Retry
-              </Button>
+              {retryableFailed.length > 0 && (
+                <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
+                  Retry
+                </Button>
+              )}
             </div>
           )}
         </>

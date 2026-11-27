@@ -305,4 +305,99 @@ describe('transaction detail screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('lays the detail out in two columns on desktop widths', async () => {
+    // Follow-up: the v2 wider cap (672 -> 768px) was invisible, so the
+    // detail now lays out in two columns at lg. Below lg it stays a
+    // single max-w-2xl column, so the mobile layout is untouched.
+    setWallet({
+      btc: emptyHistory,
+      eth: emptyHistory,
+      trx: emptyHistory,
+      ton: emptyHistory,
+      sol: emptyHistory,
+      bsc: emptyHistory,
+      matic: emptyHistory,
+      arb: emptyHistory,
+      op: emptyHistory,
+      base: emptyHistory,
+      avax: emptyHistory,
+      gnosis: emptyHistory,
+      celo: emptyHistory,
+      linea: emptyHistory,
+      mantle: emptyHistory,
+      scroll: emptyHistory,
+      opbnb: emptyHistory,
+      metis: emptyHistory,
+      aurora: emptyHistory,
+      fantom: emptyHistory,
+      ltc: emptyHistory,
+      doge: emptyHistory,
+    });
+    const mounted = await mountScreen('/transactions/0xmissing');
+    try {
+      const wrapper = mounted.div.querySelector('div.max-w-2xl');
+      expect(wrapper).not.toBeNull();
+      expect(wrapper?.className).toContain('max-w-2xl');
+      expect(wrapper?.className).toContain('lg:max-w-none');
+      expect(wrapper?.className).not.toContain('lg:max-w-3xl');
+      const section = mounted.div.querySelector('section');
+      expect(section?.className).toContain('lg:grid');
+      expect(section?.className).toContain('lg:grid-cols-2');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('splits a found transaction into two detail columns on desktop widths', async () => {
+    setWallet({
+      btc: emptyHistory,
+      eth: {
+        status: 'loaded',
+        txs: [
+          {
+            hash: '0xabc',
+            chain: 'eth',
+            networkId: 'eip155:1',
+            direction: 'out',
+            amountBaseUnits: '250000000000000000',
+            counterparty: '0xRecipient',
+            timestamp: 1700000000000,
+            status: 'confirmed',
+            explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
+          },
+        ],
+      },
+      trx: emptyHistory,
+      ton: emptyHistory,
+      sol: { status: 'empty', txs: [] },
+      bsc: { status: 'empty', txs: [] },
+      matic: { status: 'empty', txs: [] },
+      arb: { status: 'empty', txs: [] },
+      op: { status: 'empty', txs: [] },
+      base: { status: 'empty', txs: [] },
+      avax: { status: 'empty', txs: [] },
+      gnosis: { status: 'empty', txs: [] },
+      celo: { status: 'empty', txs: [] },
+      linea: { status: 'empty', txs: [] },
+      mantle: { status: 'empty', txs: [] },
+      scroll: { status: 'empty', txs: [] },
+      opbnb: { status: 'empty', txs: [] },
+      metis: { status: 'empty', txs: [] },
+      aurora: { status: 'empty', txs: [] },
+      fantom: { status: 'empty', txs: [] },
+      ltc: { status: 'empty', txs: [] },
+      doge: { status: 'empty', txs: [] },
+    });
+    const mounted = await mountScreen('/transactions/0xabc');
+    try {
+      const lists = mounted.div.querySelectorAll('dl');
+      expect(lists.length).toBe(2);
+      const wrapper = lists[0]?.parentElement;
+      expect(wrapper?.className).toContain('lg:grid');
+      expect(wrapper?.className).toContain('lg:grid-cols-2');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

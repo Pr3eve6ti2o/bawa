@@ -294,6 +294,66 @@ describe('wallet management — vault account selection', () => {
       await mounted.cleanup();
     }
   });
+
+  it('lays the vault card beside the imported wallets on desktop widths', async () => {
+    // Follow-up: the vault card sat left and the imported list
+    // underneath it in a full-width two-column grid, which left the
+    // "No wallets imported" card mostly empty and the vault card with
+    // dead space bottom-right. The screen is now two columns at lg —
+    // vault card left, imported list (or the empty card), note and
+    // Forget-all button in a right rail. The vault address list keeps
+    // its own two columns inside the vault card. Below lg the same
+    // blocks stack in one column in the same order (space-y-6, no bare
+    // grid class), so the mobile layout is untouched. Adapted from the
+    // tag's test: HEAD's setWallet takes no xpubs, so the imported
+    // wallet is mocked directly, as HEAD's watch-only tests do.
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: {
+        btc: {
+          chain: 'btc',
+          xpub: 'xpub6TestBtc1234567890abcdef',
+          label: '',
+          derivedCount: 1,
+        },
+        eth: null,
+        trx: null,
+        ton: null,
+      },
+      removeXpub: vi.fn(),
+      vaultAccount: { account: 0, index: 0 },
+      setVaultAccount: vi.fn(async () => {}),
+      vaultAddresses: TEST_ADDRESSES,
+      vaultAccounts: [0],
+      vaultPassphraseNeeded: false,
+      createVaultAccounts: vi.fn(async () => []),
+      selectVaultAccount: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      const section = mounted.div.querySelector('section');
+      expect(section?.className).toContain('space-y-6');
+      expect(section?.className).toContain('lg:grid');
+      expect(section?.className).toContain('lg:grid-cols-[7fr_5fr]');
+      expect(section?.className).not.toMatch(
+        /(^|\s)grid-cols-\[7fr_5fr\](\s|$)/,
+      );
+      const dl = mounted.div.querySelector('dl');
+      expect(dl?.className).toContain('lg:grid');
+      expect(dl?.className).toContain('lg:grid-cols-2');
+      expect(dl?.className).toContain('space-y-3');
+      expect(dl?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      const list = [...mounted.div.querySelectorAll('ul')].find((el) =>
+        el.querySelector('[aria-label="Forget stored Bitcoin key"]'),
+      );
+      expect(list?.className).toContain('lg:grid');
+      expect(list?.className).toContain('lg:grid-cols-1');
+      expect(list?.className).not.toContain('lg:grid-cols-2');
+      expect(list?.className).toContain('space-y-4');
+      expect(list?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
 
 describe('wallet management — accounts list and bulk creation', () => {
