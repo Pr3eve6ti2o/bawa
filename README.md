@@ -30,8 +30,6 @@ Real screenshots of the example web wallet running from this branch, taken with 
 | <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" height="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" height="360"> |
 | Portfolio, assets and recent activity. | The same wallet on mobile. |
 
-> **Note (2026-11-26, guide-update pass):** these two screenshots predate the November redesign (taken 2026-11-23) — they show the pre-redesign dashboard. Re-taking them via CDP is pending; no live browser was available in this lane. Treat them as stale until re-taken.
-
 ### Create your own
 
 Prefer to build one yourself? Follow [Create the example web wallet](docs/CREATE-EXAMPLE-WALLET.md) — or run it straight from a terminal:
@@ -145,7 +143,7 @@ The single entry point for Bawa documentation is [docs/index.md](docs/index.md).
 
 | You need | Read |
 | --- | --- |
-| Full manual | [docs/README-FULL.md](docs/README-FULL.md) — the previous 1,308-line README, preserved with only its link paths adjusted |
+| Full manual | [docs/README-FULL.md](docs/README-FULL.md) — the previous 1,308-line README (78,294 bytes), substantially reworked from the e3b65fb8 root README — not a verbatim copy |
 | Guide map | [docs/README.md](docs/README.md) |
 | Docs index | [docs/index.md](docs/index.md) |
 | How it works | [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) |

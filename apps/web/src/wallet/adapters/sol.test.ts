@@ -172,13 +172,13 @@ describe('solana adapter — balance', () => {
     }
   });
 
-  it('falls back to the Vibe Station RPC when publicnode throws', async () => {
+  it('falls back to the solana.publicnode.com backup when publicnode throws', async () => {
     const request = vi.fn(async (url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
       if (url === 'https://solana-rpc.publicnode.com') {
         throw new Error('Network error: publicnode unreachable');
       }
-      if (url === 'https://public.rpc.solanavibestation.com') {
+      if (url === 'https://solana.publicnode.com') {
         if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
         if (body.method === 'getBalance') {
           return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 2368210 } };
@@ -191,17 +191,17 @@ describe('solana adapter — balance', () => {
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
       expect(result.data.valueBaseUnits).toBe('2368210');
-      expect(result.data.source).toBe('solana-vibe-station');
+      expect(result.data.source).toBe('solana-publicnode-alt');
     }
   });
 
-  it('falls back to the Vibe Station RPC when publicnode returns an error object', async () => {
+  it('falls back to the solana.publicnode.com backup when publicnode returns an error object', async () => {
     const request = vi.fn(async (url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
       if (url === 'https://solana-rpc.publicnode.com') {
         return { jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'Access forbidden' } };
       }
-      if (url === 'https://public.rpc.solanavibestation.com') {
+      if (url === 'https://solana.publicnode.com') {
         if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
         if (body.method === 'getBalance') {
           return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 7 } };

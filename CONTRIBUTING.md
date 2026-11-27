@@ -14,6 +14,8 @@ For bug reports, include reproduction steps, expected behaviour and actual behav
 
 Create your change branch from `panel-rebuild/token-gaps`, the working line (not `main` — `main` is a docs-sweep tip, currently `29b4b62`). Name the branch after the work, for example `panel-rebuild/guide-update`. Target the pull request at the branch the work belongs to; ask in the issue if you are unsure.
 
+The repo's branch families are `panel-rebuild/*`, `redesign/*`, `usable-*`, `gh-pages` and `main`.
+
 ## Code style
 
 Match the conventions of the surrounding code in the language you are changing. Keep unrelated formatting changes out of the pull request. Run the checks below before requesting review.

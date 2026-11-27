@@ -198,7 +198,7 @@ These reference images are included as links for visual inspection, not as permi
 
 **Phantom - official help-centre example of Home and Receive/network selection:**
 
-![Phantom Home and Receive reference](https://help.phantom.com/hc/article_attachments/48163003614099)
+![Phantom Home and Receive reference](https://phantom-wallet.zendesk.com/hc/article_attachments/56783179501715)
 
 Source: [Phantom Help - View your account addresses](https://help.phantom.com/hc/en-us/articles/28355153389075-View-your-account-addresses-in-Phantom).
 

@@ -6,7 +6,7 @@
  * getBalance 2368210 lamports for
  * 4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM, re-confirmed at a later
  * slot with the identical value); fallback is
- * https://public.rpc.solanavibestation.com (same call, same value).
+ * https://solana.publicnode.com (same call, same value).
  * api.mainnet-beta.solana.com is RETIRED: it 403s browser requests
  * ("Access forbidden", re-confirmed for getBalance and getHealth).
  * Chain identity rests on getHealth returning 'ok' (cached per
@@ -36,9 +36,9 @@ import { withRetry } from '../retry';
 
 const NETWORK_ID = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
 const PRIMARY_URL = 'https://solana-rpc.publicnode.com';
-const FALLBACK_URL = 'https://public.rpc.solanavibestation.com';
+const FALLBACK_URL = 'https://solana.publicnode.com';
 const PRIMARY_SOURCE = 'solana-publicnode';
-const FALLBACK_SOURCE = 'solana-vibe-station';
+const FALLBACK_SOURCE = 'solana-publicnode-alt';
 const DECIMALS = 9;
 
 /**
@@ -161,7 +161,7 @@ export async function fetchSolanaMinimumBalanceForRentExemption(
   return value;
 }
 
-export interface SolanaAdapterOverrides {
+interface SolanaAdapterOverrides {
   baseUrl?: string;
   fallbackUrl?: string;
   /**

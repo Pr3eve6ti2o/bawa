@@ -36,7 +36,7 @@ describe('chain registry — token discovery', () => {
   it('pins the live-verified RPC for each new chain', () => {
     expect(CHAINS.sol.rpcEndpoints).toEqual([
       'https://solana-rpc.publicnode.com',
-      'https://public.rpc.solanavibestation.com',
+      'https://solana.publicnode.com',
     ]);
     expect(CHAINS.bsc.rpcEndpoints).toEqual([
       'https://bsc-rpc.publicnode.com',

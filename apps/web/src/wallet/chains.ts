@@ -3,7 +3,7 @@ import { formatChainId } from './caip';
 
 export type { ChainId };
 
-export type CapabilityName =
+type CapabilityName =
   | 'derive'
   | 'restore'
   | 'receive'
@@ -15,7 +15,7 @@ export type CapabilityName =
   | 'post-sign-verify'
   | 'simulate';
 
-export type CapabilityStatus =
+type CapabilityStatus =
   | 'verified'
   | 'blocked'
   | 'unsupported'
@@ -28,9 +28,9 @@ export type CapabilityStatus =
  * Never claim mainnet confirmation for anything the offline probes
  * established.
  */
-export type EvidenceLevel = 'mainnet-confirmed' | 'probe-only';
+type EvidenceLevel = 'mainnet-confirmed' | 'probe-only';
 
-export interface CapabilityEntry {
+interface CapabilityEntry {
   status: CapabilityStatus;
   /** Short evidence reference. A capability with no evidence is never verified. */
   evidence: string;
@@ -412,7 +412,8 @@ function capabilitiesForExpandedBalanceChain(
 /**
  * Lane 80-APP: pathFor for the expanded chains, built by substituting
  * the account/index into the chain's recorded derivation template
- * (chains-expanded.ts). At account 0 index 0 the result is the
+ * (recorded in chains.ts in production; chains-expanded.ts keeps the
+ * canonical dataset). At account 0 index 0 the result is the
  * recorded derivationPath exactly (pinned by
  * chains-expanded-wiring.test.ts). Stellar and NEAR templates carry no
  * {index} — one address per account — so the index is ignored for them.
@@ -639,7 +640,10 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       // additional addresses on distinct hardened paths.
       return ed25519PathFor(501, account, index);
     },
-    rpcEndpoints: ['https://solana-rpc.publicnode.com', 'https://public.rpc.solanavibestation.com'],
+    // Lane B (2026-11-27): backup is solana.publicnode.com - Vibe Station
+    // connection-refused, replaced. Both hostnames share PublicNode infra,
+    // so this guards a hostname failure, not a provider outage.
+    rpcEndpoints: ['https://solana-rpc.publicnode.com', 'https://solana.publicnode.com'],
     evmChainId: null,
     capabilities: capabilitiesForBalanceChain('sol', undefined, true),
   },
@@ -1681,7 +1685,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
 export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom', 'zksync', 'cronos', 'kava', 'filecoin', 'zora', 'mode', 'fraxtal', 'berachain', 'sei', 'arbnova', 'worldchain', 'manta', 'unichain', 'ink', 'abstract', 'soneium', 'apechain', 'sonic', 'hyperevm', 'monad', 'ronin', 'immutable', 'fuse', 'velas', 'syscoin', 'theta', 'iotex', 'xlayer', 'boba', 'taiko', 'astar', 'telos', 'conflux', 'core', 'songbird', 'rootstock', 'pulsechain', 'xdc', 'chiliz', 'etc', 'flare', 'zetachain', 'hemi', 'bob', 'flowevm', 'cosmos', 'osmosis', 'xrp', 'stellar', 'polkadot', 'near', 'aptos', 'tezos', 'algorand', 'hedera', 'injective', 'celestia', 'dydx', 'seicosmos', 'axelar', 'noble', 'juno', 'cardano', 'kaspa', 'starknet'];
 
 // The Wallet Core default Solana profile is now supported as bawa-sol-bip44-v1; only the Phantom bip44Change profile stays unsupported.
-export interface UnsupportedProfile {
+interface UnsupportedProfile {
   profileId: string;
   path: string;
   networkId: string;
@@ -1871,7 +1875,7 @@ export function chainConfigForNetwork(networkId: string): ChainConfig {
  * a custom RPC added third could otherwise never become primary.
  */
 export const RPC_OVERRIDES_KEY = 'bawa-rpc-overrides:v1';
-export const MAX_RPC_ENDPOINTS_PER_CHAIN = 3;
+const MAX_RPC_ENDPOINTS_PER_CHAIN = 3;
 
 /** The chains whose adapters consume resolveRpcEndpoints (all but Dogecoin). */
 export const RPC_MANAGED_CHAINS: readonly ChainId[] = SUPPORTED_CHAINS.filter(

@@ -18,7 +18,7 @@
 //   is a native SOL transfer — a token amount without it would be paid
 //   in SOL, so the token path must always carry the mint.
 // - TON: ton://transfer/<address>?amount=<nanotons>
-//   (https://ton-blockchain.github.io/docs/develop/dapps/telegram-apps/app-deeplinks;
+//   (https://docs.ton.org/onboarding/wallet-apps/deep-links;
 //   1 TON = 10^9 nanotons) for native TON, or
 //   ton://transfer/<address>?jetton=<jetton master>&amount=<base units>
 //   for a Jetton (docs.ton.org deep links: the jetton parameter names
@@ -51,7 +51,7 @@ import { CHAINS, SUPPORTED_CHAINS, type ChainId } from './chains';
 import { decimalToBaseUnits } from './chain-amount-format';
 import { DEFAULT_TOKENS } from './tokens';
 
-export interface PaymentRequest {
+interface PaymentRequest {
   chain: ChainId;
   /** Recipient address (the token contract for an ERC-20 payment lives in tokenContract). */
   address: string;
@@ -66,11 +66,11 @@ export interface PaymentRequest {
   message?: string;
 }
 
-export type PaymentUriResult =
+type PaymentUriResult =
   | { ok: true; uri: string }
   | { ok: false; reason: string };
 
-export type ParsePaymentUriResult =
+type ParsePaymentUriResult =
   | { ok: true; request: PaymentRequest }
   | { ok: false; reason: string };
 
@@ -81,7 +81,7 @@ const BIP21: Record<string, { chain: ChainId; decimals: number }> = {
 };
 
 /** Exact decimal math: base units back to a decimal string, no floats. */
-export function baseUnitsToDecimal(value: string, decimals: number): string | null {
+function baseUnitsToDecimal(value: string, decimals: number): string | null {
   if (!/^\d+$/.test(value)) return null;
   const padded = value.padStart(decimals + 1, '0');
   const whole = padded.slice(0, padded.length - decimals);
@@ -452,7 +452,7 @@ export function parseBawaSendLink(
 // raw query string, re-validated through parseBawaSendLink on read,
 // so a hand-edited or stale value can never inject an invalid link.
 // All access is guarded: private-mode storage must never break Send.
-export const PENDING_SEND_LINK_KEY = 'bawa-pending-send-link';
+const PENDING_SEND_LINK_KEY = 'bawa-pending-send-link';
 
 export function savePendingSendLink(search: string): void {
   try {
@@ -498,7 +498,7 @@ export function clearPendingSendLink(): void {
 // precedent): jsdom has no canvas and its Image never loads, so tests
 // inject fakes; the production call site uses the browser globals.
 
-export interface QrRenderImage {
+interface QrRenderImage {
   onload: (() => void) | null;
   onerror: (() => void) | null;
   width: number;
@@ -506,7 +506,7 @@ export interface QrRenderImage {
   src: string;
 }
 
-export interface QrRenderContext {
+interface QrRenderContext {
   fillStyle: string;
   strokeStyle?: string;
   lineWidth?: number;
@@ -565,7 +565,7 @@ export interface QrRenderContext {
   ) => void;
 }
 
-export interface QrRenderCanvas {
+interface QrRenderCanvas {
   width: number;
   height: number;
   getContext(kind: '2d'): QrRenderContext | null;
@@ -718,7 +718,7 @@ export async function qrSvgToPngFile(
 
 export type QrCardTemplate = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g';
 
-export interface QrCardTemplateMeta {
+interface QrCardTemplateMeta {
   id: QrCardTemplate;
   label: string;
   hint: string;
@@ -773,7 +773,7 @@ export const QR_CARD_SCAN_LINE =
 /** Template A's link line below the card — Bawa's own share-link slot. */
 export const QR_CARD_SHARE_LINK_TEXT = 'Open the Bawa link ›';
 /** The brand wordmark, drawn once per card, outside the functional area. */
-export const QR_CARD_BRAND = 'Bawa Wallet';
+const QR_CARD_BRAND = 'Bawa Wallet';
 
 export interface QrCardPngDetails {
   /** e.g. '25 USDC', or 'Any amount' when no amount is set. */

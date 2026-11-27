@@ -12,7 +12,7 @@ This index maps Bawa's wallet reference and AI Wallet Builder: where to start, w
 - [Implementation plan](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md) — `DOCUMENTED_NOT_TESTED`: Phases 0–10, evidence vocabulary and outstanding milestones.
 - [Workflow command](../scripts/build-wallet.mjs) — `IMPLEMENTED_AND_VERIFIED` for sample request 1 (Create a Web wallet: 3/3 steps VERIFIED) and sample request 3 (Create a multi-chain wallet: 6/6 steps VERIFIED). Sample request 2 (Create an Android wallet) reports setup as SKIPPED without toolchains. Exercise dates are not stated in this index.
 - [README](../README.md) — `DOCUMENTED_NOT_TESTED`: the front door — what Bawa is, quickstart, and where to go next.
-- [Full manual (preserved README)](README-FULL.md) — `DOCUMENTED_NOT_TESTED`: the previous 1,308-line README, preserved verbatim.
+- [Full manual (preserved README)](README-FULL.md) — `DOCUMENTED_NOT_TESTED`: the previous 1,308-line README (78,294 bytes), an expanded manual verified 2026-11-10 at b438d3a7 — substantially reworked from the e3b65fb8 root README, not a verbatim copy.
 
 ## Tutorials — learn by doing
 

@@ -317,7 +317,9 @@ describe('chains registry', () => {
 
   it('lists all eighty-seven chains for derive, restore and receive', () => {
     // Lane 80-APP (2026-11-24): derivation is probe-verified for all 65
-    // expanded chains (chains-expanded-wiring.test.ts); this test pins
+    // expanded chains, now in chains.ts in production
+    // (chains-expanded-wiring.test.ts cross-checks them against the
+    // canonical dataset in chains-expanded.ts); this test pins
     // the set equals the registry.
     expect(availableFor('derive')).toEqual([...SUPPORTED_CHAINS]);
     expect(availableFor('restore')).toEqual([...SUPPORTED_CHAINS]);
@@ -644,11 +646,13 @@ describe('chains registry', () => {
     // returned empty twice and is never pinned.
     // Token gaps (2026-11-22, Lane 1): SOL retires
     // api.mainnet-beta.solana.com (browser 403) for publicnode primary +
-    // Vibe Station fallback; DOGE adds SoChain primary ahead of
-    // BlockCypher.
+    // solana.publicnode.com fallback (Lane B, 2026-11-27: Vibe Station
+    // connection-refused, replaced - both hostnames share PublicNode
+    // infra, so this guards a hostname failure, not a provider outage).
+    // DOGE adds SoChain primary ahead of BlockCypher.
     expect(CHAINS.sol.rpcEndpoints).toEqual([
       'https://solana-rpc.publicnode.com',
-      'https://public.rpc.solanavibestation.com',
+      'https://solana.publicnode.com',
     ]);
     expect(CHAINS.bsc.rpcEndpoints).toEqual([
       'https://bsc-rpc.publicnode.com',
