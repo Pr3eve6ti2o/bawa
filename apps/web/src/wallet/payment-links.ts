@@ -2022,8 +2022,8 @@ function drawQrCard(
     const g = geometry as QrCardGeometryA;
     const page = '#023139';
     const card = '#011F29';
-    const footerBand = '#0E2127';
-    const muted = '#7A9491';
+    const hairline = '#2A4A52';
+    const muted = '#A7C4C1';
     ctx.fillStyle = page;
     ctx.fillRect(0, 0, width, g.height);
     // Header: white logo disc + chain badge.
@@ -2046,34 +2046,40 @@ function drawQrCard(
     if (g.warningY !== null) {
       drawSubtitleBlock(ctx, g.warningLines, width / 2, g.warningY, px(19), px(13), '#FFFFFF', '#FFFFFF');
     }
-    // The card: QR band over footer band, one rounded shape. The
-    // bands are painted inside a clip of the rounded card path, so
-    // both bands keep the card's round corners.
+    // The card: ONE flat teal field. The QR sits directly on the
+    // card field (Bitget structure); the address zone below is divided
+    // from the QR zone by a 1px hairline rule, not a filled band. The
+    // old stacked dark fills (dE 4-10 steps) read as a muddy gradient.
+    // The hairline is painted inside the clip so it keeps the card's
+    // round corners.
     const cardX = px(19);
     const cardW = px(352);
     ctx.save();
     roundRectPath(ctx, cardX, g.cardY, cardW, g.cardH, px(24));
     ctx.clip();
     ctx.fillStyle = card;
-    ctx.fillRect(cardX, g.cardY, cardW, g.bandH);
-    ctx.fillStyle = footerBand;
-    ctx.fillRect(cardX, g.cardY + g.bandH, cardW, g.cardH - g.bandH);
+    ctx.fillRect(cardX, g.cardY, cardW, g.cardH);
+    ctx.fillStyle = hairline;
+    ctx.fillRect(cardX, g.cardY + g.bandH, cardW, px(1));
     ctx.restore();
     ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
     centreMark(ctx, deps, images, 'a', g.qrX + px(qrSpec.size) / 2, g.qrY + px(qrSpec.size) / 2, s);
     drawText(ctx, details.amountText, width / 2, g.amountY, DISPLAY_FONT(px(20), 700), '#FFFFFF');
     drawText(ctx, 'Receiving address', cardX + px(20), g.labelY, BODY_FONT(px(14)), muted, 'left');
     drawAddressLines(ctx, g.addressLines, cardX + px(20), g.addressY, px(24), MONO_FONT(px(17), 700), '#FFFFFF', 'left');
-    fillCircle(ctx, g.copyX + px(22), g.copyY + px(22), px(22), '#1B2023');
+    // Coral disc, white glyph - the control must read as a control.
+    fillCircle(ctx, g.copyX + px(22), g.copyY + px(22), px(22), QR_CARD_CORAL);
     drawCopyGlyph(ctx, g.copyX + px(12), g.copyY + px(12), px(20), '#FFFFFF');
     // Lane B: the footer tagline, above the link line — the same
     // order as the in-app card (tagline, then link).
     drawText(ctx, QR_CARD_FOOTER, width / 2, g.footerY, BODY_FONT(px(14)), muted);
     drawText(ctx, details.shareLinkText ?? QR_CARD_SHARE_LINK_TEXT, width / 2, g.linkY, BODY_FONT(px(15)), muted);
-    // Brand bar: near-black, full-bleed, Bawa's own wordmark.
+    // Brand row: no slab - it sits on the card field, coral mark +
+    // white wordmark unchanged. (Bitget's black bar is full-bleed at the
+    // screen bottom, never a layer inside the card.)
     // UX-major Lane 1: the mark is 48 px and the wordmark 24 px
     // (was 44/22) — Bitget's bar is a statement, not a footnote.
-    ctx.fillStyle = '#121818';
+    ctx.fillStyle = card;
     ctx.fillRect(0, g.brandY, width, g.brandH);
     const brandFont = BODY_FONT(px(24), 800);
     ctx.font = brandFont;
