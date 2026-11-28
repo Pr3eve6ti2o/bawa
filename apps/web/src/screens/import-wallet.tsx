@@ -246,7 +246,7 @@ function DerivedAddressesList({
           ) : (
             <div className="text-base font-semibold">{CHAIN_LABELS[chainId]}</div>
           )}
-          <code className="block break-all rounded-md bg-muted p-3 text-sm">
+          <code className="block break-all rounded-flat bg-muted p-3 text-sm">
             {derived[chainId]}
           </code>
         </li>
@@ -552,7 +552,7 @@ export function ImportWalletScreen() {
     // order (space-y-6, no bare grid class), so the mobile layout is
     // untouched.
     <div className="space-y-6 lg:grid lg:grid-cols-[5fr_7fr] lg:gap-6 lg:items-start lg:space-y-0">
-      <Card radius="xl">
+      <Card radius="flat">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Import a wallet</CardTitle>
@@ -586,7 +586,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && phraseStep === 'enter' && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>Restore from a recovery phrase</CardTitle>
             <CardDescription>
@@ -666,7 +666,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && phraseStep === 'same' && derived !== null && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>This is the same recovery phrase</CardTitle>
             <CardDescription>
@@ -735,7 +735,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && phraseStep === 'different' && derived !== null && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>
               {compareUnavailable
@@ -791,7 +791,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && !vaultExists && phraseStep === 'preview' && derived !== null && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>Check the restored addresses</CardTitle>
             <CardDescription>
@@ -860,7 +860,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && !vaultExists && phraseStep === 'saved' && derived !== null && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>Wallet restored</CardTitle>
             <CardDescription>
@@ -977,7 +977,7 @@ export function ImportWalletScreen() {
                     groups.set(wallet.xpub, list);
                   }
                   return [...groups.entries()].map(([value, wallets]) => (
-                    <li key={value} className="space-y-2 rounded-xl border bg-card p-4 text-foreground">
+                    <li key={value} className="space-y-2 rounded-flat-lg border bg-card p-4 text-foreground">
                       <div className="flex flex-wrap items-center gap-2">
                         {wallets.map((wallet) => (
                           <Badge key={wallet.chain} variant="secondary">{wallet.chain.toUpperCase()}</Badge>
@@ -999,7 +999,7 @@ export function ImportWalletScreen() {
               (they used to bury it). Same words, one tap away. The
               notice paragraph keeps its id: the address input above
               references it with aria-describedby. */}
-          <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+          <details className="rounded-flat-lg border border-ink bg-paper p-4">
             <summary className="cursor-pointer text-sm font-semibold text-ink">
               What watch-only can and cannot do
             </summary>

@@ -212,7 +212,7 @@ export function CreateWalletScreen() {
   if (vaultExists) {
     return (
       <section aria-labelledby="create-wallet-title" className="space-y-6 lg:mx-auto lg:max-w-2xl">
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle id="create-wallet-title">A wallet already exists</CardTitle>
             <CardDescription>
@@ -363,7 +363,7 @@ export function CreateWalletScreen() {
       )}
 
       {step === 1 && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>Vault password</CardTitle>
             <CardDescription>
@@ -537,7 +537,7 @@ export function CreateWalletScreen() {
       )}
 
       {step === 3 && mnemonic !== null && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>Confirm your recovery phrase</CardTitle>
             <CardDescription>
@@ -575,7 +575,7 @@ export function CreateWalletScreen() {
       )}
 
       {step === 4 && (
-        <Card radius="xl">
+        <Card radius="flat">
           <CardHeader>
             <CardTitle>Your wallet is ready</CardTitle>
             <CardDescription>
@@ -588,7 +588,7 @@ export function CreateWalletScreen() {
               {DISPLAY_ORDER.map((chain) => (
                 <li key={chain} className="space-y-1">
                   <div className="text-base font-semibold">{CHAIN_LABELS[chain]}</div>
-                  <code className="block break-all rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
+                  <code className="block break-all rounded-flat-sm border border-ink bg-paper p-3 text-sm text-ink">
                     {vaultAddresses[chain][0] ?? 'Address unavailable.'}
                   </code>
                   {vaultAddresses[chain][0] && (

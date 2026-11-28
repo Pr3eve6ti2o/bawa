@@ -116,7 +116,7 @@ export function AutoLockSetting() {
             <select
               id="auto-lock"
               aria-label="Lock after inactivity"
-              className="h-12 w-full rounded-bawa-sm border-2 border-ink bg-paper px-4 text-base text-ink"
+              className="h-12 w-full rounded-flat-sm border border-ink bg-paper px-4 text-base text-ink"
               value={autoLockMinutes}
               disabled={controlsDisabled}
               onChange={(event) => {

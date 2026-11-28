@@ -40,7 +40,7 @@ export function SecuritySettingsScreen() {
         Security &amp; backup
       </h1>
 
-      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-bawa border-2 border-ink bg-paper">
+      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-flat-lg border border-ink bg-paper">
         <li>
           <AutoLockSetting />
         </li>

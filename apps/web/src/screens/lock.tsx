@@ -278,7 +278,6 @@ export function LockScreen() {
                     name="password"
                     type="password"
                     autoComplete="current-password"
-                    radius="bawa"
                     value={password}
                     onChange={(event) =>
                       setPassword(event.currentTarget.value)
@@ -301,7 +300,6 @@ export function LockScreen() {
                       name="passphrase"
                       type="password"
                       autoComplete="off"
-                      radius="bawa"
                       value={passphrase}
                       onChange={(event) =>
                         setPassphrase(event.currentTarget.value)
@@ -317,11 +315,11 @@ export function LockScreen() {
                   <p
                     id="lock-error"
                     role="alert"
-                    className="bg-coral text-ink border-ink rounded-bawa"
+                    className="bg-coral text-ink border-ink rounded-flat-lg"
                     style={{
                       margin: 0,
                       padding: "0.75rem",
-                      borderWidth: 2,
+                      borderWidth: 1,
                       borderStyle: "solid",
                       lineHeight: 1.5,
                     }}
