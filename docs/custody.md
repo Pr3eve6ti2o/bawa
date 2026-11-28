@@ -26,12 +26,15 @@ offer, and anyone who learns the words can spend from the wallet.
   reference. It is never held in React state, component refs,
   `localStorage`, or logs. JavaScript strings cannot be overwritten,
   so "dropped" is the guarantee — not byte-level erasure.
-- **Single-use handoff.** Secrets passed between screens use
-  `apps/web/src/wallet/secret-handoff.ts`: in-memory only, under
-  incrementing numeric IDs, consumed on retrieval, never persisted,
-  never put in navigation state, never logged. IDs are routing
-  handles, not authorisation tokens, and deletion is not guaranteed
-  memory erasure.
+- **No inter-screen secret handoff.** Secrets are not passed between
+  screens: the backup screen reads the mnemonic from the vault
+  module's closure via `withMnemonic` while the vault is unlocked
+  (`apps/web/src/screens/backup.tsx`), and the phrase never enters
+  navigation state, `localStorage`, or logs. (An earlier draft of this
+  document described a single-use handoff module at
+  `apps/web/src/wallet/secret-handoff.ts`; no such file exists at
+  token-gaps `ceade79` — the module is gone, so the bullet was
+  rewritten 2026-11-28.)
 - **Gated reveal.** The recovery phrase is shown only on the mnemonic
   backup screen, and only after a password re-prompt (password-only reveal — the safety quiz was removed, S3-A; `apps/web/src/screens/backup.tsx`). The
   password is verified first without changing lock state; only a

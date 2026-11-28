@@ -68,6 +68,8 @@ npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core
 >
 > Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
 
+**Resolved 2026-11-26 (re-checked 2026-11-28, token-gaps `734cfef`):** the root lockfile now exists (`package-lock.json`, `npm ci` exit 0, 0 vulnerabilities) — see `docs/03` §9. The warning above is retained as the rule that produced it, not as a current blocker.
+
 **Environment note:** A differential-test scratch result passed with Node v24.22.1 and Python 3.12.3. Python met the requirement; Node did not. That pass does **not** validate a supported installation. Repeat the differential check with Node 22.
 
 ## 3. Generating the wallet safely

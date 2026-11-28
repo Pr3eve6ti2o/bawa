@@ -9,7 +9,7 @@ as true of this branch.
 
 ## Currency note (2026-11-28, token-gaps `734cfef`)
 
-This register is the 2026-11-20 lane record; the item statuses below are as recorded that day except where noted here. Verified since: **§3** (1,000-digit input cap) is now fixed in the tree — `MAX_INTEGER_STRING_LENGTH = 1_000` is enforced in `apps/web/src/wallet/money.ts`; **§4** (deleted components) has landed — `apps/web/src/ui/components/` holds 28 files, the 36 deleted components and ThemeToggle are gone, the 20 dead dependencies are gone (5 Radix packages remain: checkbox, label, slot, switch, tabs); **§7** (`mnemonic-words`) has landed — it is in `devDependencies`, not `dependencies`; **§10** (Android pass count) is superseded — the tree now has 77 `@Test` annotations across 10 test files, executed in the Android Step 3 data-layer lane (e20cee6), with a debug APK (`app-debug.apk`, 53,712,159 bytes); **§1** (ecdsa) stands as accepted residual risk with re-review by 2027-05-20; `npm audit` for the web app is 0 vulnerabilities at token-gaps `2205f15`, re-verified 2026-11-28. Items not listed here remain as recorded on 2026-11-20.
+This register is the 2026-11-20 lane record; the item statuses below are as recorded that day except where noted here. Verified since: **§3** (1,000-digit input cap) is now fixed in the tree — `MAX_INTEGER_STRING_LENGTH = 1_000` is enforced in `apps/web/src/wallet/money.ts`; **§4** (deleted components) has landed — `apps/web/src/ui/components/` holds 28 files, the 36 deleted components and ThemeToggle are gone, the 20 dead dependencies are gone (5 Radix packages remain: checkbox, label, slot, switch, tabs); **§7** (`mnemonic-words`) has landed — it is in `devDependencies`, not `dependencies`; **§10** (Android pass count) is superseded in part — the tree now has 77 `@Test` annotations across 10 test files, counted in the Android Step 3 data-layer lane (`e20cee6`), with a debug APK (`app-debug.apk`, 53,712,159 bytes); 77 is an annotation count, not an executed pass count — the executed pass count at a single revision is still open; **§1** (ecdsa) stands as accepted residual risk with re-review by 2027-05-20; `npm audit` for the web app is 0 vulnerabilities at token-gaps `734cfef`, re-verified first-hand on loud-stone 2026-11-28. Items not listed here remain as recorded on 2026-11-20.
 
 ## Status vocabulary
 
@@ -72,7 +72,7 @@ This register is the 2026-11-20 lane record; the item statuses below are as reco
   the gate if the safety facts change. The acceptance was a lane verdict
   before this decision (diagnostics 2026-11-19, re-verified by Lane D
   2026-11-20); it is a delegated decision now.
-- Correction to the earlier record: `docs/security-AUDIT-TOOLCHAIN.md`
+- Correction to the earlier record: `docs/SECURITY-AUDIT-TOOLCHAIN.md`
   §6 said reachability was "TBD" and "T40+ must adjudicate", and named
   `bip-utils` 2.12.2 (the pinned version is 2.12.3). The adjudication
   has now been done twice — diagnostics lane 2026-11-19
@@ -80,7 +80,7 @@ This register is the 2026-11-20 lane record; the item statuses below are as reco
   2026-11-20 — and the AUDIT-TOOLCHAIN note is updated to point here.
   The same doc's OSV paragraph said the repo "should gain a Python
   lockfile"; `requirements.lock` now exists (pip-compile style, hashed).
-- Full audit record: `docs/security-AUDIT-TOOLCHAIN.md` §6. Canonical
+- Full audit record: `docs/SECURITY-AUDIT-TOOLCHAIN.md` §6. Canonical
   summary: `docs/SECURITY.md` ("Dependency and supply chain").
 - **Re-review by 2027-05-20, or sooner if** crypto usage or
   dependencies change (new signing path, `coincurve` dropped, `ecdsa`
@@ -389,7 +389,7 @@ artefact survives.**
 - Did **not** delete `confirmation-policy.ts` (§6) — a decision is
   needed first.
 - Did **not** create a second home for the ecdsa finding: the full audit
-  record stays in `docs/security-AUDIT-TOOLCHAIN.md` §6, the canonical
+  record stays in `docs/SECURITY-AUDIT-TOOLCHAIN.md` §6, the canonical
   summary in `docs/SECURITY.md`, and this register points at both.
 - Did **not** touch `main`, push any branch, or delete any branch.
 

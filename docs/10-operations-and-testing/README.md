@@ -69,7 +69,7 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 
 | Component | Scope | Declared value | Required release-verification pin | Status |
 | --- | --- | --- | --- | --- |
-| Trust Wallet Core | `tools/hdwallet-gen` | `4.9.3` | `4.9.3`; reference engine: `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | `tools/hdwallet-gen` | `4.9.3` | `4.9.3`; reference engine: `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08) and re-run on 4.9.3 (D31); in-browser offline signing is implemented (`apps/web/src/wallet/send.ts` signers; devnet TON sends ran on `panel-rebuild/devnet-temp`); mainnet broadcast remains disabled. |
 | cryptography | Python | `==50.0.2` | `==50.0.2` | Pinned |
 | bip-utils | Python | `==2.12.3` | `==2.12.3` | Pinned |
 | Node | repo | `>=22 <23` | record the full tested version separately | Verified on Node v22.23.4 on the VM (D22, 2026-11-08; official tarball, SHA-256 verified): the full repository suite was re-run with no result changes. Separately, the operator's 2026-11-09 run on Node v24.22.2, outside the declared range, passed `npm run check`, `npm test` (28/28), differential testing and `py_compile`, all with exit 0. |
@@ -88,7 +88,7 @@ Verify the intended commit or tag before installing dependencies. For this refer
 
 ### Node dependencies
 
-The repository root declares no dependencies, so skip root `npm install`. Running it installs nothing and creates an untracked root `package-lock.json`.
+The repository root now declares devDependencies (eslint) and carries a committed root `package-lock.json` (lockfile repair 2026-11-26), so run `npm ci` at the root as well as in `tools/hdwallet-gen`. (The "root declares no dependencies, skip root install" instruction below is the 2026-11-08 record, superseded by the root lockfile.)
 
 Install the wallet-core tooling at its package boundary: enter it with `cd tools/hdwallet-gen`, run `npm install`, then return to the repository root with `cd ../..`.
 
@@ -163,7 +163,7 @@ Do not claim Semantic Versioning adherence until you declare the public API (the
 
 ### Tagging
 
-As of 8 November 2026, the Bawa repository has zero tags: `git tag` is empty. A tag is the immutable record of a release.
+As of 8 November 2026, the Bawa repository had zero tags: `git tag` was empty. That is no longer true — tags now exist (verified 2026-11-28 via `ls-remote`: `save/mobile-loved-2026-11-22` → `67c48e2`, `save/mobile-2026-11-25`, `save/mobile-2026-11-26` → `f5a5f19`, plus four `archive/*` branch tags). A tag is the immutable record of a release.
 
 Before tagging, document which release artefacts are built from the tag and where their checksums are recorded. Neither the artefact set nor the checksum-record location is established by the available evidence; resolve and document both rather than assuming a build output or path.
 
@@ -527,7 +527,7 @@ Run `npm test` from the repository root; it invokes `npm --prefix tools/hdwallet
 
 ### Web
 
-> 31 offline unit tests pass (mocked transport; no live-network coverage), run by the author against the validation draft, not shipped in any repo.
+> The web starter is in the repository (`apps/web`): 3,429 tests passed + 5 skipped across 129 vitest files on 2026-11-28 (token-gaps `1253bf6`), production build green, live previews screenshot-checked. The "31 offline unit tests … not shipped in any repo" line below is the 2026-11-08 validation-draft record, superseded.
 >
 > **Web:** Fixture gate enforced in-engine and covered by offline engine tests; no live-network gate run exists.
 >
@@ -537,7 +537,7 @@ This layer has no runnable procedure in this guide yet.
 
 ### Android
 
-> 55 pure-module checks passed in the author's kotlinc 2.1.0 harness run; the harness was not re-run for this guide and covers pure Kotlin logic only - no JNI binding, signing, UI or Gradle build.
+> The Android starter is in the repository (`apps/android`): Step 3 data layer done (`e20cee6`, 77 `@Test` annotations across 10 Kotlin test files — annotation count, not an executed pass count) with a debug APK (53,712,159 bytes) built, installed and launched on an emulator; Step 4 done — Trust Wallet Core 4.8.4 AAR built from source and in-tree (`f9f312b`, `ENGINE_BINDING_AVAILABLE` true; on-device derivation execution still unverified). The "55 pure-module checks … harness was not re-run" lines below are the 2026-11-08 draft record, superseded.
 >
 > **Android:** Fixture gate defined (section I.4) and pure-logic half checked (7 checks, part of 55/55); the on-device gate has never run.
 >
@@ -578,7 +578,7 @@ This layer has no runnable procedure in this guide yet.
 
 Retain the following limits:
 
-> V1 (live run on 8 November 2026, pushed head 082f7915) demonstrated wallet generation under a real pty and a byte-identical decrypt round trip; the differential test returned PASS. V1 did not verify full recovery. See docs/08 §3 for the unexecuted clean-install recovery rehearsal with independent derivation and address comparison; its unexecuted gates are marked FAIL. No live testnet spend has been made from this wallet.
+> V1 (live run on 8 November 2026, pushed head 082f7915) demonstrated wallet generation under a real pty and a byte-identical decrypt round trip; the differential test returned PASS. V1 did not verify full recovery. See docs/08 §3 for the unexecuted clean-install recovery rehearsal with independent derivation and address comparison; its unexecuted gates are marked FAIL. Devnet TON test sends have since run (panel-rebuild/devnet-temp); no MAINNET send has ever run from this wallet.
 >
 > TESTNET-only does not mean testnet-tested.
 
@@ -698,7 +698,7 @@ References:
 - [Trust Wallet Assets](https://github.com/trustwallet/assets)
 ## Release gates and CI
 
-Treat this section as a specification to implement, not as an existing release process. Record the current baseline: zero tags exist, and no release process has ever run. Keep every gate without its required procedure and evidence **blocked (unverified)**.
+Treat this section as a specification to implement, not as an existing release process. Record the current baseline: tags now exist (`save/mobile-*` and `archive/*`, verified 2026-11-28 — the "zero tags" baseline below is the 2026-11-08 record), and no release process has ever run. Keep every gate without its required procedure and evidence **blocked (unverified)**.
 
 ### Establish the release sequence
 
@@ -716,7 +716,7 @@ Establish the following sequence, and stop wherever required procedures or evide
 
 ### Implement the CI extension
 
-Extend the current workflow, which already runs the Node tests and Python differential test as steps in one job. Make the workflow file change in the repository; do not treat this prose as an implemented change. The CI workflow is `.github/workflows/ci.yml`.
+Extend the current workflow, which now runs five jobs (`node-tests`, `python-tests`, `docs-checks`, `web`, `floor-guard` — see the CI workflow section above; the "one job" wording below is the 2026-11-08 record). Make the workflow file change in the repository; do not treat this prose as an implemented change. The CI workflow is `.github/workflows/ci.yml`.
 
 Implement the following requirements:
 
@@ -785,7 +785,7 @@ Ask the maintainer for the undocumented CI configuration, public fixture locatio
 
 ### Establish trust first
 
-Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+Bawa currently has no published maintainer signing key and no signed commits; tags do exist (`save/mobile-*` and `archive/*`, verified 2026-11-28 — the "no tags" wording below is the 2026-11-08 record). The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 Do not treat a tag as verified without both trusted-key confirmation and a successful check of that tag’s signature.
 
@@ -842,7 +842,7 @@ Keep private keys out of `ci-evidence.json`, logs and reports.
 
 ### Complete the scanning checklist
 
-Record the current scanning status explicitly: no scan has ever been recorded, and no tool is named yet. Confirm scanner configuration with the maintainer, because Bawa does not document an established configuration. Name dependency and secret scanners only after the maintainer has validated them.
+Record the current scanning status explicitly: dependency scanning now runs — the `web` CI job runs `npm audit` (0 vulnerabilities at token-gaps `2205f15`, re-verified 2026-11-28) and the manual `.github/workflows/security-audit.yml` workflow runs the named scanners `npm audit`, `pip-audit`, Bandit, Ruff, Semgrep and OSV-Scanner (all continue-on-error, logs uploaded as an artifact). Secret scanning is pre-commit only (`node scripts/secret-scan.mjs`); there is still no secret-scan step in CI and its CI evidence is recorded as `blocked-unverified` (`docs/SECURITY.md`). The "no scan has ever been recorded, and no tool is named yet" sentence below is the 2026-11-08 record, superseded for dependency scanning. Confirm scanner configuration with the maintainer, because Bawa does not document an established configuration. Name dependency and secret scanners only after the maintainer has validated them.
 
 Treat a lockfile as a record of the tested dependency graph, not as evidence of dependency safety.
 
@@ -1325,7 +1325,7 @@ Coordinate a history purge where possible, using a method confirmed with the mai
 
 ### Verify the tag or commit signature
 
-Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+Bawa currently has no published maintainer signing key and no signed commits; tags do exist (`save/mobile-*` and `archive/*`, verified 2026-11-28 — the "no tags" wording below is the 2026-11-08 record). The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 For the intended tag:
 
@@ -1418,7 +1418,7 @@ Tagged release
 - https://0x70ssam.github.io/devsecops/cloud-native/DevSecOps-Roadmap-2026-Comprehensive-Guide-From-Foundations-to-Expert/
 ## Incident response playbook
 
-OI-065 — Operational/security ownership and a vulnerability-disclosure procedure are not established by the supplied evidence. Obtain maintainer-approved responsibilities, a reporting channel, and handling/escalation instructions, and publish them here. No reporting channel or response commitment is claimed meanwhile. Owner: W2 (documentation closure).
+OI-065 — Operational/security ownership and a vulnerability-disclosure procedure are not established by the supplied evidence. Obtain maintainer-approved responsibilities, a reporting channel, and handling/escalation instructions, and publish them here. **Update 2026-11-28 (Lane A docs audit):** the reporting channel half is now resolved — root `SECURITY.md` documents GitHub private vulnerability reporting. Operational/security ownership and handling/escalation instructions remain open. No response commitment is claimed meanwhile. Owner: W2 (documentation closure).
 
 The guides give no incident-response playbook today beyond this section. Use the playbook created here in docs/10 for the operations-side response, and cross-reference [docs/15](../15-threat-model-and-theft-prevention/README.md) for the holder-side playbook. Do not treat these instructions as evidence that any incident has been rehearsed or any response tested.
 
@@ -1510,7 +1510,7 @@ Follow each scenario in order: contain first, choose trusted-device recovery or 
 
 ### Escalation and acceptance requirements
 
-Keep maintainer-dependent escalation pending while no vulnerability-disclosure procedure, contact or channel exists. Retain the redacted incident record and track the required maintainer decisions alongside the maintainer-owned disclosure open item. Do not treat an assumed private disclosure path as available. Use the relevant issuers for affected account and service access, and confirm session-revocation support and results rather than assuming a Bawa-specific revocation procedure.
+Keep maintainer-dependent escalation pending while no handling/escalation instructions or ownership exist (the disclosure channel itself is now documented in root `SECURITY.md` — GitHub private vulnerability reporting). Retain the redacted incident record and track the required maintainer decisions alongside the maintainer-owned disclosure open item. Do not treat an assumed private disclosure path as available. Use the relevant issuers for affected account and service access, and confirm session-revocation support and results rather than assuming a Bawa-specific revocation procedure.
 
 > **Warning:** Sharing incident records containing secrets can extend the exposure. Keep incident material separate from the clean installation and redact secrets from anything shared with a maintainer. Never send a seed, private key, data key or unredacted `.env`. Check each item for secrets before sharing it.
 

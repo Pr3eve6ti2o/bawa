@@ -65,10 +65,11 @@ closure while the vault is unlocked. It is never held in React state,
 component refs, `localStorage`, or logs. `lock()` drops every
 reference to the key and the mnemonic. JavaScript strings are
 immutable, so "zeroing" means dropping every reference, not overwriting
-bytes; no copy is retained anywhere after `lock()`. The same limit
-applies to the single-use secret handoff
-(`apps/web/src/wallet/secret-handoff.ts`): deleting an entry drops the
-reference and is not guaranteed memory erasure.
+bytes; no copy is retained anywhere after `lock()`. (An earlier draft
+of this document cited a single-use secret-handoff module at
+`apps/web/src/wallet/secret-handoff.ts`; no such file exists at
+token-gaps `ceade79` — the module is gone, so the sentence about it
+was removed 2026-11-28.)
 
 ## Backup and restore
 
@@ -116,17 +117,16 @@ current text, not part of the code contract.
 | 1007 | `BACKUP_MISSING` | No vault backup exists. |
 | 1008 | `BACKUP_CORRUPTED` | Vault backup is corrupted. |
 
-These codes are the vault's proposal for the shared error catalogue
-(`apps/web/src/wallet/errors.ts`, owned by the P1 lane): codes
-1001–1005 match the catalogue exactly as P1 defined it, and 1006–1008
-are proposed additions for the catalogue to adopt, so the vault can
-import the codes instead of defining them locally. Until then the
-vault defines them locally and the table above is the contract. The
-empty-mnemonic and empty-password failures keep their existing plain
-`Error` messages (`'Mnemonic must not be empty.'`,
-`'Password must not be empty.'`): the catalogue has no distinct code
-for them, and changing their messages would break existing callers
-for no diagnostic gain.
+These codes are the vault's contract, defined in the shared error
+catalogue (`apps/web/src/wallet/errors.ts`): codes 1001–1005 match the
+catalogue exactly as P1 defined it, and 1006–1008 — proposed additions
+when this document was written — have since been adopted by the
+catalogue, so the vault imports all eight codes from it instead of
+defining them locally. The empty-mnemonic and empty-password failures
+keep their existing plain `Error` messages (`'Mnemonic must not be
+empty.'`, `'Password must not be empty.'`): the catalogue has no
+distinct code for them, and changing their messages would break
+existing callers for no diagnostic gain.
 
 ## KDF evaluation (item 14)
 

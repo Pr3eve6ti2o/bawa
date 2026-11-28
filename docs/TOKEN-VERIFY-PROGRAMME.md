@@ -177,6 +177,13 @@ Pages build is the `ClVv0p3m` rebuild, verified live by hash (below).
   The merged tree satisfies CONSTRAINTS.md (under by 17,181) but not CI
   (over by 120,530). Only the owner can re-baseline or reconcile them.
 
+**Resolved (2026-11-26, Lane A docs audit):** the owner ordered CI
+aligned to the doc's number — one line in `ci.yml`, verified passing
+against the current build. The budget was then re-baselined to
+6,000,000 by owner order 2026-11-26; the tree at `1253bf6` is
+4,509,662 total JS, inside the budget. The discrepancy above is
+closed; the record stays as written.
+
 ## Process notes (for the next lane)
 
 - `pkill -f` with a pattern that appears in your own command line kills

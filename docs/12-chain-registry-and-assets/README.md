@@ -13,7 +13,7 @@ Reference.
 > **Scope:** repo guide docs/12 against the pinned repo at 754721cd plus live registry checks
 > **Repository commit:** 754721cd
 >
-> **Currency note (2026-11-28, token-gaps `734cfef`):** the 2026-11-08 verification rows below remain dated records. Re-checked at `734cfef`: `registry/capabilities.json` v4 holds 87 chains in `chainSupport` (22 curated + 65 expansion); `registry/chains.json` holds 87 chains and 169 RPC endpoints; history is `IMPLEMENTED_AND_VERIFIED` for 17 chains and `NOT_SUPPORTED` for the rest (among the 22 curated chains, only bsc, gnosis, opbnb, metis and fantom still read `NOT_SUPPORTED`); balance is `IMPLEMENTED_AND_VERIFIED` for 66 chains and `NOT_SUPPORTED` for 21 derive-only chains; chain logos number 87 (see below).
+> **Currency note (2026-11-28, token-gaps `ceade79`, Lane A docs audit):** the 2026-11-08 verification rows below remain dated records. Re-checked at `ceade79`: `registry/capabilities.json` v4 holds 87 chains in `chainSupport` (22 curated + 65 expansion); `registry/chains.json` holds 87 chains and 169 RPC endpoints; history is `IMPLEMENTED_AND_VERIFIED` for 17 chains and `NOT_SUPPORTED` for the rest (among the 22 curated chains, only bsc, gnosis, opbnb, metis and fantom still read `NOT_SUPPORTED` in the registry — Gnosis history is verified in the app since `d06a224` (`chains.ts:832`); the registry has not been regenerated since, so it lags the app on Gnosis); balance is `IMPLEMENTED_AND_VERIFIED` for 66 chains and `NOT_SUPPORTED` for 21 derive-only chains; chain logos number 87 (see below).
 > **Tool versions:** Node v24.22.2 (VM), outside the repo's declared >=22 <23 range
 > **Actually run:** Pinned-repository review; live `registry.json` checks
 > **Not run:** A complete metadata contribution and validation workflow
@@ -122,15 +122,15 @@ The following mainnet metadata pins were verified against [Wallet Core 4.9.3 `re
 
 | Registry id | `coinId` | `slip44` | EVM `chainId` | Derivation path | Status |
 | --- | --- | --- | --- | --- | --- |
-| `solana` | `501` | — | — | `m/44'/501'/0'` | prospective |
-| `smartchain` | `20000714` | `714` | `56` | `m/44'/60'/0'/0/0` | prospective |
-| `polygon` | `966` | — | `137` | `m/44'/60'/0'/0/0` | prospective |
-| `arbitrum` | `10042221` | `60` | `42161` | `m/44'/60'/0'/0/0` | prospective |
-| `optimism` | `10000070` | `60` | `10` | `m/44'/60'/0'/0/0` | prospective |
-| `base` | `8453` | — | `8453` | `m/44'/60'/0'/0/0` | prospective |
-| `avalanchec` | `10009000` | — | `43114` | `m/44'/60'/0'/0/0` | prospective |
-| `litecoin` | `2` | — | — | `m/84'/2'/0'/0/0` | prospective |
-| `doge` | `3` | — | — | `m/44'/3'/0'/0/0` | prospective |
+| `solana` | `501` | — | — | `m/44'/501'/0'` | implemented |
+| `smartchain` | `20000714` | `714` | `56` | `m/44'/60'/0'/0/0` | implemented |
+| `polygon` | `966` | — | `137` | `m/44'/60'/0'/0/0` | implemented |
+| `arbitrum` | `10042221` | `60` | `42161` | `m/44'/60'/0'/0/0` | implemented |
+| `optimism` | `10000070` | `60` | `10` | `m/44'/60'/0'/0/0` | implemented |
+| `base` | `8453` | — | `8453` | `m/44'/60'/0'/0/0` | implemented |
+| `avalanchec` | `10009000` | — | `43114` | `m/44'/60'/0'/0/0` | implemented |
+| `litecoin` | `2` | — | — | `m/84'/2'/0'/0/0` | implemented |
+| `doge` | `3` | — | — | `m/44'/3'/0'/0/0` | implemented |
 
 `—` under `slip44` means the registry does not carry that key, not that no SLIP-44 assignment exists; do not fill it by inference. `—` under EVM `chainId` marks a non-EVM chain. EVM chain IDs are shown in decimal.
 
@@ -138,7 +138,7 @@ Keep `coinId`, optional `slip44`, EVM `chainId` and the literal derivation path 
 
 ## Bawa's four original chains in the registry
 
-The table gives Core's `registry.json` values at tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. These are the registry's values, not Bawa's derivation policy. For Bawa's pinned selections at repo commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`, use docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy). The table covers the four original chains only; the eighteen additional chains are listed with their derivation paths in [Bawa's own chain support](#bawas-own-chain-support) below, and the nine newer EVM chains have no registry-pin table in this chapter yet — their entries live in `registry/capabilities.json`.
+The table gives Core's `registry.json` values at tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. These are the registry's values, not Bawa's derivation policy. For Bawa's pinned selections at repo commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`, use docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy). The table covers the four original chains only; the eighteen additional chains are listed with their derivation paths in [Bawa's own chain support](#bawas-own-chain-support) below, and the nine newer chains have their registry pins in the [nine-chain pins table](#nine-chain-pins-core-493) above — their entries also live in `registry/capabilities.json`.
 
 | Registry field | Bitcoin | Ethereum | Tron | TON (`id: "ton"`) |
 | --- | --- | --- | --- | --- |
@@ -211,7 +211,7 @@ balance adapter in the app (none is in the 21 derive-only chains,
 ```mermaid
 flowchart TB
     accTitle: Bawa chain support overview
-    accDescr: token-gaps supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus eighteen additional chains with create, derive, restore, receive and balance verified and the remaining five operations unsupported (history verified for 13 of the 18 — SOL, LTC, DOGE, MATIC, ARB, OP, Base, AVAX, CELO, Linea, Mantle, Scroll, Aurora — per chains.ts and docs/06). The registry grew from 13 chains (multichain-create) to 87 on token-gaps: 22 curated + 65 expansion.
+    accDescr: token-gaps supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus eighteen additional chains with create, derive, restore, receive and balance verified and the remaining five operations unsupported (history verified for 14 of the 18 — SOL, LTC, DOGE, MATIC, ARB, OP, Base, AVAX, CELO, Gnosis, Linea, Mantle, Scroll, Aurora — per chains.ts and docs/06). The registry grew from 13 chains (multichain-create) to 87 on token-gaps: 22 curated + 65 expansion.
 
     S["Sources of truth<br/>registry/capabilities.json: chainSupport<br/>apps/web/src/wallet/chains.ts:<br/>ChainId, pathFor, per-chain capabilities with evidence"]
 
@@ -221,7 +221,7 @@ flowchart TB
 
     T["Partially verified: TON<br/>DOCUMENTED_NOT_TESTED: fee-quote, verify-signature<br/>IMPLEMENTED_AND_VERIFIED: other 8 operations"]
 
-    D["Extended: 18 additional chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge), Gnosis, Celo,<br/>Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive, balance<br/>History verified for 13 of the 18 (SOL, LTC, DOGE,<br/>MATIC, ARB, OP, Base, AVAX, CELO, Linea,<br/>Mantle, Scroll, Aurora)<br/>NOT_SUPPORTED: history (other 5), fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
+    D["Extended: 18 additional chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge), Gnosis, Celo,<br/>Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive, balance<br/>History verified for 14 of the 18 (SOL, LTC, DOGE,<br/>MATIC, ARB, OP, Base, AVAX, CELO, Gnosis, Linea,<br/>Mantle, Scroll, Aurora)<br/>NOT_SUPPORTED: history (other 4), fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
 
     S --> A
     A --> F
@@ -260,13 +260,16 @@ are single-address: their paths ignore account and index. The fifty-six EVM chai
 
 - **Fully verified** = all 10 operations `IMPLEMENTED_AND_VERIFIED`.
 - **Extended (5/10)** = create, derive, restore, receive, balance
-  `IMPLEMENTED_AND_VERIFIED`; history, fee-quote, plan-transfer,
-  local-sign, verify-signature `NOT_SUPPORTED`. An extended chain has no
-  history or signing support in the repo — do not present it as a
+  `IMPLEMENTED_AND_VERIFIED` in the registry; history, fee-quote, plan-transfer,
+  local-sign, verify-signature `NOT_SUPPORTED` there. The 5/10 label is the
+  registry's operation count: in the app, history is verified for 14 of the
+  18 extended chains (see the note above — Gnosis since `d06a224`), while
+  fee-quote, plan-transfer, local-sign and verify-signature remain
+  `NOT_SUPPORTED`. An extended chain has no signing support in the repo — do not present it as a
   working wallet chain.
 - No broadcast exists for any chain in the repo.
 
-Note (resolved 2026-11-26 by the registry v4 update, commit `2a0fa75`): history is now `IMPLEMENTED_AND_VERIFIED` in the registry for SOL, LTC and DOGE and 14 further chains (17 total); only bsc, gnosis, opbnb, metis and fantom still read `NOT_SUPPORTED`. The two sources agree; the re-verification is closed.
+Note (resolved 2026-11-26 by the registry v4 update, commit `2a0fa75`): history is now `IMPLEMENTED_AND_VERIFIED` in the registry for SOL, LTC and DOGE and 14 further chains (17 total); only bsc, gnosis, opbnb, metis and fantom still read `NOT_SUPPORTED` in the registry. **Update 2026-11-28 (Lane A docs audit):** Gnosis history is verified in the app since `d06a224` (`chains.ts:832`, 10 real transactions rendered) — the app now has history on 18 chains while the registry still records 17. The two sources disagree on Gnosis until the registry is regenerated (registry lag, data not docs); the four genuinely blocked chains are bsc, opbnb, metis and fantom.
 
 ## Testnet and the registry
 

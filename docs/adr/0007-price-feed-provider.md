@@ -221,6 +221,8 @@ Amendment (2026-11-24): the live price feed now covers all 84 chains in the chai
 
 Amendment (2026-11-26, guide-update pass): the live price feed now covers all 87 chains in the chain registry (apps/web/src/wallet/prices.ts), using 64 unique CoinGecko ids — counted first-hand from `PRICE_IDS` (`prices.ts:70`, 87 entries; duplicates: ethereum ×21, bitcoin ×2, binancecoin ×2, sei-network ×2). The 2026-11-24 amendment's "61 unique ids" was a miscount, corrected here. No other part of this record changes.
 
+Amendment (2026-11-28, Lane A docs audit): the seven CoinGecko-only chains from the 2026-11-24 amendment are unchanged at 87 chains — `registry/chains.json` coverage at token-gaps `ceade79` records `chainsWithSecondPriceSource: 80` with `coingeckoAloneChains: [fraxtal, velas, telos, songbird, rootstock, pulsechain, xdc]`. No other part of this record changes.
+
 ## Consequences
 
 - `apps/web/src/wallet/prices.ts` is the feed: one batched CoinGecko call per

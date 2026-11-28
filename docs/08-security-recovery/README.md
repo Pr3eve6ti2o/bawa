@@ -21,7 +21,7 @@ These limitations are not weaknesses of the guide — they are part of being hon
 
 Read "audited" as "reviewed against the ownership contract, with the scope, reviewer and date stated". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.3 tag".
 
-Bawa has offline unsigned native-asset transaction builders (`tools/mainnet-tx/unsigned-tx.mjs`), local signing (`tools/mainnet-signing/local-signing.mjs`) and web offline signing for BTC/ETH/TRX/TON (`apps/web/src/wallet/send.ts`). Both starters are in the repository: `apps/web` builds, passed all 457 tests across 40 test files on 2026-11-20 and has screenshot-checked live previews; a debug APK from `apps/android` was built, installed and launched on an emulator, with welcome and import screens visually verified. Broadcast is disabled everywhere, and no send has ever run on any network. Android still has no Core AAR or on-device derivation; its on-device Add-button acceptance path remains unverified. Recovery rehearsal has never been executed.
+Bawa has offline unsigned native-asset transaction builders (`tools/mainnet-tx/unsigned-tx.mjs`), local signing (`tools/mainnet-signing/local-signing.mjs`) and web offline signing for BTC/ETH/TRX/TON/SOL (`apps/web/src/wallet/send.ts`). Both starters are in the repository: `apps/web` builds, passed 3,429 tests + 5 skipped across 129 test files on 2026-11-28 (token-gaps `1253bf6`) and has screenshot-checked live previews; a debug APK from `apps/android` was built, installed and launched on an emulator, with welcome and import screens visually verified, and Android Step 4 is done — the Trust Wallet Core 4.8.4 AAR is built from source and in-tree (`f9f312b`, `ENGINE_BINDING_AVAILABLE` is `true`; on-device derivation execution still unverified). Broadcast is disabled everywhere, and no MAINNET send has ever run. (Devnet TON test sends have run on `panel-rebuild/devnet-temp`.) Recovery rehearsal has never been executed.
 
 Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
 
@@ -258,7 +258,7 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ### Current CI
 
-`.github/workflows/ci.yml` runs nine steps: checkout; set up Node 22; install Node dependencies in `tools/hdwallet-gen` using `npm install --ignore-scripts --no-audit --no-fund`; check JavaScript syntax with `npm run check`; run smoke tests with `npm test`; set up Python 3.13; install Python reference-test dependencies; run the independent `bip_utils` reference test with `python test/differential_test.py`; and compile the Python tools with `python -m py_compile tools/make_wallet.py tools/decrypt_seed.py`. The repairs were pushed as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 8 November 2026, and GitHub Actions run 28 for that commit completed successfully. Floating references remain: `ubuntu-latest`, `actions/checkout@v4`, `actions/setup-node@v4` and `actions/setup-python@v5`.
+`.github/workflows/ci.yml` (token-gaps `ceade79`) runs five jobs on pinned `ubuntu-24.04` with actions pinned to full SHAs: `node-tests` (Node smoke/differential checks), `python-tests` (Python 3.13, `bip_utils` differential test, `py_compile` of the tools), `docs-checks` (link check, registry drift check, docs gates), `web` (typecheck, lint, vitest, build, bundle-size gate at 6,000,000) and `floor-guard`. The nine-step single-workflow description below is the 2026-11-08 snapshot, retained as the record of what CI was then; the TARGET items "pin the runner to a fixed Ubuntu label" and "pin every action to a full-length commit SHA" are now met (see above).
 
 ## 5. Common mistakes
 
@@ -306,24 +306,26 @@ Complete the migration: generate a new wallet on a fresh trusted device, move ev
 2. Generate a new wallet with a fresh seed on a fresh trusted device. Move every asset and token to it, and retire the old wallet permanently.
 3. Do not try to repair the exposed wallet by adding a passphrase or changing a password. Changing the vault password cannot secure an exposed phrase — only a fresh seed and migration can. Revocation cannot repair key theft.
 
-## 7. Disclosure: no channel exists
+## 7. Disclosure: channel exists (resolved 2026-11-28)
 
-**OPEN ITEM — owned by the maintainers.** No vulnerability-disclosure procedure exists, and neither `SECURITY.md` supplies a contact or channel.
+**RESOLVED (Lane A docs audit, 2026-11-28, token-gaps `ceade79`):** a vulnerability-disclosure procedure now exists — root `SECURITY.md` §76 documents GitHub private vulnerability reporting as the private reporting route. The "no channel exists" heading and the open item below are the pre-resolution record, retained as written; the procedure is live, so do not carry this forward as an open item.
 
-**Existing line — OPEN ITEM:**
+**Was OPEN — owned by the maintainers.** No vulnerability-disclosure procedure existed, and neither `SECURITY.md` supplied a contact or channel.
+
+**Existing line — was OPEN:**
 
 > Send vulnerability reports to the repository maintainers through a private reporting route. Keep exploit-enabling details out of public issues.
 
-No private reporting route is documented, so this line does not identify an available channel. Establish and document one; that is the maintainers’ open item.
+That line now resolves to the procedure in root `SECURITY.md`.
 
 ### Open items and required work
 
 Carry these as open work and requirements, not claims that controls are implemented:
 
 Phrase clipboard policy — defined in the Web guide. See `docs/web-wallet/WEB-GUIDE.md`, "Keep the phrase off the clipboard": the app must never write the mnemonic to the clipboard. Do not paste it into any other app or field; re-enter the words yourself in the confirmation gate.
-- **OPEN ITEM — script injection.** Give “defend against script injection” an executable control. It currently has none: no CSP/SRI/inline-script rule.
-PBKDF2 scope and basis. The 600,000-iteration value comes from the local-only web-draft vault, which is not in any repository. This repository contains no vault, password hashing or PBKDF2 call. The OWASP Password Storage Cheat Sheet 2023 is cited as the basis for that draft value, not as evidence of a repository security control.
-- **OPEN ITEMS — vault passphrase and unlock time.** Define the vault-passphrase strength policy and unlock-time target. Keep both marked as open items, not stated policy.
+- **OPEN ITEM — script injection (partly resolved 2026-11-28).** The production build now ships a CSP meta (`script-src 'self' 'wasm-unsafe-eval'` — the frame-buster inline script is blocked by it, which proves the CSP is enforced), so the "no CSP rule" half of this item is closed. SRI for loaded scripts and an inline-script rule beyond the CSP remain open: give "defend against script injection" an executable control covering those.
+PBKDF2 scope and basis. The 600,000-iteration value is the live web vault's KDF (`apps/web/src/wallet/vault.ts`, PBKDF2-600k + AES-256-GCM) — the "this repository contains no vault, password hashing or PBKDF2 call" sentence below is superseded; the vault exists in `apps/web`. The OWASP Password Storage Cheat Sheet 2023 remains the cited basis for the 600,000 value.
+- **OPEN ITEMS — vault passphrase and unlock time.** Auto-lock is implemented (toggle + duration Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day, on `/security`; see §1), and the vault password minimum (8 characters) is enforced at vault creation per the 2026-11-23 reverify record. A vault-passphrase strength policy beyond that minimum remains open; define it and keep it marked as an open item, not stated policy.
 - **Required — network-identity verification.** Verify network identity for BTC, TRON and TON adapters too, not only ETH (`chainId 11155111`).
 - **Builder duty — genuine-app verification.** Make the genuine app verifiable through its official origin, publisher identity, release signing and key continuity.
 
@@ -799,7 +801,7 @@ Exit will normally mean an on-chain transfer to a fresh self-custody wallet or a
 
 Using a custodian does not make Bawa recovery work less sensitive. Keep seed words, private signing keys and their extended forms out of public commits, issues, screenshots and support logs. Apply the same rule to keys used to decrypt recovery data, `.env` files used in production, wallet-backup artefacts and account/service credentials.
 
-Use placeholders in examples and redact diagnostic material. Send vulnerability reports to the repository maintainers through a private reporting route (OPEN ITEM — no route is documented; see §7). Keep exploit-enabling details out of public issues.
+Use placeholders in examples and redact diagnostic material. Send vulnerability reports to the repository maintainers through the private reporting route documented in root `SECURITY.md` (GitHub private vulnerability reporting). Keep exploit-enabling details out of public issues.
 
 **Shift in signing control (not a safety ranking):** self-custody — holder controls signing; into collaborative custody — holder and provider share signing authority; into qualified custody — provider controls signing; holder requests transfers.
 ## 18. Paid security: HSM-based signing

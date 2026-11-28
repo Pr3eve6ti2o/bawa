@@ -62,6 +62,22 @@ Live demo: `https://pr3eve6ti2o.github.io/bawa/` — still serves the previous
 token-gaps build until republished from the new tip (republish was not part of
 this programme lane; follow-up).
 
+## Currency note (2026-11-28, Lane A docs audit, token-gaps `ceade79`)
+
+This record is from 2026-11-24, retained as written above. Since
+then, open items 1–3 and 8 are resolved: (1) the bundle budget was
+re-baselined to 6,000,000 by owner order 2026-11-26 — the merged tree
+is now 4,509,662 total JS at `1253bf6`, inside the budget; (2) `npm
+audit` for the web app is 0 vulnerabilities at token-gaps `734cfef`,
+re-verified first-hand on loud-stone 2026-11-28; (3) the site has been
+republished — the live site serves the `ceade79` build
+(`index-Brm7r34g.js`, gh-pages `c0cf697`); (8) the PNG share path now
+draws the full QR card (QR-card programme, 7 templates A–G, 1080 px
+export). Item 5 is resolved: `docs/sample-requests.md` §1 now describes offline
+signing for 65 chains (61 EVM + BTC/TRX/TON/SOL), with verified
+`send.ts` line refs. Items 6 (E2E suite not run on the merged tree) and 7 (live
+camera scan unverified — needs the owner's phone) are still open.
+
 ## Open items (for the owner)
 
 1. Bundle budget: the merged tree is 297,073 bytes over the 4,177,711 budget.

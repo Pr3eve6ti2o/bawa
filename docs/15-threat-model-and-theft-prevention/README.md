@@ -330,7 +330,7 @@ Begin containment before attempting wallet recovery or migration.
 
 ### Escalate to the maintainers
 
-No vulnerability-disclosure channel is published in the repository (OI-065). Continue containment; reporting to the maintainers remains an open item until a suitable private channel is published. Once such a channel is available and containment is under way, report suspected compromise through it.
+A private vulnerability-disclosure channel is published in the repository: root `SECURITY.md` documents GitHub private vulnerability reporting. (The "no channel is published (OI-065)" sentence below is the 2026-11-08 record, superseded — the reporting channel half of OI-065 is resolved; ownership and handling/escalation instructions remain open.) Report suspected compromise through that channel once containment is under way.
 
 > **Warning:** Sharing wallet or account secrets can expose funds or accounts. Keep mnemonics, passphrase values and recovery codes out of the report. Check the report for those secrets before sending it.
 

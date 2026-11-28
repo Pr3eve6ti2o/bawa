@@ -15,8 +15,10 @@ How-to guide.
 > **Tool versions:** bip-utils 2.12.2, cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
 > **Pin note (2026-11-20):** The current `bip-utils` pin in `requirements.txt` is **2.12.3**. Mentions of **2.12.2** record the version the fixtures were verified against on **2026-11-08**.
 > **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
-> **Not run:** no live testnet spend.
+> **Not run:** no live testnet spend (2026-11-08 record). **Update 2026-11-28 (Lane A docs audit):** devnet TON test sends have since run on `panel-rebuild/devnet-temp`; no MAINNET send has ever run. In-browser offline signing is now implemented (`apps/web/src/wallet/send.ts` signers for BTC/ETH/TRX/TON/SOL + generalised EVM signer for 61 EVM chains, Core 4.9.3 WASM); mainnet broadcast remains disabled.
 > **Completed:** The Wallet Core side of the differential comparison for the xpub mapping was captured (D31, 2026-11-08).
+>
+> **Currency note (2026-11-28, Lane A docs audit):** this guide's verification record above is dated 2026-11-08 against `754721cd`; the repo is now at token-gaps `ceade79`. The body below is a dated record except where a 2026-11-28 update is marked inline.
 
 Mark the checks listed as not run above `blocked-unverified`.
 
@@ -163,7 +165,7 @@ Where no independent implementation or published vector exists, document the lim
 
 Use Trust Wallet Core **4.9.3** as Bawa's reference engine, matching the repository pin qualified by R08 on 2026-11-12 and applied by E02 on 2026-11-13. The former reference engine, **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry returned 200), is a GitHub prerelease. At commit `754721cd`, the tools still pinned **4.8.4**; the current revision installs **4.9.3**. Keep bip-utils in the test layer and identify the Core version for each verification run.
 
-The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
+The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08) and re-run on 4.9.3 (D31); in-browser offline signing is implemented (`apps/web/src/wallet/send.ts` signers; devnet TON sends ran on `panel-rebuild/devnet-temp`); mainnet broadcast remains disabled and no mainnet send has ever run.
 
 Apply Bawa’s differential-verification rule: document both implementations’ support for the same standard, exact derivation path, chain, network and output format. Keep a fixture blocked if any setting is unresolved or differs. Capture both implementations’ public outputs and diff them before marking the fixture eligible. Treat a match as evidence for that fixture only, not blanket equivalence across chains or paths.
 
@@ -329,7 +331,7 @@ Do not require a separate Sepolia address fixture, because ETH addresses are net
 
 ## Verification and testing
 
-Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Transaction construction and offline signing exist in the built apps, via Trust Wallet Core 4.9.3 (`apps/web/src/wallet/send.ts` — `signBtcOffline`, `signEvmOffline`, `signTrxOffline`, `signTonOffline`, `signSolOffline`, `signSplOffline`; the generalised EVM signer covers all 61 EVM chains). Broadcast remains disabled and no MAINNET send has ever run; devnet TON test sends ran on `panel-rebuild/devnet-temp`. (The "no transaction construction or signing implementation" sentence below is the 2026-11-08 record, superseded.)
 
 Use this file as verification guidance for public outputs, not as a signing capability.
 
@@ -537,7 +539,7 @@ Restore the baseline between independent cases. Redelivery is normal; duplicate 
 
 Use the repository pin, Trust Wallet Core **4.9.3**, in CI (upgraded 2026-11-13, E02). Trust Wallet Core **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry response 200) is the version the D21 EIP-1559 demonstration ran on; it is a GitHub prerelease, not the pin, and it does not supersede `4.9.3`. The 4.9.3 qualification run is complete (Doc 4 section 21 M-21, R08; applied by E02).
 
-The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. Do not carry that demonstration forward as proof of the in-browser flow.
+The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08) and re-run on 4.9.3 (D31); in-browser offline signing is implemented (`apps/web/src/wallet/send.ts` signers; devnet TON sends ran on `panel-rebuild/devnet-temp`); mainnet broadcast remains disabled and no mainnet send has ever run. Do not carry that demonstration forward as proof of the in-browser flow.
 
 Use only published public fixtures in CI. Record their origin and revision so changes to upstream test data cannot silently change a run. Never generate a real wallet in CI, even as a throwaway test. Keep private wallet material out of job inputs, environment variables, logs, caches and artefacts.
 

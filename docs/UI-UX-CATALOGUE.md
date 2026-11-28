@@ -251,6 +251,13 @@ The single source of truth remains `docs/14-wallet-app-implementation/README.md`
 
 **Review** is a required state within Send, not a fifteenth screen. **Lock** is an app state, not a separate screen.
 
+**Note (2026-11-28, Lane A docs audit):** the 14-screen contract
+above is the v1.0 (10 Nov 2026) record. The app now also ships Swap,
+Track, Address book and Lock as screens beyond the 14 — `docs/14`
+§5.1 needs updating to record them (flagged 2026-11-28, docs-currency
+Lane B; see `docs/review-rules.md` §1). Until Doc 14 is updated, do
+not present the 14 as the complete shipped screen list.
+
 ## 7. States and behaviours that must appear in the design
 
 Every relevant screen needs proper state design, not just a happy-path screenshot.

@@ -13,9 +13,12 @@ financial style everywhere, illustration only for brand moments. This
 supersedes the drawing-illustration direction the original Lane 0
 document codified (4 colours, 2 px ink strokes, wobbly radii, squiggle
 underlines). The money screens (Dashboard, Assets, Send, Receive, Swap)
-and the app shell are flat under style B as of P3-B; the QR card (all
-seven templates) and the Welcome illustration keep the paper/comic
-treatment, and at most one small brand touch per screen.
+and the app shell are flat under style B as of P3-B; the Welcome
+illustration keeps the paper/comic treatment, and at most one small
+brand touch per screen. The QR card was flattened to style B by Lane B
+(`fec71be`, 2026-11-28) — clean 24/20/16 px radii, 1 px hairlines, soft
+shadows; its wobble radii, 2 px ink frames and hard offset shadow are
+gone (see §2.4 and §6).
 **Rule for every lane:** this file is the shared foundation. If a section
 needs something that contradicts it, do not improvise — record it as an
 owner decision and keep building to this file until the owner rules.
@@ -60,8 +63,9 @@ follows from that.
    Figures are tabular Inter; Baloo 2 is headings/brand only, never
    money. Nothing glossy, no gradients, no glass, no purple/blue
    AI-default palettes. Illustration survives only as brand moments:
-   the QR card templates, the Welcome illustration, at most one small
-   touch per screen.
+   the Welcome illustration, at most one small touch per screen. (The
+   QR card templates were paper/comic until Lane B flattened them to
+   style B on 2026-11-28, `fec71be`.)
 6. **Every screen works at 390 px first.** Mobile is the primary surface
    (the owner judges on their phone). Desktop is the same content laid
    out wider — never a different app.
@@ -182,13 +186,17 @@ do NOT silently add it.
   `--radius-flat 10px`, `--radius-flat-lg 12px` (P3-A tokens, now the
   app-wide default). `rounded-flat*` everywhere on money screens.
   The old hand-drawn wobble radii (`--bawa-radius`,
-  `--bawa-radius-sm`) survive ONLY as explicit opt-ins for the QR
-  card and the Welcome illustration, which own them — `radius="bawa"`
-  on a Card is an opt-in, not a default (the `radius="xl"` branch was removed as dead code at `734cfef`, 2026-11-28 — it had 0 call sites). `Button
+  `--bawa-radius-sm`) survive ONLY as an explicit opt-in for the
+  Welcome illustration, which owns them — the QR card no longer uses
+  them (Lane B, `fec71be`, 2026-11-28: clean 24/20/16 px radii).
+  `radius="bawa"` on a Card is an opt-in, not a default (the `radius="xl"` branch was removed as dead code at `734cfef`, 2026-11-28 — it had 0 call sites). `Button
   size="pill"` (22 px, existing) is unchanged.
 - **Shadow:** none on money screens — flat + hairline only.
-  `--bawa-shadow: 4px 4px 0 ink` stays defined for the QR card only
-  (its templates own their shadow). The one soft exception is the
+  `--bawa-shadow: 4px 4px 0 ink` is still defined in `globals.css`
+  but is gone from the QR card (Lane B, `fec71be`, 2026-11-28 — the
+  card root and the tiles over coloured fields use the soft
+  `shadow-lg`); do not re-apply the hard offset shadow to money
+  screens or the QR card. The one soft exception is the
   chain-picker dropdown's `shadow-lg` (one blurred tier, pre-existing,
   audit-passing) — do not spread it.
 - **Motion:** `--duration-fast 150ms`, `--duration-normal 240ms`,
@@ -431,12 +439,17 @@ the current placement is already right — restyle it, don't move it.
   tap to switch" picker (`aria-pressed`, active = sun). The card is
   the shareable object: title, network subtitle (network name bolded),
   QR, address + copy. Share / Download / Copy-link sit directly under
-  the card, in that order. **The QR card itself is untouched by style
-  B** — its templates own their radii, shadows and `--qr-*` palette
-  (§2.2).
-- In-app/PNG parity gap is ACCEPTED (DECISIONS.md §24.3): in-app the
-  address wraps to 3 lines at 390 px, the PNG to 2 — do not shrink the
-  address font below design size or widen the card to chase parity.
+  the card, in that order. **The QR card itself was flattened to style
+  B by Lane B (`fec71be`, 2026-11-28)** — clean 24/20/16 px radii,
+  1 px hairlines, soft `shadow-lg`; its templates keep only the
+  `--qr-*` palette (§2.2). The wobble radii, 2 px ink frames and hard
+  offset shadow are gone from it.
+- In-app/PNG band difference (Lane B, 2026-11-28): template A's
+  in-app band is stacked — the address gets the full band width on
+  its own row — while the PNG export keeps its measured single-row
+  band (see `CREATE-THIS-SPEC.md` §8). Do not "fix" the difference by
+  shrinking the address font below design size or widening the card
+  past the locked layout.
 - The `--qr-*` palette lives ONLY inside the card (§2.2).
 
 ### Track (`screens/track-transaction.tsx`, `/track`)
@@ -523,8 +536,9 @@ the current placement is already right — restyle it, don't move it.
   only — it is not a dark-mode precedent).
 - No wobbly radii, no 2 px ink borders, no hard shadows, no squiggle
   underlines, no dashed connectors, no highlighter on money — on any
-  money screen or shared chrome (style B, P3-B). The QR card and the
-  Welcome illustration are the only places the drawing style survives.
+  money screen or shared chrome (style B, P3-B). The Welcome
+  illustration is the only place the drawing style survives. (The QR
+  card was flattened to style B by Lane B, `fec71be`, 2026-11-28.)
 - No emoji as icons; no grey placeholder boxes where a real asset
   belongs; no Lorem ipsum; no invented balances, prices or fees.
 - No hover-only controls; no focus-ring removal; no zoom disabling.
@@ -608,7 +622,7 @@ the current placement is already right — restyle it, don't move it.
    is replaced by the solid outline everywhere; amount-input groups
    use a coral `focus-within` ring. The `.bawa-squiggle-underline`
    utility is deleted.
-6. **Remaining wobble — CLOSED (wobbly-cards lane, `67c7610`, + web follow-ups `734cfef`, 2026-11-28):** the 19 explicit `radius="xl"` Cards and the Lock screen's `radius="bawa"` are flipped flat; transaction-history and track-transaction are flat too; the dead `radius="xl"` branch was removed from `card.tsx` (0 call sites). Wobble radii now survive only where they belong: the QR card templates and the Welcome illustration, which own them.
+6. **Remaining wobble — CLOSED (wobbly-cards lane, `67c7610`, + web follow-ups `734cfef`, 2026-11-28):** the 19 explicit `radius="xl"` Cards and the Lock screen's `radius="bawa"` are flipped flat; transaction-history and track-transaction are flat too; the dead `radius="xl"` branch was removed from `card.tsx` (0 call sites). Wobble radii now survive only where they belong: the Welcome illustration, which owns them. (The QR card templates were flattened to style B by Lane B, `fec71be`, 2026-11-28 — clean 24/20/16 px radii, 1 px hairlines, soft `shadow-lg`.)
 
 ---
 
