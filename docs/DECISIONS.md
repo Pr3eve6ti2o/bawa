@@ -2373,9 +2373,10 @@ the guide-update pass — nothing to record yet).
 token-gaps; D4 (indexer slowness on some chains) is inherent to the
 upstream indexers, not a Bawa defect — no code fix is owed for it.
 **Caution, standing:** a `browser.open` text fetch of the Pages site
-still renders "84 chains" from a stale crawl cache — trust the
-served asset hash, not the fetched text, when checking the live
-chain count.
+once rendered "84 chains" from a stale crawl cache (observed
+2026-11-26); re-checked 2026-11-28 the fetched text renders
+"87 chains", matching the served build — trust the served asset
+hash, not the fetched text, when checking the live chain count.
 
 ## §30 — Bundle budget re-baseline to 6,000,000 (owner order) — 2026-11-26
 
@@ -2464,3 +2465,11 @@ chain count.
 **What changed:** `apps/web/src/ui/styles/globals.css` (tokens, focus rule, utility deletion); `ui/components/{card,button,alert,input,tabs,badge,dialog,sonner,asset-row,skeleton}.tsx` (flat defaults / flat radii); `screens/{dashboard,asset-list,asset-detail,asset-rows,send,send-review,receive,swap,chain-search-select,token-picker-row,recent-activity,tx-row,add-token,price-chart,welcome,backup}.tsx` + `wallet/qr-scanner.tsx` + `app/{app,sidebar-nav}.tsx` (flat chrome, coloured 24h change, red errors); `apps/web/scripts/palette-audit.mjs` + `src/ui/styles/globals.test.ts` (palette); `docs/DESIGN-SYSTEM.md` (rewritten for style B — see its header).
 
 **Deliberately untouched:** `screens/qr-card.tsx` (all 7 templates, exact), the Welcome illustration (intro card, `bawa-marker` title, doodles), the recovery-phrase screen (P3-A owns it), `screens/transaction-detail.tsx:323` warning box (P2-B's screen, one `rounded-xl` left), the backup panels at `backup.tsx:571–669`, and the Lock screen's `radius="bawa"`. Icons are NOT redrawn (Lane F REFINE, still open); the loading draw-circle stays as a brand beat; the Switch stays as built (Security/Networks only).
+
+## §43 — P2 + P3 merged and live (2026-11-28, `2205f15`; gh-pages `5d64609`)
+
+**Decision (P2 + P3 merge, pushed and live):** token-gaps `f1f0e6c` (P2 merge) → `9585647` (P3-B merge: flat polished money screens + shared chrome + DESIGN-SYSTEM.md rewrite), then `bughunt-v2-fixes` (`b64d83a`) merged with zero conflicts → `2205f15`, pushed `f1f0e6c` → `2205f15`, and republished to GitHub Pages (`gh-pages` `5d64609`, "Publish Bawa from token-gaps `2205f15` (P2+P3 + bughunt-v2-fixes merge)"), serving `assets/index-B2tRFRuM.js`; the live root returns 200 (verified by curl from loud-stone 2026-11-28).
+
+**Gates at `2205f15` on loud-stone with Node 22 (verified first-hand before the push):** tsc 0, eslint 0, build 0, vitest 129 files / 3,347 passed + 5 skipped / 0 failures, bundle 4,482,619 / 6,000,000, diagram test 5/5.
+
+**Current counts (verified 2026-11-28 on this tree):** 87 chains (`registry/chains.json` chainCount 87), 21 default tokens (`registry/tokens.json` tokenCount 21), 43 dashboard rows (22 native assets + 21 default tokens), bundle budget 6,000,000, diagram test 5/5. This supersedes §38 as the current live state; §38 stays as the record of the P0 push.
