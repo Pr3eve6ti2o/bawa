@@ -119,7 +119,7 @@ The read-only `BalanceProvider` registry is in `apps/web/src/wallet/balance-prov
 | Network | Adapter | Endpoint URL | Source |
 | --- | --- | --- | --- |
 | BTC | mempool.space REST | API: <https://mempool.space/api><br>Explorer: <https://mempool.space/tx/> | `apps/web/src/wallet/adapters/btc.ts:15` (API) |
-| ETH | viem | RPC: <https://ethereum-rpc.publicnode.com><br>History: <https://eth.blockscout.com/api><br>Explorer: <https://eth.blockscout.com/tx/> | `apps/web/src/wallet/adapters/eth.ts:22–23` (RPC/history) |
+| ETH | viem | RPC: <https://ethereum-rpc.publicnode.com><br>History: <https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api> (Blockscout v2 fallback; was `eth.blockscout.com/api` until 2026-11-28, DECISIONS.md §53)<br>Explorer: <https://eth.blockscout.com/tx/> | `apps/web/src/wallet/adapters/eth.ts:46–66` (RPC/history) |
 | TRX | TronGrid | API: <https://api.trongrid.io><br>Explorer: <https://tronscan.org/> | `apps/web/src/wallet/adapters/trx.ts:14` (API) |
 | TON | TonCenter | JSON-RPC: <https://toncenter.com/api/v2/jsonRPC><br>Explorer: <https://tonviewer.com/transaction/> | `apps/web/src/wallet/adapters/ton.ts:13` (JSON-RPC) |
 

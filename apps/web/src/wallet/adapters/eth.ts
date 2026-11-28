@@ -2,8 +2,8 @@
  * Ethereum adapter — a thin wrapper over the generalised EVM adapter
  * (adapters/evm.ts). The balance/history/fee/nonce behaviour is the
  * factory's; this file only pins the Ethereum mainnet configuration
- * (chain 1, publicnode RPC, Blockscout history) so existing imports and
- * tests keep working unchanged.
+ * (chain 1, publicnode RPC, Routescan history with a Blockscout v2
+ * fallback) so existing imports and tests keep working unchanged.
  */
 import type { PublicClient } from 'viem';
 import { createEvmAdapter } from './evm';
@@ -21,7 +21,7 @@ interface EthAdapterOverrides {
   /** Ordered RPC list, or a resolver re-read on every call (item 19). */
   rpcUrls?: EndpointList;
   /**
-   * Injectable transport for the Blockscout history read (item 2).
+   * Injectable transport for the history read (item 2).
    * Defaults to the single-attempt HTTP transport.
    */
   transport?: FetchTransport;
@@ -51,7 +51,15 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
       chainName: 'Ethereum',
       nativeSymbol: 'ETH',
       source: 'publicnode',
-      historyBaseUrl: 'https://eth.blockscout.com/api',
+      // Partials fix (2026-11-28): history reads Routescan's
+      // Etherscan-compatible API — Blockscout v1 429s on loud-stone's
+      // shared egress IP (10-request bucket) and its tokentx +
+      // contract filter hangs; Routescan answered live with the real
+      // txlist + USDC tokentx rows. The explorer base stays
+      // eth.blockscout.com, so the tracker's Blockscout v2 lookup,
+      // the tx links, and the adapter's v2 fallback keep working.
+      historyBaseUrl:
+        'https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api',
       historyExplorerBase: 'https://eth.blockscout.com',
     },
     {

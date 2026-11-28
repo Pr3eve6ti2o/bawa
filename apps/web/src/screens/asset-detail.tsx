@@ -921,11 +921,23 @@ export function AssetDetailScreen() {
               No transactions yet for this token.
             </p>
           ) : (
-            <ul className="space-y-3">
-              {tokenHistory.data.map((tx) => (
-                <TxRow key={tx.hash} tx={tx} chain={chainId} />
-              ))}
-            </ul>
+            <>
+              <ul className="space-y-3">
+                {tokenHistory.data.map((tx) => (
+                  <TxRow key={tx.hash} tx={tx} chain={chainId} />
+                ))}
+              </ul>
+              {/* Partials fix (2026-11-28): name the history source
+                  under the list, as /track already does for its
+                  lookup — and carry Routescan's free-plan "Powered by
+                  Routescan.io APIs" mention when it answered. */}
+              <p className="text-sm text-muted-foreground">
+                {`Source: ${tokenHistory.source}`}
+                {tokenHistory.source === 'routescan'
+                  ? ' — Powered by Routescan.io APIs'
+                  : ''}
+              </p>
+            </>
           )
         ) : (
           <div className="space-y-2 rounded-flat-lg border border-ink bg-paper p-4">

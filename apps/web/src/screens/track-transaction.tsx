@@ -532,22 +532,34 @@ export function TrackTransactionScreen() {
           </div>
         )}
         {activity.kind === 'result' && activity.result.status === 'ok' && activity.result.data.length > 0 && (
-          <ul className='space-y-2'>
-            {activity.result.data.slice(0, 10).map((tx) => (
-              <li key={tx.hash}>
-                <Link
-                  to={`/transactions/${encodeURIComponent(tx.hash)}`}
-                  className='flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-base hover:bg-panel-hover'
-                >
-                  <span className='font-medium'>{directionLabel(tx.direction)}</span>
-                  {' '}
-                  <span>{amountLabel(tx.amountBaseUnits, chain)}</span>
-                  {' '}
-                  <span className='text-muted-foreground'>{dateLabel(tx.timestamp, true)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className='space-y-2'>
+              {activity.result.data.slice(0, 10).map((tx) => (
+                <li key={tx.hash}>
+                  <Link
+                    to={`/transactions/${encodeURIComponent(tx.hash)}`}
+                    className='flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-base hover:bg-panel-hover'
+                  >
+                    <span className='font-medium'>{directionLabel(tx.direction)}</span>
+                    {' '}
+                    <span>{amountLabel(tx.amountBaseUnits, chain)}</span>
+                    {' '}
+                    <span className='text-muted-foreground'>{dateLabel(tx.timestamp, true)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {/* Partials fix (2026-11-28): name the history source
+                under the list, as the lookup above already does —
+                and carry Routescan's free-plan "Powered by
+                Routescan.io APIs" mention when it answered. */}
+            <p className='text-sm text-muted-foreground'>
+              {`Source: ${activity.result.source}`}
+              {activity.result.source === 'routescan'
+                ? ' — Powered by Routescan.io APIs'
+                : ''}
+            </p>
+          </>
         )}
         {activity.kind === 'result' && (activity.result.status === 'unavailable' || activity.result.status === 'error') && (
           <Alert variant='destructive'>

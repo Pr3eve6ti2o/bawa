@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicClient } from 'viem';
-import { createEvmAdapter, type EvmAdapterConfig } from './evm';
+import {
+  createEvmAdapter,
+  parseBlockscoutV2TokenTransfers,
+  parseBlockscoutV2TxList,
+  type EvmAdapterConfig,
+} from './evm';
 import { BROADCAST_DISABLED_MESSAGE } from './types';
 
 const ADDRESS = '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7';
@@ -680,5 +685,309 @@ describe('evm adapter — estimateFeeTiers', () => {
     });
     const result = await adapter.estimateFeeTiers?.();
     expect(result?.status).toBe('error');
+  });
+});
+
+// Partials fix (2026-11-28): Blockscout v2 REST history fallback.
+// Ethereum history is Routescan-primary (eth.ts / chains.ts); when
+// the primary errors, the adapter falls back to Blockscout v2 on the
+// explorer host — the v1/v2 buckets are separate (10 vs 180, probed
+// live 2026-11-28). Fixtures below are the live v2 shapes, trimmed.
+describe('evm adapter — Blockscout v2 history fallback', () => {
+  const ETH: EvmAdapterConfig = {
+    chain: 'eth',
+    networkId: 'eip155:1',
+    rpcUrl: 'https://ethereum-rpc.publicnode.com',
+    evmChainId: 1,
+    chainName: 'Ethereum',
+    nativeSymbol: 'ETH',
+    source: 'publicnode',
+    historyBaseUrl:
+      'https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api',
+    historyExplorerBase: 'https://eth.blockscout.com',
+  };
+  const USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+  const ethClient = (): PublicClient =>
+    mockClient({ getChainId: vi.fn(async () => 1) });
+
+  // Live v2 transactions item (eth.blockscout.com, EF address,
+  // 2026-11-28): newest row, hash 0x986656a4… at block 26475533.
+  const V2_TX = {
+    hash: '0x986656a45d8e5be5faf91af9ebda32aeb27493555fb77cda4e980045c4536455',
+    block_number: 26475533,
+    timestamp: '2026-11-23T04:46:47.000000Z',
+    status: 'ok',
+    value: '0',
+    from: { hash: '0x74bfc11416e3443a5f3ff85f71acfb503216a165' },
+    to: { hash: ADDRESS },
+    fee: { value: '13433138658240' },
+  };
+  // Live v2 token-transfers items (same probe): the USDT row first,
+  // then the USDC row at block 26163453, 115.68205 USDC.
+  const V2_USDT_TRANSFER = {
+    transaction_hash:
+      '0xfb5fed09a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8',
+    block_number: 26331158,
+    timestamp: '2026-11-03T02:03:47.000000Z',
+    from: { hash: '0x1e459CEB323152F1F5d6A7639f46E287CE8423b3' },
+    to: { hash: ADDRESS },
+    token: {
+      address_hash: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      symbol: 'USDT',
+      decimals: '6',
+    },
+    total: { value: '10000000', decimals: '6' },
+    token_type: 'ERC-20',
+  };
+  const V2_USDC_TRANSFER = {
+    transaction_hash:
+      '0x9d0afd8e33eebbbde1b5ae5eceeb1dc1c84f9fd7171ebe9f06121b14aab07f5a',
+    block_number: 26163453,
+    timestamp: '2026-10-10T17:13:35.000000Z',
+    from: { hash: '0xee7ae85f2fe2239e27d9c1e23fffe168d63b4055' },
+    to: { hash: ADDRESS },
+    token: {
+      address_hash: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      symbol: 'USDC',
+      decimals: '6',
+    },
+    total: { value: '115682050', decimals: '6' },
+    token_type: 'ERC-20',
+  };
+
+  function mockRoutedFetch(
+    handler: (url: string) => { ok: boolean; status: number; body?: unknown },
+  ): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const res = handler(url);
+        return {
+          ok: res.ok,
+          status: res.status,
+          json: async () => res.body ?? {},
+        };
+      }),
+    );
+  }
+
+  it('reads Routescan history as the primary and labels the source routescan', async () => {
+    const seen: string[] = [];
+    mockRoutedFetch((url) => {
+      seen.push(url);
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          status: '1',
+          message: 'OK',
+          result: [
+            {
+              hash: '0xabc',
+              from: ADDRESS,
+              to: '0x000000000000000000000000000000000000dEaD',
+              value: '1000',
+              timeStamp: '1700000000',
+              txreceipt_status: '1',
+              isError: '0',
+            },
+          ],
+        },
+      };
+    });
+    const adapter = createEvmAdapter(ETH, { client: ethClient() });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.source).toBe('routescan');
+      expect(result.data).toHaveLength(1);
+    }
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toContain('api.routescan.io');
+    expect(seen[0]).toContain('action=txlist');
+  });
+
+  it('falls back to Blockscout v2 txlist when the primary 429s', async () => {
+    const seen: string[] = [];
+    mockRoutedFetch((url) => {
+      seen.push(url);
+      if (url.includes('api.routescan.io')) {
+        return { ok: false, status: 429 };
+      }
+      return {
+        ok: true,
+        status: 200,
+        body: { items: [V2_TX], next_page_params: null },
+      };
+    });
+    const adapter = createEvmAdapter(ETH, { client: ethClient() });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.source).toBe('blockscout-v2');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        hash: V2_TX.hash,
+        direction: 'in',
+        amountBaseUnits: '0',
+        explorerUrl: `https://eth.blockscout.com/tx/${V2_TX.hash}`,
+      });
+    }
+    expect(seen.some((url) => url.includes('eth.blockscout.com/api/v2/addresses'))).toBe(true);
+    expect(seen.some((url) => url.includes('transactions?items_count='))).toBe(true);
+  });
+
+  it('falls back to Blockscout v2 token-transfers with a client-side USDC filter', async () => {
+    mockRoutedFetch((url) => {
+      if (url.includes('api.routescan.io')) {
+        return { ok: false, status: 429 };
+      }
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          items: [V2_USDT_TRANSFER, V2_USDC_TRANSFER],
+          next_page_params: null,
+        },
+      };
+    });
+    const adapter = createEvmAdapter(ETH, { client: ethClient() });
+    const result = await adapter.getTokenHistory?.(USDC, ADDRESS, 5);
+    expect(result?.status).toBe('ok');
+    if (result?.status === 'ok') {
+      expect(result.source).toBe('blockscout-v2');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        hash: V2_USDC_TRANSFER.transaction_hash,
+        direction: 'in',
+        amountBaseUnits: '115682050',
+        token: { symbol: 'USDC', decimals: 6 },
+      });
+    }
+  });
+
+  it('does not fall back on a terminal primary 404', async () => {
+    const seen: string[] = [];
+    mockRoutedFetch((url) => {
+      seen.push(url);
+      return { ok: false, status: 404 };
+    });
+    const adapter = createEvmAdapter(ETH, { client: ethClient() });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('error');
+    // Item 2: a terminal error is the indexer's settled answer — no
+    // fallback attempt, so exactly one fetch.
+    expect(seen).toHaveLength(1);
+  });
+
+  it('keeps the primary error when there is no Blockscout host to fall back to', async () => {
+    const seen: string[] = [];
+    mockRoutedFetch((url) => {
+      seen.push(url);
+      return { ok: false, status: 429 };
+    });
+    const adapter = createEvmAdapter(
+      { ...ETH, historyExplorerBase: 'https://routescan.io' },
+      { client: ethClient() },
+    );
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toContain('429');
+    }
+    expect(seen.some((url) => url.includes('blockscout.com'))).toBe(false);
+  });
+
+  it('keeps the primary error when the v2 token walk finds no match in its bounded pages', async () => {
+    const seen: string[] = [];
+    mockRoutedFetch((url) => {
+      seen.push(url);
+      if (url.includes('api.routescan.io')) {
+        return { ok: false, status: 429 };
+      }
+      // One USDT row per page, always another page — inconclusive,
+      // so the walk must stop after its bounded pages, not page on.
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          items: [V2_USDT_TRANSFER],
+          next_page_params: { index: 6, block_number: 26163453 },
+        },
+      };
+    });
+    const adapter = createEvmAdapter(ETH, { client: ethClient() });
+    const result = await adapter.getTokenHistory?.(USDC, ADDRESS, 5);
+    expect(result?.status).toBe('error');
+    if (result?.status === 'error') {
+      expect(result.reason).toContain('429');
+    }
+    // Primary retries 3 times, then the bounded 3-page v2 walk.
+    expect(seen.filter((url) => url.includes('api.routescan.io'))).toHaveLength(3);
+    expect(seen.filter((url) => url.includes('token-transfers'))).toHaveLength(3);
+  });
+
+  it('parses the v2 txlist shape and rejects a wrong shape', () => {
+    const parsed = parseBlockscoutV2TxList(
+      { items: [V2_TX], next_page_params: null },
+      {
+        chain: 'eth',
+        networkId: 'eip155:1',
+        address: ADDRESS,
+        explorerBase: 'https://eth.blockscout.com',
+      },
+    );
+    expect(parsed).toHaveLength(1);
+    expect(parsed?.[0]).toMatchObject({
+      hash: V2_TX.hash,
+      direction: 'in',
+      status: 'confirmed',
+    });
+    expect(parseBlockscoutV2TxList(null, {
+      chain: 'eth',
+      networkId: 'eip155:1',
+      address: ADDRESS,
+    })).toBeNull();
+    expect(parseBlockscoutV2TxList({ items: [{ hash: '0xabc' }] }, {
+      chain: 'eth',
+      networkId: 'eip155:1',
+      address: ADDRESS,
+    })).toBeNull();
+  });
+
+  it('parses v2 token-transfers with a client-side filter and keyset params', () => {
+    const parsed = parseBlockscoutV2TokenTransfers(
+      {
+        items: [V2_USDT_TRANSFER, V2_USDC_TRANSFER],
+        next_page_params: { index: 6, block_number: 26163453 },
+      },
+      {
+        chain: 'eth',
+        networkId: 'eip155:1',
+        address: ADDRESS,
+        explorerBase: 'https://eth.blockscout.com',
+        contract: USDC,
+      },
+    );
+    expect(parsed?.txs).toHaveLength(1);
+    expect(parsed?.txs[0]).toMatchObject({
+      hash: V2_USDC_TRANSFER.transaction_hash,
+      amountBaseUnits: '115682050',
+    });
+    expect(parsed?.nextPageParams).toEqual({
+      index: 6,
+      block_number: 26163453,
+    });
+    const empty = parseBlockscoutV2TokenTransfers(
+      { items: [V2_USDT_TRANSFER], next_page_params: null },
+      {
+        chain: 'eth',
+        networkId: 'eip155:1',
+        address: ADDRESS,
+        contract: USDC,
+      },
+    );
+    expect(empty?.txs).toHaveLength(0);
+    expect(empty?.nextPageParams).toBeNull();
   });
 });
