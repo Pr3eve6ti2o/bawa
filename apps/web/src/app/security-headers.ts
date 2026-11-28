@@ -15,9 +15,14 @@
 // - script-src 'self' 'wasm-unsafe-eval': 'wasm-unsafe-eval' is REQUIRED for
 //   WebAssembly.compile/instantiateStreaming (wallet-core WASM) once any CSP
 //   is present; it does NOT re-enable eval(). No 'unsafe-inline': the built
-//   output has no inline scripts, and inline script injection is the attack
-//   this policy exists to stop (an injected script could substitute the
-//   displayed receive address and exfiltrate xpubs from localStorage).
+//   output has exactly one inline script, the frame-buster in index.html,
+//   deliberately placed above the build-injected CSP meta so the meta does
+//   not govern it (DECISIONS §50: verified in Chromium 159 — under meta-only
+//   delivery it runs and hides the framed page; under a header CSP it is
+//   blocked, one console error per load, and framing is blocked by
+//   frame-ancestors / X-Frame-Options instead). Any OTHER inline script —
+//   including an injected one, which could substitute the displayed receive
+//   address and exfiltrate xpubs from localStorage — is blocked.
 // - style-src 'self' 'unsafe-inline': Tailwind v4 + Radix/sonner use inline
 //   style attributes; 'unsafe-inline' in style-src does not execute script.
 // - img-src 'self' data: plus the five token-icon origins (token-verify

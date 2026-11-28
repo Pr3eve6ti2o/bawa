@@ -84,16 +84,22 @@ Derivation policy, where `i` is the address index:
   The derivation paths are not a network-enforcement mechanism.
 - Content-Security-Policy (T47): `src/app/security-headers.ts` is the single source
   of truth. The strict policy (`script-src 'self' 'wasm-unsafe-eval'`, no inline
-  scripts, `object-src 'none'`, `frame-ancestors 'none'`) is served as an HTTP
-  header by `vite preview` and injected as a `<meta>` tag into `dist/index.html`
-  at build time only — Vite dev injects an inline react-refresh preamble, so a
-  source-level meta tag would break `npm run dev`. The meta carries the same
-  policy minus `frame-ancestors 'none'`, which a `<meta>` tag cannot set
-  (browsers ignore it and log a console error). Any production host serving
-  `dist/` must send the same `Content-Security-Policy` header (plus
-  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`); GitHub Pages
-  sends no custom headers, so the Pages deployment has no enforceable
-  `frame-ancestors`.
+  scripts except the frame-buster in `index.html`, `object-src 'none'`,
+  `frame-ancestors 'none'`) is served as an HTTP header by `vite preview` and
+  injected as a `<meta>` tag into `dist/index.html` at build time only — Vite dev
+  injects an inline react-refresh preamble, so a source-level meta tag would break
+  `npm run dev`. The meta carries the same policy minus `frame-ancestors 'none'`,
+  which a `<meta>` tag cannot set (browsers ignore it and log a console error).
+  Any production host serving `dist/` must send the same `Content-Security-Policy`
+  header (plus `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`);
+  GitHub Pages sends no custom headers, so the Pages deployment has no enforceable
+  `frame-ancestors`. Its only framing defence is the frame-buster: under meta-only
+  delivery the inline script runs (a meta CSP does not govern a script above it)
+  and, when framed, hides the whole page — the bust-out itself no longer works in
+  current Chrome, which blocks a cross-origin top-level navigation with no user
+  gesture (DECISIONS §50). Where headers are served the header CSP blocks the
+  inline script instead (one console error per load under `vite preview`) and
+  framing is blocked by `frame-ancestors` / `X-Frame-Options`.
 - WASM integrity (T47): `scripts/copy-wasm.mjs` refuses to copy a wallet-core.wasm
   whose SHA-256 differs from the published @trustwallet/wallet-core@4.9.3 pin in
   `scripts/wasm-integrity.mjs`. Bump the pin from the new published tarball only.
