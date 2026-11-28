@@ -7,7 +7,11 @@
  * unwired — bsc, gnosis, linea, opbnb, metis, fantom; see
  * EVM_HISTORY_SOURCES and docs/GAP-ANALYSIS.md §1. Fix-All Lane A,
  * 2026-11-24: Linea is wired too, via Etherscan V2 keyless — ten
- * wired, five unwired: bsc, gnosis, opbnb, metis, fantom.)
+ * wired, five unwired: bsc, gnosis, opbnb, metis, fantom. Gnosis is
+ * wired 2026-11-28 via gnosisscan.io keyless (browser fetch; curl is
+ * 403 Cloudflare) — eleven wired, four unwired: bsc, opbnb, metis,
+ * fantom. Gnosis is wired in chains.ts, not in EVM_HISTORY_SOURCES,
+ * like Linea.)
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicClient } from 'viem';

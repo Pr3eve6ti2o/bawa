@@ -408,7 +408,9 @@ describe('chains registry', () => {
     // instances), Avalanche, Mantle (Routescan), and Polygon, Base,
     // Arbitrum via a headless-Chromium fetch (plain curl gets 403
     // Cloudflare). Fix-All Lane A adds Linea via Etherscan V2, keyless.
-    // The five remaining EVM chains stay blocked: bsc, gnosis, opbnb,
+    // Gnosis joins them 2026-11-28 via gnosisscan.io, keyless (browser
+    // fetch; plain curl gets 403 Cloudflare).
+    // The four remaining EVM chains stay blocked: bsc, opbnb,
     // metis, fantom — no working keyless public history indexer exists
     // for them (owner decision: Etherscan API key or another indexer).
     expect(availableFor('history')).toEqual([
@@ -424,6 +426,7 @@ describe('chains registry', () => {
       'avax',
       'ltc',
       'doge',
+      'gnosis',
       'celo',
       'linea',
       'mantle',
@@ -434,7 +437,7 @@ describe('chains registry', () => {
     expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
   });
 
-  it('pins a keyless history indexer only for the ten live-probed EVM chains (Lane B + Fix-All Lane A)', () => {
+  it('pins a keyless history indexer only for the eleven live-probed EVM chains (Lane B + Fix-All Lane A)', () => {
     // The adapter reads history from the pinned URL, so a chain with a
     // verified history capability must carry its endpoint here, and a
     // blocked chain must not carry one — a stale URL would fetch history
@@ -467,9 +470,13 @@ describe('chains registry', () => {
       'https://api.etherscan.io/v2/api?chainid=59144',
     );
     expect(CHAINS.linea.historyExplorerBase).toBe('https://lineascan.build');
+    // Gnosis, 2026-11-28: gnosisscan.io (Etherscan v1) answers keyless
+    // with real transactions to a browser fetch (plain curl gets 403
+    // Cloudflare) — probed live in headless Chromium, in-page fetch too.
+    expect(CHAINS.gnosis.historyBaseUrl).toBe('https://gnosisscan.io/api');
+    expect(CHAINS.gnosis.historyExplorerBase).toBe('https://gnosisscan.io');
     for (const chain of [
       'bsc',
-      'gnosis',
       'opbnb',
       'metis',
       'fantom',
@@ -594,10 +601,12 @@ describe('chains registry', () => {
       // Lane B (Finish the Product, 2026-11-23): celo, mantle, scroll
       // and aurora history is verified — Celo/Scroll/Aurora via
       // Blockscout instances, Mantle via Routescan, all probed live
-      // returning real transactions. Gnosis, opBNB, Metis and Fantom
+      // returning real transactions. opBNB, Metis and Fantom
       // stay blocked: no working keyless indexer. Fix-All Lane A
       // (2026-11-24): Linea joins them — Etherscan V2 answers keyless
-      // for chain 59144, probed live with real transactions.
+      // for chain 59144, probed live with real transactions. Gnosis
+      // joins them 2026-11-28 — gnosisscan.io answers keyless to a
+      // browser fetch, probed live with real transactions.
       if (
         chain === 'celo' ||
         chain === 'mantle' ||
@@ -609,6 +618,9 @@ describe('chains registry', () => {
       } else if (chain === 'linea') {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-24');
+      } else if (chain === 'gnosis') {
+        expect(caps.history.status).toBe('verified');
+        expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-28');
       } else {
         expect(caps.history.status).toBe('blocked');
         expect(caps.history.evidence).toContain('never faked');
@@ -1764,11 +1776,13 @@ describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => 
           // 2026-11-23 (live host response cross-checked against the
           // adapter's Blockscout-shaped parser; single source — the
           // host itself, stated in the evidence), the Linea history
-          // host 2026-11-24 (Fix-All Lane A, Etherscan V2 keyless).
+          // host 2026-11-24 (Fix-All Lane A, Etherscan V2 keyless),
+          // the Gnosis history host 2026-11-28 (gnosisscan.io,
+          // Etherscan v1 keyless, browser fetch).
           // Any of the dates is accepted; the rule that a verified
           // balance/history needs a dated cross-check stays intact.
           expect(entry.evidence).toMatch(
-            /live mainnet cross-check 2026-11-(19|22|23|24)/,
+            /live mainnet cross-check 2026-11-(19|22|23|24|28)/,
           );
         } else if (entry.status === 'verified') {
           expect(entry.evidence).toMatch(/send\.test\.ts|core\.test\.ts/);

@@ -730,9 +730,9 @@ describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
       expect(eth.textContent).toContain('working');
       await selectRpcChain(mounted, 'Gnosis');
       const gnosis = rpcRow(mounted, 'Gnosis');
-      expect(gnosis.textContent).toContain(
-        'History: no working source — history unavailable for this chain.',
-      );
+      // Gnosis history wired 2026-11-28 via gnosisscan.io (keyless,
+      // browser fetch; plain curl is 403 Cloudflare).
+      expect(gnosis.textContent).toContain('History: gnosisscan.io');
     } finally {
       await mounted.cleanup();
     }

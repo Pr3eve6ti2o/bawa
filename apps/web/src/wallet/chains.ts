@@ -258,6 +258,10 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  * a headless-Chromium fetch — see HISTORY_EVIDENCE_2026_11_23_BROWSER below.)
  * (Fix-All Lane A, 2026-11-24: Linea left this blocked set — Etherscan
  * V2 answers keyless for chain 59144. Five remain blocked.)
+ * (Gnosis left it 2026-11-28 — gnosisscan.io answers keyless to a
+ * browser fetch with real transactions; plain curl is Cloudflare-blocked,
+ * so the browser probe is the evidence, not curl. Four remain blocked:
+ * bsc, opbnb, metis, fantom.)
  */
 const HISTORY_EVIDENCE_2026_11_23 =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Blockscout-shaped history) + '
@@ -291,6 +295,19 @@ const HISTORY_EVIDENCE_2026_11_23_BROWSER =
 const HISTORY_EVIDENCE_2026_11_24_LINEA =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Etherscan V2 history) + '
   + 'live mainnet cross-check 2026-11-24: Etherscan V2 returns real Linea transactions for a known address keyless (status 1, 1 req/5s keyless tier), and the live response matches the txlist shape the adapter parses. Single source — the host itself, no second keyless indexer answers for Linea.';
+
+// Gnosis history, 2026-11-28: gnosisscan.io (Etherscan v1 API),
+// keyless — GET https://gnosisscan.io/api?module=account&action=txlist&
+// address=0xd8dA...6045&page=1&offset=5&sort=desc returns status 1 with
+// real transactions and message "OK". Plain curl is 403 Cloudflare; a
+// headless-Chromium fetch — and an in-page fetch from a blank page, the
+// exact path the adapter uses — returns 200 with identical JSON (CORS
+// passes), and a second address returns different transactions
+// (address filter proven). Single source — the host itself, no second
+// keyless indexer answers for Gnosis.
+const HISTORY_EVIDENCE_2026_11_28_GNOSIS =
+  'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Etherscan v1 history) + '
+  + 'live mainnet cross-check 2026-11-28: gnosisscan.io returns real Gnosis transactions for a known address keyless (status 1), an in-page fetch passes Cloudflare + CORS, and a second address returns different transactions (address filter proven); the live response matches the txlist shape the adapter parses. Single source — the host itself, no second keyless indexer answers for Gnosis.';
 
 function capabilitiesForBalanceChain(
   chain: ChainId,
@@ -792,7 +809,16 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://gnosis-rpc.publicnode.com',
       'https://rpc.gnosischain.com'],
     evmChainId: 100,
-    capabilities: capabilitiesForBalanceChain('gnosis', BALANCE_EVIDENCE_2026_11_23),
+    // Gnosis history, 2026-11-28: probed live — gnosisscan.io answers
+    // keyless with real transactions (browser fetch; curl is 403).
+    historyBaseUrl: 'https://gnosisscan.io/api',
+    historyExplorerBase: 'https://gnosisscan.io',
+    capabilities: capabilitiesForBalanceChain(
+      'gnosis',
+      BALANCE_EVIDENCE_2026_11_23,
+      true,
+      HISTORY_EVIDENCE_2026_11_28_GNOSIS,
+    ),
   },
   celo: {
     id: 'celo',

@@ -39,6 +39,10 @@ import { EVM_TX_CHAINS } from '../watch-only-families';
  * bsc/avalanche/linea/mantle/opbnb/metis/aurora/fantom 404 ("default
  * backend"). An Etherscan-family keyed API would cover those — that is
  * an owner decision (keyed service), not a Lane D fix.
+ * (2026-11-28: the Gnosis line above is superseded — the 403 was plain
+ * curl; a headless-Chromium fetch and an in-page fetch both return 200
+ * with real transactions, so Gnosis is wired in chains.ts via
+ * gnosisscan.io, keyless. The other Lane D results stand as probed.)
  */
 export const EVM_HISTORY_SOURCES: Record<
   string,

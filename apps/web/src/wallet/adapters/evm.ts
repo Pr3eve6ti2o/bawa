@@ -169,14 +169,17 @@ export function createEvmAdapter(
   // The history source label names the indexer that answered: an
   // explicit config label wins (Lane D: optimism-explorer, scrollscan);
   // otherwise derive it from the URL — Routescan for Avalanche/Mantle,
-  // Etherscan V2 for Linea, Blockscout instances for the rest (Lane B).
+  // Etherscan V2 for Linea, gnosisscan for Gnosis (Etherscan v1 API,
+  // 2026-11-28), Blockscout instances for the rest (Lane B).
   const historySource =
     config.historySource ??
     (historyBaseUrl?.includes('routescan')
       ? 'routescan'
       : historyBaseUrl?.includes('etherscan.io')
         ? 'etherscan-v2'
-        : 'blockscout');
+        : historyBaseUrl?.includes('gnosisscan.io')
+          ? 'gnosisscan'
+          : 'blockscout');
   const transport = overrides.transport ?? httpFetchTransport;
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });
@@ -255,9 +258,10 @@ export function createEvmAdapter(
     if (!historyBaseUrl) {
       return {
         status: 'unavailable',
-        // Fix-all Lane H, item 6: five chains stay balance-only — no
+        // Fix-all Lane H, item 6: four chains stay balance-only — no
         // keyless indexer covers them — so the reason says so, and that
         // the balance still loads. Shown as-is by humanReasonMessage.
+        // (Gnosis left this set 2026-11-28: gnosisscan.io answers keyless.)
         reason: `History is not connected for ${config.chainName} yet — no keyless indexer covers this chain, so only the balance shows here.`,
       };
     }
