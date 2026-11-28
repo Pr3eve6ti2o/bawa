@@ -1,7 +1,7 @@
 # Constraints
 
 Last reviewed: 2026-11-28 by the docs audit, Lane A (hands-on, 0 Sol calls).
-Base: `panel-rebuild/token-gaps` at `ceade79` (honest remains, live).
+Base: `panel-rebuild/token-gaps` at `1a85258` (three findings fixed, live).
 
 This is Bawa's written quality contract. It outlives any single session:
 a number here is a decision, not an aspiration. Every enforced row names
@@ -49,8 +49,8 @@ pass.** Tightening the bar is silent; loosening it is loud (see
 
 | Metric | Today (2026-11-26, this tree) | Direction |
 | --- | --- | --- |
-| Web vitest | 129 files — PASSES on loud-stone (3,429 passed + 5 skipped, 0 failed, Node 22, at token-gaps `1253bf6`, 2026-11-28; the 3,416-passed figure was the gates at `7f24ef1`, the 3,351-passed figure the publish gates at `734cfef`). FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run — environment artefacts, not code defects | must not fall |
-| Web bundle JS | 4,509,662 bytes total (measured 2026-11-28 on token-gaps `1253bf6`, fresh build, Node 22, first-hand on loud-stone; was 4,509,097 at `7f24ef1`, 4,508,592 at `4adbd30`); largest chunk (boundary) 2,906,616 bytes (measured 2026-11-28 at `7f24ef1`, fresh build, Node 22, first-hand on loud-stone — not re-measured at `1253bf6`); passes the 6,000,000 budget by 1,490,338 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
+| Web vitest | 129 files — PASSES on loud-stone (3,437 passed + 5 skipped, 0 failed, Node 22, at token-gaps `1a85258`, 2026-11-28; the 3,429-passed figure was the gates at `1253bf6`, the 3,416-passed figure was the gates at `7f24ef1`, the 3,351-passed figure the publish gates at `734cfef`). FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run — environment artefacts, not code defects | must not fall |
+| Web bundle JS | 4,509,960 bytes total (measured 2026-11-28 on token-gaps `1a85258`, fresh build, Node 22, first-hand on loud-stone; was 4,509,662 at `1253bf6`, 4,509,097 at `7f24ef1`, 4,508,592 at `4adbd30`); largest chunk (boundary) 2,906,616 bytes (measured 2026-11-28 at `7f24ef1`, fresh build, Node 22, first-hand on loud-stone — not re-measured at `1253bf6`); passes the 6,000,000 budget by 1,490,040 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
 | Web test duration | ~93 s (`vitest run`, 2026-11-27, 92.66 s at token-gaps `33f1ff1`) | must not grow without a reason |
 | Root smoke checks | 440 checks pass, 0 fail (412 smoke + 28 register-links, re-verified 2026-11-28 at token-gaps `734cfef` on loud-stone, Node 22; not re-run since — code changed after that measurement, so this is the last measured figure, not a re-verification at the tip) | must not fall |
 

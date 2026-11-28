@@ -259,10 +259,10 @@ The full step-by-step version, verified from a clean checkout, is
    pinned `@trustwallet/wallet-core` 4.9.3 release.
 4. **Run** — `npm run preview` serves the built app at
    `http://localhost:4173` (`npm run dev` instead for hot reload on
-   `http://localhost:5173`). Note (2026-11-28, open finding at this
-   tip, fix in progress): wallet creation under `npm run dev` is
-   currently broken — the wallet-core WASM 404s in dev; use the
-   production preview above until the fix lands.
+   `http://localhost:5173`). Note (2026-11-28): wallet creation under `npm run dev` was broken —
+   the wallet-core WASM 404d in dev — and is fixed at token-gaps `ae07a45`
+   (2026-11-28); `npm run dev` now serves the WASM under `/bawa/` and wallet
+   creation works.
 5. **Welcome screen** — create a wallet, import one, or add a
    watch-only wallet.
 6. **Dashboard** — a fresh wallet opens on 22 native assets plus 21

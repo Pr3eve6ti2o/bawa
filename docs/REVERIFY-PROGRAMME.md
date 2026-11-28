@@ -376,7 +376,7 @@ label, slot, switch, tabs); the E2E harness was fixed by deep-audit
 Lane E; devnet Issues 5 and 6 are closed/fixed (deep-audit Lane B);
 the Receive tagline was restored by fix-all Lane H; the README
 mobile dashboard shot was re-shot clean (marketing-fix Lane 4);
-GitHub Pages now serves the token-gaps build (`ceade79`), not the
+GitHub Pages now serves the token-gaps build (`1a85258`), not the
 saved `67c48e2` build. Still open: the reference-repo link, the
 jscpd consolidation candidates, and the remaining O-01–O-12 items
 not listed here (see `docs/REVERIFY-CHECKLIST.md`).

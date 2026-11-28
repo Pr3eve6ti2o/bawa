@@ -61,11 +61,11 @@ npm run preview
 
 Expected: Vite preview serves the built app at `http://localhost:4173`.
 For development with hot reload, run `npm run dev` instead and open
-`http://localhost:5173`. Note (2026-11-28, open finding, fix in progress):
-wallet creation under `npm run dev` is currently broken — the wallet-core
-WASM 404s in dev (dev serves `public/` under `/bawa/` while `<base href="/">`
-makes the loader request `/wallet-core.wasm`); use the production preview
-above until the fix lands.
+`http://localhost:5173`. Note (2026-11-28): wallet creation under `npm run dev` was broken — the wallet-core
+WASM 404d in dev (dev serves `public/` under `/bawa/` while `<base href="/">`
+made the loader request `/wallet-core.wasm`) — and is fixed at token-gaps `ae07a45`
+(2026-11-28); `npm run dev` now serves the WASM under `/bawa/` and wallet
+creation works.
 
 ### Step 5: Open it in the browser
 

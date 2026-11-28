@@ -128,8 +128,8 @@ proof and Issue 6 is FIXED (see
 `docs/DEEP-AUDIT-DEVNET-PROGRAMME.md` Lane B, 2026-11-23); the E2E
 harness was fixed by deep-audit Lane E (root-base `build:e2e` +
 `preview:e2e`) and E2E has run on later merged trees; the GitHub
-Pages preview now serves the token-gaps build (`ceade79`,
-`index-Brm7r34g.js`), not the saved adopt-proper build named in
+Pages preview now serves the token-gaps build (`1a85258`,
+`index-B9gxTjOm.js`), not the saved adopt-proper build named in
 "Preview / Pages pointers" above. The remaining items below are as
 recorded 2026-11-23 unless noted.
 
