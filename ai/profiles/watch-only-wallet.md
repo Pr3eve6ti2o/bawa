@@ -18,7 +18,7 @@
 ## Missing
 
 - a built watch-only wallet product or monitoring interface
-- balances
+- balances (this CLI profile only — the web app dashboard now shows watch balances since the fix programme, f77b803–4adbd30; see ai/profiles/web-wallet.md)
 - confirmation-policy enforcement
 - TON (excluded: no xpub)
 - any secret intake or signing

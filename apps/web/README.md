@@ -42,7 +42,7 @@ The screens are `dashboard`, `welcome`, `create-wallet`, `import-wallet`, `mnemo
 `backup-shares`, `asset-list`, `asset-detail`, `receive`, `send`, `swap`, `transaction-history`,
 `transaction-detail`, `track-transaction`, `network-selection`, `wallet-management`,
 `address-book`, `security-settings` and `lock` (routes counted first-hand in
-`src/app/app.tsx` at HEAD `734cfef`; the 14-screen contract in `docs/14` §5.1 is the
+`src/app/app.tsx` at HEAD `ceade79`; the 14-screen contract in `docs/14` §5.1 is the
 starting point, and the app has since grown past it). A screen's presence does
 not mean its underlying wallet operation is implemented.
 
@@ -66,7 +66,7 @@ Derivation policy, where `i` is the address index:
 - **TON:** derived at `m/44'/607'/0'` (V4 R2), with balance/history adapters and offline signing; watch-only public-address import remains an option.
   Broadcast remains disabled until separately authorised; no secrets leave the browser.
 - **WalletConnect:** removed in the providers programme (2026-11-26). Connecting Bawa to dApps needs a free Reown Cloud project ID, which has not been set up — without one the relay never connects, so the screen, its client modules and the `@walletconnect/*` dependencies were removed rather than shipped dead. No keys or funds are affected. To bring it back later: create a free account at https://cloud.reown.com, create a project, copy the project ID into `VITE_WALLETCONNECT_PROJECT_ID`, and restore the WalletConnect files from git history. The Security screen carries the same note in the app.
-- **Buying with fiat (Coinbase Onramp, Lane D 2026-11-25):** the dashboard Buy tile and the Receive Buy panel (`/receive?buy=1`, the `/send?scan=1` precedent) wire Coinbase Onramp: the widget opens as a pop-up for the wallet's addresses on the ten Coinbase destination networks (Bitcoin, Ethereum, Solana, Base, Optimism, Arbitrum, Polygon, Avalanche, BNB Chain, TRON); Coinbase sets the price, fees, payment methods and regional availability. The panel shows the first deliverable address the purchase lands on by default — the widget itself is the network picker. There is deliberately no in-app success/exit feedback: a message listener plus its outcome states cost ~1 KB against 1,517,378 B of headroom (2026-11-28), and the purchase is completed and confirmed inside the Coinbase pop-up, with the delivery showing up as a normal incoming transaction. The widget URL is built in [`src/wallet/onramp.ts`](src/wallet/onramp.ts) as a faithful port of the SDK's `generateOnRampURL` (`@coinbase/cbpay-js` 2.4.0, MIT) — the SDK itself is NOT bundled, because its whole 7.3 KB survives the build (no `sideEffects: false`, and Vite's per-module override defeats both a treeshake rule and a `resolveId` plugin; three builds proved it) against 1,517,378 B of headroom (2026-11-28), and a separate `/buy` route is not built — the Buy UI lives in the Receive screen reusing its components. A second entry point on the Receive details step was cut — the dashboard tile is the one entry point. Parity tests mirror the SDK's own URL vectors. **Not live yet:** buying needs Coinbase Onramp onboarding and the public project ID as `VITE_COINBASE_ONRAMP_APP_ID` at build time — without it the Buy panel says so plainly and offers no purchase. A live purchase has not been verified (no onboarding/keys exist yet). The Buy panel now also offers a provider picker (Ramp, MoonPay, Onramper, Banxa Referral, Transak, Mercuryo), each row stating which keys it needs and where they live; providers whose keys the owner has not provided show as not set up yet.
+- **Buying with fiat (Coinbase Onramp, Lane D 2026-11-25):** the dashboard Buy tile and the Receive Buy panel (`/receive?buy=1`, the `/send?scan=1` precedent) wire Coinbase Onramp: the widget opens as a pop-up for the wallet's addresses on the ten Coinbase destination networks (Bitcoin, Ethereum, Solana, Base, Optimism, Arbitrum, Polygon, Avalanche, BNB Chain, TRON); Coinbase sets the price, fees, payment methods and regional availability. The panel shows the first deliverable address the purchase lands on by default — the widget itself is the network picker. There is deliberately no in-app success/exit feedback: a message listener plus its outcome states cost ~1 KB against 1,490,338 B of headroom (2026-11-28), and the purchase is completed and confirmed inside the Coinbase pop-up, with the delivery showing up as a normal incoming transaction. The widget URL is built in [`src/wallet/onramp.ts`](src/wallet/onramp.ts) as a faithful port of the SDK's `generateOnRampURL` (`@coinbase/cbpay-js` 2.4.0, MIT) — the SDK itself is NOT bundled, because its whole 7.3 KB survives the build (no `sideEffects: false`, and Vite's per-module override defeats both a treeshake rule and a `resolveId` plugin; three builds proved it) against 1,490,338 B of headroom (2026-11-28), and a separate `/buy` route is not built — the Buy UI lives in the Receive screen reusing its components. A second entry point on the Receive details step was cut — the dashboard tile is the one entry point. Parity tests mirror the SDK's own URL vectors. **Not live yet:** buying needs Coinbase Onramp onboarding and the public project ID as `VITE_COINBASE_ONRAMP_APP_ID` at build time — without it the Buy panel says so plainly and offers no purchase. A live purchase has not been verified (no onboarding/keys exist yet). The Buy panel now also offers a provider picker (Ramp, MoonPay, Onramper, Banxa Referral, Transak, Mercuryo), each row stating which keys it needs and where they live; providers whose keys the owner has not provided show as not set up yet.
 
 ## Security notes
 
@@ -106,7 +106,7 @@ Paths are relative to `apps/web/` unless marked otherwise.
 - `src/assets/chains/` — native chain logos; see [Chain logos](#chain-logos).
 - `src/engine/` — public-key validation boundary and browser wallet-core WASM address derivation.
 - `src/state/` — wallet context, xpub persistence, in-memory addresses and UI lock state.
-- `src/screens/` — the 15 screens and their available, mock or unavailable states.
+- `src/screens/` — 31 non-test files holding the 19 screens and their available, mock or unavailable states (counted first-hand 2026-11-28, HEAD ceade79).
 - `src/app/` — application shell and routing.
 - [`packages/contracts/`](../../packages/contracts/) (repository root) — shared types, imported as `@bawa/contracts` via a `file:` dependency.
 
@@ -291,9 +291,9 @@ The boundary tests derive the published fixture addresses exactly for BTC, ETH a
 indices 0 and 1. They also reject private extended keys and keys with bad checksums, wrong
 versions or invalid secp256k1 points. Run `npm test` to see them pass.
 
-Verified on this tree on 2026-11-28 (HEAD `734cfef`): Vitest 129 files,
-3,351 passed + 5 skipped (3,356 total, exit 0); `tsc --noEmit` 0 errors;
-`eslint` 0 errors; `vite build` passes; JS bundle 4,482,622 / 6,000,000
-budget; `npm ci` 0 vulnerabilities. The live site
-(https://pr3eve6ti2o.github.io/bawa/) serves `index-BxW-qfX0.js`, root 200,
+Verified on this tree on 2026-11-28 (HEAD `ceade79`): Vitest 129 files,
+3,429 passed + 5 skipped (3,434 total, exit 0, at 1253bf6); `tsc --noEmit` 0 errors;
+`eslint` 0 errors; `vite build` passes; JS bundle 4,509,662 / 6,000,000
+budget (1,490,338 B headroom). The live site
+(https://pr3eve6ti2o.github.io/bawa/) serves `index-Brm7r34g.js`, root 200,
 asset 200.
