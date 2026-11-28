@@ -388,7 +388,7 @@ Track confirmations and chain reorganisations (reorgs). Account for the possibil
 - Free: Public plan 200 requests/day, keyless; Starter plan 1,000 requests/day with a free key. The wallet uses the keyless Public plan, so a heavy day can exhaust it — the primary carries the load.
 - Paid: Personal $9.90/month, 40,000 requests/day, adds WebSocket and a 99.9% SLA; Developer $29.90/month, 100,000 requests/day, adds testnets. Source: 1rpc.io pricing, reviewed 2026-11-18.
 
-**Binance public dataseed** — Binance's public BSC endpoint. The wallet uses it only as the BNB Smart Chain backup (`https://bsc-dataseed.binance.org`).
+**Binance public dataseed** — Binance's public BSC endpoint. The wallet uses it as the BNB Smart Chain backup — second of three endpoints (primary PublicNode, then this, then DeFiBit's dataseed `https://bsc-dataseed1.defibit.io`, added 2026-11-28 after the first two 429d the shared sandbox egress and Add Token by contract failed on CAKE).
 
 - Free: public, no key.
 - Paid / limits: no published per-client limit or paid tier found for this endpoint — unverified. Do not quote a number for it.
@@ -452,7 +452,7 @@ Per-chain endpoint table (registry order is primary first; the adapter tries the
 | TRON (trx) | — | `https://api.trongrid.io` |
 | TON (ton) | — | `https://toncenter.com/api/v2/jsonRPC` (+ TonAPI balance fallback) |
 | Solana (sol) | — | `https://solana-rpc.publicnode.com`, `https://solana.publicnode.com` |
-| BNB Smart Chain (bsc) | 56 | `https://bsc-rpc.publicnode.com`, `https://bsc-dataseed.binance.org` |
+| BNB Smart Chain (bsc) | 56 | `https://bsc-rpc.publicnode.com`, `https://bsc-dataseed.binance.org`, `https://bsc-dataseed1.defibit.io` |
 | Polygon (matic) | 137 | `https://polygon-bor-rpc.publicnode.com` |
 | Arbitrum One (arb) | 42161 | `https://arbitrum-rpc.publicnode.com` |
 | OP Mainnet (op) | 10 | `https://optimism-rpc.publicnode.com`, `https://mainnet.optimism.io` |

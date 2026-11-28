@@ -673,7 +673,25 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     coinTypeName: 'smartChain',
     ...evmChainFacts(56, 714),
     pathFor: expandedPathFor(EVM_PATH),
-    rpcEndpoints: ['https://bsc-rpc.publicnode.com', 'https://bsc-dataseed.binance.org'],
+    // Lane 1 (2026-11-28): third endpoint is DeFiBit's dataseed —
+    // probed live from loud-stone (eth_blockNumber + eth_getCode +
+    // eth_call name/symbol/decimals on CAKE
+    // 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82, all 9–76 ms,
+    // CORS `*`). It is the only third endpoint from an operator
+    // independent of both the primary (PublicNode) and the Binance
+    // dataseed: bsc-dataseed1.bnbchain.org answers too, but shares
+    // Binance infra with the backup, so it guards a hostname, not a
+    // provider outage. Dead the same day, keyless tier gone:
+    // 1rpc.io/bnb (-32001 usage limit), rpc.ankr.com/bsc (now keyed),
+    // binance.llamarpc.com (unreachable from this egress),
+    // bsc.drpc.org (HTTP 429 public-endpoint limit). The token-read
+    // sweep (tryEndpoints in adapters/token-balances.ts) tries them
+    // in order, so a 429 on the first two still resolves CAKE.
+    rpcEndpoints: [
+      'https://bsc-rpc.publicnode.com',
+      'https://bsc-dataseed.binance.org',
+      'https://bsc-dataseed1.defibit.io',
+    ],
     evmChainId: 56,
     capabilities: capabilitiesForBalanceChain('bsc'),
   },

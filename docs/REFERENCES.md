@@ -59,6 +59,7 @@ Lane C, FIX-ALL programme, 2026-11-24. The full entries — what each service do
 - SoChain — https://sochain.com — limits: https://sochain.com/docs/limits — pricing: https://sochain.com/pricing
 - BlockCypher — https://www.blockcypher.com — pricing: https://www.blockcypher.com/pricing.html — rate limits: https://www.blockcypher.com/dev/
 - Binance public dataseed — https://bsc-dataseed.binance.org
+- DeFiBit BSC dataseed — https://bsc-dataseed1.defibit.io — BSC third endpoint (Add Token fallback, 2026-11-28; probed live, keyless, CORS-open)
 
 ### History indexers
 

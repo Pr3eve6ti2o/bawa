@@ -669,6 +669,7 @@ describe('chains registry', () => {
     expect(CHAINS.bsc.rpcEndpoints).toEqual([
       'https://bsc-rpc.publicnode.com',
       'https://bsc-dataseed.binance.org',
+      'https://bsc-dataseed1.defibit.io',
     ]);
     expect(CHAINS.matic.rpcEndpoints).toEqual([
       'https://polygon-bor-rpc.publicnode.com',
@@ -1824,6 +1825,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     expect(resolveRpcEndpoints('bsc', storage)).toEqual([
       'https://bsc-rpc.publicnode.com',
       'https://bsc-dataseed.binance.org',
+      'https://bsc-dataseed1.defibit.io',
     ]);
     expect(resolveRpcEndpoints('matic', storage)).toEqual([
       'https://polygon-bor-rpc.publicnode.com',

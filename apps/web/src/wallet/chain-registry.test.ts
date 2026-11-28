@@ -41,6 +41,7 @@ describe('chain registry — token discovery', () => {
     expect(CHAINS.bsc.rpcEndpoints).toEqual([
       'https://bsc-rpc.publicnode.com',
       'https://bsc-dataseed.binance.org',
+      'https://bsc-dataseed1.defibit.io',
     ]);
     expect(CHAINS.arb.rpcEndpoints).toEqual(['https://arbitrum-rpc.publicnode.com']);
     expect(CHAINS.op.rpcEndpoints).toEqual([

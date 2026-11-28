@@ -490,6 +490,65 @@ describe('evmClientForChain — RPC failover (UI/UX fixes, item 19)', () => {
     );
     expect(result.status).toBe('error');
   });
+
+  it('verifies CAKE on BSC through the third RPC when the first two 429', async () => {
+    // Lane 1 (2026-11-28): BSC's first two endpoints (PublicNode,
+    // Binance dataseed) 429 the shared sandbox egress, so Add Token
+    // by contract failed with "Could not read this token". The third
+    // endpoint (DeFiBit dataseed, probed live from loud-stone) answers
+    // the same CAKE contract read — the sweep must reach it, and the
+    // token must verify with its real on-chain metadata.
+    const CAKE = '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82';
+    const transport: FetchTransportLike = {
+      request: vi.fn(async (url: string, init?: RequestInit) => {
+        if (url !== 'https://bsc-dataseed1.defibit.io') {
+          throw new Error('HTTP 429 Too Many Requests');
+        }
+        const body = JSON.parse(String(init?.body ?? '{}')) as {
+          method?: string;
+          params?: unknown[];
+          id?: unknown;
+        };
+        let result: string;
+        if (body.method === 'eth_getCode') {
+          result = '0x60006000';
+        } else if (body.method === 'eth_chainId') {
+          result = '0x38';
+        } else if (body.method === 'eth_call') {
+          const data = String(
+            (body.params?.[0] as { data?: string } | undefined)?.data ?? '',
+          ).toLowerCase();
+          if (data.startsWith('0x06fdde03')) {
+            result = `0x${abiStringHex('PancakeSwap Token')}`;
+          } else if (data.startsWith('0x95d89b41')) {
+            result = `0x${abiStringHex('Cake')}`;
+          } else if (data.startsWith('0x313ce567')) {
+            result = `0x${uint256Hex(18n)}`;
+          } else if (data.startsWith('0x70a08231')) {
+            result = `0x${uint256Hex(0n)}`;
+          } else {
+            throw new Error(`unexpected eth_call data ${data}`);
+          }
+        } else {
+          throw new Error(`unexpected method ${body.method}`);
+        }
+        return { jsonrpc: '2.0', id: body.id ?? 1, result };
+      }),
+    };
+    const client = evmClientForChain('bsc', undefined, transport);
+    const result = await verifyEvmToken({
+      chain: 'bsc',
+      contract: CAKE,
+      ownerAddress: OWNER,
+      evmClient: client,
+    });
+    expect(result).toEqual({
+      ok: true,
+      metadata: { name: 'PancakeSwap Token', symbol: 'Cake', decimals: 18 },
+      balanceBaseUnits: '0',
+    });
+    expect(client.lastEndpoint?.()).toBe('https://bsc-dataseed1.defibit.io');
+  });
 });
 
 const SOL_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
