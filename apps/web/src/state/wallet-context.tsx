@@ -215,6 +215,16 @@ interface WalletState {
   hydrating: boolean;
 }
 
+/** Skip the background balance/history refresh after a vault
+ * derivation. Import flow only: import is a local operation and
+ * must issue no network requests, so a screen that shows no
+ * balances cannot log a console error for a third-party host's
+ * DNS failure. The viewing screens fetch on mount instead
+ * (useLiveBalances). Every other caller keeps the default. */
+export type VaultRefreshOptions = {
+  skipBackgroundRefresh?: boolean;
+};
+
 export interface WalletContextValue extends WalletState {
   selectedChain: ChainId;
   addXpub(chain: ChainId, xpub: string, label: string): Promise<void>;
@@ -244,9 +254,13 @@ export interface WalletContextValue extends WalletState {
   /** TEMPORARY devnet mode: test networks, valueless tokens. */
   devnetEnabled: boolean;
   setDevnetEnabled(enabled: boolean): Promise<void>;
-  setVaultAccount(account: number, index: number): Promise<void>;
+  setVaultAccount(
+    account: number,
+    index: number,
+    options?: VaultRefreshOptions,
+  ): Promise<void>;
   /** Switch to another account from the same phrase, keeping the address index. */
-  selectVaultAccount(account: number): Promise<void>;
+  selectVaultAccount(account: number, options?: VaultRefreshOptions): Promise<void>;
   /** Create `count` new accounts from the vault phrase; returns their indices. */
   createVaultAccounts(count: number): Promise<number[]>;
   /**
@@ -290,10 +304,13 @@ export interface WalletContextValue extends WalletState {
    * demand and never stores it.
    */
   exportAccountExtendedPublicKey(chain: ChainId): Promise<string | null>;
-  refreshVaultAccounts(selection?: {
-    account: number;
-    index: number;
-  }): Promise<void>;
+  refreshVaultAccounts(
+    selection?: {
+      account: number;
+      index: number;
+    },
+    options?: VaultRefreshOptions,
+  ): Promise<void>;
   refreshBalances(): Promise<void>;
   refreshHistory(): Promise<void>;
   // Token balances refresh on demand (AssetRows calls it on mount and on
@@ -1437,12 +1454,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [update]);
 
-  // Adding or removing a watch-only wallet re-fetches balances (and
-  // history after them) for the new address set. Token gaps, item 6:
-  // without this, a wallet added after boot kept its boot-time balance
-  // state ('unavailable', no address) until a reload or a manual
-  // refresh — the boot refresh runs only once at hydration. These live
-  // below refreshBalances/refreshHistory so their stable identities can
+  // Adding a watch-only wallet issues NO network request: import
+  // is a purely local operation (validate, derive, persist). The
+  // add-time balance/history refresh that used to live here is gone
+  // on purpose (fix-import-err-name-not-resolved, 2026-11-29): it
+  // fanned one 0x address out to every EVM chain's RPC endpoint —
+  // two POSTs per endpoint (chain id, then balance), per-endpoint
+  // failover, up to 3x retry — so a single import bought hundreds
+  // of lottery tickets on third-party hosts, and any one host's DNS
+  // failure logged a console error on a screen that shows no
+  // balances. Token gaps, item 6 still holds — a wallet added after
+  // boot must show its balances without a reload or a manual refresh
+  // — but it is kept by the viewing screens now: useLiveBalances
+  // refreshes on mount, so the dashboard and the asset list fetch as
+  // soon as the user looks at them. (removeXpub below still
+  // refreshes: wallet management shows balances.) These live below
+  // refreshBalances/refreshHistory so their stable identities can
   // be listed as dependencies.
   const addXpub = useCallback(async (chain: ChainId, xpub: string, label: string) => {
     const request = ++additions.current[chain];
@@ -1461,8 +1488,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // contracts). TON has one address because its path is fully hardened.
     const wallet = { chain, xpub: publicKey, label: trimmedLabel, derivedCount: chain === 'ton' ? 1 : 5 };
     await putWallet(chain, wallet);
-    void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
-  }, [putWallet, refreshBalances, refreshHistory]);
+  }, [putWallet]);
 
   // Lane B (Finish the Product): add a plain public address watch-only,
   // fanned out to every chain in its family. One 0x address is the same
@@ -1512,11 +1538,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       await putWallet(familyChain, wallet);
       added.push(familyChain);
     }
-    if (added.length > 0) {
-      void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
-    }
+    // No balance/history refresh here: see addXpub above — import
+    // is local, and the viewing screens fetch on mount.
     return { added, skipped };
-  }, [putWallet, refreshBalances, refreshHistory]);
+  }, [putWallet]);
 
   const removeXpub = useCallback((chain: ChainId) => {
     ++additions.current[chain];
@@ -1592,7 +1617,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const refreshVaultAccounts = useCallback(async (selection?: {
     account: number;
     index: number;
-  }) => {
+  }, options?: VaultRefreshOptions) => {
     const request = ++vaultDerivations.current;
     // Lane D (FIX-ALL): attempt the prompt-free open FIRST. The old order
     // read computeVaultState() (in-memory lock state) before awaiting
@@ -1715,17 +1740,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // soon as the derived addresses are in state, so the wallet shows
     // immediately. A failed background refresh leaves the per-chain
     // error/unavailable state (or the previous state) and the dashboard
-    // Retry button re-runs it; it never throws here.
-    void refreshBalances()
-      .finally(() => refreshHistory())
-      .catch(() => {});
+    // Retry button re-runs it; it never throws here. The import flow
+    // opts out (skipBackgroundRefresh): it must stay a local operation
+    // with zero network requests, and the viewing screens fetch on
+    // mount instead (useLiveBalances).
+    if (!options?.skipBackgroundRefresh) {
+      void refreshBalances()
+        .finally(() => refreshHistory())
+        .catch(() => {});
+    }
   }, [update, refreshBalances, refreshHistory]);
 
   // Switch the derived vault account. Validates like deriveAddressesAt
   // (which re-validates), stores the selection, then re-derives with the
   // NEW selection passed explicitly — never with captured state. A new
   // account starts its HD receive rotation over (index 0 on every chain).
-  const setVaultAccount = useCallback(async (account: number, index: number) => {
+  const setVaultAccount = useCallback(async (account: number, index: number, options?: VaultRefreshOptions) => {
     if (!Number.isSafeInteger(account) || account < 0) {
       throw new RangeError('account must be a non-negative safe integer');
     }
@@ -1742,13 +1772,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       receiveIndices: readReceiveIndices(),
       receiveAddresses: perChain<string | null>(() => null),
     }));
-    await refreshVaultAccounts(selection);
+    await refreshVaultAccounts(selection, options);
   }, [update, refreshVaultAccounts]);
 
   // Lane C, item 7: switch to another account from the same phrase,
   // keeping the current address index.
-  const selectVaultAccount = useCallback(async (account: number) => {
-    await setVaultAccount(account, current.current.vaultAccount.index);
+  const selectVaultAccount = useCallback(async (account: number, options?: VaultRefreshOptions) => {
+    await setVaultAccount(account, current.current.vaultAccount.index, options);
   }, [setVaultAccount]);
 
   // Lane C, items 6/7/17: create `count` NEW accounts from the vault

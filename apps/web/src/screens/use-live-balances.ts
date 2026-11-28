@@ -1,11 +1,15 @@
 /**
  * Live balances (watch-only display programme, 2026-11-28): balances
- * refresh on a ~45 s poll while a portfolio screen is mounted — the
- * 30–60 s cadence the polling guide recommends for token balances and
- * portfolio values — plus a refresh when the tab becomes visible
- * again. Prices already poll on ~60 s (use-live-prices); this is the
- * balances half. No websocket, no push service: Bawa has no backend
- * and no keys in the browser. Polling pauses while the tab is hidden.
+ * refresh once on mount and then on a ~45 s poll while a portfolio
+ * screen is mounted — the 30–60 s cadence the polling guide
+ * recommends for token balances and portfolio values — plus a
+ * refresh when the tab becomes visible again. Prices already poll on
+ * ~60 s (use-live-prices); this is the balances half. No websocket,
+ * no push service: Bawa has no backend and no keys in the browser.
+ * Polling pauses while the tab is hidden. The mount fetch is what
+ * keeps token gaps item 6 (a wallet added after boot shows its
+ * balances with no reload or manual refresh) now that the import
+ * flow itself issues no network requests.
  *
  * The poll re-runs the refreshers, which is also the bounded
  * auto-retry for failed fetches: a chain that 429'd on load recovers
@@ -45,6 +49,9 @@ export function useLiveBalances(enabled = true): void {
       void runTokens?.();
       void runHistory?.();
     };
+    // Fetch on mount, not only on the 45 s tick: a screen that
+    // shows balances fetches them when it appears.
+    tick();
     const interval = setInterval(tick, BALANCE_POLL_INTERVAL_MS);
     const onVisibilityChange = () => {
       if (!document.hidden) tick();

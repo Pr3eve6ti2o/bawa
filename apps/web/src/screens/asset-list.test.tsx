@@ -509,7 +509,9 @@ describe('asset list screen', () => {
         (candidate) => candidate.textContent === 'Retry',
       );
       expect(retryButtons).toHaveLength(0);
-      expect(mockRefreshBalances).not.toHaveBeenCalled();
+      // fix-import-err-name-not-resolved: the mount tick refreshes once
+      // on mount; no Retry button is offered while locked.
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(1);
       const unlock = mounted.div.querySelector('a[href="/lock"]');
       expect(unlock).not.toBeNull();
       expect(unlock?.textContent).toContain('Unlock');
