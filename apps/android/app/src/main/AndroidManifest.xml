@@ -7,6 +7,14 @@
          export from assets only. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Step 5, Lane C: CAMERA for the QR / barcode scanner
+         (ui/scanner/QrCodeScanner.kt). The scanner only reads an
+         address / QR text and returns it to the caller; it never
+         sends anything. uses-feature required=false so devices
+         without a camera can still install. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <!-- T47: allowBackup="false" — this is a wallet. App data (including any
          future persisted watch-only data) must never leave the device in a
          cloud backup or an adb backup. The starter currently keeps xpubs in
