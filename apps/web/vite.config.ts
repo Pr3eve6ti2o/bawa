@@ -21,8 +21,9 @@ import {
 // Dev server headers are deliberately minimal (no CSP): localhost dev is not
 // a deployment target, and a dev CSP would break HMR without protecting users.
 // GitHub Pages (panel-rebuild/pages-base): the <base> tag must match the
-// build base, or relative URLs (e.g. wallet-core.wasm) resolve to the
-// domain root instead of /bawa/. Captured from the resolved config.
+// served base, in dev as well as at build, or relative URLs (e.g.
+// wallet-core.wasm) resolve to the domain root instead of /bawa/.
+// Captured from the resolved config.
 let resolvedBase = '/'
 
 // G-9 (Lane T2, 2026-11-28): build stamp — the source commit + build
@@ -70,18 +71,34 @@ export default defineConfig({
         resolvedBase = config.base
       },
       transformIndexHtml(html, ctx) {
-        if (ctx.server) return html
+        // The <base> tag must match the served base in BOTH dev and build:
+        // Vite serves the app (and public/, i.e. wallet-core.wasm) under
+        // config.base (/bawa/), while source index.html hardcodes
+        // <base href="/" />. The Emscripten loader resolves the bare
+        // relative URL `wallet-core.wasm` against the document base, so
+        // with the dev base left at "/" it requested /wallet-core.wasm
+        // (404) instead of /bawa/wallet-core.wasm, and wallet creation
+        // failed under `vite dev` ("The wallet could not be generated").
+        // This hook used to early-return when ctx.server was set, so the
+        // rebase only ever ran at build time. The favicon href is rebased
+        // the same way as <base>, so dev serves /bawa/favicon.svg too.
+        const withBase = html
+          .replace('<base href="/" />', `<base href="${resolvedBase}" />`)
+          .replace('href="/favicon.svg"', `href="${resolvedBase}favicon.svg"`)
+        // Build only from here: the CSP meta stays out of dev (Vite dev
+        // injects an inline react-refresh preamble that a script-src
+        // 'self' policy would block, breaking `npm run dev` / HMR), and
+        // the build stamp identifies the built artifact.
+        if (ctx.server) return withBase
         const meta =
           `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY_META}">`
-        const withBase = html.replace('<base href="/" />', `<base href="${resolvedBase}" />`)
         // G-9 build stamp (Lane T2): source commit + build time, as an
         // HTML comment and a data attribute on <html> (readable in the
-        // DOM as document.documentElement.dataset.bawaBuild). The favicon
-        // href is rebased the same way as <base> above, so the Pages
-        // build (base /bawa/) serves /bawa/favicon.svg.
-        const withStamp = withBase
-          .replace('<html lang="en">', `<html lang="en" data-bawa-build="${buildCommit} ${buildTime}">`)
-          .replace('href="/favicon.svg"', `href="${resolvedBase}favicon.svg"`)
+        // DOM as document.documentElement.dataset.bawaBuild).
+        const withStamp = withBase.replace(
+          '<html lang="en">',
+          `<html lang="en" data-bawa-build="${buildCommit} ${buildTime}">`,
+        )
         const stampComment = `<!-- Bawa build: ${buildCommit} ${buildTime} -->`
         // Insert before the LAST </head>: a first-occurrence replace breaks
         // if any earlier literal (e.g. a comment) contains the string.
