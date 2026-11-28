@@ -320,6 +320,93 @@ describe('TrackTransactionScreen', () => {
     expect(getRecentActivity).toHaveBeenCalledTimes(2);
   });
 
+  it('retries a transient activity failure automatically and recovers', async () => {
+    // Item 7 (c): a 429 used to end the lookup at once. The first
+    // attempt fails transiently, the second succeeds — the screen
+    // retries on its own, so the user never sees the error.
+    vi.useFakeTimers();
+    try {
+      vi.mocked(getRecentActivity)
+        .mockResolvedValueOnce({
+          status: 'error',
+          reason: 'HTTP 429 Too Many Requests',
+        })
+        .mockResolvedValue({
+          status: 'ok',
+          data: [],
+          source: 'stub',
+          fetchedAt: 1,
+        });
+      mounted = mount();
+      const { div } = mounted;
+
+      setInputValue(div.querySelector<HTMLInputElement>('#activity-address'), btcAddress);
+      await clickButton(div, 'Show recent activity');
+      expect(getRecentActivity).toHaveBeenCalledTimes(1);
+      // The 1 s backoff is a fake timer: advance past it for attempt 2.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(getRecentActivity).toHaveBeenCalledTimes(2);
+      expect(div.textContent).toContain('No transactions found for this address');
+      expect(div.textContent).not.toMatch(/could not be loaded/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('gives up after 3 transient failures and says it retried', async () => {
+    // Item 7 (c): the error only shows after the automatic retries
+    // are spent — and says so, so the manual Retry reads as a fresh
+    // cycle, not the first try.
+    vi.useFakeTimers();
+    try {
+      vi.mocked(getRecentActivity).mockResolvedValue({
+        status: 'error',
+        reason: 'HTTP 429 Too Many Requests',
+      });
+      mounted = mount();
+      const { div } = mounted;
+
+      setInputValue(div.querySelector<HTMLInputElement>('#activity-address'), btcAddress);
+      await clickButton(div, 'Show recent activity');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      expect(getRecentActivity).toHaveBeenCalledTimes(3);
+      expect(div.textContent).toMatch(/could not be loaded/i);
+      expect(div.textContent).toContain('Tried 3 times');
+      expect(
+        [...div.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === 'Retry',
+        ),
+      ).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not auto-retry a non-transient activity failure', async () => {
+    // 'Indexer unavailable' is not transient: one attempt, then the
+    // error + manual Retry, exactly as before.
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'error',
+      reason: 'Indexer unavailable',
+    });
+    mounted = mount();
+    const { div } = mounted;
+
+    setInputValue(div.querySelector<HTMLInputElement>('#activity-address'), btcAddress);
+    await clickButton(div, 'Show recent activity');
+
+    expect(getRecentActivity).toHaveBeenCalledTimes(1);
+    expect(div.textContent).toMatch(/could not be loaded/i);
+    expect(div.textContent).not.toContain('Tried 3 times');
+  });
+
   it('loads the adapters before the activity lookup, and hides the Retry when the chain has none', async () => {
     // CDP first-hand: on a cold visit to /track the activity call
     // ran before any adapter was registered and failed at once with

@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { TransactionHistoryScreen } from './transaction-history';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
+import { getRecentActivity } from '../wallet/tracker';
 import type { ChainId } from '../engine/boundary';
 import type { HistoryState } from '../state/wallet-context';
 import type { AdapterTx } from '../wallet/adapters/types';
@@ -13,6 +14,16 @@ import type { AdapterTx } from '../wallet/adapters/types';
 vi.mock('../state/wallet-context', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../state/wallet-context')>()),
   useWallet: vi.fn(),
+  // The watch-only path dynamically imports these; the real ones would
+  // pull the ~3 MB adapter chunk into jsdom.
+  ensureAdapters: vi.fn(() => Promise.resolve()),
+  ensureDevnetAdapters: vi.fn(() => Promise.resolve()),
+}));
+
+// The watch-only path dynamically imports the tracker; the real module
+// would register live adapters in jsdom.
+vi.mock('../wallet/tracker', () => ({
+  getRecentActivity: vi.fn(),
 }));
 
 vi.mock('../wallet/chains', async (importOriginal) => {
@@ -426,6 +437,161 @@ describe('transaction history screen', () => {
     try {
       expect(mounted.div.textContent).toContain('Locked. Unlock to see activity.');
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('counts the chains already checked while history loads', async () => {
+    // Item 7 (b): the wait is counted, not a bare spinner.
+    const loading: HistoryState = { status: 'loading', txs: [] };
+    setWallet({
+      ...perChainEmpty(),
+      btc: loading,
+      eth: loading,
+      trx: loading,
+      ton: loading,
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Loading your activity…');
+      expect(mounted.div.textContent).toContain('Checked 0 of 4 chains…');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Item 7 (a): the wallet switcher. The public Ethereum Foundation
+  // address is used as the watch-only wallet (public, read-only).
+  const EF_ADDRESS = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe';
+
+  function setWalletWithWatchOnly(): void {
+    vi.mocked(useWallet).mockReturnValue({
+      history: perChainEmpty(),
+      refreshHistory: mockRefreshHistory,
+      vaultState: 'unlocked',
+      vaultAccount: { account: 0, index: 0 },
+      devnetEnabled: false,
+      vaultAddresses: {
+        btc: [],
+        eth: ['0x5Cdd0fBa789b1BCcaab1CC6cEdFe8D9742077E26'],
+        trx: [],
+        ton: [],
+      },
+      addresses: {
+        eth: [{ chain: 'eth', index: 0, address: EF_ADDRESS }],
+        bsc: [{ chain: 'bsc', index: 0, address: EF_ADDRESS }],
+      },
+      // One 0x address stored once per EVM chain (the fan-out): the
+      // switcher must still show it as ONE wallet, not two.
+      xpubs: {
+        eth: {
+          chain: 'eth',
+          xpub: EF_ADDRESS,
+          label: 'Ethereum Foundation',
+          derivedCount: 1,
+        },
+        bsc: {
+          chain: 'bsc',
+          xpub: EF_ADDRESS,
+          label: 'Ethereum Foundation',
+          derivedCount: 1,
+        },
+      },
+    } as unknown as ReturnType<typeof useWallet>);
+  }
+
+  async function flushDirectFetch(): Promise<void> {
+    // The direct path dynamically imports the tracker, then awaits one
+    // adapter call per chain — several macrotasks, flushed in act.
+    for (let i = 0; i < 5; i += 1) {
+      await act(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        });
+      });
+    }
+  }
+
+  async function selectWallet(
+    div: HTMLDivElement,
+    value: string,
+  ): Promise<void> {
+    const select = div.querySelector<HTMLSelectElement>('#history-wallet');
+    expect(select).not.toBeNull();
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        'value',
+      )?.set;
+      setter?.call(select, value);
+      select?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await flushDirectFetch();
+  }
+
+  it('shows one switcher option per watch-only wallet and its history on select', async () => {
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'ok',
+      data: [tx('0xef1', 'eth', 'in', '1000000000000000000')],
+      source: 'stub',
+      fetchedAt: 1,
+    });
+    setWalletWithWatchOnly();
+    const mounted = await mountScreen();
+    try {
+      const select = mounted.div.querySelector<HTMLSelectElement>('#history-wallet');
+      expect(select).not.toBeNull();
+      // Vault + ONE watch-only option (not one per fanned-out chain).
+      expect(select?.querySelectorAll('option').length).toBe(2);
+      expect(select?.textContent).toContain('Ethereum Foundation');
+      // Labelled wallet: "Name — address", never the address twice.
+      expect(select?.textContent).toContain(
+        'Ethereum Foundation — 0xde0B…7BAe',
+      );
+      // The vault wallet has no transactions in the mocked context.
+      expect(mounted.div.textContent).toContain('No transactions yet');
+      const watchId = `watch:${EF_ADDRESS.toLowerCase()}`;
+      await selectWallet(mounted.div, watchId);
+      expect(vi.mocked(getRecentActivity)).toHaveBeenCalledWith(
+        'eth',
+        EF_ADDRESS,
+        25,
+        { devnet: false },
+      );
+      expect(mounted.div.textContent).toContain('0xef1');
+      expect(mounted.div.textContent).toContain('Watch-only');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the honest empty state for a watch-only wallet with no transactions', async () => {
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'ok',
+      data: [],
+      source: 'stub',
+      fetchedAt: 1,
+    });
+    setWalletWithWatchOnly();
+    const mounted = await mountScreen();
+    try {
+      const watchId = `watch:${EF_ADDRESS.toLowerCase()}`;
+      await selectWallet(mounted.div, watchId);
+      expect(mounted.div.textContent).toContain('No transactions yet');
+      expect(mounted.div.textContent).not.toContain('0xef1');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows no wallet switcher when there is only the vault wallet', async () => {
+    setWallet(perChainEmpty(), 'unlocked');
+    const mounted = await mountScreen();
+    try {
+      expect(
+        mounted.div.querySelector('#history-wallet'),
+      ).toBeNull();
     } finally {
       await mounted.cleanup();
     }

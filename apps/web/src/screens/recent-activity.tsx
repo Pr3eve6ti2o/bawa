@@ -64,6 +64,15 @@ export function RecentActivity() {
           (chain) => history?.[chain]?.status === 'loading',
         );
 
+        // Item 7 (b): same counted wait as /transactions — chains that
+        // already settled are named, so the 15–20 s history wait reads
+        // as progress, not a stuck spinner.
+        const settledCount = chains.filter(
+          (chain) =>
+            history?.[chain] !== undefined &&
+            history[chain].status !== 'loading',
+        ).length;
+
         const unavailableChains = chains.filter(
           (chain) =>
             history?.[chain]?.status === 'unavailable' ||
@@ -134,7 +143,12 @@ export function RecentActivity() {
               // bare div replaced it). The labelled Skeleton renders
               // the compact loader — spinner + dots + the line — inside
               // the box, so the wait is named.
-              <Skeleton className="h-20 w-full" label="Loading recent activity…" />
+              <div className="space-y-2">
+                <Skeleton className="h-20 w-full" label="Loading recent activity…" />
+                <p className="text-sm text-panel-text-muted">
+                  {`Checked ${settledCount} of ${chains.length} chains…`}
+                </p>
+              </div>
             ) : anyLoaded ? (
               <div className="rounded-flat-lg border border-ink bg-paper p-4">
                 <p className="text-base font-semibold text-panel-text">No activity yet</p>

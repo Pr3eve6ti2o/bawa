@@ -21,6 +21,7 @@ import {
   ensureAdapters,
   ensureDevnetAdapters,
   humanReasonMessage,
+  isTransientReason,
   useWallet,
 } from '../state/wallet-context';
 
@@ -33,8 +34,19 @@ type LookupState =
   | { kind: 'result'; result: TrackerLookupResult };
 type ActivityState =
   | { kind: 'idle' }
-  | { kind: 'loading' }
+  | { kind: 'loading'; attempt: number }
   | { kind: 'result'; result: TrackerActivityResult };
+
+// Item 7 (c): a single 429 used to end the address lookup at once with
+// "network is busy". Transient indexer failures (429 / rate-limit, 5xx,
+// timeouts, network errors — the shared isTransientReason set) are now
+// retried automatically with backoff before the error is shown.
+const ACTIVITY_MAX_ATTEMPTS = 3;
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 function errorReason(error: unknown): string {
   return error instanceof Error && error.message
@@ -229,20 +241,65 @@ export function TrackTransactionScreen() {
   async function runActivity() {
     if (!address.trim()) return;
     const request = ++activityRequest.current;
-    setActivity({ kind: 'loading' });
+    const value = address.trim();
+    // P0-6: the history adapters load lazily — on a cold visit to
+    // /track nothing has registered them yet, so the activity call
+    // would fail at once with "No history adapter…", and a Retry
+    // would fail the same way. Load them first so the lookup
+    // actually runs and a Retry can succeed.
     try {
-      // P0-6: the history adapters load lazily — on a cold visit to
-      // /track nothing has registered them yet, so the activity call
-      // would fail at once with "No history adapter…", and a Retry
-      // would fail the same way. Load them first so the lookup
-      // actually runs and a Retry can succeed.
       await (devnetEnabled ? ensureDevnetAdapters() : ensureAdapters());
-      const result = await getRecentActivity(chain, address.trim(), 10, { devnet: devnetEnabled });
-      if (request === activityRequest.current) setActivity({ kind: 'result', result });
     } catch (error: unknown) {
       if (request === activityRequest.current) {
-        setActivity({ kind: 'result', result: { status: 'error', reason: errorReason(error) } });
+        setActivity({
+          kind: 'result',
+          result: { status: 'error', reason: errorReason(error) },
+        });
       }
+      return;
+    }
+    let lastResult: TrackerActivityResult | null = null;
+    for (let attempt = 0; attempt < ACTIVITY_MAX_ATTEMPTS; attempt += 1) {
+      if (request !== activityRequest.current) return;
+      setActivity({ kind: 'loading', attempt });
+      try {
+        const result = await getRecentActivity(chain, value, 10, {
+          devnet: devnetEnabled,
+        });
+        if (request !== activityRequest.current) return;
+        // Only a transient failure is worth another attempt: a
+        // permanent one ('unavailable' — no adapter for the chain, or
+        // a non-transient error) settles at once, exactly as before.
+        if (
+          result.status !== 'error' ||
+          !isTransientReason(result.reason) ||
+          attempt === ACTIVITY_MAX_ATTEMPTS - 1
+        ) {
+          setActivity({ kind: 'result', result });
+          return;
+        }
+        lastResult = result;
+      } catch (error: unknown) {
+        if (request !== activityRequest.current) return;
+        const reason = errorReason(error);
+        if (
+          !isTransientReason(reason) ||
+          attempt === ACTIVITY_MAX_ATTEMPTS - 1
+        ) {
+          setActivity({ kind: 'result', result: { status: 'error', reason } });
+          return;
+        }
+        lastResult = { status: 'error', reason };
+      }
+      // Transient failure, attempts left: back off (1 s, then 2 s —
+      // the fetchWithRetry shape) and try again instead of handing
+      // the user a dead end on a 429.
+      await sleep(1000 * (attempt + 1));
+    }
+    // Unreachable in practice — the loop always settles a result — but
+    // a terminal state beats leaving the spinner up if it ever is.
+    if (request === activityRequest.current && lastResult !== null) {
+      setActivity({ kind: 'result', result: lastResult });
     }
   }
 
@@ -389,7 +446,13 @@ export function TrackTransactionScreen() {
         </form>
 
         {activity.kind === 'loading' && (
-          <BawaLoading label="Loading recent activity…" />
+          <BawaLoading
+            label={
+              activity.attempt > 0
+                ? `Loading recent activity… Retrying, attempt ${activity.attempt + 1} of ${ACTIVITY_MAX_ATTEMPTS}.`
+                : 'Loading recent activity…'
+            }
+          />
         )}
         {activity.kind === 'result' && activity.result.status === 'ok' && activity.result.data.length === 0 && (
           <div className='space-y-1 text-base'>
@@ -419,6 +482,17 @@ export function TrackTransactionScreen() {
             <AlertDescription className='space-y-2'>
               <p>{humanReasonMessage(activity.result.reason, 'track')}</p>
               <p>Recent activity could not be loaded.</p>
+              {/* Item 7 (c): a transient failure was already retried
+                  automatically (up to 3 attempts with backoff) before
+                  this error showed — say so, so the user knows the
+                  Retry below is a fresh cycle, not the first try. */}
+              {activity.result.status === 'error' &&
+                isTransientReason(activity.result.reason) && (
+                  <p>
+                    Tried {ACTIVITY_MAX_ATTEMPTS} times — the indexer
+                    stayed unreachable.
+                  </p>
+                )}
               {/* P0-6: the lookup error on this screen has a Retry;
                   the activity error had none — same failure, same
                   action. Gated like the lookup Retry: disabled with
