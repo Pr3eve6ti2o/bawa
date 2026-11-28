@@ -488,7 +488,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
   // Check sit side by side. Below lg the cards stack, as before.
   return (
     <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start lg:space-y-0">
-      <Card radius="xl" className="lg:col-span-2">
+      <Card radius="flat" className="lg:col-span-2">
         <CardHeader>
           <CardTitle>Backup shares</CardTitle>
           <CardDescription>
@@ -507,7 +507,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
         </CardContent>
       </Card>
 
-      <Card radius="xl">
+      <Card radius="flat">
         <CardHeader>
           <CardTitle>Create shares</CardTitle>
           <CardDescription>
@@ -580,7 +580,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
                 {shares.map((share, index) => (
                   <li
                     key={`${index}-${share.slice(0, 12)}`}
-                    className="space-y-2 rounded-bawa-sm border-2 border-ink bg-paper p-3"
+                    className="space-y-2 rounded-flat-sm border border-ink bg-paper p-3"
                   >
                     <p className="text-base font-semibold">
                       Share {index + 1} of {shares.length}
@@ -605,7 +605,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
                       readOnly
                       rows={3}
                       value={share}
-                      className="w-full rounded-bawa-sm border-2 border-ink bg-paper px-3 py-2 font-mono text-xs break-all"
+                      className="w-full rounded-flat-sm border border-ink bg-paper px-3 py-2 font-mono text-xs break-all"
                     />
                     <Button
                       type="button"
@@ -628,7 +628,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
         </CardContent>
       </Card>
 
-      <Card radius="xl">
+      <Card radius="flat">
         <CardHeader>
           <CardTitle>Check shares</CardTitle>
           <CardDescription>
@@ -646,7 +646,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
                   handleCheckThreshold(Number(event.target.value))
                 }
                 disabled={isChecking}
-                className="w-full rounded-bawa-sm border-2 border-ink bg-paper px-3 py-2 text-base"
+                className="w-full rounded-flat-sm border border-ink bg-paper px-3 py-2 text-base"
               >
                 <option value={2}>2 shares</option>
                 <option value={3}>3 shares</option>
@@ -678,7 +678,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
                   }
                   disabled={isChecking}
                   placeholder="Paste a share, starting with bawa-share-v1:"
-                  className="w-full rounded-bawa-sm border-2 border-ink bg-paper px-3 py-2 font-mono text-xs break-all"
+                  className="w-full rounded-flat-sm border border-ink bg-paper px-3 py-2 font-mono text-xs break-all"
                 />
               </div>
             ))}

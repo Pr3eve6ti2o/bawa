@@ -78,7 +78,7 @@ function NetworkChainRow({
         }
         onToggle(chain, !isEnabled);
       }}
-      className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2"
+      className="flex cursor-pointer items-center justify-between gap-3 rounded-flat border border-border bg-card px-3 py-2"
     >
       <span className="flex min-w-0 items-center gap-3">
         <ChainLogo chain={chain} size={32} />
@@ -161,7 +161,7 @@ export function NetworkSelectionScreen() {
 
       <DevnetSetting />
 
-      <Card radius="xl">
+      <Card radius="flat">
         <CardHeader>
           <CardTitle>Mainnet</CardTitle>
         </CardHeader>
@@ -183,7 +183,7 @@ export function NetworkSelectionScreen() {
           <div
             role="tablist"
             aria-label="Chain families"
-            className="flex flex-wrap gap-1 rounded-bawa border-2 border-ink bg-paper p-1"
+            className="flex flex-wrap gap-1 rounded-flat-lg border border-ink bg-paper p-1"
           >
             {FAMILY_TABS.map((tab) => (
               <button
@@ -214,7 +214,7 @@ export function NetworkSelectionScreen() {
                 }}
                 // 44 px tabs, sun = selected — the same segmented
                 // pattern as the dashboard tabs were (Lane D §2).
-                className={`min-h-11 rounded-bawa-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
+                className={`min-h-11 rounded-flat-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
                   family === tab.id
                     ? 'bg-sun text-ink'
                     : 'text-ink hover:bg-sun'
@@ -244,14 +244,14 @@ export function NetworkSelectionScreen() {
           behind disclosures now — Networks is the toggle list first.
           Native <details> keeps the content in the DOM while closed,
           so the RPC manager's state keeps working. */}
-      <details className="rounded-bawa border-2 border-ink bg-paper">
+      <details className="rounded-flat-lg border border-ink bg-paper">
         <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">RPC endpoints</summary>
         <div className="px-4 pb-4">
           <RpcEndpointManager />
         </div>
       </details>
 
-      <details className="rounded-bawa border-2 border-ink bg-paper">
+      <details className="rounded-flat-lg border border-ink bg-paper">
         <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">How prices work</summary>
         <div className="px-4 pb-4">
           <PriceSourcesCard />
@@ -458,12 +458,12 @@ function RpcEndpointManager() {
               placeholder="https://your-rpc.example"
               value={customUrl}
               onChange={(event) => setCustomUrl(event.target.value)}
-              className="min-w-0 rounded-bawa-sm border bg-card px-3 py-2 text-base"
+              className="min-w-0 rounded-flat-sm border bg-card px-3 py-2 text-base"
             />
           </label>
           <button
             type="button"
-            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-flat-sm border px-3 py-2 text-sm font-medium"
             onClick={addCustom}
           >
             Add RPC
@@ -478,7 +478,7 @@ function RpcEndpointManager() {
               <button
                 key={suggestion.url}
                 type="button"
-                className="mr-2 rounded-bawa-sm border px-3 py-2 text-base font-medium"
+                className="mr-2 rounded-flat-sm border px-3 py-2 text-base font-medium"
                 onClick={() => addSuggestion(suggestion.url)}
               >
                 Add {suggestion.label}
@@ -495,14 +495,14 @@ function RpcEndpointManager() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-flat-sm border px-3 py-2 text-sm font-medium"
             onClick={switchAll}
           >
             Switch all to backup
           </button>
           <button
             type="button"
-            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-flat-sm border px-3 py-2 text-sm font-medium"
             onClick={() => {
               resetAllRpcEndpoints();
               void applyAndRefresh('All RPC endpoints reset to the defaults.');
@@ -512,7 +512,7 @@ function RpcEndpointManager() {
           </button>
           <button
             type="button"
-            className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
+            className="min-h-11 rounded-flat-sm border px-3 py-2 text-sm font-medium"
             disabled={checking.length > 0}
             onClick={() => void checkAll()}
           >
@@ -551,7 +551,7 @@ function RpcEndpointManager() {
             return (
               <li
                 key={chain}
-                className="space-y-2 rounded-[15px] border border-border bg-card p-3"
+                className="space-y-2 rounded-flat-lg border border-border bg-card p-3"
               >
                 <span className="flex flex-wrap items-center justify-between gap-3">
                   <span>
@@ -564,7 +564,7 @@ function RpcEndpointManager() {
                     {managed && endpoints.length >= 2 && (
                       <button
                         type="button"
-                        className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
+                        className="min-h-11 rounded-flat-sm border px-3 py-2 text-sm font-medium"
                         onClick={() => {
                           promoteBackupEndpoint(chain);
                           void applyAndRefresh(
@@ -577,7 +577,7 @@ function RpcEndpointManager() {
                     )}
                     <button
                       type="button"
-                      className="min-h-11 rounded-bawa-sm border px-3 py-2 text-sm font-medium"
+                      className="min-h-11 rounded-flat-sm border px-3 py-2 text-sm font-medium"
                       disabled={isChecking}
                       onClick={() => void checkChain(chain)}
                     >
@@ -599,7 +599,7 @@ function RpcEndpointManager() {
                     return (
                       <span
                         key={url}
-                        className="flex flex-wrap items-center gap-2 rounded-bawa-sm border px-2 py-1 text-base"
+                        className="flex flex-wrap items-center gap-2 rounded-flat-sm border px-2 py-1 text-base"
                       >
                         <span>{rpcEndpointHost(url)}</span><span className="text-xs font-bold text-muted-foreground">{badge}</span>
                         {isCustom && (

@@ -154,7 +154,7 @@ export function AddressBookScreen() {
         </p>
       </header>
 
-      <Card radius="xl">
+      <Card radius="flat">
         <CardHeader>
           <CardTitle>{editingId === null ? 'Add an address' : 'Edit saved address'}</CardTitle>
         </CardHeader>
@@ -228,7 +228,7 @@ export function AddressBookScreen() {
           Saved addresses {entries.length > 0 ? '(' + entries.length + ')' : ''}
         </h2>
         {entries.length === 0 ? (
-          <Card radius="xl">
+          <Card radius="flat">
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 No addresses yet.
@@ -245,7 +245,7 @@ export function AddressBookScreen() {
           <ul className="space-y-3">
             {entries.map((entry) => (
               <li key={entry.id}>
-                <Card radius="xl">
+                <Card radius="flat">
                   <CardContent className="space-y-2">
                     <span className="flex flex-wrap items-center gap-2">
                       <ChainLogo chain={entry.chain} size={32} />
@@ -257,7 +257,7 @@ export function AddressBookScreen() {
                       </span>
                       <CopyButton value={entry.address} label={'Copy ' + entry.label + ' address'} />
                     </span>
-                    <span className="flex items-center gap-2 rounded-md bg-muted p-3">
+                    <span className="flex items-center gap-2 rounded-flat bg-muted p-3">
                       {/* Lane P2-C (M6): the identicon pairs the saved
                           address — the entry is recognisable at a
                           glance, not just by reading hex. */}

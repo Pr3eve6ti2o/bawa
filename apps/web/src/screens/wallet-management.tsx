@@ -336,7 +336,7 @@ export function WalletManagementScreen() {
         </p>
       </details>
 
-      <Card radius="xl" className="lg:col-start-1 lg:row-start-3">
+      <Card radius="flat" className="lg:col-start-1 lg:row-start-3">
         <CardHeader>
           <CardTitle>Your accounts</CardTitle>
         </CardHeader>
@@ -493,7 +493,7 @@ export function WalletManagementScreen() {
                     return (
                       <li
                         key={account}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2"
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-flat border px-3 py-2"
                       >
                         <span className="flex items-center gap-2 text-base font-medium">
                           {accountName(account)}
@@ -576,7 +576,7 @@ export function WalletManagementScreen() {
                   <div key={id} className="space-y-1">
                     <dt className="text-sm font-semibold">{name}</dt>
                     <dd>
-                      <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                      <code className="block break-all rounded-flat bg-muted p-3 text-sm">
                         {vaultAddresses[id]?.[0] ?? "—"}
                       </code>
                     </dd>
@@ -631,7 +631,7 @@ export function WalletManagementScreen() {
                     burying the watch-only section below it. The keys
                     are a bot power feature; they collapse into a
                     disclosure. Everything inside is unchanged. */}
-                <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+                <details className="rounded-flat-lg border border-ink bg-paper p-4">
                   <summary className="cursor-pointer text-sm font-semibold text-ink">
                     Show the extended public keys
                   </summary>
@@ -671,7 +671,7 @@ export function WalletManagementScreen() {
                     return (
                       <li
                         key={id}
-                        className="space-y-2 rounded-md border px-3 py-2"
+                        className="space-y-2 rounded-flat border px-3 py-2"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <span className="flex items-center gap-2 text-base font-medium">
@@ -713,7 +713,7 @@ export function WalletManagementScreen() {
                         </p>
                         {isSingleAddress ? (
                           singleAddress !== undefined ? (
-                            <span className="flex items-center gap-2 rounded-md bg-muted p-3">
+                            <span className="flex items-center gap-2 rounded-flat bg-muted p-3">
                               {/* Lane P2-C (M6): TON/SOL have no xpub —
                                   the address itself is what the bot
                                   uses, so it gets its identicon. */}
@@ -726,12 +726,12 @@ export function WalletManagementScreen() {
                               </code>
                             </span>
                           ) : (
-                            <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                            <code className="block break-all rounded-flat bg-muted p-3 text-sm">
                               —
                             </code>
                           )
                         ) : shown ? (
-                          <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                          <code className="block break-all rounded-flat bg-muted p-3 text-sm">
                             {shown}
                           </code>
                         ) : null}
@@ -794,7 +794,7 @@ export function WalletManagementScreen() {
               const shortXpub = `${value.slice(0, 12)}…${value.slice(-8)}`;
               return (
                 <li key={value}>
-                  <Card radius="xl">
+                  <Card radius="flat">
                     <CardHeader>
                       {/* Merge (Lane 5 + Lane 6): Lane 5's grouped card,
                           with Lane 6's Watch-only badge on the group, so
@@ -829,7 +829,7 @@ export function WalletManagementScreen() {
                           {shortXpub}
                         </code>
                       )}
-                      <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+                      <ul className="divide-y rounded-flat-sm border border-ink bg-paper">
                         {entries.map(({ id, name, wallet }) => {
                           // The watched address is the first derived
                           // address for the entry (for an address entry
