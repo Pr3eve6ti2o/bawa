@@ -776,7 +776,7 @@ export function BackupScreen() {
       <div
         role="tablist"
         aria-label="Backup"
-        className="flex flex-wrap gap-1 rounded-bawa border-2 border-ink bg-paper p-1"
+        className="flex flex-wrap gap-1 rounded-flat-lg border border-ink bg-paper p-1"
       >
         {BACKUP_TABS.map((tab) => (
           <button
@@ -789,7 +789,7 @@ export function BackupScreen() {
             tabIndex={activeTab === tab.id ? 0 : -1}
             onClick={() => setTab(tab.id)}
             onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-            className={`min-h-11 rounded-bawa-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
+            className={`min-h-11 rounded-flat-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
               activeTab === tab.id
                 ? 'bg-sun text-ink'
                 : 'text-ink hover:bg-sun'

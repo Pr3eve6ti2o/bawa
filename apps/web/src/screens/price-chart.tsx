@@ -137,7 +137,7 @@ export function PriceChart({
   return (
     <section
       aria-label={`Price chart for ${label}`}
-      className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-4"
+      className="space-y-3 rounded-flat-lg border border-ink bg-paper p-4"
     >
       <h2 className="font-semibold text-ink">
         Price · last 7 days

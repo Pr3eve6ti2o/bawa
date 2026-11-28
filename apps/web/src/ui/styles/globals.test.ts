@@ -21,7 +21,12 @@ describe('globals.css', () => {
     // note in :root and scripts/palette-audit.mjs. Plus deep coral
     // #C23A1D (Lane T2 F1/F4, 2026-11-28; decision in
     // docs/DECISIONS.md §41) — link text and destructive text only.
-    // No further literal may be added without a recorded decision in
+    // Plus the four P3-B semantic colours (style B, 2026-11-28;
+    // decision in docs/DECISIONS.md §42): green #177245 (success /
+    // up, 5.85:1 on paper), red #B42318 (error / down, 6.46:1),
+    // grey #5B5850 (secondary text, 6.98:1) and the light-green
+    // success surface #E7F3EA (green on it 5.22:1). No further
+    // literal may be added without a recorded decision in
     // docs/DECISIONS.md.
     const hexLiterals = css.match(/#[0-9a-f]+\b/gi) ?? [];
     const palette = [...new Set(hexLiterals.map((hex) => hex.toUpperCase()))]
@@ -29,7 +34,7 @@ describe('globals.css', () => {
       .join(' ');
 
     expect(palette).toMatch(
-      /^#011F29 #023139 #0E2127 #111111 #121818 #1B2023 #2B2B2B #6B7280 #7A9491 #9CA3AF #C23A1D #FF6B4A #FFD93B #FFE9E4 #FFFDF7$/,
+      /^#011F29 #023139 #0E2127 #111111 #121818 #177245 #1B2023 #2B2B2B #5B5850 #6B7280 #7A9491 #9CA3AF #B42318 #C23A1D #E7F3EA #FF6B4A #FFD93B #FFE9E4 #FFFDF7$/,
     );
   });
 

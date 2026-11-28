@@ -427,7 +427,12 @@ export function DashboardScreen() {
     <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
       <h1 className="sr-only">Portfolio</h1>
 
-      <div className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-4 sm:p-5">
+      {/* P3-B (style B): the hero is a flat card — uniform 12px radius,
+          1px hairline border, no hard shadow. The balance figure is
+          Inter tabular numerals with NO yellow highlighter (the
+          bawa-marker span is gone: the number the owner checks first
+          must feel exact, not annotated). */}
+      <div className="space-y-1 rounded-flat-lg border border-ink bg-paper p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-base font-semibold leading-6 text-ink">Portfolio balance</p>
           <button
@@ -436,7 +441,7 @@ export function DashboardScreen() {
             aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
             title={hideBalance ? 'Show balance' : 'Hide balance'}
             onClick={() => toggleHideBalance()}
-            className="flex size-11 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="flex size-11 shrink-0 items-center justify-center rounded-flat-sm border border-ink bg-paper text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
             {hideBalance ? (
               <BawaIcon name="eye-off" className="size-5" />
@@ -450,7 +455,7 @@ export function DashboardScreen() {
             instead of clipping past its edge; tabular-nums (break-ui)
             stops the digits jittering while the ticker counts; normal
             totals render exactly as before. */}
-        <p className="break-words tabular-nums text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker"><NumberTicker text={heroText} /></span></p>
+        <p className="break-words tabular-nums text-display-lg font-bold tracking-tight text-ink"><NumberTicker text={heroText} /></p>
         {primaryAddress !== undefined && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="font-mono text-sm break-all text-ink" title={primaryAddress}>
@@ -537,18 +542,22 @@ export function DashboardScreen() {
           to the wide hero. Mobile is unchanged: the row follows the hero
           in the single column, balance first, actions second. */}
       <div className="grid grid-cols-4 gap-2 lg:self-end">
+        {/* P3-B (style B): the action tiles are flat — one icon + one
+            word each, 1px hairline border, uniform 8px radius, flat
+            sun disc (no 2px ink border, no wobble). P0 made them
+            functional; this is the polished shape. */}
         {ACTION_LINKS.map(({ to, icon, label }) => (
           <Link
             key={to}
             to={to}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-flat-sm border border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun"
           >
             {/* UX-major Lane 2 (break-ui, measured first-hand): the 56 px
                 discs overflow their 49.6 px tracks at 320 px viewport
                 (page +14 px) — below 360 px they render at 44 px, which
                 fits the track with the label. 390 px and up are
                 untouched. */}
-            <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink max-[359px]:size-11">
+            <span className="flex size-14 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink max-[359px]:size-11">
               {icon}
             </span>
             <span className="text-xs leading-4 font-medium text-ink">{label}</span>
@@ -564,9 +573,9 @@ export function DashboardScreen() {
           disabled={primaryAddress === undefined}
           aria-live="polite"
           onClick={() => void copyPrimaryAddress()}
-          className="flex cursor-pointer flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex cursor-pointer flex-col items-center gap-2 rounded-flat-sm border border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink max-[359px]:size-11">
+          <span className="flex size-14 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink max-[359px]:size-11">
             <BawaIcon name="copy" className="size-6" />
           </span>
           <span className="text-xs leading-4 font-medium text-ink">
@@ -634,7 +643,7 @@ export function DashboardScreen() {
                 inside (Lane 4, UX-major data): funded holdings only,
                 largest first; an unpriced holding reads "Value
                 unavailable", never $0.00. */}
-            <details aria-label="Portfolio breakdown" className="mt-6 rounded-bawa border-2 border-ink bg-paper">
+            <details aria-label="Portfolio breakdown" className="mt-6 rounded-flat-lg border border-ink bg-paper">
               <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">Breakdown</summary>
               <div className="px-4 pb-4">
               {devnetEnabled ? (
@@ -659,7 +668,7 @@ export function DashboardScreen() {
                 </p>
               ) : (
                 <>
-                  <ul className="mt-4 divide-y divide-border rounded-bawa border-2 border-ink bg-paper">
+                  <ul className="mt-4 divide-y divide-border rounded-flat-lg border border-ink bg-paper">
                     {breakdown.holdings.slice(0, 8).map((holding) => (
                       <li key={holding.key} className="flex items-center justify-between gap-3 px-4 py-3">
                         <span className="min-w-0">
@@ -705,7 +714,7 @@ export function DashboardScreen() {
                 exists. No owner-decision copy on user UI. */}
             <p className="mt-4 text-base text-ink">
               NFTs aren&apos;t listed yet — no indexer connected.{' '}
-              <Link to="/assets" className="font-semibold underline decoration-wavy decoration-coral underline-offset-4">
+              <Link to="/assets" className="font-semibold underline underline-offset-4">
                 See assets
               </Link>
             </p>

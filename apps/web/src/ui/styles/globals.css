@@ -29,7 +29,8 @@
 @source "../**/*.{ts,tsx}";
 
 /* Bawa design tokens, formalised in the instalanding.ai Linework
- * structure (dot-grid paper + architectural line drawing, 66 tokens):
+ * structure (dot-grid paper + architectural line drawing, 66 tokens),
+ * restyled under style B (owner decision 2026-11-27, P3-B):
  *   Paper    — the page and every surface (--bawa-paper, and every
  *              --surface-* / --card / --popover alias, all paper).
  *   Ink      — the one drawing colour: all text, borders, marks
@@ -37,9 +38,17 @@
  *   Accent   — the two drawing inks used sparingly, never as text on
  *              paper except Ink: Coral (primary action) and Sun
  *              (highlight, hover, the action-tile disc).
- *   Shape    — the hand-drawn stroke: --bawa-stroke, --bawa-border
- *              (solid/dashed), --bawa-radius/--bawa-radius-sm.
- * Only Ink is text on Paper. No token value changes with this comment.
+ *   Semantic — restored by P3-B: green success, red error, grey
+ *              secondary text (--bawa-success / --bawa-error /
+ *              --bawa-muted). Status is now carried by colour AND
+ *              label, never by colour alone.
+ *   Shape    — flat, not hand-drawn: 1px hairline borders, uniform
+ *              12/10/8px radii (--radius-flat-lg / --radius-flat /
+ *              --radius-flat-sm), no hard offset shadow. The wobbly
+ *              --bawa-radius tokens survive only for the QR card and
+ *              the Welcome illustration, which own them.
+ * Only Ink is text on Paper, plus the semantic colours above. No
+ * token value changes with this comment.
  */
 :root {
   /* Bawa design tokens — formalised after instalanding.ai's Linework
@@ -55,12 +64,32 @@
      - Coral (#FF6B4A): the CTA — the primary action only, never
        body text (ink on coral is 5.0:1, still passing).
      - Sun (#FFD93B): Selected — the current choice, highlight.
+     P3-B (style B): the hard 4-colour cap is lifted for semantic
+     colour only — green success, red error, grey secondary text
+     (see --bawa-success / --bawa-error / --bawa-muted above).
      The shadow is the Oishi system's hard offset shadow (cream
      paper, ink borders, hard offset shadows): one fixed offset in
-     ink, never a blur. */
+     ink, never a blur. P3-B: the hard shadow is retired on
+     functional surfaces (flat + hairline, no shadow); the token
+     survives for the QR card, which owns it. */
   --bawa-paper: #FFFDF7;
   --bawa-ink: #2B2B2B;
   --bawa-coral: #FF6B4A;
+  /* P3-B (style B, 2026-11-28; decision in docs/DECISIONS.md §42):
+     semantic colours, restored. The 4-colour cap collapsed success
+     and warning into the same yellow and left errors with no colour
+     of their own, so a financial app could not signal state. The
+     brand palette above is unchanged; these four are the semantic
+     layer only — success green, error red, secondary grey, and the
+     light-green success surface. All ratios computed first-hand on
+     paper #FFFDF7: green #177245 5.85:1, red #B42318 6.46:1, grey
+     #5B5850 6.98:1 (all pass AA normal 4.5:1); green on the tint
+     #E7F3EA 5.22:1. Green on sun is only 4.32:1, so green text never
+     sits on a sun fill — success surfaces use the tint, not sun. */
+  --bawa-success: #177245;
+  --bawa-error: #B42318;
+  --bawa-muted: #5B5850;
+  --bawa-success-surface: #E7F3EA;
   /* Lane T2 (F1/F4, 2026-11-28): deep coral is the LINK-TEXT colour
      only. Coral text on paper is 2.77:1, below WCAG AA 4.5:1 for
      normal text (and below 3:1 for the destructive icon), so link
@@ -129,17 +158,23 @@
   --secondary-foreground: var(--bawa-ink);
   --primary-disabled-foreground: var(--bawa-ink);
   --step-pending-text: var(--bawa-ink);
-  --muted-foreground: var(--bawa-ink);
-  --text-secondary-gray: var(--bawa-ink);
-  --placeholder: var(--bawa-ink);
-  --text-tertiary: var(--bawa-ink);
+  /* P3-B (style B): secondary text is the grey, not ink — ink for
+     secondary copy destroyed the hierarchy (primary and secondary
+     read as the same weight). 6.98:1 on paper, AA. */
+  --muted-foreground: var(--bawa-muted);
+  --text-secondary-gray: var(--bawa-muted);
+  --placeholder: var(--bawa-muted);
+  --text-tertiary: var(--bawa-muted);
   --text-disabled: var(--bawa-ink);
   --ai-text: var(--bawa-ink);
-  --success-text: var(--bawa-ink);
+  /* P3-B (style B): error text is the red, not ink — an error must
+     read as an error, not an emphasis. 6.46:1 on paper, AA. */
+  --error-text: var(--bawa-error);
+  --error: var(--bawa-error);
+  --success-text: var(--bawa-success);
   --warning-text: var(--bawa-ink);
-  --error-text: var(--bawa-ink);
   --info: var(--bawa-ink);
-  --positive: var(--bawa-ink);
+  --positive: var(--bawa-success);
   --tx-dropped: var(--bawa-ink);
   --chart-1: var(--bawa-ink);
   --chart-5: var(--bawa-ink);
@@ -147,7 +182,8 @@
   --border: var(--bawa-ink);
   --border-strong: var(--bawa-ink);
   --border-subtle: var(--bawa-ink);
-  --success-border: var(--bawa-ink);
+  /* P3-B: --success-border lives in the semantic block below (green);
+     it is not defined here any more — one definition, no duplicate. */
   --warning-border: var(--bawa-ink);
   --info-border: var(--bawa-ink);
   --ai-subtle-border: var(--bawa-ink);
@@ -175,17 +211,28 @@
 
   --accent: var(--bawa-sun);
   --primary-soft: var(--bawa-sun);
-  --success: var(--bawa-sun);
-  --success-surface: var(--bawa-sun);
-  --success-surface-tint: var(--bawa-sun);
+  /* P3-B (style B): success is the green, not sun — success and
+     warning were the same yellow. Confirmed transactions, up-moves
+     and success states read green; warning/pending stay sun. */
+  --success: var(--bawa-success);
+  --success-surface: var(--bawa-success-surface);
+  --success-surface-tint: var(--bawa-success-surface);
+  --success-border: var(--bawa-success);
   --warning: var(--bawa-sun);
   --warning-surface: var(--bawa-sun);
-  --positive-surface: var(--bawa-sun);
+  --positive: var(--bawa-success);
+  --positive-surface: var(--bawa-success-surface);
   --tx-pending: var(--bawa-sun);
-  --tx-confirmed: var(--bawa-sun);
+  --tx-confirmed: var(--bawa-success);
+  /* P3-B (style B): a failed transaction is the red, not coral —
+     coral is the primary-action colour, and a failure must not look
+     like a CTA. */
+  --tx-failed: var(--bawa-error);
   --chart-3: var(--bawa-sun);
   --brand-secondary: var(--bawa-sun);
-  --error-surface: var(--bawa-sun);
+  /* P3-B (style B): error surfaces are paper, not sun — a yellow
+     error box reads as a warning. The red border/text carries it. */
+  --error-surface: var(--bawa-paper);
   --surface-blue-light: var(--bawa-sun);
   --surface-blue-dim: var(--bawa-sun);
 
@@ -208,8 +255,10 @@
   --panel-surface-raised: var(--bawa-paper);
   --panel-border: var(--bawa-ink);
   --panel-text: var(--bawa-ink);
-  --panel-text-muted: var(--bawa-ink);
-  --panel-text-soft: var(--bawa-ink);
+  /* P3-B (style B): panel secondary text is the grey too — the same
+     hierarchy fix as --muted-foreground above. */
+  --panel-text-muted: var(--bawa-muted);
+  --panel-text-soft: var(--bawa-muted);
   --panel-accent: var(--bawa-coral);
   --panel-accent-from: var(--bawa-coral);
   --panel-accent-to: var(--bawa-sun);
@@ -331,6 +380,7 @@
   --color-warning-surface: var(--warning-surface);
   --color-warning-border: var(--warning-border);
   --color-danger-border: var(--danger-border);
+  --color-error: var(--error);
   --color-error-text: var(--error-text);
   --color-error-surface: var(--error-surface);
   --color-info: var(--info);
@@ -387,12 +437,15 @@
   --radius-bawa: var(--bawa-radius);
   --radius-bawa-sm: var(--bawa-radius-sm);
 
-  /* P3-A (style B, 2026-11-28): flat radii for the recovery-phrase
-     screens ONLY. Every --radius-* token above resolves to the wobbly
-     --bawa-radius, so no clean radius exists anywhere; these three
-     flat tokens are the clean variant the phrase screen uses (tiles
-     8px, buttons 10px, cards 12px). P3-B reuses them for the remaining
-     money screens — no other screen uses them yet. */
+  /* P3-A (style B, 2026-11-28) + P3-B: flat radii for the whole app
+     under style B. Every --radius-* token above still resolves to
+     the wobbly --bawa-radius — the QR card and the Welcome
+     illustration own those tokens now — so no clean radius exists in
+     the token set; these three flat tokens are the clean variant
+     every functional surface uses (tiles 8px, buttons 10px, cards
+     12px). Components default to them (Card radius="flat",
+     Button flat); raw rounded-bawa classes survive only inside the
+     QR card and the Welcome illustration. */
   --radius-flat-sm: 8px;
   --radius-flat: 10px;
   --radius-flat-lg: 12px;
@@ -567,20 +620,23 @@
     font-weight: var(--font-weight-normal);
   }
 
+  /* P3-B (style B, 2026-11-28; decision in docs/DECISIONS.md §42):
+     focus is the solid 2px ink outline ONLY. The old rule added a
+     wavy coral underline to every focused link/button — the
+     "teacher's correction" cue Lane F inventoried — on top of the
+     outline. The outline stays (it is the affordance, WCAG 2.4.11);
+     the squiggle is gone everywhere. No other focus rule may add a
+     wavy underline back. */
   :focus-visible {
     outline: 2px solid var(--bawa-ink);
     outline-offset: 2px;
   }
-
-  a:focus-visible,
-  button:focus-visible,
-  [role="button"]:focus-visible {
-    text-decoration: underline wavy var(--bawa-coral);
-    text-underline-offset: 3px;
-  }
 }
 
 @layer utilities {
+  /* P3-B (style B): .bawa-marker stays — the Welcome title keeps its
+     highlighter (a brand moment, not money). It is gone from the
+     balance figure and every other money/security surface. */
   .bawa-marker {
     background-color: var(--bawa-sun);
     -webkit-box-decoration-break: clone;
@@ -588,10 +644,13 @@
     padding: 0 0.15em;
   }
 
-  .bawa-squiggle-underline {
-    text-decoration: underline wavy var(--bawa-coral);
-    text-underline-offset: 3px;
-  }
+  /* P3-B (style B): .bawa-squiggle-underline is DELETED — it was the
+     wavy coral underline on every form error, link, active nav item
+     and focus state, and P3-B removed the last usage (Send/Swap/
+     Receive errors, the ghost button, the bottom nav, the focus
+     rule, the QR scanner). Errors are red text, links underline
+     plainly, nav selection is a tinted fill, focus is the solid
+     2px outline. Do not re-add it. */
 
   @keyframes bawa-draw {
     from {
@@ -662,35 +721,51 @@
   }
 }
 
-/* Lane T2 (F1/F4, 2026-11-28): link text and destructive text render
-   in the deep-coral link colour, not the CTA coral. text-primary is
-   used ONLY for link text in this app (17 sites, all Link/a with an
-   underline; the primary button uses bg-coral, never text-primary),
-   and text-destructive is used ONLY for error text — so overriding
-   the two text utilities here fixes every site, including the ones
-   in files this lane does not own, without touching those files.
-   New link code should use text-link directly. */
+/* Lane T2 (F1/F4, 2026-11-28): link text renders in the deep-coral
+   link colour, not the CTA coral. text-primary is used ONLY for link
+   text in this app (17 sites, all Link/a with an underline; the
+   primary button uses bg-coral, never text-primary), so overriding
+   the text utility here fixes every site, including the ones in
+   files this lane does not own, without touching those files.
+   New link code should use text-link directly.
+   P3-B (style B, 2026-11-28): error text is the semantic red, not
+   the link colour — T2 mapped .text-destructive onto --link because
+   no red existed yet; now one does (see --bawa-error above). */
 @layer utilities {
   .text-primary {
     color: var(--link);
   }
 
   .text-destructive {
-    color: var(--link);
+    color: var(--bawa-error);
   }
 }
 
-/* P3-A (style B, 2026-11-28): the flat button shape, recovery-phrase
-   screens only. Button's variants carry the wobbly radius + 2px ink
-   border (P1's system); .btn-flat — applied via Button's `flat` prop,
-   never via className — flattens both to a 1px hairline + uniform
-   10px radius, and drops the wavy press underline. Same layer,
-   later in file, so it wins over the variant utilities (the same
-   override pattern as the Lane T2 block above). P3-B reuses it for
-   the remaining money screens. */
+/* P3-A (style B, 2026-11-28) + P3-B: the flat button shape. Button's
+   variants carry the wobbly radius + 2px ink border (P1's system);
+   .btn-flat — applied via Button's `flat` prop, which defaults to
+   true since P3-B, never via className — flattens both to a 1px
+   hairline + uniform 10px radius, and drops the wavy press
+   underline. Same layer, later in file, so it wins over the variant
+   utilities (the same override pattern as the Lane T2 block above).
+   Ghost buttons never get .btn-flat: ghost is borderless by
+   contract, and .btn-flat would add a border to it — they get
+   .btn-flat-ghost (radius only) instead, so the size variant's
+   rounded-bawa does not show on the :focus-visible outline. */
 @layer utilities {
   .btn-flat {
     border: 1px solid var(--border);
+    border-radius: var(--radius-flat);
+  }
+
+  /* P3-B: the flat GHOST shape — radius only, never a border. Ghost
+     is borderless by contract, so it never gets .btn-flat (which
+     would add a border), but its size variant still emits
+     rounded-bawa — and that wobble shows on the :focus-visible
+     outline, which follows the border radius. .btn-flat-ghost
+     overrides the radius the same way .btn-flat does (same layer,
+     later in the file), and adds nothing else. */
+  .btn-flat-ghost {
     border-radius: var(--radius-flat);
   }
 
@@ -698,9 +773,10 @@
     text-decoration-line: none;
   }
 
-  /* P3-A: the flat alert shape, recovery-phrase screens only —
-     applied via Alert's `flat` prop. Width + radius only, never the
-     border colour: the destructive variant's coral border stays. */
+  /* P3-A + P3-B: the flat alert shape — applied via Alert's `flat`
+     prop, which defaults to true since P3-B. Width + radius only,
+     never the border colour: the destructive variant's coral border
+     stays. */
   .alert-flat {
     border-width: 1px;
     border-radius: var(--radius-flat-lg);

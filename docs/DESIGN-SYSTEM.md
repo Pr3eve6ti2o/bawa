@@ -1,18 +1,28 @@
 # Bawa — Shared Design System (Redesign Programme, Lane 0)
 
-**Status:** Lane 0 foundation document. **Date:** 2026-11-25.
+**Status:** Lane 0 foundation document, rewritten for style B by Lane
+P3-B (2026-11-28). **Date:** 2026-11-28 (original 2026-11-25).
 **Source tree studied first-hand:** `bawa-token-gaps-worktree` at `token-gaps 7fea3e4`
 (`apps/web/src/app/app.tsx`, `apps/web/src/app/sidebar-nav.tsx`,
 `apps/web/src/ui/styles/globals.css`, `apps/web/src/screens/*`,
 `apps/web/src/ui/components/*`, `docs/DECISIONS.md` §24).
 **Authority:** owner order — full redesign, both mobile and desktop; the
 2026-11-22 mobile UI/UX lock is LIFTED for this programme only.
+**Style authority (owner, 2026-11-27 ~18:26 IST):** style B — polished
+financial style everywhere, illustration only for brand moments. This
+supersedes the drawing-illustration direction the original Lane 0
+document codified (4 colours, 2 px ink strokes, wobbly radii, squiggle
+underlines). The money screens (Dashboard, Assets, Send, Receive, Swap)
+and the app shell are flat under style B as of P3-B; the QR card (all
+seven templates) and the Welcome illustration keep the paper/comic
+treatment, and at most one small brand touch per screen.
 **Rule for every lane:** this file is the shared foundation. If a section
 needs something that contradicts it, do not improvise — record it as an
 owner decision and keep building to this file until the owner rules.
 
-**Hands-on, 0 Sol calls.** No Bawa code was changed in this lane, nothing
-committed, nothing pushed.
+**Hands-on, 0 Sol calls.** No Bawa code was changed in Lane 0, nothing
+committed, nothing pushed. P3-B (2026-11-28) was also hands-on, 0 Sol
+calls; its code changes are on branch `p3-money` (local only).
 
 ---
 
@@ -40,11 +50,18 @@ follows from that.
    balances from a real source, real prices. A missing logo gets the
    redesigned paper-disc fallback — never a yellow square with a ticker,
    never an emoji, never a grey box.
-5. **Drawing-illustration style, 4 colours, hard lines.** The app is a
-   hand-drawn line drawing on paper: 2 px ink strokes, hard offset
-   shadows (no blur), wobbly hand-drawn radii, squiggle underlines.
-   Nothing glossy, no gradients, no glass, no purple/blue AI-default
-   palettes.
+5. **Polished financial style, flat, hairline, tabular (style B,
+   owner-picked 2026-11-27).** Money screens are flat: uniform
+   8/10/12 px radii, 1 px hairline ink borders, no hard shadow, no
+   wobbly radius, no squiggle underline, no dashed connector, no
+   highlighter on money. Status uses real semantic colour (green
+   success / up, red error / down, grey secondary — §2.1) with the
+   label and sign always present, so colour is never the only signal.
+   Figures are tabular Inter; Baloo 2 is headings/brand only, never
+   money. Nothing glossy, no gradients, no glass, no purple/blue
+   AI-default palettes. Illustration survives only as brand moments:
+   the QR card templates, the Welcome illustration, at most one small
+   touch per screen.
 6. **Every screen works at 390 px first.** Mobile is the primary surface
    (the owner judges on their phone). Desktop is the same content laid
    out wider — never a different app.
@@ -61,22 +78,37 @@ Read first-hand from `globals.css`, `app.tsx`, `sidebar-nav.tsx`,
 `button.tsx`, `card.tsx`, and the screens. Lanes build FROM this, they do
 not re-invent it.
 
-### 2.1 Colour — the 4-colour cap (hard rule)
+### 2.1 Colour — the 4-colour base + semantic colour (style B)
 
 | Token | Value | Job — and only that job |
 |---|---|---|
 | `--bawa-paper` | `#FFFDF7` | Page and every surface/card. |
-| `--bawa-ink` | `#2B2B2B` | The ONLY text colour, and every border/line. |
-| `--bawa-coral` | `#FF6B4A` | Primary action ONLY (CTA fill, destructive, focus ring, tx-failed marker). Never body text. |
-| `--bawa-sun` | `#FFD93B` | Selected / highlight / hover. The current choice, the marker highlight, the action-tile disc. |
+| `--bawa-ink` | `#2B2B2B` | Primary text colour, and every border/line. |
+| `--bawa-coral` | `#FF6B4A` | Primary action ONLY (CTA fill, focus ring). Never body text. |
+| `--bawa-sun` | `#FFD93B` | Selected / highlight / hover. The current choice, the action-tile disc. |
 
-All semantic tokens in `globals.css` are aliases onto these four
-(`--success`, `--warning`, `--error-text`, `--info`, `--tx-*`, chart
-colours, sidebar colours — all paper / ink / coral / sun). Status is
-therefore conveyed by **label + icon + position, never by colour alone**:
-success, warning, error and info text are all ink; a failed transaction
-is coral-marked AND labelled "Failed". Do not re-introduce green/red
-status colours — that is an owner decision, not a lane decision.
+The four-colour cap as written above is the BASE palette. Style B
+(owner, 2026-11-27) adds real semantic colour on top of it, recorded
+in `docs/DECISIONS.md` §42 (P3-B, 2026-11-28) — the cap is lifted for
+semantic colour only:
+
+| Token | Value | Job — and only that job |
+|---|---|---|
+| `--bawa-success` | `#177245` | Success text, up-moves (24h change), confirmed status. 5.85:1 on paper. |
+| `--bawa-error` | `#B42318` | Error text, down-moves, failed status. 6.46:1 on paper. |
+| `--bawa-muted` | `#5B5850` | Secondary / muted text (replaces sun-grey secondary text). 6.98:1 on paper. |
+| `--bawa-success-surface` | `#E7F3EA` | Light-green success surface (success badge / toast). Green on it 5.22:1. |
+| `--bawa-coral-deep` | `#C23A1D` | Link text and destructive text only (`DECISIONS.md` §41). 5.27:1 on paper. |
+
+Semantic tokens in `globals.css` alias onto these (`--success`,
+`--error-text`, `--tx-confirmed`, `--tx-failed`, `--positive`,
+`--muted-foreground`, chart colours, sidebar colours). Status is
+conveyed by **label + sign + colour, never by colour alone**: a 24h
+change keeps its `+`/`-` sign, an error keeps its `role="alert"` text,
+a failed transaction is red-marked AND labelled "Failed". Warning
+stays sun + ink (no amber literal — warning is a tinted surface with
+ink text, never a coloured text). Green text never sits on sun
+(4.32:1, below AA) — success surfaces use the tint.
 
 **Contrast — verified first-hand with the design-auditor
 `color_contrast_checker.py` (WCAG AA):**
@@ -87,6 +119,12 @@ status colours — that is an owner decision, not a lane decision.
 | Ink on sun `#FFD93B` | 10.28:1 | Passes AAA normal |
 | Ink on coral `#FF6B4A` | 5.03:1 | Passes AA normal — the ONLY text-on-colour pair allowed |
 | Paper on coral | 2.77:1 | **FAILS** — never put paper/white text on coral |
+| Success green `#177245` on paper | 5.85:1 | Passes AA normal (P3-B §42) |
+| Error red `#B42318` on paper | 6.46:1 | Passes AA normal (P3-B §42) |
+| Muted grey `#5B5850` on paper | 6.98:1 | Passes AA normal (P3-B §42) |
+| Success green on tint `#E7F3EA` | 5.22:1 | Passes AA normal (P3-B §42) |
+| Deep coral `#C23A1D` on paper | 5.27:1 | Passes AA normal (§41, link/destructive text) |
+| Success green on sun `#FFD93B` | 4.32:1 | **FAILS AA normal** — green text never sits on sun |
 | White `#FFFFFF` on QR teal `#023139` | 13.99:1 | Passes (QR Template A only) |
 | QR muted `#7A9491` on QR teal `#023139` | 4.31:1 | **FAILS AA normal** (passes large-text 3:1 only) — inside the QR card, keep muted text large or decorative; never copy this pairing outside the QR card |
 
@@ -135,18 +173,24 @@ do NOT silently add it.
   compact 8×12, comfortable 16×24, spacious 24×32, airy 32×48.
   Use the 8 px rhythm for gaps between touch targets (minimum 8 px
   gap, ui-ux-pro-max `touch-spacing`).
-- **Stroke:** `--bawa-stroke: 2px`, `--bawa-border: 2px solid ink`,
-  dashed variant for disabled/empty states. **Every card, input,
-  button and nav item carries a 2 px ink border.** Borderless controls
-  are a defect in this style.
-- **Radii (hand-drawn wobble, NOT geometric):**
-  `--bawa-radius: 255px 15px 225px 15px / 15px 225px 15px 255px`,
-  `--bawa-radius-sm: 15px 225px 15px 255px / 255px 15px 225px 15px`.
-  All `rounded-*` theme radii map onto these two. Do not introduce
-  geometric radii (8/12/16 px) — except the QR card, whose templates
-  own their radii, and `Button size="pill"` (22 px, existing).
-- **Shadow:** `--bawa-shadow: 4px 4px 0 ink` — one hard offset, never
-  blur, never coloured. Elevation = offset shadow + sun fill, not blur.
+- **Stroke:** 1 px hairline ink border on every card, input, button
+  and nav item (style B). The old 2 px ink border and the dashed
+  variant for disabled/empty states are gone from money screens —
+  disabled is 40% opacity + `not-allowed` cursor, never a dashed
+  border. Borderless controls are still a defect in this style.
+- **Radii (flat, geometric — style B):** `--radius-flat-sm 8px`,
+  `--radius-flat 10px`, `--radius-flat-lg 12px` (P3-A tokens, now the
+  app-wide default). `rounded-flat*` everywhere on money screens.
+  The old hand-drawn wobble radii (`--bawa-radius`,
+  `--bawa-radius-sm`) survive ONLY as explicit opt-ins for the QR
+  card and the Welcome illustration, which own them — `radius="bawa"`
+  / `radius="xl"` on a Card is an opt-in, not a default. `Button
+  size="pill"` (22 px, existing) is unchanged.
+- **Shadow:** none on money screens — flat + hairline only.
+  `--bawa-shadow: 4px 4px 0 ink` stays defined for the QR card only
+  (its templates own their shadow). The one soft exception is the
+  chain-picker dropdown's `shadow-lg` (one blurred tier, pre-existing,
+  audit-passing) — do not spread it.
 - **Motion:** `--duration-fast 150ms`, `--duration-normal 240ms`,
   `--duration-soft 360ms`, `--duration-hero 500ms`;
   `--ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1)`. Press feedback
@@ -154,9 +198,13 @@ do NOT silently add it.
   on primary buttons (existing). Respect
   `prefers-reduced-motion: reduce` — the draw/dot animations already
   switch off; any new animation must too.
-- **Focus (visible, always):** `:focus-visible` = 2 px ink outline,
-  2 px offset; links/buttons additionally get a wavy coral underline.
-  Never remove focus rings. Focus order = visual order.
+- **Focus (visible, always):** `:focus-visible` = solid 2 px ink
+  outline, 2 px offset — everywhere (P3-B decision, `DECISIONS.md`
+  §42). The old wavy coral underline on focus is GONE (the
+  `.bawa-squiggle-underline` utility is deleted); amount-input groups
+  on Send/Swap signal focus with a coral ring on `focus-within`
+  instead, and an invalid amount turns the group border red. Never
+  remove focus rings. Focus order = visual order.
 - **Selection:** sun background, ink text (`::selection`).
 
 ### 2.5 Touch targets — the rule and the known gap
@@ -182,15 +230,15 @@ do NOT silently add it.
 
 | Component | File | Current contract — keep it |
 |---|---|---|
-| Button | `ui/components/button.tsx` | `cva` variants: `default` (coral), `secondary` / `outline` / `ghost` (paper, hover sun), `destructive` (coral), `foreground` (ink fill, paper text), `link` (squiggle underline), `sun`. Disabled = paper fill, ink text, dashed ink border. Sizes per §2.5. |
-| Card | `ui/components/card.tsx` | Props `radius` (`bawa` \| `xl`), `tone` (`paper` \| `card`), `padding` (`md` py-6 px-6 \| `sm` p-3). One class per property; 2 px ink border. |
-| Input / Label / Switch / Checkbox / Tabs / Dialog / Alert / Badge / Skeleton / Loading / Toast (Sonner) / CopyButton / StepCard / SquiggleDivider | `ui/components/*` | All paper/ink/coral/sun. Inputs: paper bg, 2 px ink border, 16 px on touch. CopyButton is the address-copy pattern — reuse it, don't build a second one. |
-| Icons | `ui/components/icons.tsx` (`BawaIcon`) | SVG only, one stroke width per layer (1.5–2 px), one style per hierarchy level. **No emoji as icons, ever** (ui-ux-pro-max pro-rules). Token/chain logos are real image assets via `screens/token-logo.tsx`, never emoji. |
-| Squiggle | `.bawa-squiggle-underline`, `.bawa-marker` | Wavy coral underline for active nav + links; sun marker highlight for the hero balance number. Use sparingly — one squiggle per screen region, not per line. |
+| Button | `ui/components/button.tsx` | `cva` variants: `default` (coral), `secondary` / `outline` / `ghost` (paper, hover sun), `destructive` (coral), `foreground` (ink fill, paper text), `link` (plain underline), `sun`. **Flat by default (P3-B):** `flat` defaults true — 1 px hairline border, `rounded-flat`. Ghost is borderless by contract so it never gets `.btn-flat` (which would add a border) — it gets `.btn-flat-ghost` (radius only) instead, so the size variant's `rounded-bawa` does not show on the `:focus-visible` outline. Press = `active:scale-[0.98]`, no wavy underline. Disabled = 40% opacity + `not-allowed` cursor. Sizes per §2.5. |
+| Card | `ui/components/card.tsx` | Props `radius` (`flat` \| `bawa` \| `xl`), `tone` (`paper` \| `card`), `borderWidth` (`hairline` \| `thick`), `padding` (`md` py-6 px-6 \| `sm` p-3). **Defaults are flat + hairline (P3-B)** — `radius="bawa"` / `radius="xl"` / `borderWidth="thick"` are explicit opt-ins for the QR card and Welcome only. One class per property. |
+| Input / Label / Switch / Checkbox / Tabs / Dialog / Alert / Badge / Skeleton / Loading / Toast (Sonner) / CopyButton / StepCard / SquiggleDivider | `ui/components/*` | All paper/ink + semantic colour (§2.1). Inputs: paper bg, 1 px hairline border, `rounded-flat`, 16 px on touch; invalid = red border + red error text, never a squiggle. Alert: flat by default. Badge: `success`/`positive` = light-green surface, ink text. Skeleton: flat 12 px radius + 1 px ink border (the dashed wobbly outline is gone). CopyButton is the address-copy pattern — reuse it, don't build a second one. |
+| Icons | `ui/components/icons.tsx` (`BawaIcon`) | SVG only, one stroke width per layer (1.5–2 px), one style per hierarchy level. **No emoji as icons, ever** (ui-ux-pro-max pro-rules). Token/chain logos are real image assets via `screens/token-logo.tsx`, never emoji. Icons are NOT redrawn under style B (Lane F REFINE, still open) — the geometric set stays. |
+| Marker | `.bawa-marker` | Sun marker highlight — Welcome title ONLY (a brand moment). Gone from the balance figure and every money/security surface. The wavy coral underline (`.bawa-squiggle-underline`) is DELETED (P3-B): errors are red text, links underline plainly, nav selection is a tinted fill, focus is the solid 2 px outline. |
 
 **New-component rule:** if a section needs a component that does not
-exist, build it from these primitives (Card + Button + 2 px border +
-bawa radius) rather than importing a new library. The bundle budget
+exist, build it from these primitives (Card + Button + 1 px hairline
+border + flat radius) rather than importing a new library. The bundle budget
 (6,000,000 bytes total JS) forbids new dependencies without an owner
 decision.
 
@@ -210,24 +258,26 @@ decision.
 ### 4.2 Mobile shell (below 980 px)
 
 - **Frame:** centred 430 px column on paper; `sm:` (640 px) it becomes a
-  bordered phone card (`rounded-bawa`, 2 px ink border, min-height 720).
-- **Header (mobile):** wallet icon tile (36 px, 2 px border) + "Bawa Web
-  Wallet" (15 px bold) + account name link (12 px, wavy coral hover) on
-  the left; Mainnet/Devnet pill on the right. Height ~72 px total
-  (`pt-5 pb-4 px-5`).
-- **Bottom nav (mobile):** sticky bottom, `border-t-2 ink`, paper bg,
+  bordered phone card (`rounded-flat-lg`, 1 px hairline border, min-height 720).
+- **Header (mobile):** wallet icon tile (36 px, 1 px hairline border) +
+  "Bawa Web Wallet" (15 px bold) + account name link (12 px, plain
+  underline on hover) on the left; Mainnet/Devnet pill on the right.
+  Height ~72 px total (`pt-5 pb-4 px-5`).
+- **Bottom nav (mobile):** sticky bottom, `border-t ink` (1 px), paper bg,
   `pb-[env(safe-area-inset-bottom)]`. Exactly **5 items** (ui-ux-pro-max
   bottom-nav limit): Home, Assets, Receive, Send, More. Each: 24 px
-  icon tile (2 px border; active = sun fill) + 11 px semibold label,
-  `py-3`. Active item gets the squiggle underline. Content gets
-  `pb-24` so the last ~30 px never slides under the nav.
+  icon tile (1 px hairline border; active = sun fill) + 11 px semibold label,
+  `py-3`. Active item is marked by its sun tile alone — no squiggle
+  underline (P3-B). Content gets `pb-24` so the last ~30 px never
+  slides under the nav.
 - **More sheet:** opens above the nav (`bottom-[76px]`, centred,
   `max-w-[398px]`, `max-h-[60vh]`, scrollable, `role="menu"`). Items:
   Wallets, Transactions, Track a transaction, Import wallet,
   Create wallet, Security, Networks, Mnemonic backup, Welcome.
   Escape closes and returns focus to the trigger.
-- **Network pill:** sun fill, 2 px ink border, 10 px bold uppercase-ish
-  label ("Mainnet" / "Devnet test mode"). It is a BUTTON that toggles
+- **Network pill:** sun fill, 1 px hairline border (P3-B), 12 px bold
+  label ("Mainnet" / "Devnet test mode"; 10 px was below the
+  readability floor — UX-major Lane 2). It is a BUTTON that toggles
   mode — never a static label. Disabled with no vault.
 - **Focused flows hide the nav:** `/send` and `/create-wallet` hide
   both the sidebar and the bottom nav (and take `pb-0`); the desktop
@@ -238,13 +288,13 @@ decision.
 ### 4.3 Desktop shell (980 px and up)
 
 - **Sidebar:** 224 px expanded / 72 px collapsed (shell-owned width,
-  `transition-[width] 200ms`), sticky full-height, `border-r-2 ink`,
-  paper. Logo tile (40 px) top; nav list `space-y-1 px-3`; active item
-  = sun fill + semibold + coral square marker; hover = sun; collapse
-  button in the footer. All 13 routes listed (Home, Assets, Receive,
-  Send, divider, then the More links). Collapsed = icons only, labels
-  `sr-only`, `title` tooltips.
-- **Desktop header:** 72 px, `border-b-2 ink`, `px-6` (`xl:px-8`):
+  `transition-[width] 200ms`), sticky full-height, `border-r ink`
+  (1 px, P3-B), paper. Logo tile (40 px, flat + hairline) top; nav list
+  `space-y-1 px-3`; active item = sun fill + semibold + flat coral
+  square marker; hover = sun; collapse button in the footer. All 13
+  routes listed (Home, Assets, Receive, Send, divider, then the More
+  links). Collapsed = icons only, labels `sr-only`, `title` tooltips.
+- **Desktop header:** 72 px, `border-b ink` (1 px, P3-B), `px-6` (`xl:px-8`):
   account name link left ("No wallet" or account ›), NetworkModePill
   right.
 - **Content:** `px-5` mobile → `desktop:px-6 desktop:py-6` →
@@ -310,14 +360,17 @@ the current placement is already right — restyle it, don't move it.
 
 ### Dashboard (`screens/dashboard.tsx`, `/`)
 - Keep: Portfolio balance card first (label 13 px medium, hero number
-  40 px bold with sun marker, 20 px display subtitle, price-attribution
+  40 px bold in tabular Inter — the sun marker is OFF the number
+  under style B, P3-B — 20 px subtitle, price-attribution
   + partial-total + error lines in 12 px below). Eye toggle (36 px
-  tile) at the card's top-right.
+  flat tile) at the card's top-right. The card is flat + hairline,
+  no shadow.
 - Keep: 4 action tiles in one row (Send / Receive / Scan / Activity),
-  56 px sun disc icon tile + 12 px label, `py-1`, hover sun/50.
-  Scan goes to `/send?scan=1`.
+  56 px sun disc icon tile (flat + hairline) + 12 px label, `py-1`,
+  hover sun/50. Scan goes to `/send?scan=1`.
 - Keep: Assets section below with "Assets" h2 left + controls right;
-  asset rows are the list, not cards-per-token.
+  asset rows are the list, not cards-per-token. The breakdown
+  disclosure is a flat + hairline card.
 - Desktop: `lg:grid-cols-[7fr_5fr]` — balance + assets left, secondary
   (recent activity / info) right. Mobile: single column, same order.
 - Fix in this programme: "Popular chains" is REMOVED from the homepage
@@ -328,7 +381,13 @@ the current placement is already right — restyle it, don't move it.
 - List: one row per asset — logo left (real logo, paper-disc fallback),
   name + ticker, balance + fiat value right. Row height ≥ 56 px, full
   row tappable, chevron or press feedback. Zero balance shows `0`,
-  never Retry.
+  never Retry. Rows live in flat cards with hairline dividers (P3-B)
+  — the wobbly card chrome is gone, the real logos and the 24h
+  change stay.
+- 24h change (P0/P3-B): rendered on the same detail line as the
+  balance, after a ` · ` separator, in semantic colour — green + `+`
+  for up, red + `-` for down, grey for flat/stale — never colour
+  alone, never as part of the plain detail string.
 - Detail (`/assets/:chain` is a narrow 480 px screen): token header
   (logo + name + balance), Send / Receive actions immediately under
   the header, then holdings / transactions. The sticky Refresh on
@@ -341,14 +400,22 @@ the current placement is already right — restyle it, don't move it.
 - Focused flow: nav hidden (§4.2). Steps, in order, one per viewport:
   **chain → token → recipient + amount (one step) → review → sign →
   result.** Each step fits the viewport without scrolling to reach the
-  next control; chain step is chips only.
+  next control; chain step is chips only. The step indicator is flat
+  squares joined by a solid 1 px line (P3-B) — no wobbly step
+  squares, no dashed connectors.
 - Details step: recipient input (16 px on touch, `inputmode`
   appropriate, paste + scan buttons beside it) ABOVE the amount input;
-  amount input large (balance + "Max" beside it); fiat equivalent
-  under the amount; fee line before the primary button.
-- Review step: recipient, amount, network, fee — each on its own
-  labelled row, then ONE coral "Sign & send" button. Broadcast stays
-  DISABLED until separately authorised (safety rule — absolute).
+  amount input large (balance + "Max" beside it) in a flat + hairline
+  group with a coral ring on `focus-within` and a red border when
+  invalid; fiat equivalent under the amount; fee line before the
+  primary button. Fee-tier buttons (Slow/Standard/Fast, P2-A) and
+  the ENS field stay functional — restyled flat, never removed.
+  Warning banners are flat + hairline; errors are red text
+  (`text-error`, `role="alert"`), never a squiggle underline.
+- Review step: recipient, amount (tabular Inter, never Baloo 2),
+  network, fee — each on its own labelled row, then ONE coral "Sign &
+  send" button. Broadcast stays DISABLED until separately authorised
+  (safety rule — absolute).
 - Result step: success/failure in place, hash shown + copy + explorer
   link, "Done" returns home. Errors preserve the entered values
   (never `form.reset()`), mark only the failing fields, focus the
@@ -358,12 +425,17 @@ the current placement is already right — restyle it, don't move it.
 - Narrow 480 px screen. Order (Bitget pattern, §4.4): chain picker
   first (sleek search picker — Popular chains first, search replaces
   sections with a flat filtered list; NOT an 84-button grid), then
-  token picker, then the QR card.
+  token picker, then the QR card. All chrome around the card is flat
+  + hairline (P3-B): the Buy select, token row, template picker,
+  QR-type picker and details card. Errors are red text, never a
+  squiggle.
 - QR card: the seven templates A–G (default B) via the "Card style —
   tap to switch" picker (`aria-pressed`, active = sun). The card is
   the shareable object: title, network subtitle (network name bolded),
   QR, address + copy. Share / Download / Copy-link sit directly under
-  the card, in that order.
+  the card, in that order. **The QR card itself is untouched by style
+  B** — its templates own their radii, shadows and `--qr-*` palette
+  (§2.2).
 - In-app/PNG parity gap is ACCEPTED (DECISIONS.md §24.3): in-app the
   address wraps to 3 lines at 390 px, the PNG to 2 — do not shrink the
   address font below design size or widen the card to chase parity.
@@ -447,9 +519,14 @@ the current placement is already right — restyle it, don't move it.
 ## 7. What the redesign must NOT do
 
 - No new colours (except via an owner decision recorded in
-  DECISIONS.md). No gradients, no glass, no dark mode (Bawa is a
+  DECISIONS.md — the semantic colours in §2.1 were added that way,
+  §42). No gradients, no glass, no dark mode (Bawa is a
   light-paper app; the QR Template A dark teal is inside the card
   only — it is not a dark-mode precedent).
+- No wobbly radii, no 2 px ink borders, no hard shadows, no squiggle
+  underlines, no dashed connectors, no highlighter on money — on any
+  money screen or shared chrome (style B, P3-B). The QR card and the
+  Welcome illustration are the only places the drawing style survives.
 - No emoji as icons; no grey placeholder boxes where a real asset
   belongs; no Lorem ipsum; no invented balances, prices or fees.
 - No hover-only controls; no focus-ring removal; no zoom disabling.
@@ -467,8 +544,9 @@ the current placement is already right — restyle it, don't move it.
   targets, contrast, forms, navigation) ARE adopted; its palette
   and type suggestions are not.
 - **huashu-design's three-direction gate does NOT apply here:** the
-  direction is already chosen by the owner (drawing-illustration,
-  4 colours, Baloo 2 + Inter). What IS adopted from huashu-design:
+  direction is already chosen by the owner — style B since 2026-11-27
+  (it was drawing-illustration, 4 colours, Baloo 2 + Inter, before
+  that). What IS adopted from huashu-design:
   real assets before layout, the readability floors (§2.3), no
   template decoration (no all-caps micro-label above every title,
   no `01/02/03` numbering, no `→` on buttons, no one-word
@@ -485,8 +563,13 @@ the current placement is already right — restyle it, don't move it.
 - [ ] All touch targets ≥ 44 px hit area (or hit area expanded to
       44 px); ≥ 8 px gaps; no content under the bottom nav (`pb-24`)
       or under safe areas.
-- [ ] Contrast: only ink-on-paper, ink-on-sun, ink-on-coral text;
-      no paper-on-coral; no `--qr-*` outside the QR card.
+- [ ] Contrast: ink-on-paper, ink-on-sun, ink-on-coral text, plus
+      the semantic pairs in §2.1 (green/red/grey/deep-coral on paper,
+      green on the success tint); no paper-on-coral; no green text on
+      sun; no `--qr-*` outside the QR card.
+- [ ] Style B on money screens: flat radii, 1 px hairline borders,
+      no hard shadow, no wobbly radius, no squiggle, no dashed
+      connector, no highlighter on money; Baloo 2 off money figures.
 - [ ] No new hex literals (palette audit passes); no new dependency.
 - [ ] Focus visible on every control; focus order = visual order;
       errors inline + focusable summary; entered values preserved
@@ -503,8 +586,13 @@ the current placement is already right — restyle it, don't move it.
 
 ## 9. Decisions this document records (for the owner)
 
-1. **No new colours needed.** The 4-colour cap + confined `--qr-*`
-   exception covers every section in §6. Nothing is requested.
+1. **Style B + semantic colour (owner, 2026-11-27; P3-B, 2026-11-28,
+   `DECISIONS.md` §42).** Polished financial style everywhere;
+   illustration only for brand moments. The semantic colours in §2.1
+   (green `#177245`, red `#B42318`, grey `#5B5850`, tint `#E7F3EA`)
+   are the one lift of the 4-colour cap, each contrast-computed
+   first-hand; the palette audit and the palette test allowlist
+   exactly those four. Nothing further is requested.
 2. **Rejected:** ui-ux-pro-max's dark/gold/purple palette + Orbitron
    type (§7). No owner action needed — recorded so a later lane
    doesn't "fix" it back.
@@ -517,6 +605,19 @@ the current placement is already right — restyle it, don't move it.
    muted text is small supporting copy next to 13.99:1 white — but
    if a lane touches the QR card, keep muted text large or treat it
    as decorative, and never reuse the pairing elsewhere.
+5. **Focus = solid 2 px ink outline, no wavy underline (P3-B,
+   `DECISIONS.md` §42).** The `:focus-visible` wavy coral underline
+   is replaced by the solid outline everywhere; amount-input groups
+   use a coral `focus-within` ring. The `.bawa-squiggle-underline`
+   utility is deleted.
+6. **Known remaining wobble (P3-B, 2026-11-28 — not in this lane's
+   scope):** 19 explicit `radius="xl"` Cards on Create / Import /
+   Network-selection / Wallet-management / Address-book / Backup
+   panels, and `radius="bawa"` on the Lock screen, still render the
+   old radii — while their Buttons / Inputs / Alerts already went
+   flat via the shared-component default flip. A follow-up lane
+   should flip those 19 props; nothing else on those screens was
+   touched.
 
 ---
 
@@ -538,6 +639,19 @@ they are catalogue entries (1400-skill library) and the eight above
 cover the foundation. Lanes needing deeper coverage (e.g. motion,
 charts, forms) should run the ui-ux-pro-max domain searches for their
 own concern and record it, rather than re-reading the catalogue.
+
+**P3-B (2026-11-28, hands-on, 0 Sol calls)** read these six in full
+on the VM and used them for the style-B restyle of the money screens
++ shared chrome + this rewrite:
+
+| Skill | Used for |
+|---|---|
+| `design-system` | Token layering (primitive → semantic → component) for the four new semantic literals and the flat-token defaults. |
+| `design-system-patterns` | Flat/hairline component patterns; the shared-default flip instead of per-screen prop threading. |
+| `cdp-visual-verification` | Live-preview loop (serve dist statically under `/bawa/`, hash-verify served JS vs dist, screenshot 390/820/1280/1440, view by eye). |
+| `web-typography` | Tabular Inter for money figures; Baloo 2 off the balance hero and the Send review amount. |
+| `a11y-audit` | Colour-never-the-only-signal (24h sign kept, errors keep `role="alert"` text); focus-visible decision; contrast ratios for the four new literals. |
+| `accessibility` | WCAG 2.4.11 focus-visible, 1.4.1 use-of-colour, 1.4.3 contrast — the §2.1 table and the focus decision. |
 
 ## Appendix B — Wallet sources actually used
 

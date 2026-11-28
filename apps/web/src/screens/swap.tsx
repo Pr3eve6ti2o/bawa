@@ -176,7 +176,7 @@ function TokenChips({
                 : undefined
             }
             onClick={() => onSelect(choice)}
-            className={`flex min-h-11 items-center gap-2 rounded-bawa-sm border-2 border-ink px-3 py-2 text-sm font-medium ${
+            className={`flex min-h-11 items-center gap-2 rounded-flat-sm border border-ink px-3 py-2 text-sm font-medium ${
               isSelected ? 'bg-sun' : 'bg-paper'
             }${isFromToken ? ' opacity-40' : ''}`}
           >
@@ -1036,7 +1036,10 @@ export function SwapScreen() {
         />
         <div className="space-y-2">
           <Label htmlFor="swap-amount">{`Amount (${fromToken.symbol})`}</Label>
-          <div className="flex h-14 items-center gap-2 rounded-bawa border-2 border-ink bg-paper pl-4 pr-2">
+          {/* P3-B: same amount-group treatment as Send — a coral ring
+              on focus-within, a red border when the amount is
+              invalid, no wavy underline anywhere. */}
+          <div className={`flex h-14 items-center gap-2 rounded-flat-lg border ${amountError !== null ? 'border-error' : 'border-ink'} bg-paper pl-4 pr-2 focus-within:outline-none focus-within:ring-2 focus-within:ring-coral`}>
             <input
               id="swap-amount"
               type="text"
@@ -1047,11 +1050,11 @@ export function SwapScreen() {
               autoComplete="off"
               aria-invalid={amountError !== null}
               aria-describedby={amountError !== null ? 'swap-amount-error' : undefined}
-              className="min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none placeholder:font-normal placeholder:text-ink selection:bg-sun selection:text-ink focus-visible:underline focus-visible:decoration-wavy focus-visible:decoration-coral focus-visible:underline-offset-8 aria-invalid:underline aria-invalid:decoration-wavy aria-invalid:decoration-coral aria-invalid:underline-offset-8"
+              className="min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none placeholder:font-normal placeholder:text-muted-foreground selection:bg-sun selection:text-ink"
             />
           </div>
           {amountError && (
-            <p id="swap-amount-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
+            <p id="swap-amount-error" role="alert" className="text-base text-error">
               {amountError}
             </p>
           )}
@@ -1066,7 +1069,7 @@ export function SwapScreen() {
           type="button"
           aria-label="Switch direction"
           onClick={handleFlip}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border-2 border-ink bg-paper transition-transform active:scale-95"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink bg-paper transition-transform active:scale-95"
         >
           <BawaIcon name="swap" className="size-6 text-ink" aria-hidden="true" />
         </button>
@@ -1107,7 +1110,7 @@ export function SwapScreen() {
             aria-describedby={recipientError !== null ? 'swap-recipient-error' : undefined}
           />
           {recipientError && (
-            <p id="swap-recipient-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
+            <p id="swap-recipient-error" role="alert" className="text-base text-error">
               {recipientError}
             </p>
           )}
@@ -1169,7 +1172,7 @@ export function SwapScreen() {
       {quoteState.status === 'ok' && !isSamePair && (
         <section
           aria-labelledby="swap-quote-heading"
-          className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
+          className="space-y-1 rounded-flat-sm border border-ink bg-paper p-3 text-base"
         >
           <h2 id="swap-quote-heading" className="font-semibold">
             Quote
@@ -1245,7 +1248,7 @@ export function SwapScreen() {
         !isSamePair && (
         <section
           aria-labelledby="swap-compare-heading"
-          className="space-y-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
+          className="space-y-3 rounded-flat-sm border border-ink bg-paper p-3 text-base"
         >
           <h2 id="swap-compare-heading" className="font-semibold">
             Compare providers
@@ -1422,7 +1425,7 @@ export function SwapScreen() {
 
       <section
         aria-labelledby="refuel-heading"
-        className="space-y-2 rounded-bawa-sm border-2 border-dashed border-ink bg-paper p-3 text-base"
+        className="space-y-2 rounded-flat-sm border border-ink bg-paper p-3 text-base"
       >
         <h2 id="refuel-heading" className="font-semibold">
           Refuel gas
@@ -1522,7 +1525,7 @@ export function SwapScreen() {
                 <p
                   id="refuel-amount-error"
                   role="alert"
-                  className="text-base text-ink bawa-squiggle-underline"
+                  className="text-base text-error"
                 >
                   {refuelAmountError}
                 </p>
@@ -1588,7 +1591,7 @@ export function SwapScreen() {
             {refuelQuoteState.status === 'ok' && (
               <section
                 aria-labelledby="refuel-quote-heading"
-                className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base"
+                className="space-y-1 rounded-flat-sm border border-ink bg-paper p-3 text-base"
               >
                 <h3
                   id="refuel-quote-heading"
@@ -1653,7 +1656,7 @@ export function SwapScreen() {
 
       <section
         aria-labelledby="swap-next-heading"
-        className="space-y-2 rounded-bawa-sm border-2 border-dashed border-ink bg-paper p-3 text-base"
+        className="space-y-2 rounded-flat-sm border border-ink bg-paper p-3 text-base"
       >
         <h2 id="swap-next-heading" className="font-semibold">
           What happens next

@@ -77,7 +77,7 @@ export function SidebarNav({
     // against 72px) — and overflowed the shell's sticky wrapper, whose
     // overflow-y-auto computes overflow-x to auto: a permanent
     // horizontal scrollbar on every desktop page.
-    <aside className="flex h-full w-full shrink-0 flex-col border-r-2 border-ink bg-paper text-ink">
+    <aside className="flex h-full w-full shrink-0 flex-col border-r border-ink bg-paper text-ink">
       <div
         className={[
           "flex shrink-0 items-center p-4",
@@ -86,7 +86,7 @@ export function SidebarNav({
       >
         <div
           aria-hidden="true"
-          className="flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink"
+          className="flex size-10 shrink-0 items-center justify-center rounded-flat-sm border border-ink bg-paper text-ink"
         >
           <BawaIcon name="wallet" className="size-6" />
         </div>
@@ -130,7 +130,7 @@ export function SidebarNav({
                     // UX-major Lane 2: py-3 (44 px row) — the old py-2
                     // rows were 36 px, below the DESIGN-SYSTEM §2.5
                     // touch rule for nav items.
-                    "flex w-full items-center gap-3 rounded-bawa px-3 py-3 text-sm font-semibold transition-colors",
+                    "flex w-full items-center gap-3 rounded-flat px-3 py-3 text-sm font-semibold transition-colors",
                     collapsed ? "justify-center" : "",
                     isActive
                       ? "bg-sun font-semibold text-ink"
@@ -154,7 +154,7 @@ export function SidebarNav({
                       {isActive && (
                         <span
                           aria-hidden="true"
-                          className="size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink bg-coral"
+                          className="size-2.5 shrink-0 rounded-flat-sm border border-ink bg-coral"
                         />
                       )}
                       {/* P3: the active item's coral square steals ~18px
@@ -172,7 +172,7 @@ export function SidebarNav({
         ))}
       </nav>
 
-      <footer className="mt-auto shrink-0 border-t-2 border-ink p-3">
+      <footer className="mt-auto shrink-0 border-t border-ink p-3">
         <button
           type="button"
           onClick={onToggleCollapse}
@@ -180,7 +180,7 @@ export function SidebarNav({
           aria-expanded={!collapsed}
           title={collapseLabel}
           className={[
-            "flex w-full items-center gap-3 rounded-bawa bg-paper px-3 py-3 text-sm font-semibold text-ink transition-colors hover:bg-sun",
+            "flex w-full items-center gap-3 rounded-flat bg-paper px-3 py-3 text-sm font-semibold text-ink transition-colors hover:bg-sun",
             collapsed ? "justify-center" : "",
           ].join(" ")}
         >

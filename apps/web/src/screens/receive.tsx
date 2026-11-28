@@ -167,7 +167,7 @@ function BuyProviderRow({
             ? 'Needs a backend'
             : null;
   return (
-    <Card radius="xl">
+    <Card radius="flat" borderWidth="hairline">
       <div className="flex flex-col items-start gap-2 p-4">
         <p className="text-base font-semibold text-ink">
           {provider.rank}. {provider.name}
@@ -981,7 +981,7 @@ export function ReceiveScreen() {
       <div className="space-y-3">
         <h1 className="font-bold text-ink">Buy crypto</h1>
         {buyUnavailable !== null ? (
-          <Card radius="xl">
+          <Card radius="flat" borderWidth="hairline">
             <div className="flex flex-col items-start gap-2 p-4">
               <p className="text-base font-semibold text-ink">
                 {buyUnavailable.title}
@@ -1023,7 +1023,7 @@ export function ReceiveScreen() {
                     <select
                       id="buy-provider"
                       aria-label="Buy provider"
-                      className="h-12 w-full rounded-bawa-sm border-2 border-ink bg-paper px-4 text-base text-ink"
+                      className="h-12 w-full rounded-flat-sm border border-ink bg-paper px-4 text-base text-ink"
                       value={selected.id}
                       onChange={(event) =>
                         setSelectedBuyProvider(event.target.value as BuyProviderId)
@@ -1148,7 +1148,7 @@ export function ReceiveScreen() {
                 return (
                   <li
                     key={`native:${chain}`}
-                    className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
+                    className={`flex items-center gap-2 rounded-flat-sm border border-ink p-1.5 ${
                       selectedToken === null ? 'bg-sun' : 'bg-paper'
                     }`}
                   >
@@ -1156,7 +1156,7 @@ export function ReceiveScreen() {
                       type="button"
                       aria-pressed={selectedToken === null}
                       onClick={() => selectToken(null)}
-                      className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                      className="flex min-w-0 flex-1 items-center gap-2 rounded-flat-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                     >
                       {/* Lane G: the real chain mark (see above). */}
                       <ChainLogo chain={chain} size={24} />
@@ -1236,7 +1236,7 @@ export function ReceiveScreen() {
 
       </div>
       <div className="space-y-2 lg:sticky lg:top-6">
-      <Card radius="xl" tone="card" borderTone="border">
+      <Card radius="flat" borderWidth="hairline" tone="card" borderTone="border">
         {address ? (
           <div className="flex flex-col items-center gap-1.5">
             {/* The QR card (UI/UX Round 2, item 1): QR, amount,
@@ -1277,7 +1277,7 @@ export function ReceiveScreen() {
                
               />
               {amountError ? (
-                <p role="alert" className="text-base text-ink bawa-squiggle-underline">{amountError}</p>
+                <p role="alert" className="text-base text-error">{amountError}</p>
               ) : null}
             </div>
 {/* Lane 4 (redesign): the share actions sit directly under the
@@ -1354,7 +1354,7 @@ export function ReceiveScreen() {
             <div
               role="group"
               aria-label="Card style"
-              className="grid w-full grid-cols-4 gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
+              className="grid w-full grid-cols-4 gap-1 rounded-flat-sm border border-ink bg-paper p-1"
             >
               {QR_CARD_TEMPLATES.map((candidate) => {
                 const active = candidate.id === cardTemplate;
@@ -1366,7 +1366,7 @@ export function ReceiveScreen() {
                     aria-label={`Show ${candidate.label} card style`}
                     title={candidate.hint}
                     onClick={() => setCardTemplate(candidate.id)}
-                    className={`flex min-h-11 cursor-pointer flex-col items-center justify-center rounded-bawa-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'hover:bg-sun'}`}
+                    className={`flex min-h-11 cursor-pointer flex-col items-center justify-center rounded-flat-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'hover:bg-sun'}`}
                   >
                     <span className="font-semibold">{candidate.label}</span>
                   </button>
@@ -1389,7 +1389,7 @@ export function ReceiveScreen() {
             <div
               role="group"
               aria-label="QR type"
-              className="flex w-full gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1"
+              className="flex w-full gap-1 rounded-flat-sm border border-ink bg-paper p-1"
             >
               {qrTemplates.map((candidate) => {
                 const active = candidate.id === effectiveTemplate;
@@ -1407,7 +1407,7 @@ export function ReceiveScreen() {
                     aria-pressed={active}
                     aria-label={`Show ${candidate.label.toLowerCase()} QR`}
                     onClick={() => setTemplate(candidate.id)}
-                    className={`flex min-h-11 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-bawa-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'bg-sun' : 'hover:bg-sun'}`}
+                    className={`flex min-h-11 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-flat-sm p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50 ${active ? 'bg-sun' : 'hover:bg-sun'}`}
                   >
                     <span className="font-semibold">{candidate.label}</span>
                     {reason !== null && (

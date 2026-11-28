@@ -90,18 +90,19 @@ export function TxRow({
       : `${formatDate(tx.timestamp)} · ${statusWord(tx)}`;
 
   return (
-    // UX-major Lane 2: the standalone row uses the same 2 px ink border
-    // + wobble radius as every other card (the old rounded-lg + 1 px
-    // border was the odd one out). The row stays >= 56 px tall via its
+    // UX-major Lane 2: the standalone row uses the same flat 1 px
+    // hairline border + uniform radius as every other card since
+    // P3-B (the old rounded-lg + 1 px border was the odd one out,
+    // then the wobble was). The row stays >= 56 px tall via its
     // content + p-3; the direction tile is decorative inside the link.
-    <li className={className ?? 'rounded-bawa border-2 border-ink bg-paper px-4 py-3'}>
+    <li className={className ?? 'rounded-flat-lg border border-ink bg-paper px-4 py-3'}>
       <Link
         to={`/transactions/${tx.hash}`}
         className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
       >
         <span
           aria-hidden="true"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-paper"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full border border-ink bg-paper"
         >
           <BawaIcon name={directionIcon} className="size-4" />
         </span>

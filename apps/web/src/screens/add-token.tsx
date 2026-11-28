@@ -591,7 +591,7 @@ export function AddTokenDialog({
                   return (
                     <li
                       key={chainId}
-                      className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-3 py-2"
+                      className="flex items-center justify-between gap-3 rounded-flat-lg border border-ink bg-paper px-3 py-2"
                     >
                       <ChainLogo chain={chainId} size={40} />
                       <span className="min-w-0 flex-1">
@@ -670,7 +670,7 @@ export function AddTokenDialog({
                       <button
                         type="button"
                         onClick={() => onPickCandidate(candidate)}
-                        className="flex w-full items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-3 py-2 text-left"
+                        className="flex w-full items-center justify-between gap-3 rounded-flat-lg border border-ink bg-paper px-3 py-2 text-left"
                       >
                         {/* Lane A: the candidate's icon — its CoinGecko
                             image when search found one, the bundled

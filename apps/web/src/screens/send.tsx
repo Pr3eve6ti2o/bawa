@@ -1962,7 +1962,7 @@ export function SendScreen() {
                   type="button"
                   disabled={switchingAccount}
                   onClick={() => void chooseAccountForLink(account)}
-                  className="flex w-full flex-col gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-60"
+                  className="flex w-full flex-col gap-1 rounded-flat-sm border border-ink bg-paper p-3 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-60"
                 >
                   <span className="text-base font-semibold">
                     {accountName(account)}
@@ -1982,7 +1982,7 @@ export function SendScreen() {
           </p>
         )}
         {chooserError && (
-          <p role="alert" className="text-base text-ink bawa-squiggle-underline">
+          <p role="alert" className="text-base text-error">
             {chooserError}
           </p>
         )}
@@ -2012,7 +2012,7 @@ export function SendScreen() {
         {step === entryStep && (
         <p
           role="note"
-          className="rounded-bawa border-2 border-ink bg-sun p-4 text-base text-ink"
+          className="rounded-flat-lg border border-ink bg-sun p-4 text-base text-ink"
         >
           {devnetEnabled
             ? devnetName
@@ -2061,7 +2061,7 @@ export function SendScreen() {
                   className="flex flex-1 items-center last:flex-none"
                 >
                   <span
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-sm text-ink ${
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-flat-sm border border-ink text-sm text-ink ${
                       index < activeIndex
                         ? 'bg-sun'
                         : index === activeIndex
@@ -2072,7 +2072,7 @@ export function SendScreen() {
                     {index < activeIndex ? '✓' : index + 1}
                   </span>
                   {index < steps.length - 1 && (
-                    <span aria-hidden="true" className="mx-1 flex-1 border-t-2 border-dashed border-ink" />
+                    <span aria-hidden="true" className="mx-1 flex-1 border-t border-ink" />
                   )}
                 </li>
               ))}
@@ -2096,7 +2096,7 @@ export function SendScreen() {
           the network, token, amount and address by itself, so the
           scanner lives here too — not only on the recipient step,
           after the network and token were already picked by hand. */}
-      <div className="flex flex-wrap items-center gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-flat-sm border border-ink bg-paper p-3">
         <button
           type="button"
           aria-label="Scan QR code"
@@ -2238,7 +2238,7 @@ export function SendScreen() {
           and on result the screen speaks for itself — the bar would
           eat ~60 px on both. */}
       {(step === 'token' || step === 'details') && (
-        <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base text-ink">
+        <p className="flex items-center justify-between gap-3 rounded-flat-sm border border-ink bg-paper p-3 text-base text-ink">
           <span>
             <span className="font-semibold">
               {selectedToken === null
@@ -2281,7 +2281,7 @@ export function SendScreen() {
               ref={errorSummaryRef}
               role="alert"
               tabIndex={-1}
-              className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-3 outline-none"
+              className="space-y-1 rounded-flat-lg border border-ink bg-paper p-3 outline-none"
             >
               <p className="font-semibold">Check before you review</p>
               <ul className="list-inside list-disc space-y-1 text-base">
@@ -2323,7 +2323,7 @@ export function SendScreen() {
               address wraps in full: truncating it would need a copy
               button to stay useful, and the copy lives on the
               Receive/account screens already. */}
-          <div className="space-y-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-base">
+          <div className="space-y-1 rounded-flat-sm border border-ink bg-paper p-3 text-base">
             <div className="flex justify-between gap-3">
               <span className="shrink-0 text-ink">From</span>
               {/* Lane P2-C (M6): the sending address pairs with its
@@ -2377,7 +2377,7 @@ export function SendScreen() {
           {tokenNamesake !== null && selectedToken !== null && (
             <p
               role="alert"
-              className="rounded-xl border border-warning-border bg-warning-surface p-3 text-base text-warning-text"
+              className="rounded-flat-lg border border-warning-border bg-warning-surface p-3 text-base text-warning-text"
             >
               {`Unverified ${selectedToken.symbol} — a verified ${tokenNamesake.symbol} exists on ${config.displayName}. Check the contract address before sending.`}
             </p>
@@ -2435,7 +2435,7 @@ export function SendScreen() {
               aria-describedby={recipientError !== null ? 'send-recipient-error' : undefined}
             />
             {recipientError && (
-              <p id="send-recipient-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
+              <p id="send-recipient-error" role="alert" className="text-base text-error">
                 {recipientError}
               </p>
             )}
@@ -2495,7 +2495,7 @@ export function SendScreen() {
                     handleRecipientChange(event.target.value);
                   }
                 }}
-                className="w-full rounded-bawa border-2 border-ink bg-paper px-3 py-2 text-base text-ink"
+                className="w-full rounded-flat-lg border border-ink bg-paper px-3 py-2 text-base text-ink"
               >
                 <option value="">Choose a saved address…</option>
                 {bookForChain.map((entry) => (
@@ -2527,10 +2527,14 @@ export function SendScreen() {
                 (DESIGN-SYSTEM §6: "amount large with balance + Max
                 beside it"). A plain input inside the bordered group:
                 the shared Input carries its own border, and cn() is a
-                plain join, so nesting it would double the border. The
-                input mirrors Input's own focus language (wavy coral
-                underline) and invalid state. */}
-            <div className="flex h-14 items-center gap-2 rounded-bawa border-2 border-ink bg-paper pl-4 pr-2">
+                plain join, so nesting it would double the border.
+                P3-B: the group's focus signal is a coral ring on
+                focus-within (the inner input is outline-none, so the
+                old wavy focus underline was its only signal — and it
+                is gone under style B); an invalid amount turns the
+                group's border red, and the error text below it is red
+                too. */}
+            <div className={`flex h-14 items-center gap-2 rounded-flat-lg border ${amountError !== null ? 'border-error' : 'border-ink'} bg-paper pl-4 pr-2 focus-within:outline-none focus-within:ring-2 focus-within:ring-coral`}>
               <input
                 id="send-amount"
                 type="text"
@@ -2541,7 +2545,7 @@ export function SendScreen() {
                 autoComplete="off"
                 aria-invalid={amountError !== null}
                 aria-describedby={amountError !== null ? 'send-amount-error' : undefined}
-                className="min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none placeholder:font-normal placeholder:text-ink selection:bg-sun selection:text-ink focus-visible:underline focus-visible:decoration-wavy focus-visible:decoration-coral focus-visible:underline-offset-8 aria-invalid:underline aria-invalid:decoration-wavy aria-invalid:decoration-coral aria-invalid:underline-offset-8"
+                className="min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none placeholder:font-normal placeholder:text-muted-foreground selection:bg-sun selection:text-ink"
               />
               <Button
                 type="button"
@@ -2555,7 +2559,7 @@ export function SendScreen() {
               </Button>
             </div>
             {amountError && (
-              <p id="send-amount-error" role="alert" className="text-base text-ink bawa-squiggle-underline">
+              <p id="send-amount-error" role="alert" className="text-base text-error">
                 {amountError}
               </p>
             )}
@@ -2635,7 +2639,7 @@ export function SendScreen() {
                         type="button"
                         aria-pressed={active}
                         onClick={() => setFeeTierId(tier.id)}
-                        className={`flex min-h-11 flex-1 flex-col items-center justify-center rounded-bawa-sm border-2 border-ink p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'bg-paper hover:bg-sun'}`}
+                        className={`flex min-h-11 flex-1 flex-col items-center justify-center rounded-flat-sm border border-ink p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${active ? 'bg-sun' : 'bg-paper hover:bg-sun'}`}
                       >
                         <span className="font-semibold">{tier.label}</span>
                         <span>{tier.estimatedLabel}</span>
@@ -2730,7 +2734,7 @@ export function SendScreen() {
           )}
           {signState.status === 'error' && (
             <div role="alert" className="space-y-2 text-base">
-              <p className="text-ink bawa-squiggle-underline">
+              <p className="text-error">
                 {signState.reason}
               </p>
               {vaultState !== 'unlocked' && (
@@ -2784,7 +2788,7 @@ export function SendScreen() {
           )}
           {devnetEnabled && devnetBroadcast.status === 'error' && (
             <div role="alert" className="space-y-2 text-base">
-              <p className="text-ink bawa-squiggle-underline">
+              <p className="text-error">
                 {devnetBroadcast.reason}
               </p>
               <p className="text-muted-foreground">
@@ -2806,7 +2810,7 @@ export function SendScreen() {
             </Label>
             <pre
               id="send-signed-payload"
-              className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-xl border border-border bg-muted p-4 text-xs"
+              className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-flat-lg border border-border bg-muted p-4 text-xs"
             >
               {signState.payload}
             </pre>
