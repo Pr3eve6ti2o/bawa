@@ -1182,6 +1182,7 @@ same constraint decides the swaps providers (§12A).
   widget + `widget_id`. Coinbase: onboarding + project ID (§12). Full
   list: `RESEARCH.md` §4.1. **A live purchase has not been verified
   for any provider** (no onboarding/keys exist yet).
+- **Where each key goes (build-time env, verified 2026-11-28 at token-gaps `1a85258`, Lane A docs audit).** The app reads every Buy key from a build-time env var (`import.meta.env`; `buy-providers.ts` `readEnv` trims whitespace and treats empty as unset; `onramp.ts` for Coinbase). Set them in the build environment (e.g. `.env` at build time — never commit a real key): Ramp `VITE_RAMP_HOST_API_KEY`; MoonPay `VITE_MOONPAY_API_KEY` (publishable `pk_live_…` only — the secret `sk_live_…` is never read by the app); Onramper `VITE_ONRAMPER_API_KEY`; Banxa `VITE_BANXA_PARTNER_REF` (partner subdomain, not a key); Mercuryo `VITE_MERCURYO_WIDGET_ID`; Coinbase `VITE_COINBASE_ONRAMP_APP_ID` (§12). Transak has NO env var — its widget URL is minted server-side with the API secret (see the table above), so a backend is required before Transak can work at all. Without a provider's value, its Buy row shows "Not set up yet — {setupCopy}" (`receive.tsx:200`) — the row names exactly what is needed, and no purchase is offered.
 
 ## §12A. Swaps — provider-aware quotes (providers programme, 2026-11-26)
 
@@ -1255,8 +1256,106 @@ Relay waits on a proxy.
    9.x if the SDK is ever adopted). **Licence UNVERIFIED** — npm
    metadata declares no licence field; read the SDK repo's LICENSE file
    before vendoring any of its code. The proxy's origin must also be
-   added to `connect-src` in `security-headers.ts` at deploy time. Owner
-   must provide: Relay Dashboard account + App + API key, and the
+   added to `connect-src` in `security-headers.ts` at deploy time.
+
+   **Relay proxy — implementable spec (Lane A docs audit, 2026-11-28;
+   grounded in `apps/web/src/wallet/relay-quotes.ts`,
+   `apps/web/src/screens/swap.tsx` and
+   `apps/web/src/app/security-headers.ts` at token-gaps `1a85258`).**
+   - **Env var:** `VITE_RELAY_PROXY_URL` (constant `RELAY_PROXY_URL_ENV`
+     in `relay-quotes.ts`). A build-time Vite env (`import.meta.env`),
+     read by `relayProxyBaseUrl()` — direct member access, trimmed,
+     trailing slashes stripped, empty or unset → `null`. Example value
+     (pinned by `relay-quotes.test.ts`): `https://proxy.example.com/relay`.
+   - **The app NEVER calls `https://api.relay.link` directly.** Every
+     Relay request goes to the proxy: `POST ${proxyUrl}/quote/v3` and
+     `GET ${proxyUrl}/chains`. The proxy must forward those paths to
+     Relay's API and append the secret API key server-side. What the
+     proxy does with the request beyond forwarding is NOT defined by
+     this code — the code requires only that the proxy accept the POST
+     body below at `/quote/v3` and return Relay's v3 response; the
+     key-appending mechanism (header vs query parameter) is Relay's API
+     contract, not this code's, so it is not specified here.
+   - **Key location:** server-side only, NEVER in the browser. There is
+     no `apiKey` parameter anywhere in `relay-quotes.ts`, by design.
+     Alternative: a short-lived access token minted by a backend
+     (15-minute expiry, per the module header), sent as
+     `Authorization: Bearer <token>` — only when one is held; the app
+     never mints one.
+   - **Request — `POST ${proxyUrl}/quote/v3`:** headers
+     `Content-Type: application/json` (plus `Authorization` when an
+     access token is held); 15 s timeout (`AbortSignal.timeout(15_000)`,
+     `RELAY_QUOTE_TIMEOUT_MS`). JSON body, exactly these fields: `user`
+     (sender address on the source chain), `recipient` (recipient
+     address on the destination chain), `originChainId` (number),
+     `destinationChainId` (number), `originCurrency` (token address
+     string), `destinationCurrency` (token address string), `amount`
+     (string, source-token base units), `tradeType: "EXACT_INPUT"`.
+   - **Chain ids (`relayChainIdFor`):** EVM chains use their own chain
+     id, but only when Relay lists the chain; non-EVM chains use
+     Relay's own ids — Bitcoin 8253038, Solana 792703809, TON 224235520,
+     TRON 728126428, XRP 537724.
+   - **Currency addresses (`relayCurrencyAddress`):** EVM native
+     `0x0000000000000000000000000000000000000000`, EVM tokens the
+     contract address; SOL native
+     `11111111111111111111111111111111`; BTC native
+     `bc1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmql8k8`; TON native
+     `EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c`; TRX native
+     `T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb`; TRON USDT
+     `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`; XRP native `xrp`.
+   - **Response — parsed strictly by `parseQuote`:** anything else is
+     malformed and surfaces as `unavailable`, never a partial quote.
+     Required: `requestId` (non-empty string), `steps` (non-empty
+     array — each step carries `status`/`data`/`check` directly, no
+     `items` array; the parser only counts them), `details` (object),
+     `details.currencyOut` (object) with `amount` and `minimumAmount`
+     (base units — digits-only string or safe non-negative integer)
+     and `amountUsd` (decimal string or null). `details.timeEstimate`
+     (number ≥ 0, rounded to seconds) → `executionDurationSeconds`.
+     `fees`, when present, is an object whose components each carry a
+     `usd` decimal string; the components are summed (`toFixed(4)`) →
+     `feeUsd`, null when none. `originGas.amountUsd` (preferred) or
+     `originGas.usd` → `gasUsd`, null when absent.
+     `details.totalImpact` / `details.swapImpact` and `amountUsd` may
+     be null. The parsed quote the screen uses: `requestId`,
+     `toAmountBaseUnits`, `toAmountMinBaseUnits`, `toAmountUsd`,
+     `feeUsd`, `gasUsd`, `executionDurationSeconds`, `stepCount`
+     (= `steps.length`), `fetchedAtMs`. The steps' executable
+     transaction data is NEVER returned — quotes only; nothing here
+     signs, sends or bridges.
+   - **Statuses (`RelayQuoteResult`):** `ok`; `no-route` (chain or
+     token Relay does not cover, or Relay's error body matches
+     `NO_ROUTE`/`QUOTE` in `errorCode` or "no route" in `message`);
+     `not-configured` (no proxy set, or HTTP 401 — "Relay refused the
+     quote — the proxy or access token is not set up correctly.");
+     `unavailable` (network error, non-JSON, malformed quote, HTTP
+     429 — "Relay quotes are rate-limited right now. Try again in a
+     little while." — or any other non-OK). With no proxy configured,
+     `fetchRelayQuote` returns `not-configured` WITHOUT touching the
+     network.
+   - **`GET ${proxyUrl}/chains` (`fetchRelayChains`):** the response
+     must be `{ chains: [...] }`, each entry `{ id` (safe integer),
+     `name` (string), `vmType` (string), `tokenSupport` (string),
+     `disabled` (boolean) `}`; an empty list → `unavailable`;
+     401 → `not-configured`. Without a proxy, the static
+     `RELAY_EVM_CHAINS` table (verified live 2026-11-26) is what the
+     UI labels with.
+   - **CSP:** the proxy's origin must be added to `connect-src` in
+     `apps/web/src/app/security-headers.ts` at deploy time — the CSP
+     cannot learn a host at runtime (`security-headers.ts:55`). No
+     Relay/proxy origin is in `connect-src` today (the list at `:160`
+     has no relay entry).
+   - **How the app calls it:** `apps/web/src/screens/swap.tsx:579` —
+     on a quote attempt, `fetchRelayQuote({ fromChain, toChain,
+     fromToken, toToken, fromAmountBaseUnits: amountBaseUnits,
+     fromAddress, toAddress: recipient.trim() })`, alongside the LI.FI
+     and STON.fi quotes. Only live quotes compete; the cheapest wins
+     (Relay, then STON.fi, then LI.FI on ties). With no proxy, the
+     Relay row says plainly it is not set up and no Relay request is
+     made; a pair only Relay covers (e.g. Bitcoin as the comparison
+     chain) opens on "No route".
+
+   Owner must provide: Relay Dashboard account + App + API key, and the
    proxy/token endpoint. Coverage, live `GET /chains` 2026-11-26: **58
    chains**, none disabled — 33 EVM chains + BTC, SOL, TON, TRX and
    XRP. XRP IS covered (xrpvm, Limited, XRP only, bridging supported) —
@@ -1279,7 +1378,7 @@ Relay waits on a proxy.
    page with USDT (TRC-20 `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`) and the
    production WebSocket accepts connections, but NO live TRON quote has
    been seen — TRON pairs are flagged live-unverified and are NOT
-   offered until one is. **TON signing is wired (signed BoC only, no broadcast):** `signStonfiOrderTonOffline` in `stonfi-signing.ts` signs an order's messages TON Connect-style with the existing Trust Wallet Core engine (V4R2, mode 3, `m/44'/607'/0'` for account 0) and returns the signed BoC only — verified 2026-11-27 against a real live orderTx (quoteId `7fc458a6…59e`), 15 tests. Quotes need no signature; execution still needs its implementation — the owner approved swap execution on 2026-11-27, but no execution path is built yet; broadcast stays DISABLED on mainnet until then. Owner must still provide: destination-chain integrator address(es) and the fee choice (`integratorFeePips` / `referralValue` bps); nothing else.
+   offered until one is. **TON signing is wired (signed BoC only, no broadcast):** `signStonfiOrderTonOffline` in `stonfi-signing.ts` signs an order's messages TON Connect-style with the existing Trust Wallet Core engine (V4R2, mode 3, `m/44'/607'/0'` for account 0) and returns the signed BoC only — verified 2026-11-27 against a real live orderTx (quoteId `7fc458a6…59e`), 15 tests. Quotes need no signature; execution still needs its implementation — the owner approved swap execution on 2026-11-27, but no execution path is built yet; broadcast stays DISABLED on mainnet until then. Owner must still provide: destination-chain integrator address(es) and the fee choice (`integratorFeePips` / `referralValue` bps); nothing else. There is no config slot for them yet — no env var and no field in `stonfi-quotes.ts` reads one (verified 2026-11-28 at token-gaps `1a85258`); supplying them is code work, not configuration, and no env var name should be invented for them.
 4. **LI.FI — stays as the fallback.** Already integrated and proven live
    in Bawa (0.1 ETH → POL). Apache-2.0, no key for basic use. Live
    `GET https://li.quest/v1/chains` 2026-11-26 returns **64 chains**,
@@ -1464,8 +1563,8 @@ The survey's verified facts, which Lane F implemented from:
   `docs/DESIGN-SYSTEM.md` and is migrating it — this spec states the
   direction, not the token list.**
 - Follow Doc 14 §5.1's **14-screen contract**. **Review is a Send state;
-  Lock is an app state**, not extra screens. Required states: **loading,
-  empty, stale, locked, gate-failed, error**. The app now also ships Swap, Track, Address book and Lock as screens beyond the 14 (routed in `app.tsx`); Doc 14 §5.1 needs updating to record them (flagged 2026-11-28, docs-currency Lane B).
+  Lock is an app state with its own screen (`/lock`)**. Required states: **loading,
+  empty, stale, locked, gate-failed, error**. The app now also ships Swap, Track, Address book and Lock as screens beyond the 14 (routed in `app.tsx`); Doc 14 §5.1 now records them (updated 2026-11-28, docs-audit Lane A).
 - Default visual direction: **style B** (owner pick, 2026-11-27 —
   polished financial style everywhere, illustration only for brand
   moments, plus a tiny bounded paper/comic fraction; §0.3). The
@@ -1560,6 +1659,25 @@ Playwright Chromium at 390, 412 and 1280 px: 23 screens, 0 overflow
 / 0 offenders each, including vault + deep states and the Receive
 Cake details step.
 
+### §15.3. Wallet standard — 24th point named (owner order, 2026-11-28 ~20:40 IST)
+
+The owner's wallet-quality standard lists 23 points. The 24th was
+unnamed because the owner's "all" reply approved what it named but
+never named a 24th, and no requirement was to be invented for the
+owner's own standard. The owner has now ordered it named:
+
+**24. Price alerts / notifications — the wallet lets the user set a
+price alert on a held token and notifies them when it crosses the
+threshold.**
+
+The owner can replace this point. Two honest notes: the 23 points
+themselves are not listed in this guide — they are the owner's list,
+not a section of this file set, so this subsection records only the
+newly named 24th point; and naming the point is not shipping it — no
+price-alert feature is implemented, the standard is the requirement,
+not a shipped feature. (Recorded in `docs/DECISIONS.md`, dated entry
+2026-11-28, docs-audit Lane A.)
+
 ## §16. Verify and report honestly
 
 - Use exactly the evidence labels in `AGENTS.md` §5. For each scoped
@@ -1640,6 +1758,7 @@ were re-measured from that tree (see the rows below).
 | §15.1 /wallets manage | `wallet-management.tsx:312`; `vault.ts:1066`, `:969` (MAX 40) | /wallets screen undescribed; rename/delete absent before `65edc90` | Implemented (fix programme, 2026-11-28) |
 | §15.2 mobile overflow pattern | `dialog.tsx:155-166`; `add-token.tsx:715-717`; `chain-search-select.tsx:292-294` | Overflow pattern undescribed; earlier "no overflow" claim wrong for the fixed dialog | Fixed in place (Lane A `aea4b58`, 2026-11-28) |
 | §19 Lane D audit | This lane, hands-on, 0 Sol calls; gates at `7f24ef1` | Not in the guide before | Added |
+| §20 Owner-configured API keys + Relay proxy | `apps/web/src/wallet/buy-providers.ts` (six `VITE_*` env vars, `readEnv`); `relay-quotes.ts` (`RELAY_PROXY_URL_ENV`, `relayProxyBaseUrl()`, `fetchRelayQuote`, `parseQuote`); `screens/swap.tsx:579`; `app/security-headers.ts:55` (CSP, proxy origin at deploy time); no `apiKey` anywhere in `apps/web/src/wallet/adapters/`; `stonfi-quotes.ts:307` (`flexibleIntegratorFee` only) | Not in the guide before | Added (docs-audit Lane A, 2026-11-28, owner orders 2026-11-28 ~20:40 IST; Relay proxy to AI-usable depth per the 2026-11-28 ~20:46 IST refinement) |
 
 **Not verified first-hand (re-check pass, 2026-11-26; providers
 programme additions, 2026-11-26):** Relay quotes with a live proxy (no
@@ -1841,3 +1960,89 @@ passed and total JS 4,482,622 → 4,509,097 at `7f24ef1`.
 **Dashboard row count — FIXED (Lane 2, 2026-11-28, `3db591e`, hands-on, 0 Sol calls):** the live count varied 41–43 because failed rows rendered as a plain `<li>` with no link — the count of navigable rows was 43 minus the rows whose balance fetch had failed (native Dogecoin, SoChain 429s on the shared egress with BlockCypher CORS-blocked as its only fallback; TRON USDT, Trongrid `triggerconstantcontract` 429 — the native TRX row survives the same 429s via its PublicNode fallback, the token path has none). The `<li>` count itself was always 43 (`e6a2727` held: failed rows stay visible). Fix in `screens/asset-rows.tsx`: every main-list row is a link to its asset detail in every state — ready, failed, or still loading — in both the list and table variants, so the linked-row count is the full 43 whatever the network does; watch-only rows are never links (a watched address can never send). Verified first-hand in the real browser (production build, fresh disposable test wallet per viewport, phrases never logged): 5 reloads at 390 px + 5 at 1280 px, `li` = 43 and linked = 43 at every sample (40 samples, including mid-load and with 1 balance failed), with count logs + screenshots. Gates at `3db591e`: tsc 0, eslint clean, build exit 0, vitest 3,428 passed + 5 skipped (129 files) on the worktree as tested (which also held other lanes' uncommitted test edits; this lane's own suites, dashboard + asset-list, 61 passed), total JS 4,509,662 / 6,000,000.
 
 **Docs audit, Lane A (2026-11-28, hands-on, 0 Sol calls).** The guide was re-read in full (1,831 lines) against token-gaps `ceade79` and each section re-traced to the code it cites. Current-state figures corrected in place: vitest 3,416 → 3,429 passed (gates at `1253bf6`) and total JS 4,509,097 → 4,509,662 (Part A status, Bundle note, §0.2, §3); Buy headroom 1,517,378 → 1,490,338 (§12); `SUPPORTED_CHAINS` line `chains.ts:1687` → `:1731` (§2); Gnosis history record `chains.ts:812-815` → `:832-833` (§2.7); `send.ts:987` "Nothing here broadcasts" → the per-signer occurrences (EVM `:1165`, TRX `:1715`, TRC-20 `:2487`) (§5). Android state corrected in place: Step 4 DONE (`f9f312b`, 2026-11-28 — AAR in-tree, `ENGINE_BINDING_AVAILABLE = true` at `DerivationPolicy.kt:199`, on-device derivation bound, execution still unverified); Step 3 added the `INTERNET` permission and the data layer (§2.6, §15, §17 trace row). Two registry lags found, not fixed here (data, not docs): `registry/capabilities.json` `chainSupport.history` I&V is 17 while `chains.ts` history covers 18 (Gnosis, `d06a224`, never reached the registry); `registry/chains.json` is stale at `ceade79` — last regenerated at `b65e8c3` from `7efba14`, it has no DeFiBit BSC RPC (`ff63077`), so regeneration is owed (`ci.yml:221` runs the generator's `--check`). The 3 open findings (vite-dev WASM 404, TRON USDT PublicNode fallback, mmdc persistent reinstall) are still open and are not claimed fixed anywhere in this guide.
+
+## §20. Owner-configured API keys and the Relay proxy — "I have a key, what do I do?" (2026-11-28, docs-audit Lane A)
+
+This section answers one question: a user HAS an API key (or a proxy
+endpoint) — where does it go, what does it unlock, and what does the
+app show without it? No key value is given anywhere here; no key value
+has been invented. All config paths were verified first-hand in the
+code at token-gaps `1a85258`.
+
+### §20.1. History keys — the 4 blocked chains (BSC, opBNB, Fantom, Metis)
+
+**No key slot exists today.** No `apiKey` appears anywhere in
+`apps/web/src/wallet/adapters/` (verified 2026-11-28 at token-gaps
+`1a85258`). The four chains are balance-only; their history stays
+blocked, never faked (Doc 06 §3). Per-chain probe reasons
+(DECISIONS §46): BSC — Etherscan V2 refuses keyless, no Blockscout,
+BscScan V1 needs a key; opBNB — Etherscan V2 502s, opbnbscan is
+HTML-only with no JSON API, no Blockscout; Fantom — Etherscan V2
+dropped the chain id, Blockscout 503, ftmscout 522; Metis — Andromeda
+returns real transactions to curl but sends no CORS header, so the
+browser blocks every fetch (wiring was built, then reverted).
+
+**Options for a user who has a key:** (a) a free Etherscan/BscScan API
+key, (b) a NodeReal free-tier key, or (c) Blockscout PRO. Which one,
+and where it goes, is an owner decision and code work — there is no
+env var or config file to drop a key into today, and no key value
+should be invented. **What the app shows without a key:** balances
+load; history for these four chains stays blocked with the honest
+blocked state.
+
+### §20.2. Buy-provider keys
+
+Six build-time env vars, read via `readEnv` in
+`apps/web/src/wallet/buy-providers.ts` (trims whitespace; empty =
+unset) — full table in §12.1: `VITE_RAMP_HOST_API_KEY` (public by
+Ramp's design), `VITE_MOONPAY_API_KEY` (publishable `pk_live_…` only —
+the secret `sk_live_…` is never read), `VITE_ONRAMPER_API_KEY`,
+`VITE_BANXA_PARTNER_REF` (a partner subdomain, not a key),
+`VITE_MERCURYO_WIDGET_ID`, `VITE_COINBASE_ONRAMP_APP_ID`
+(`onramp.ts:73`). Transak has no env var and no builder: its widget
+URL is minted server-side with the API secret (POST refresh-token →
+POST auth/session → widgetUrl, valid 5 minutes, single-use sessionId)
+and its readiness is always `needs-backend`. **What the app shows
+without a key:** each provider's Buy row says "Not set up yet —
+{setupCopy}" (`receive.tsx:200`).
+
+### §20.3. Relay proxy — implementable spec
+
+Full spec: §12A item 2, "Relay proxy — implementable spec". The
+contract in brief, so this section stands alone: the app never calls
+`https://api.relay.link` directly — it calls `POST
+${proxyUrl}/quote/v3` and `GET ${proxyUrl}/chains` on a proxy whose
+base URL comes from the build-time env `VITE_RELAY_PROXY_URL`
+(`relayProxyBaseUrl()` in `apps/web/src/wallet/relay-quotes.ts`;
+empty by default). The proxy appends the secret Relay API key
+server-side; the key is NEVER in the browser (no `apiKey` parameter
+anywhere in `relay-quotes.ts`, by design) — or a short-lived access
+token minted by a backend (15-minute expiry) goes in the
+`Authorization: Bearer` header. The quote request body is exactly
+`user`, `recipient`, `originChainId`, `destinationChainId`,
+`originCurrency`, `destinationCurrency`, `amount` (base units),
+`tradeType: "EXACT_INPUT"`; the 15 s timeout, the strict v3 response
+parsing (`requestId`, non-empty `steps`, `details.currencyOut`
+`amount`/`minimumAmount`/`amountUsd`, `fees` summed to `feeUsd`,
+`originGas` to `gasUsd`), the status mapping (`ok` / `no-route` /
+`not-configured` / `unavailable`), and the chain-id and
+currency-address tables are all specified in §12A. The proxy's origin
+must be added to `connect-src` in
+`apps/web/src/app/security-headers.ts` at deploy time — the CSP cannot
+learn a host at runtime. **What the app shows without a proxy:** the
+Relay row says plainly it is not set up ("Relay quotes need a proxy
+or access-token endpoint — not set up yet") and no Relay request is
+made (`swap.tsx:19-21`, `relay-quotes.ts` returns `not-configured`
+without touching the network). **Owner must provide:** Relay Dashboard
+account + App + API key, and the proxy/token endpoint.
+
+### §20.4. STON.fi integrator addresses
+
+**No config slot exists.** `buildStonfiQuoteRequest` takes only
+fromChain / fromToken / toChain / toToken / fromAmountBaseUnits, and
+the only fee field in the tree is `flexibleIntegratorFee: true`
+(`stonfi-quotes.ts:307`). Quotes work without integrator addresses
+(live: 1 USDT on TON → 0.972388 USDC on Base). Supplying
+destination-chain integrator addresses and the fee choice
+(`integratorFeePips` / `referralValue` bps) is code work, not an env
+var — do not invent an env var name for them.

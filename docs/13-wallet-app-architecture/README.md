@@ -475,6 +475,87 @@ Per-chain endpoint table (registry order is primary first; the adapter tries the
 
 Two cross-checks against the code: the adapters hardcode the same defaults as the registry (ETH adapter pins `ethereum-rpc.publicnode.com`, the BTC adapter pins mempool.space then Blockstream, the Solana adapter pins PublicNode for both endpoints (solana-rpc.publicnode.com primary, solana.publicnode.com backup)) — registry and adapter agree. And `https://ethereum.publicnode.com` appears only in a comment (`apps/web/src/engine/destination.ts:548`, a chain-id probe note) — it is **not** a configured endpoint, so it is not listed above. The owner can add a custom endpoint per chain in the RPC manager; `validateRpcEndpoint` (`chains.ts`) requires https only, no embedded credentials, no query or fragment, at most 3 endpoints per chain (`MAX_RPC_ENDPOINTS_PER_CHAIN`), and registry endpoints can never be removed — only demoted.
 
+#### Buy-provider keys and the Relay proxy (owner-configured, 2026-11-28, docs-audit Lane A)
+
+**Buy-provider keys.** Six build-time env vars, read via `readEnv` in
+`apps/web/src/wallet/buy-providers.ts` (trims whitespace; empty =
+unset): `VITE_RAMP_HOST_API_KEY` (public by Ramp's design),
+`VITE_MOONPAY_API_KEY` (publishable `pk_live_…` only — the secret
+`sk_live_…` is never read), `VITE_ONRAMPER_API_KEY`,
+`VITE_BANXA_PARTNER_REF` (a partner subdomain, not a key),
+`VITE_MERCURYO_WIDGET_ID`, `VITE_COINBASE_ONRAMP_APP_ID`
+(`onramp.ts:73`). Transak has no env var and no builder: its widget
+URL is minted server-side with the API secret (POST refresh-token →
+POST auth/session → widgetUrl, valid 5 minutes, single-use sessionId)
+and its readiness is always `needs-backend`. Without a key, each
+provider's Buy row says "Not set up yet — {setupCopy}"
+(`receive.tsx:200`). Full table: CREATE-THIS-SPEC §12.1; "I have a
+key" section: §20.2.
+
+**Relay proxy — implementable spec.** Full spec: CREATE-THIS-SPEC
+§12A item 2 (grounded in `apps/web/src/wallet/relay-quotes.ts`,
+`apps/web/src/screens/swap.tsx`,
+`apps/web/src/app/security-headers.ts` at token-gaps `1a85258`). The
+contract: the app never calls `https://api.relay.link` directly — it
+calls `POST ${proxyUrl}/quote/v3` and `GET ${proxyUrl}/chains` on a
+proxy whose base URL comes from the build-time env
+`VITE_RELAY_PROXY_URL` (`relayProxyBaseUrl()`; trimmed, trailing
+slashes stripped, empty by default → `null`). The proxy forwards
+those paths to Relay's API and appends the secret API key
+server-side; the key is NEVER in the browser (no `apiKey` parameter
+anywhere in `relay-quotes.ts`, by design) — or a short-lived access
+token minted by a backend (15-minute expiry) goes in the
+`Authorization: Bearer` header. What the proxy does beyond forwarding
+is NOT defined by this code — the code requires only that the proxy
+accept the POST body below at `/quote/v3` and return Relay's v3
+response; the key-appending mechanism is Relay's API contract, not
+this code's. Request body, exactly: `user` (sender address),
+`recipient`, `originChainId` (number), `destinationChainId` (number),
+`originCurrency`, `destinationCurrency` (address strings), `amount`
+(string, base units), `tradeType: "EXACT_INPUT"`; 15 s timeout
+(`RELAY_QUOTE_TIMEOUT_MS`). Response, parsed strictly by
+`parseQuote` (anything else is malformed → `unavailable`, never a
+partial quote): `requestId` (non-empty string), `steps` (non-empty
+array — each step carries `status`/`data`/`check` directly, no `items`
+array; the parser only counts them), `details` (object),
+`details.currencyOut` with `amount` and `minimumAmount` (base units)
+and `amountUsd` (decimal string or null); `details.timeEstimate` →
+`executionDurationSeconds`; `fees` components' `usd` summed
+(`toFixed(4)`) → `feeUsd`; `originGas.amountUsd` (preferred) or
+`originGas.usd` → `gasUsd`. Statuses: `ok`; `no-route` (chain/token
+not covered, or Relay's error body matches `NO_ROUTE`/`QUOTE` or "no
+route"); `not-configured` (no proxy set, or HTTP 401); `unavailable`
+(network error, non-JSON, malformed quote, HTTP 429, or any other
+non-OK). Chain ids: EVM chains use their own id when Relay lists
+them; non-EVM use Relay's own — Bitcoin 8253038, Solana 792703809,
+TON 224235520, TRON 728126428, XRP 537724. Currency addresses: EVM
+native `0x0000000000000000000000000000000000000000`, EVM tokens the
+contract; SOL native `11111111111111111111111111111111`; BTC native
+`bc1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmql8k8`; TON native
+`EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c`; TRX native
+`T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb`; TRON USDT
+`TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`; XRP native `xrp`. `GET
+${proxyUrl}/chains` must return `{ chains: [...] }` of `{ id, name,
+vmType, tokenSupport, disabled }`. CSP: the proxy's origin must be
+added to `connect-src` in `security-headers.ts` at deploy time — the
+CSP cannot learn a host at runtime (`security-headers.ts:55`); no
+Relay/proxy origin is in `connect-src` today. How the app calls it:
+`swap.tsx:579` — `fetchRelayQuote({ fromChain, toChain, fromToken,
+toToken, fromAmountBaseUnits, fromAddress, toAddress })` on a quote
+attempt, alongside LI.FI and STON.fi; only live quotes compete, the
+cheapest wins (Relay, then STON.fi, then LI.FI on ties). With no
+proxy, the Relay row says plainly it is not set up ("Relay quotes
+need a proxy or access-token endpoint — not set up yet") and no Relay
+request is made.
+
+**STON.fi integrator addresses.** No config slot exists:
+`buildStonfiQuoteRequest` takes only fromChain / fromToken / toChain /
+toToken / fromAmountBaseUnits, and the only fee field in the tree is
+`flexibleIntegratorFee: true` (`stonfi-quotes.ts:307`). Quotes work
+without integrator addresses (live: 1 USDT on TON → 0.972388 USDC on
+Base). Supplying them is code work, not an env var — do not invent an
+env var name for them.
+
 #### History indexers — summary
 
 The full per-chain history table and the indexer provider entries live in [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer) ("RPC is not an indexer"), where a reader of history looks. The summary: 18 of 87 chains have a verified keyless history indexer — Bitcoin (mempool.space / Blockstream), Ethereum, Polygon, Arbitrum, Optimism, Base, Celo, Scroll, Aurora (Blockscout instances), Avalanche and Mantle (Routescan), TRON (TronGrid), TON (TonCenter), Solana (Solana RPC), Litecoin (Litecoinspace / BlockCypher), Dogecoin (SoChain / BlockCypher), Linea (Etherscan V2, wired 2026-11-24), Gnosis (gnosisscan.io keyless, `d06a224`, 2026-11-28). Four chains have **no** working keyless indexer and their history stays blocked, never faked: **BNB Smart Chain, opBNB, Metis, Fantom** — an Etherscan API key or another indexer is an owner decision, not a code fix.

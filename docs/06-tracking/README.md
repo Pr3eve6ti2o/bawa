@@ -147,6 +147,27 @@ Per-chain history status (probed live 2026-11-23 unless noted):
 
 The four blocked chains — BNB Smart Chain, opBNB, Metis, Fantom — were each probed and no keyless public history indexer answers for them (the Etherscan-family hosts 404 or 403). Their history stays blocked, never faked. (Linea was blocked until 2026-11-24, when it was wired via Etherscan V2 — see the table above — and Gnosis was blocked until 2026-11-28, when it was wired via gnosisscan.io keyless, `d06a224`.) Unblocking them needs an Etherscan API key or another indexer — an owner decision, because it is a keyed service. Note the stale comment in `apps/web/src/wallet/adapters/index.ts` (`EVM_HISTORY_SOURCES`) still says "the other twelve non-ETH EVM chains stay unwired": it predates the Lane B verification above and is out of date.
 
+### History keys — "I have a key, what do I do?" (2026-11-28, docs-audit Lane A)
+
+**No key slot exists today.** No `apiKey` appears anywhere in
+`apps/web/src/wallet/adapters/` (verified 2026-11-28 at token-gaps
+`1a85258`). The four blocked chains are balance-only; history is
+blocked, never faked. Per-chain probe reasons (DECISIONS §46): BSC —
+Etherscan V2 refuses keyless, no Blockscout, BscScan V1 needs a key;
+opBNB — Etherscan V2 502s, opbnbscan is HTML-only with no JSON API, no
+Blockscout; Fantom — Etherscan V2 dropped the chain id, Blockscout
+503, ftmscout 522; Metis — Andromeda returns real transactions to
+curl but sends no CORS header, so the browser blocks every fetch
+(wiring was built, then reverted).
+
+**Options for a user who has a key:** (a) a free Etherscan/BscScan API
+key, (b) a NodeReal free-tier key, or (c) Blockscout PRO. Which one,
+and where it goes, is an owner decision and code work — there is no
+env var or config file to drop a key into today, and no key value
+should be invented. **What the app shows without a key:** balances
+load; history for these four chains stays blocked with the honest
+blocked state. (Full "I have a key" section: CREATE-THIS-SPEC §20.1.)
+
 ## 4. UTXO tracking vs account tracking
 
 - **BTC:** Track which outputs belong to the wallet, which are unspent or spent, and which transaction created or spent each output. Keep the state UTXO-oriented. Treat xpubs as **sensitive public material**: they can reveal derived addresses and link their activity.
