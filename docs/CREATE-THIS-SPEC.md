@@ -28,7 +28,7 @@ branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
-the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 129 files / 3,416 passed + 5 skipped (gates at `7f24ef1`, 2026-11-28 — Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit; the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef`, 2026-11-28 — wobbly-cards + Starknet QR warning + web follow-ups, verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15`, P2/P3 merge + bughunt-v2-fixes; the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
+the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 129 files / 3,429 passed + 5 skipped (gates at `1253bf6`, 2026-11-28 — honest-remains Lane 4, verified first-hand on loud-stone; the earlier 129-file / 3,416-passed figure was the gates at `7f24ef1`, 2026-11-28 — Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit; the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef`, 2026-11-28 — wobbly-cards + Starknet QR warning + web follow-ups, verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15`, P2/P3 merge + bughunt-v2-fixes; the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -49,7 +49,7 @@ calls): removed WalletConnect (§11), added the Buy provider picker
 table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
-**Bundle note:** the merged tree passes the budget — total JS 4,509,097 vs the 6,000,000 budget (§0.2), passing by 1,490,903 bytes; largest chunk 2,906,616 at `7f24ef1` (under the 3,050,000 cap). Measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates, verified first-hand on loud-stone). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
+**Bundle note:** the merged tree passes the budget — total JS 4,509,662 vs the 6,000,000 budget (§0.2), passing by 1,490,338 bytes; largest chunk 2,906,616 at `7f24ef1` (under the 3,050,000 cap; not re-measured at `1253bf6`). Measured at `1253bf6` (2026-11-28, honest-remains Lane 4, verified first-hand on loud-stone). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
@@ -84,7 +84,7 @@ above — Part A is the six lanes only.
    (route chunk 10,085 B) — none of it on the cold-load path (home cold
    load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
    The WalletConnect lazy chunk (348,194 B) was removed with the feature
-   in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Re-measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates): 4,509,097 bytes total JS, passing by 1,490,903 bytes; largest chunk 2,906,616 bytes. Whether the gate should exclude lazy
+   in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Re-measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates): 4,509,097 bytes total JS, passing by 1,490,903 bytes; largest chunk 2,906,616 bytes. Re-measured at `1253bf6` (2026-11-28, honest-remains Lane 4 gates, verified first-hand on loud-stone): 4,509,662 bytes total JS, passing by 1,490,338 bytes; largest chunk not re-measured at this tip. Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
 3. **Visual direction: style B (owner pick, 2026-11-27).** Polished financial style everywhere — flat, hairline, tabular, real semantic colour — with illustration kept only for brand moments, plus a tiny bounded fraction of the paper/comic theme (the Welcome illustration, at most one small brand touch per screen — the QR card templates were paper/comic until Lane B flattened them to style B on 2026-11-28, §8). This supersedes the 2026-11-20 drawing-illustration order and its four-colour cap: the cap no longer governs new work. Transition state, stated honestly: the current tree still carries the four `--bawa-*` tokens in `apps/web/src/ui/styles/globals.css:60-63` (`--bawa-paper #FFFDF7`, `--bawa-ink #2B2B2B`, `--bawa-coral #FF6B4A`, `--bawa-sun #FFD93B`) while the P1 style lane migrates screens — do not cite the cap as the current rule, and do not re-impose it on migrated screens. The single confined exception that STANDS is the QR card: exactly ten named `--qr-*` tokens
    (`--qr-teal`, `--qr-teal-deep`, `--qr-teal-band`, `--qr-teal-copy`,
@@ -151,7 +151,7 @@ The 65 break down as 45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other) + 3
 OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) — whose full
 fact records live in the same file (cardano `:1832`, kaspa `:1859`,
 starknet `:1886`), not in a separate file. `SUPPORTED_CHAINS`
-(`chains.ts:1687`) holds all 87.**
+(`chains.ts:1731`) holds all 87.**
 The expansion programme wired 84 into the app (adapters, prices,
 icons, explorers; `docs/EXPANSION-PROGRAMME.md`); Lane B added the
 three, so the app now wires 87. The 22-row capability
@@ -310,23 +310,27 @@ registry" would rebuild what already exists; the work is completion, not creatio
 
 **Registry v4 event (2026-11-26, commit `2a0fa75`):** the validator was upgraded from v3 to v4 (87-chain vocabulary from the schema enum; the v4 profiles rule), history I&V went from 10 to 17 chains, and the schema enum went from 84 to 87 (+cardano, kaspa, starknet). The validator exits 0 with 0 errors; `docs/index.md` records the re-earned IMPLEMENTED_AND_VERIFIED status.
 
-**Implemented (Android Step 1, 2026-11-27, commit `58d85c5`):** the web wallet's data is exported as generated, versioned JSON — `registry/chains.json` (87 chains, 169 RPC endpoints, 4 testnets, `sourceCommit`, `coverage`) + `registry/tokens.json` (the 21 default tokens, `tokens.ts:182`) — generated by `apps/web/scripts/generate-android-registry.mjs` from `apps/web/src/wallet/*.ts` and `registry/capabilities.json` (current files generated from `7efba14`). This was the step that unblocked the Android programme: data export first, toolchain in parallel, then the data layer. Lanes must read chain/token data from the export; no Android lane may hand-write chain data from the TypeScript files.
+**Implemented (Android Step 1, 2026-11-27, commit `58d85c5`):** the web wallet's data is exported as generated, versioned JSON — `registry/chains.json` (87 chains, 169 RPC endpoints, 4 testnets, `sourceCommit`, `coverage`) + `registry/tokens.json` (the 21 default tokens, `tokens.ts:182`) — generated by `apps/web/scripts/generate-android-registry.mjs` from `apps/web/src/wallet/*.ts` and `registry/capabilities.json` (current files generated from `7efba14`, last regenerated at `b65e8c3`, 2026-11-27). **Stale at `ceade79` (2026-11-28, Lane A docs audit):** the export does not contain the BSC third RPC (`https://bsc-dataseed1.defibit.io`, `ff63077`) — `registry/chains.json` has no DeFiBit entry while `chains.ts` at this tip does. Regeneration is owed (a data change, not a docs fix); `ci.yml:221` runs the generator's `--check`. This was the step that unblocked the Android programme: data export first, toolchain in parallel, then the data layer. Lanes must read chain/token data from the export; no Android lane may hand-write chain data from the TypeScript files.
 
 **Why Android needs it — the data gap (A1–A12).** The Android starter
 (`apps/android`) is a watch-only UI starter, not a wallet, and the
 guide must not let an agent assume otherwise:
-- Chain data: 4 derivation-path templates + a confirmation-policy
+- Chain data (as of Step 1; closed by Step 3): 4 derivation-path templates + a confirmation-policy
   evaluator for BTC/ETH only, as metadata — `DerivationPolicy.kt:5-10`
   ("Policy metadata only; this watch-only starter does not derive
   addresses"), `ConfirmationPolicy.kt`. No chain registry, no RPCs,
-  no tokens, no prices, no icons in the app.
-- No network permission: zero `<uses-permission>` in
+  no tokens, no prices, no icons in the app — until Step 3 (`e20cee6`,
+  2026-11-28) landed the data layer from the Step 1 export: 87 chains,
+  169 RPCs, 4 testnets, 21 tokens.
+- No network permission (as of Step 1; closed by Step 3): zero `<uses-permission>` in
   `AndroidManifest.xml` — the app cannot reach any network today.
-- No data layer: no Room, Ktor, Retrofit or OkHttp in the build.
-- No on-device derivation: `ENGINE_BINDING_AVAILABLE = false`
-  (`apps/android/core/src/main/java/com/bawa/wallet/core/DerivationPolicy.kt:208`) — no Trust Wallet Core AAR exists yet (Step 4 is building it from the cloned source, owner-authorized 2026-11-28), so on-device derivation is OPEN.
+  Step 3 added `INTERNET` (`AndroidManifest.xml:8`).
+- No data layer (as of Step 1; closed by Step 3): no Room, Ktor, Retrofit or OkHttp in the build.
+  Step 3 (`e20cee6`) built the data layer over the Step 1 JSON export.
+- On-device derivation: `ENGINE_BINDING_AVAILABLE = true`
+  (`apps/android/core/src/main/java/com/bawa/wallet/core/DerivationPolicy.kt:199`) — Step 4 is DONE (`f9f312b`, 2026-11-28): the Trust Wallet Core 4.8.4 AAR is built from source and in-tree (`apps/android/core/libs/wallet-core-4.8.4.aar`; see `apps/android/TWC-AAR.md`); on-device derivation is bound, not stubbed. Execution on-device is still unverified.
 - Tests: 77 `@Test` annotations counted across the Android tree (Step 3, `e20cee6` — was 57 across 5 Kotlin test files before Step 3).
-- Toolchain — INSTALLED and proven (2026-11-27, loud-stone): JDK 17 (OpenJDK 17.0.21.1), Android SDK at `/home/boxd/Android/Sdk` with platform-tools 37.0.3, platforms `android-34` + `android-35`, build-tools 34.0.0 + 35.0.0, cmake 3.22.1, ndk 27.2.12479018. `./gradlew assembleDebug` succeeds (clean build re-run first-hand by the docs-currency lane, BUILD SUCCESSFUL in 32 s; the earlier proven run took 1 m 49 s). The build needs `ANDROID_HOME=/home/boxd/Android/Sdk` in the shell (or `sdk.dir` in `local.properties`) — without it Gradle fails with "SDK location not found". AGP is 8.2.2 with compileSdk 35 (`build.gradle.kts:3-4,12`). Step 3 of the Android programme is DONE (`e20cee6`, 2026-11-28, hands-on, 0 Sol calls): the data layer from the Step 1 export — 87 chains, 169 RPCs, 4 testnets, 21 tokens, 77 unit tests, APK 53,712,159 bytes. Step 4 (Trust Wallet Core AAR build from the cloned source) is RUNNING, owner-authorized 2026-11-28 — do not state it as done; steps 5–6 still await it. Steps 3–6 were BLOCKED before that: the Step 3 lane's report was removed by safety classifiers before the coordinator could see it, and the coordinator was instructed not to continue that request — the same pattern that blocked Step 2. No on-device derivation exists in the app yet; that work is Step 4, not a toolchain gap.
+- Toolchain — INSTALLED and proven (2026-11-27, loud-stone): JDK 17 (OpenJDK 17.0.21.1), Android SDK at `/home/boxd/Android/Sdk` with platform-tools 37.0.3, platforms `android-34` + `android-35`, build-tools 34.0.0 + 35.0.0, cmake 3.22.1, ndk 27.2.12479018. `./gradlew assembleDebug` succeeds (clean build re-run first-hand by the docs-currency lane, BUILD SUCCESSFUL in 32 s; the earlier proven run took 1 m 49 s). The build needs `ANDROID_HOME=/home/boxd/Android/Sdk` in the shell (or `sdk.dir` in `local.properties`) — without it Gradle fails with "SDK location not found". AGP is 8.2.2 with compileSdk 35 (`build.gradle.kts:3-4,12`). Step 3 of the Android programme is DONE (`e20cee6`, 2026-11-28, hands-on, 0 Sol calls): the data layer from the Step 1 export — 87 chains, 169 RPCs, 4 testnets, 21 tokens, 77 unit tests, APK 53,712,159 bytes. Step 4 (Trust Wallet Core AAR build from the cloned source) is DONE (`f9f312b`, 2026-11-28): the 4.8.4 AAR is in-tree and `ENGINE_BINDING_AVAILABLE` is `true` — on-device derivation is bound, execution still unverified. Steps 5–6 still await it. Steps 3–6 were BLOCKED before that: the Step 3 lane's report was removed by safety classifiers before the coordinator could see it, and the coordinator was instructed not to continue that request — the same pattern that blocked Step 2. On-device derivation is bound (Step 4 done), execution still unverified; that work is Step 4's, not a toolchain gap.
 - **Policy tension, recorded not resolved:** watch-only is
   mainnet-only by owner order 2026-11-23 (`docs/DECISIONS.md`,
   Gap 21) — while the Android starter's own header states testnet-only
@@ -346,7 +350,7 @@ keyless history indexer and its history stays blocked, never faked.
 - **Gnosis — wired 2026-11-28 (`d06a224`), keyless.**
   `https://gnosisscan.io/api` (Etherscan v1 API) with
   `historyExplorerBase` `https://gnosisscan.io`
-  (`apps/web/src/wallet/chains.ts:812-815`).
+  (`apps/web/src/wallet/chains.ts:832-833`).
   `GET /api?module=account&action=txlist&address=<addr>&page=1&offset=5&sort=desc`
   returns status 1 with real transactions and message "OK". The
   adapter branches on the host (`apps/web/src/wallet/adapters/evm.ts:172-181`,
@@ -402,7 +406,7 @@ keyless history indexer and its history stays blocked, never faked.
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
-  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 129 files; the 3,416-passed + 5-skipped figure is the gates at `7f24ef1` (2026-11-28, Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit); the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef` (2026-11-28, wobbly-cards + Starknet QR warning + web follow-ups), verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15` (P2/P3 merge + bughunt-v2-fixes); the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
+  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 129 files; the 3,429-passed + 5-skipped figure is the gates at `1253bf6` (2026-11-28, honest-remains Lane 4, run first-hand on loud-stone); the earlier 129-file / 3,416-passed figure was the gates at `7f24ef1` (2026-11-28, Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit); the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef` (2026-11-28, wobbly-cards + Starknet QR warning + web follow-ups), verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15` (P2/P3 merge + bughunt-v2-fixes); the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -464,7 +468,7 @@ implemented (owner order 2026-11-20). Implement and describe it as follows.
 
 - Offline signing and unsigned-transaction construction exist in the web
   starter (`apps/web/src/wallet/send.ts`); broadcast is disabled (§0.1).
-  `send.ts:987` — "Nothing here broadcasts."
+  `send.ts:65-66` — "no module broadcasts on mainnet: broadcast stays DISABLED until separately authorised"; each offline signer repeats "Nothing here broadcasts" (EVM `:1165`, TRX `:1715`, TRC-20 `:2487`).
 - **Sign (local-sign verified): BTC, ETH, TRX.** TON local-sign is
   verified with two blocks: fee-quote is blocked (a TON fee depends on
   the unsigned message, which is Phase 4 work — no fee number is ever
@@ -1060,7 +1064,7 @@ The survey's verified facts, which Lane D implemented from:
   aimed at self-custody wallets as the destination.
 - **Lazy-load only.** Measured via Bundlephobia: **7,473 B minified /
   2,841 B gzip** — 7,473 B alone exceeds the ~5,304 B headroom at survey
-  time (1.4× over; headroom is now 1,517,378 B under the 6,000,000 budget — see §0.2, 2026-11-28). It is loaded by dynamic import on the Buy screen
+  time (1.4× over; headroom is now 1,490,338 B under the 6,000,000 budget — see §0.2, 2026-11-28). It is loaded by dynamic import on the Buy screen
   only, by design. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
 - **The SDK is NOT bundled.** `@coinbase/cbpay-js` 2.4.0 (MIT) is not
@@ -1470,14 +1474,20 @@ The survey's verified facts, which Lane F implemented from:
   Android foundation: **Tether WDK Starter Kotlin**, **UI layer only**,
   **Apache-2.0**, in `apps/android`. The Android starter is a watch-only
   UI starter, not a wallet: 4 derivation-path templates + a
-  confirmation-policy evaluator for BTC/ETH only, no chain registry,
-  no RPCs/tokens/prices/icons, no network permission, no data layer,
-  no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP
+  confirmation-policy evaluator for BTC/ETH only as metadata, and — as
+  of Step 1 — no chain registry, no RPCs/tokens/prices/icons, no network
+  permission, no data layer, no on-device derivation
+  (`ENGINE_BINDING_AVAILABLE = false`). Step 3 closed the data gap
+  (`e20cee6`, 2026-11-28: data layer from the Step 1 export, 87 chains,
+  169 RPCs, 4 testnets, 21 tokens; `INTERNET` permission added) and
+  Step 4 is DONE (`f9f312b`, 2026-11-28: Trust Wallet Core 4.8.4 AAR
+  in-tree, `ENGINE_BINDING_AVAILABLE = true`, on-device derivation
+  bound, execution still unverified). AGP
   8.2.2 + compileSdk 35. The JSON export in §2.6 exists (Step 1,
   2026-11-27) and the toolchain is installed and proven
   (`./gradlew assembleDebug` succeeds) — Android Step 3 is DONE
-  (`e20cee6`, 2026-11-28) and Step 4 (AAR build) is RUNNING,
-  owner-authorized 2026-11-28; steps 5–6 still await it — not the
+  (`e20cee6`, 2026-11-28) and Step 4 is DONE (`f9f312b`, 2026-11-28);
+  steps 5–6 still await it — not the
   toolchain or the export — and the owner still has to resolve
   the mainnet-only vs testnet-only tension (§2.6).
 - Style B governs the visual direction (§0.3); the four-colour cap no
@@ -1596,7 +1606,7 @@ were re-measured from that tree (see the rows below).
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |
 | §2.4 XRP/Stellar/NEAR | Coordinator first-hand registry check, 2026-11-25 (survey) | Not previously recorded in the guide | Added |
 | §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1832` (cardano), `:1859` (kaspa), `:1886` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
-| §2.6 Android JSON export + toolchain | `registry/chains.json` (87 chains, 169 RPCs, 4 testnets, `sourceCommit 7efba14`), `registry/tokens.json` (21 tokens); `apps/web/scripts/generate-android-registry.mjs`; `./gradlew assembleDebug` BUILD SUCCESSFUL (clean, 32 s, 2026-11-27) | Was "Proposal (not yet implemented)" with no SDK/JDK on loud-stone | Fixed in place (docs-currency Lane 2, 2026-11-27; export Step 1 commit `58d85c5`; steps 3–6 were BLOCKED, Step 3 report removed by safety classifiers; Step 3 DONE (`e20cee6`, 2026-11-28), Step 4 running, owner-authorized 2026-11-28) |
+| §2.6 Android JSON export + toolchain | `registry/chains.json` (87 chains, 169 RPCs, 4 testnets, `sourceCommit 7efba14`), `registry/tokens.json` (21 tokens); `apps/web/scripts/generate-android-registry.mjs`; `./gradlew assembleDebug` BUILD SUCCESSFUL (clean, 32 s, 2026-11-27) | Was "Proposal (not yet implemented)" with no SDK/JDK on loud-stone | Fixed in place (docs-currency Lane 2, 2026-11-27; export Step 1 commit `58d85c5`; steps 3–6 were BLOCKED, Step 3 report removed by safety classifiers; Step 3 DONE (`e20cee6`, 2026-11-28), Step 4 DONE (`f9f312b`, 2026-11-28 — AAR in-tree, `ENGINE_BINDING_AVAILABLE` true); export stale at `ceade79` — BSC third RPC `ff63077` not in `registry/chains.json`, regeneration owed, Lane A docs audit 2026-11-28) |
 | §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files — the 2,945 + 5 skipped figure is Lane C's loud-stone run, not reproduced in this sandbox, 2026-11-26; smoke 440; dinero.js dropped) |
 | §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:85`, `:83`; `auto-lock.ts:13-15` | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |
 | §5 offline signing | `apps/web/src/wallet/send.ts:2527-2530` (Solana); capability table in `WALLET_BUILDER.md` | Correct; SOL `@solana/web3.js` route added from code | Verified |
@@ -1829,3 +1839,5 @@ stacked-band difference; (§3 + Part A) test counts 3,351 → 3,416
 passed and total JS 4,482,622 → 4,509,097 at `7f24ef1`.
 
 **Dashboard row count — FIXED (Lane 2, 2026-11-28, `3db591e`, hands-on, 0 Sol calls):** the live count varied 41–43 because failed rows rendered as a plain `<li>` with no link — the count of navigable rows was 43 minus the rows whose balance fetch had failed (native Dogecoin, SoChain 429s on the shared egress with BlockCypher CORS-blocked as its only fallback; TRON USDT, Trongrid `triggerconstantcontract` 429 — the native TRX row survives the same 429s via its PublicNode fallback, the token path has none). The `<li>` count itself was always 43 (`e6a2727` held: failed rows stay visible). Fix in `screens/asset-rows.tsx`: every main-list row is a link to its asset detail in every state — ready, failed, or still loading — in both the list and table variants, so the linked-row count is the full 43 whatever the network does; watch-only rows are never links (a watched address can never send). Verified first-hand in the real browser (production build, fresh disposable test wallet per viewport, phrases never logged): 5 reloads at 390 px + 5 at 1280 px, `li` = 43 and linked = 43 at every sample (40 samples, including mid-load and with 1 balance failed), with count logs + screenshots. Gates at `3db591e`: tsc 0, eslint clean, build exit 0, vitest 3,428 passed + 5 skipped (129 files) on the worktree as tested (which also held other lanes' uncommitted test edits; this lane's own suites, dashboard + asset-list, 61 passed), total JS 4,509,662 / 6,000,000.
+
+**Docs audit, Lane A (2026-11-28, hands-on, 0 Sol calls).** The guide was re-read in full (1,831 lines) against token-gaps `ceade79` and each section re-traced to the code it cites. Current-state figures corrected in place: vitest 3,416 → 3,429 passed (gates at `1253bf6`) and total JS 4,509,097 → 4,509,662 (Part A status, Bundle note, §0.2, §3); Buy headroom 1,517,378 → 1,490,338 (§12); `SUPPORTED_CHAINS` line `chains.ts:1687` → `:1731` (§2); Gnosis history record `chains.ts:812-815` → `:832-833` (§2.7); `send.ts:987` "Nothing here broadcasts" → the per-signer occurrences (EVM `:1165`, TRX `:1715`, TRC-20 `:2487`) (§5). Android state corrected in place: Step 4 DONE (`f9f312b`, 2026-11-28 — AAR in-tree, `ENGINE_BINDING_AVAILABLE = true` at `DerivationPolicy.kt:199`, on-device derivation bound, execution still unverified); Step 3 added the `INTERNET` permission and the data layer (§2.6, §15, §17 trace row). Two registry lags found, not fixed here (data, not docs): `registry/capabilities.json` `chainSupport.history` I&V is 17 while `chains.ts` history covers 18 (Gnosis, `d06a224`, never reached the registry); `registry/chains.json` is stale at `ceade79` — last regenerated at `b65e8c3` from `7efba14`, it has no DeFiBit BSC RPC (`ff63077`), so regeneration is owed (`ci.yml:221` runs the generator's `--check`). The 3 open findings (vite-dev WASM 404, TRON USDT PublicNode fallback, mmdc persistent reinstall) are still open and are not claimed fixed anywhere in this guide.
