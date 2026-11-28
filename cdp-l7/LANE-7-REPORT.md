@@ -112,7 +112,7 @@ l7-after-details-native-1440.png, l7-after-download-link.png
   NOT done here — flagging to the coordinator/owner whether they
   also want the QR visible before a network + token are picked.
 
-  Update (2026-11-28 docs pass, HEAD 734cfef): partly addressed — the
+  Update (2026-11-28 docs-audit-b, HEAD ceade79): partly addressed — the
   network picker is now the one shared searchable chain picker (P1,
   Lane S4 item 11), and picking a network records it as last-used, so
   the next visit opens straight on its QR (`receive.tsx`). A first

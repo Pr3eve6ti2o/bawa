@@ -19,6 +19,8 @@ description: Build a non-custodial Web wallet from the Bawa repository for Bitco
 > - **Evidence:** repo clone at `082f7915`, validation-draft build logs
 > - **Sources fetched on:** 2026-11-08
 
+> **Currency note (2026-11-28, docs-audit-b, token-gaps ceade79).** This guide is a dated 2026-11-08 testnet build spec; its procedures are retained as written. What has changed since: the repository direction is mainnet-first (ADR-0003, see the 2026-11-20 scope note below); the Web starter exists in `apps/web` (Vite 8, 19 screens, Core pin 4.9.3, root lockfile present); the QR scanner is implemented at the decode level plus payment-request URI parsing in the Send flow (`parsePaymentUri`), with live camera on a real phone still unverified; 18 preview screenshots exist in `docs/preview/`; §B step 4's esbuild/iife build path differs from the shipped Vite 8 starter. Do not build a new wallet from the §1-era pins without reading the current tree first.
+
 ## A. Scope and starting points
 
 Use this guide to build a non-custodial Web wallet for Bitcoin testnet4, Ethereum Sepolia, TRON Nile and TON testnet from the Bawa repo. Bawa supplies documentation and an engine reference; it is not a hosted wallet, a custody service or an exchange. You build the app by following this guide: fourteen screens, an encrypted local vault and watch-only derivation, using Trust Wallet Core. Follow only Web-specific steps here; use the repo guide for the derivation contract, fixture vectors, test taxonomy, release gates, repo-level troubleshooting and FAQ. Repo guide sections **13 (troubleshooting)** and **14 (FAQ)** are the canonical home for repo-level questions; this guide’s [Section K](#k-troubleshooting-by-symptom) covers only Web-specific recovery. Keep your build testnet-only. Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
@@ -110,7 +112,7 @@ All links checked: **2026-11-08**.
 
 3. **Create the app lockfile without overstating the repository’s state.**
 
-   The Bawa repository now ships a root `package-lock.json` (committed in the 2026-11-26 lockfile repair; present at token-gaps `734cfef`, 2026-11-28), so `npm ci` runs against the repository root and the former "missing root lockfile" release blocker is closed. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); the tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. `npm ci` requires an existing lockfile and fails without one.
+   The Bawa repository now ships a root `package-lock.json` (committed in the 2026-11-26 lockfile repair; present at token-gaps `ceade79`, 2026-11-28), so `npm ci` runs against the repository root and the former "missing root lockfile" release blocker is closed. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); the tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. `npm ci` requires an existing lockfile and fails without one.
 
    For the Web app itself, generate `package-lock.json` from a clean install using the pins above. Install `http-server` as a development dependency, inspect its installed version, and record that exact value in `package.json` without `^` or `~`. This makes the version a recorded fact rather than a floating install. Pin Core and esbuild exactly as shown in the table, and keep the app’s lockfile consistent with its manifest.
 
@@ -158,7 +160,7 @@ All sources checked on 2026-11-08.
 
 ### Open items
 
-- CLOSED 2026-11-26 (re-checked 2026-11-28, token-gaps `734cfef`): the repository now ships a root `package-lock.json`; the "missing root lockfile" release blocker (OI-042) is closed. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact).
+- CLOSED 2026-11-26 (re-checked 2026-11-28, token-gaps `ceade79`): the repository now ships a root `package-lock.json`; the "missing root lockfile" release blocker (OI-042) is closed. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact).
 - The Core `4.9.2` EIP-1559 signing-proof demonstration is complete for the construction/signing demonstration scope (D21, 2026-11-08); in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised (Section F). See Doc 3, Consolidated open-items register, `OI-004`.
 - The integrated browser flow has had an end-to-end run (Section D): V2, 2026-11-08, 14 PASS / 0 FAIL / 3 INFO across 17 steps in a real headless browser. Live spend was not exercised. See Doc 3, Consolidated open-items register, `OI-039`.
 
@@ -447,7 +449,7 @@ Bawa’s repository tools contain no transaction construction or signing impleme
 ### QR payment-request scanning — testnet only
 
 Scanning is in scope (user decision, 2026-11-08). This section specifies the
-testnet scanning behaviour. Update 2026-11-28 (token-gaps `734cfef`): the scanner is implemented at the decode level — `apps/web/src/wallet/qr-scanner.tsx` (jsQR, lazy-loaded; camera loop plus image-file upload, wired into the Send screen) — but payment-request URI parsing is not implemented (the scanned value is used as a bare address), and the live camera on a real phone is unverified. The `qr-scanner@1.4.2` decoder named in step 2 below was not the one built; the built scanner uses jsQR.
+testnet scanning behaviour. Update 2026-11-28 (token-gaps `ceade79`, docs-audit-b): the scanner is implemented at the decode level — `apps/web/src/wallet/qr-scanner.tsx` (jsQR, lazy-loaded; camera loop plus image-file upload, wired into the Send screen) — and payment-request URI parsing IS implemented in the Send flow (`parsePaymentUri` in `send.tsx`: BIP-21, EIP-681, Solana Pay, TON; Bawa send links parsed; prefills chain/recipient/amount/token). The live camera on a real phone is still unverified. The `qr-scanner@1.4.2` decoder named in step 2 below was not the one built; the built scanner uses jsQR.
 
 **Purpose.** Let a sender pay a payment request shown as a QR code, by scanning
 it with the device camera, without typing the address. Scanning runs on testnet
@@ -617,7 +619,7 @@ QR payment-request scanning is specified in Section F. See Doc 3, Consolidated o
 
 - **QR receive:** RESOLVED — keep receive-QR and scanning, user decision 2026-11-08. See Doc 3, Consolidated open-items register, `OI-037`.
 - **Browser validation:** the fourteen screens were written in the validation draft, and the integrated browser flow was run on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser). Live spend was not exercised. See Doc 3, Consolidated open-items register, `OI-039`.
-- **Screenshots:** none exist because no maintained client example exists.
+- **Screenshots:** 18 preview PNGs exist in `docs/preview/` (9 screens x mobile/desktop, Lane C 8e14369) — the "none exist" statement describes the 2026-11-08 draft, not this tree. (Update 2026-11-28, docs-audit-b, ceade79.)
 
 ## H. Testing
 
@@ -889,7 +891,7 @@ Do not read the validation-draft row as a list of components available in the re
 | Status | Scope |
 | --- | --- |
 | Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock (draft evidence only; the current target is optional auto-lock, OFF by default); fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised); token-balance reading; 31 offline unit tests passing. |
-| Unimplemented | the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live spend was not exercised (broadcast disabled). Implemented since the validation draft: token management (Add Token adds a whole chain or a single token by contract address) and token sends (offline signers per token standard in `apps/web/src/wallet/send.ts`; broadcast disabled); QR receive (receive.tsx renders the derived address as a QR code; BIP-21 amount URI for BTC, ETH value in wei, plain address for TRX/TON); QR payment-request scanning (Section F) at the decode level — qr-scanner.tsx is a camera scanner wired into the send screen, but payment-request URI parsing is not implemented (the scanned value is used as a bare address); live wallet creation and live restore in the browser (core.ts createWallet()/restoreWallet), not only in the V2 browser run (2026-11-08). |
+| Unimplemented | the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live spend was not exercised (broadcast disabled). Implemented since the validation draft: token management (Add Token adds a whole chain or a single token by contract address) and token sends (offline signers per token standard in `apps/web/src/wallet/send.ts`; broadcast disabled); QR receive (receive.tsx renders the derived address as a QR code; BIP-21 amount URI for BTC, ETH value in wei, plain address for TRX/TON); QR payment-request scanning (Section F) at the decode level — qr-scanner.tsx is a camera scanner wired into the send screen, and payment-request URI parsing is implemented in the Send flow (parsePaymentUri in send.tsx; update 2026-11-28, docs-audit-b, ceade79) — live camera on a real phone still unverified; live wallet creation and live restore in the browser (core.ts createWallet()/restoreWallet), not only in the V2 browser run (2026-11-08). |
 
 A successful build or testnet send does not replace the release gates below.
 
@@ -933,7 +935,7 @@ Use this as a reader checklist, not as evidence of performed live operations.
 ### Open items
 
 - No release gate has passed. See Doc 3, Consolidated open-items register, `OI-058`.
-- Scanner names established 2026-11-28 (token-gaps `734cfef`): the manual `.github/workflows/security-audit.yml` workflow runs `npm audit`, `pip-audit` 2.10.1, Bandit 1.9.4, Ruff 0.17.4, Semgrep 1.185.0 and OSV-Scanner 2.7.1; the `web` CI job runs `npm audit` (0 vulnerabilities at token-gaps `2205f15`). A secret-scan step in CI is still absent (pre-commit `node scripts/secret-scan.mjs` only). See Doc 3, Consolidated open-items register, `OI-059`.
+- Scanner names established 2026-11-28 (token-gaps `ceade79`): the manual `.github/workflows/security-audit.yml` workflow runs `npm audit`, `pip-audit` 2.10.1, Bandit 1.9.4, Ruff 0.17.4, Semgrep 1.185.0 and OSV-Scanner 2.7.1; the `web` CI job runs `npm audit` (0 vulnerabilities at token-gaps `2205f15`). A secret-scan step in CI is still absent (pre-commit `node scripts/secret-scan.mjs` only). See Doc 3, Consolidated open-items register, `OI-059`.
 - Core 4.9.2 EIP-1559 demonstration complete for the construction/signing demonstration scope (D21, 2026-11-08); in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised. See Doc 3, Consolidated open-items register, `OI-004`.
 - QR receive: RESOLVED — in scope, user decision 2026-11-08. See Doc 3, Consolidated open-items register, `OI-037`.
 - Live creation/restore performed in the V2 browser run (2026-11-08); live spend was not exercised. See Doc 3, Consolidated open-items register, `OI-039`.

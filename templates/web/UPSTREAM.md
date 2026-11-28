@@ -102,7 +102,7 @@ Do not proceed on the strength of this record without reassessment if:
   react-router 7.14.0, vite 8.0.7, typescript 5.9.3, tailwindcss 4.2.4,
   vitest 4.1.3, jsdom 31.0.0, qrcode.react 4.2.0, @trustwallet/wallet-core
   4.9.3 (the repo pin, upgraded 2026-11-13; the former pin 4.9.1 is superseded).
-  Current pins at HEAD 734cfef (2026-11-28): react-router 7.18.5, vite 8.3.8,
+  Current pins at HEAD ceade79 (2026-11-28): react-router 7.18.5, vite 8.3.8,
   vitest 4.1.12 (react/react-dom 19.2.5, typescript 5.9.3, tailwindcss 4.2.4,
   jsdom 31.0.0, qrcode.react 4.2.0 and wallet-core 4.9.3 unchanged);
   the lockfile now holds 411 packages.
@@ -114,7 +114,7 @@ Do not proceed on the strength of this record without reassessment if:
   `scripts/copy-wasm.mjs` (runs on `predev`/`prebuild`). The wasm is a
   build artifact, never committed (`apps/web/.gitignore`). Verified:
   `vite preview` serves `/` HTTP 200 and `/wallet-core.wasm` HTTP 200
-  (10,386,536 bytes).
+  (10,386,536 bytes). (Note 2026-11-28, docs-audit-b: this is the web bundle's served size; the 10,422,325-byte figure in MAINNET-GUIDE §21 M-21 (R08) is the separate hdwallet-gen WASM artifact, not this file.)
 - Delivered: the 14 screens (docs/14 §5.1), the engine boundary
   (apps/web/src/engine/boundary.ts — validation before WASM, R-01 point
   validation mirrored in pure BigInt), shared contracts
