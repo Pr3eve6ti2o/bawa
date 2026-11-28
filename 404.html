@@ -1,15 +1,30 @@
 <!DOCTYPE html>
-<html lang="en" data-bawa-build="1a85258 2026-11-28T14:45:53.322Z">
+<html lang="en" data-bawa-build="d9732a6 2026-11-28T16:48:19.747Z">
   <head>
     <meta charset="UTF-8" />
     <script>
-      // Frame-buster (bug hunt S2): GitHub Pages sends no custom
-      // headers, so frame-ancestors cannot protect the live app.
-      // This script MUST stay above the build-injected CSP meta
-      // (inserted just before the closing head tag): a meta CSP only governs
-      // content after it, and script-src has no unsafe-inline, so
-      // a buster placed after the meta would be blocked and the
-      // wallet would stay framable.
+      // Frame-buster (bug hunt S2; mechanism corrected 2026-11-28, DECISIONS §50).
+      // GitHub Pages sends no custom headers, so frame-ancestors cannot
+      // protect the live app — this script is the Pages deployment's only
+      // framing defence, and it MUST stay inline in index.html, above the
+      // build-injected CSP meta (inserted just before the closing head
+      // tag): in Chromium a meta-delivered CSP does not retroactively govern
+      // an inline script that appears before the meta element, so the script
+      // runs under meta-only delivery; the same script IS blocked by the
+      // HTTP-header CSP wherever headers are served (vite preview logs one
+      // console error per load for it), and framing there is blocked by the
+      // frame-ancestors / X-Frame-Options headers instead.
+      // Honest mechanism, verified first-hand in Chromium 159: the bust-out
+      // itself does NOT work any more — Chrome blocks a cross-origin
+      // top-level navigation with no user gesture, so
+      // window.top.location.href throws and the catch hides the whole page
+      // (display none). The protection on Pages is that fail-closed hiding,
+      // not the navigation: a framed wallet renders nothing. Do NOT remove
+      // this script without a header-sending host, and do NOT move it into
+      // the bundle: a deferred module script runs after first paint, so the
+      // framed page could flash its content before the hide runs. Do NOT add
+      // unsafe-inline to script-src to silence the preview console error —
+      // that would bless all inline scripts.
       try {
         if (window.top !== window.self) {
           window.top.location.href = window.self.location.href;
@@ -24,7 +39,7 @@
     <meta name="description" content="Bawa Web Wallet — a self-custodial multi-chain wallet. One recovery phrase for 87 chains. Your keys never leave this device." />
     <link rel="icon" type="image/svg+xml" href="/bawa/favicon.svg" />
     <title>Bawa Web Wallet</title>
-    <script type="module" crossorigin src="/bawa/assets/index-B9gxTjOm.js"></script>
+    <script type="module" crossorigin src="/bawa/assets/index-C5GhUS5H.js"></script>
     <link rel="modulepreload" crossorigin href="/bawa/assets/rolldown-runtime-BCiCTKAo.js">
     <link rel="modulepreload" crossorigin href="/bawa/assets/react-WmG6g5jw.js">
     <link rel="modulepreload" crossorigin href="/bawa/assets/jsx-runtime-BB9-612F.js">
@@ -45,14 +60,14 @@
     <link rel="modulepreload" crossorigin href="/bawa/assets/vault-B7XAY5jQ.js">
     <link rel="modulepreload" crossorigin href="/bawa/assets/devnet-gBWjC-Wr.js">
     <link rel="modulepreload" crossorigin href="/bawa/assets/preload-helper-DjKmMeFA.js">
-    <link rel="modulepreload" crossorigin href="/bawa/assets/wallet-context-vl4phgwk.js">
+    <link rel="modulepreload" crossorigin href="/bawa/assets/wallet-context-DtYxcVM2.js">
     <link rel="modulepreload" crossorigin href="/bawa/assets/chain-amount-format-Itgcxqdo.js">
-    <link rel="modulepreload" crossorigin href="/bawa/assets/prices-DHmScUjH.js">
+    <link rel="modulepreload" crossorigin href="/bawa/assets/prices-DUO8sARC.js">
     <link rel="modulepreload" crossorigin href="/bawa/assets/button-DzqmGNoF.js">
     <link rel="modulepreload" crossorigin href="/bawa/assets/concat-DtZp25Qw.js">
-    <link rel="stylesheet" crossorigin href="/bawa/assets/index-B_E-2RXV.css">
+    <link rel="stylesheet" crossorigin href="/bawa/assets/index-BKfOIzRR.css">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com https://assets.coingecko.com https://coin-images.coingecko.com https://tokens.1inch.io https://tokens.pancakeswap.finance; font-src 'self' data:; connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.drpc.org https://rpc.flashbots.net https://eth.blockscout.com https://explorer.optimism.io https://scrollscan.com https://celo.blockscout.com https://explorer.aurora.dev https://api.routescan.io https://polygon.blockscout.com https://base.blockscout.com https://arbitrum.blockscout.com https://api.etherscan.io https://lineascan.build https://gnosisscan.io https://api.trongrid.io https://apilist.tronscanapi.com https://tron-rpc.publicnode.com https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://li.quest https://backend.gas.zip wss://omni-ws.ston.fi https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://solana.publicnode.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://bsc-dataseed1.defibit.io https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://aurora.drpc.org https://rpc.fantom.network https://rpc2.fantom.network https://106.rpc.thirdweb.com https://361.rpc.thirdweb.com https://43111.rpc.thirdweb.com https://4689.rpc.thirdweb.com https://480.rpc.thirdweb.com https://50.rpc.thirdweb.com https://57.rpc.thirdweb.com https://60808.rpc.thirdweb.com https://747.rpc.thirdweb.com https://abstract.drpc.org https://apechain.drpc.org https://api.kaspa.org https://api.koios.rest https://api.mainnet.abs.xyz https://api.mainnet.aptoslabs.com https://api.node.glif.io https://api.roninchain.com https://arbitrum-nova-rpc.publicnode.com https://astar.drpc.org https://axelar-rpc.polkachu.com https://axelar-rpc.publicnode.com https://babel-api.mainnet.iotex.io https://berachain-rpc.publicnode.com https://boba-ethereum.gateway.tenderly.co https://celestia-rpc.polkachu.com https://celestia-rpc.publicnode.com https://core.drpc.org https://cosmos-rpc.polkachu.com https://cosmos-rpc.publicnode.com https://cronos-evm-rpc.publicnode.com https://dydx-rpc.polkachu.com https://dydx-rpc.publicnode.com https://etc.etcdesktop.com https://eth-rpc-api.thetatoken.org https://evm-rpc.sei-apis.com https://evm.astar.network https://evm.confluxrpc.com https://evm.confluxrpc.org https://evm.cronos.com https://evm.kava.io https://evmexplorer.velas.com https://flare-api.flare.network https://flare.rpc.thirdweb.com https://fraxtal-rpc.publicnode.com https://fullnode.mainnet.aptoslabs.com https://fuse.drpc.org https://geth-at.etc-network.info https://horizon.stellar.lobstr.co https://horizon.stellar.org https://hyperliquid-rpc.publicnode.com https://immutable-zkevm.drpc.org https://injective-rpc.polkachu.com https://injective-rpc.publicnode.com https://juno-rpc.polkachu.com https://juno-rpc.publicnode.com https://kava-evm-rpc.publicnode.com https://mainnet-api.4160.nodely.dev https://mainnet-api.algonode.cloud https://mainnet-public.mirrornode.hedera.com https://mainnet.boba.network https://mainnet.era.zksync.io https://mainnet.evm.nodes.onflow.org https://mainnet.mirrornode.hedera.com https://mainnet.mode.network https://mainnet.unichain.org https://manta-pacific.drpc.org https://mode.drpc.org https://monad.drpc.org https://mycrypto.rsk.co https://near.drpc.org https://noble-rpc.polkachu.com https://nova.arbitrum.io https://osmosis-rpc.publicnode.com https://pacific-rpc.manta.network https://polkadot-rpc.publicnode.com https://public-node.rsk.co https://pulsechain-rpc.publicnode.com https://ronin.drpc.org https://rpc-gel.inkonchain.com https://rpc-noble.keplr.app https://rpc-qnd.inkonchain.com https://rpc.ankr.com https://rpc.apechain.com https://rpc.berachain.com https://rpc.chiliz.com https://rpc.coredao.org https://rpc.frax.com https://rpc.fuse.io https://rpc.gobob.xyz https://rpc.hemi.network https://rpc.hyperliquid.xyz https://rpc.immutable.com https://rpc.mainnet.near.org https://rpc.mainnet.taiko.xyz https://rpc.monad.xyz https://rpc.osmosis.zone https://rpc.polkadot.io https://rpc.pulsechain.com https://rpc.soneium.org https://rpc.soniclabs.com https://rpc.syscoin.org https://rpc.telos.net https://rpc.tzbeta.net https://rpc.tzkt.io https://rpc.xdc.network https://rpc.xlayer.tech https://rpc.zora.energy https://s1.ripple.com:51234 https://sei-rpc.polkachu.com https://sei-rpc.publicnode.com https://sei.drpc.org https://soneium-rpc.publicnode.com https://songbird-api.flare.network https://sonic-rpc.publicnode.com https://starknet-mainnet.drpc.org https://starknet.drpc.org https://taiko-rpc.publicnode.com https://telos.drpc.org https://unichain-rpc.publicnode.com https://worldchain-mainnet.g.alchemy.com https://xlayerrpc.okx.com https://xrplcluster.com https://zetachain-evm.blockpi.network https://zetachain-mainnet.g.allthatnode.com https://zksync.drpc.org https://zora.drpc.org https://etc.blockscout.com https://explorer.fuse.io https://explorer.hemi.xyz https://explorer.mode.network https://explorer.roninchain.com https://explorer.syscoin.org https://flare-explorer.flare.network https://pacific-explorer.manta.network https://songbird-explorer.flare.network https://zetascan.com https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://11155111.rpc.thirdweb.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com https://tokens.1inch.io https://tokens.pancakeswap.finance https://tokens.uniswap.org https://copenapi.bgwapi.io https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <!-- Bawa build: 1a85258 2026-11-28T14:45:53.322Z -->
+  <!-- Bawa build: d9732a6 2026-11-28T16:48:19.747Z -->
   </head>
   <body>
     <div id="root"></div>
