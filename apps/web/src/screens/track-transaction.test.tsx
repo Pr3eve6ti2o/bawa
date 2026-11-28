@@ -522,4 +522,64 @@ describe('TrackTransactionScreen', () => {
     expect(input).not.toBeNull();
     expect(input!.value).toBe('Solana');
   });
+
+  it('prefills the first watched address and runs its activity on mount', async () => {
+    // Watch-only display programme (audit F12): /track opens on the
+    // watched wallet's recent activity instead of a blank lookup. A
+    // 0x address with no ?chain= runs on Ethereum.
+    const EF_ADDRESS = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe';
+    vi.mocked(useWallet).mockReturnValue({
+      devnetEnabled: false,
+      xpubs: {
+        eth: { chain: 'eth', xpub: EF_ADDRESS, label: 'Ethereum Foundation', derivedCount: 1 },
+      },
+      addresses: { eth: [{ chain: 'eth', index: 0, address: EF_ADDRESS }] },
+    } as ReturnType<typeof useWallet>);
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'ok',
+      data: [],
+      source: 'stub',
+      fetchedAt: 1,
+    });
+    mounted = mount();
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+    const input = mounted.div.querySelector<HTMLInputElement>('#activity-address');
+    expect(input?.value).toBe(EF_ADDRESS);
+    expect(vi.mocked(getRecentActivity)).toHaveBeenCalledWith(
+      'eth',
+      EF_ADDRESS,
+      10,
+      { devnet: false },
+    );
+  });
+
+  it('runs the ?address= lookup on mount', async () => {
+    // Watch-only display programme: the URL names the address, so it
+    // is the lookup — no watched wallet needed.
+    const EF_ADDRESS = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe';
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'ok',
+      data: [],
+      source: 'stub',
+      fetchedAt: 1,
+    });
+    mounted = mount([`/track?address=${EF_ADDRESS}`]);
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+    const input = mounted.div.querySelector<HTMLInputElement>('#activity-address');
+    expect(input?.value).toBe(EF_ADDRESS);
+    expect(vi.mocked(getRecentActivity)).toHaveBeenCalledWith(
+      'eth',
+      EF_ADDRESS,
+      10,
+      { devnet: false },
+    );
+  });
 });

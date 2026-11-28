@@ -347,6 +347,9 @@ function AppLayout() {
                   setSidebarCollapsed((value) => !value)
                 }
                 onPreloadRoute={preloadRoute}
+                // Watch-only display programme: with no vault there is
+                // no phrase, so the sidebar hides "Mnemonic backup".
+                hasVault={vaultState !== 'no-vault'}
               />
             </div>
           </aside>

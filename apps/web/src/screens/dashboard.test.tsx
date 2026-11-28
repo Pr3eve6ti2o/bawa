@@ -320,6 +320,75 @@ describe('dashboard screen', () => {
     }
   });
 
+  it('totals the vault and the watched wallet together, with the watched part shown separately', async () => {
+    // Watch-only display programme (audit F2): a fresh HD wallet
+    // ($0.00) plus a watched wallet holding 1 ETH ($1,774.93). The
+    // hero used to be HD-only — $0.00 while the watched wallet held
+    // real funds. Now it totals both, names the watched part, and
+    // offers the switcher to view either wallet alone.
+    const EF_ADDRESS = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe';
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+      {
+        watchBalances: balancesFor({
+          eth: { status: 'available', value: '1000000000000000000' },
+        }),
+        watchTokenBalances: {},
+        addresses: {
+          eth: [{ index: 0, address: EF_ADDRESS }],
+        },
+        xpubs: {
+          eth: {
+            chain: 'eth',
+            xpub: EF_ADDRESS,
+            label: 'Ethereum Foundation',
+            derivedCount: 1,
+          },
+        },
+        vaultAddresses: {
+          eth: ['0x5Cdd0fBa789b1BCcaab1CC6cEdFe8D9742077E26'],
+        },
+        vaultAccount: { account: 0, index: 0 },
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const start = Date.now();
+      while (Date.now() - start < 10_000) {
+        if (heroAmount(mounted) === '$1,774.93') break;
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+      }
+      expect(heroAmount(mounted)).toBe('$1,774.93');
+      expect(mounted.div.textContent).toContain('Your wallets $0.00');
+      expect(mounted.div.textContent).toContain('Watched $1,774.93');
+      // The switcher offers All wallets / the vault / the watched
+      // wallet; switching to the watched wallet keeps the same total
+      // and shows the watching banner.
+      const switcher = mounted.div.querySelector<HTMLSelectElement>('#hero-wallet');
+      expect(switcher).not.toBeNull();
+      expect(switcher?.value).toBe('all');
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLSelectElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(switcher, `watch:${EF_ADDRESS.toLowerCase()}`);
+        switcher?.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      expect(heroAmount(mounted)).toBe('$1,774.93');
+      expect(mounted.div.textContent).toContain('Watching');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the full token name on the row, not just the symbol (Lane 4)', async () => {
     // Owner report: the complete token name was not displayed on the
     // mobile homepage — a token row showed only its symbol (USDC),
@@ -657,6 +726,54 @@ describe('dashboard screen', () => {
       // Only the failed chain is marked; the hero itself is a total.
       expect(mounted.div.textContent).toContain('Could not load balance');
       expect(mounted.div.textContent).not.toContain('Balances could not be loaded');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a clean total (never Partial) for a watch-only wallet when the only unloaded chains have no address', async () => {
+    // Watch-only display programme: chains with no watched address
+    // sit at 'unavailable/no-address', which is not a failure — the
+    // watched wallet simply has no address there. Before this fix
+    // the watch-only-only hero totalled all hero chains, so it was
+    // Partial forever for that reason alone, with a Missing note
+    // that could name nothing.
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'unavailable', reason: 'no-address' },
+        ton: { status: 'unavailable', reason: 'no-address' },
+      }),
+      {
+        vaultState: 'no-vault',
+        addresses: {
+          eth: [{ address: '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe' }],
+        },
+        // A token on a chain with no watched address: refresh
+        // stores 'unavailable/no-address' for it, and the hero
+        // must not count that as a failure either (same rule as
+        // the natives above — the token memo used to count it).
+        tokenBalances: {
+          'sol:epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v': {
+            status: 'unavailable',
+            reason: 'no-address',
+          },
+        },
+      },
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(heroAmount(mounted)).toBe('$62,683.00');
+      expect(mounted.div.textContent).not.toContain('(Partial)');
+      expect(mounted.div.textContent).not.toContain('Partial total');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();

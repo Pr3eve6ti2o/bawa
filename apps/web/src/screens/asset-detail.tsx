@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
+import type { TrackerActivityResult } from '../wallet/tracker';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
@@ -195,6 +196,86 @@ export function AssetDetailScreen() {
   const isCustomToken =
     tokenRecord !== undefined && !isDefaultToken(tokenRecord);
 
+  // Watch-only display programme: the token route's history. The
+  // address is memoised on its stringified value (the context objects
+  // change identity on every provider update) so the fetch runs once
+  // per address, not once per render.
+  const tokenHistoryAddress = useMemo(
+    () =>
+      vaultAddresses?.[chainId]?.[0] ?? addresses[chainId]?.[0]?.address,
+    // The stringified address lists are the stable deps — the context
+    // objects change identity on every provider update.
+    [
+      chainId,
+      JSON.stringify(vaultAddresses?.[chainId] ?? []),
+      JSON.stringify(addresses[chainId] ?? []),
+    ],
+  );
+  // null = not a token route, or no address to look up; 'loading' =
+  // the tokentx fetch is in flight; otherwise the adapter's answer.
+  const [tokenHistory, setTokenHistory] = useState<
+    TrackerActivityResult | 'loading' | null
+  >(null);
+  const [tokenHistoryAttempt, setTokenHistoryAttempt] = useState(0);
+  useEffect(() => {
+    if (tokenRecord === undefined || config === undefined) {
+      setTokenHistory(null);
+      return;
+    }
+    if (tokenHistoryAddress === undefined) {
+      setTokenHistory(null);
+      return;
+    }
+    let cancelled = false;
+    setTokenHistory('loading');
+    void (async () => {
+      // The tracker reads the adapter registry, which only exists
+      // after ensureAdapters() registers it — the adapter chunk is
+      // lazy (~271 KB), so a fresh navigation to this route can mount
+      // and call the tracker before registration lands, and the call
+      // then reports "No history adapter is available for this
+      // chain" for a chain whose adapter exists. Same pattern as the
+      // Activity screen: load the adapters first, then ask.
+      const [{ ensureAdapters, ensureDevnetAdapters }, { getRecentTokenActivity }] =
+        await Promise.all([
+          import('../state/wallet-context'),
+          import('../wallet/tracker'),
+        ]);
+      if (cancelled) return;
+      await (devnetEnabled === true
+        ? ensureDevnetAdapters()
+        : ensureAdapters());
+      if (cancelled) return;
+      let result = await getRecentTokenActivity(
+        chainId,
+        tokenRecord.contract,
+        tokenHistoryAddress,
+        5,
+        { devnet: devnetEnabled === true },
+      );
+      // One delayed retry for a failed fetch: the keyless indexers
+      // rate-limit in bursts (Blockscout 429s), and a token-history
+      // error must not sit there until the user finds the Retry
+      // button. 'unavailable' is not retried — it is a settled
+      // answer, not a transient failure.
+      if (result.status === 'error' && !cancelled) {
+        await new Promise((resolve) => setTimeout(resolve, 6000));
+        if (cancelled) return;
+        result = await getRecentTokenActivity(
+          chainId,
+          tokenRecord.contract,
+          tokenHistoryAddress,
+          5,
+          { devnet: devnetEnabled === true },
+        );
+      }
+      if (!cancelled) setTokenHistory(result);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tokenRecord, config, chainId, tokenHistoryAddress, devnetEnabled, tokenHistoryAttempt]);
+
   // Per-unit price from the same live price feed as the dashboard
   // strip and the asset list. No price is ever invented: a
   // missing/expired/failed feed reads as such in the Details block.
@@ -271,6 +352,13 @@ export function AssetDetailScreen() {
   const hasVaultAddress = vaultList.length > 0;
   const firstVaultAddress = vaultList[0];
   const hasWallet = hasVaultAddress || (addresses[chainId]?.length ?? 0) > 0;
+  // Watch-only display programme: the chain's addresses are watched
+  // only (no vault address) — the section header and the sticky
+  // actions both say so instead of offering Send/Swap for a wallet
+  // that can never sign.
+  const hasWatchOnlyAddress =
+    !hasVaultAddress && (addresses[chainId]?.length ?? 0) > 0;
+  const watchOnlyOnly = vaultState === 'no-vault' && hasWallet;
   // Lane G: with no vault and no address for this chain, a balance
   // that can never be fetched renders as zero — the same rule as the
   // asset rows. A locked vault also has no addresses in state, so the
@@ -546,7 +634,16 @@ export function AssetDetailScreen() {
               {effectiveBalance.status === 'error'
                 ? 'Could not load the balance.'
                 : 'Balance unavailable for this network.'}
-              {effectiveBalance.reason ? ` ${humanReasonMessage(effectiveBalance.reason, 'balance')}` : ''}
+              {/* Watch-only display programme (audit F8): a
+                  'no-address' reason is false when the address is
+                  imported — the Details card below shows it — so it
+                  never reads as "No address is available" here. It
+                  is a load failure; Retry is the action. */}
+              {effectiveBalance.reason === 'no-address' && hasWallet
+                ? ' The address is imported — this is a load failure. Try Retry below.'
+                : effectiveBalance.reason
+                  ? ` ${humanReasonMessage(effectiveBalance.reason, 'balance')}`
+                  : ''}
             </p>
             <LockedOrRetry
               lockedMessage="Locked. Unlock to see balances."
@@ -587,17 +684,27 @@ export function AssetDetailScreen() {
         are unchanged otherwise — layout only.
       */}
       <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-flat-lg border border-ink bg-paper px-2 py-2">
-        <Button asChild size="sm">
-          <Link
-            to={sendHref}
-            onClick={() => {
-              setSelectedChain(chainId);
-              recordLastUsedChain(chainId);
-            }}
-          >
+        {/* Watch-only display programme (audit F15): a watch-only
+            wallet can never sign, so Send and Swap are disabled here
+            with the reason — Receive stays, since receiving into a
+            watched address is the point of watching it. */}
+        {watchOnlyOnly ? (
+          <Button type="button" size="sm" disabled title="Unavailable for watch-only wallets">
             Send
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button asChild size="sm">
+            <Link
+              to={sendHref}
+              onClick={() => {
+                setSelectedChain(chainId);
+                recordLastUsedChain(chainId);
+              }}
+            >
+              Send
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="secondary" size="sm">
           <Link
             to={receiveHref}
@@ -609,7 +716,11 @@ export function AssetDetailScreen() {
             Receive
           </Link>
         </Button>
-        {swapCovered ? (
+        {watchOnlyOnly ? (
+          <Button type="button" variant="secondary" size="sm" disabled title="Unavailable for watch-only wallets">
+            Swap
+          </Button>
+        ) : swapCovered ? (
           <Button asChild variant="secondary" size="sm">
             <Link
               to={swapHref}
@@ -790,14 +901,49 @@ export function AssetDetailScreen() {
           </Link>
         </div>
       {/*
-        Token history: no token-history adapter exists yet, so the token
-        route shows an honest note instead of the native history list.
-        Never a fabricated or empty-state list.
+        Watch-only display programme: the token route fetches the
+        token's transfers (Etherscan tokentx via the adapter) and
+        shows them like the native list. No address means no lookup —
+        the honest note stays for that case — and a chain whose
+        adapter has no token history says so instead of pretending
+        the token never moved.
       */}
       {isToken ? (
-        <p className="rounded-flat-lg border border-ink bg-paper p-4 text-sm text-muted-foreground">
-          No history for this token yet.
-        </p>
+        tokenHistory === null ? (
+          <p className="rounded-flat-lg border border-ink bg-paper p-4 text-sm text-muted-foreground">
+            No history for this token yet.
+          </p>
+        ) : tokenHistory === 'loading' ? (
+          <Skeleton className="h-20 w-full" label="Loading transactions…" />
+        ) : tokenHistory.status === 'ok' ? (
+          tokenHistory.data.length === 0 ? (
+            <p className="rounded-flat-lg border border-ink bg-paper p-4 text-sm text-muted-foreground">
+              No transactions yet for this token.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {tokenHistory.data.map((tx) => (
+                <TxRow key={tx.hash} tx={tx} chain={chainId} />
+              ))}
+            </ul>
+          )
+        ) : (
+          <div className="space-y-2 rounded-flat-lg border border-ink bg-paper p-4">
+            <p className="text-base">
+              {tokenHistory.status === 'error'
+                ? 'Could not load token transactions.'
+                : 'Token history is unavailable for this chain.'}
+              {` ${tokenHistory.reason}`}
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setTokenHistoryAttempt((attempt) => attempt + 1)}
+            >
+              Retry
+            </Button>
+          </div>
+        )
       ) : chainHistory.status === 'loading' && recentTxs.length === 0 ? (
           // P0-6: the history wait was a wordless bordered box. The
           // labelled Skeleton names it inside the box.
@@ -850,7 +996,14 @@ export function AssetDetailScreen() {
         <div className="space-y-6">
       <section aria-labelledby="derived-addresses-heading" className="space-y-3">
         <h2 id="derived-addresses-heading" className="font-semibold">
-          {chain === 'ton' ? 'Imported address' : 'Derived addresses'}
+          {/* Watch-only display programme (audit F8): the addresses
+              below are watched, not derived from a vault — the header
+              says so when no vault address exists for the chain. */}
+          {chain === 'ton'
+            ? 'Imported address'
+            : hasWatchOnlyAddress
+              ? 'Watched address'
+              : 'Derived addresses'}
         </h2>
         {hasWallet ? (
           <ul className="space-y-3">

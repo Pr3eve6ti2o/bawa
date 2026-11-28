@@ -530,7 +530,7 @@ describe('transaction history screen', () => {
     await flushDirectFetch();
   }
 
-  it('shows one switcher option per watch-only wallet and its history on select', async () => {
+  it('shows one switcher option per watch-only wallet and opens on it when the vault is empty', async () => {
     vi.mocked(getRecentActivity).mockResolvedValue({
       status: 'ok',
       data: [tx('0xef1', 'eth', 'in', '1000000000000000000')],
@@ -549,10 +549,13 @@ describe('transaction history screen', () => {
       expect(select?.textContent).toContain(
         'Ethereum Foundation — 0xde0B…7BAe',
       );
-      // The vault wallet has no transactions in the mocked context.
-      expect(mounted.div.textContent).toContain('No transactions yet');
+      // Watch-only display programme (audit F4/F5): the vault wallet
+      // has no transactions in the mocked context, so the screen opens
+      // on the watched wallet instead of a blank vault — its history
+      // shows at 0 taps, no switcher tap needed.
       const watchId = `watch:${EF_ADDRESS.toLowerCase()}`;
-      await selectWallet(mounted.div, watchId);
+      await flushDirectFetch();
+      expect(select?.value).toBe(watchId);
       expect(vi.mocked(getRecentActivity)).toHaveBeenCalledWith(
         'eth',
         EF_ADDRESS,
@@ -561,6 +564,29 @@ describe('transaction history screen', () => {
       );
       expect(mounted.div.textContent).toContain('0xef1');
       expect(mounted.div.textContent).toContain('Watch-only');
+      // Flipping back to the vault shows its empty state.
+      await selectWallet(mounted.div, 'vault');
+      expect(mounted.div.textContent).toContain('No transactions yet');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('keeps a stored wallet choice instead of auto-selecting the watched wallet', async () => {
+    vi.mocked(getRecentActivity).mockResolvedValue({
+      status: 'ok',
+      data: [tx('0xef1', 'eth', 'in', '1000000000000000000')],
+      source: 'stub',
+      fetchedAt: 1,
+    });
+    window.localStorage.setItem('bawa:activity-wallet', 'vault');
+    setWalletWithWatchOnly();
+    const mounted = await mountScreen();
+    try {
+      const select = mounted.div.querySelector<HTMLSelectElement>('#history-wallet');
+      expect(select?.value).toBe('vault');
+      expect(mounted.div.textContent).toContain('No transactions yet');
+      expect(mounted.div.textContent).not.toContain('0xef1');
     } finally {
       await mounted.cleanup();
     }

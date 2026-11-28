@@ -973,4 +973,39 @@ describe('asset list screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('shows the per-chain allocation for a watched wallet with no vault of its own', async () => {
+    // Watch-only display programme: in the watch-only-only state the
+    // main rows already ARE the watched wallet, so the allocation
+    // reads the main balances — before this fix the allocation only
+    // rendered inside the watch section, which is empty without a
+    // vault, and the watched wallet had no allocation view at all.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      vaultState: 'no-vault',
+      addresses: {
+        eth: [{ address: '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe' }],
+      },
+      balances: balancesFor({
+        eth: { status: 'available', value: '1000000000000000000' },
+      }),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '100.0%');
+      expect(
+        mounted.div.querySelector('[aria-label="Allocation by chain"]'),
+      ).not.toBeNull();
+      expect(mounted.div.textContent).toContain('Watch-only');
+      expect(mounted.div.textContent).toContain('Ethereum');
+      expect(mounted.div.textContent).toContain('$1,774.93');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

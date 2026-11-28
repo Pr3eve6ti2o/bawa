@@ -362,6 +362,86 @@ describe('evm adapter — history', () => {
   });
 });
 
+describe('evm adapter — token history', () => {
+  const USDC = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+
+  it('reads tokentx transfers with the token on each row', async () => {
+    // Watch-only display programme: the asset-detail token route
+    // shows real USDC history instead of "No history for this token
+    // yet". The tokentx entry carries the token, and the amount is in
+    // the token's smallest units — so the row carries the token with
+    // it for formatting.
+    const fetchMock = vi.fn(async (_url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: '1',
+        message: 'OK',
+        result: [
+          {
+            hash: '0xtoken1',
+            from: ADDRESS,
+            to: '0x000000000000000000000000000000000000dEaD',
+            value: '1136600000',
+            timeStamp: '1700000000',
+            contractAddress: USDC,
+            tokenName: 'USD Coin',
+            tokenSymbol: 'USDC',
+            tokenDecimal: '6',
+          },
+        ],
+      }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const adapter = createEvmAdapter(
+      {
+        chain: 'eth',
+        networkId: 'eip155:1',
+        rpcUrl: 'https://eth-rpc.publicnode.com',
+        evmChainId: 1,
+        chainName: 'Ethereum',
+        nativeSymbol: 'ETH',
+        source: 'publicnode',
+        historyBaseUrl: 'https://eth.blockscout.com/api',
+        historyExplorerBase: 'https://eth.blockscout.com',
+      },
+      { client: mockClient({ getChainId: vi.fn(async () => 1) }) },
+    );
+    const result = await adapter.getTokenHistory?.(USDC, ADDRESS, 5);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('action=tokentx');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(`contractaddress=${USDC}`);
+    expect(result?.status).toBe('ok');
+    if (result?.status === 'ok') {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        hash: '0xtoken1',
+        direction: 'out',
+        amountBaseUnits: '1136600000',
+        token: { symbol: 'USDC', decimals: 6 },
+      });
+    }
+  });
+
+  it('rejects an invalid contract address', async () => {
+    const adapter = createEvmAdapter(
+      { ...BSC, historyBaseUrl: 'https://eth.blockscout.com/api' },
+      { client: mockClient() },
+    );
+    const result = await adapter.getTokenHistory?.('not-a-contract', ADDRESS);
+    expect(result).toEqual({
+      status: 'error',
+      reason: 'Invalid token contract address',
+    });
+  });
+
+  it('reports token history unavailable when no history endpoint is configured', async () => {
+    const adapter = createEvmAdapter(BSC, { client: mockClient() });
+    const result = await adapter.getTokenHistory?.(USDC, ADDRESS);
+    expect(result?.status).toBe('unavailable');
+  });
+});
+
 describe('evm adapter — broadcast', () => {
   it('always throws the broadcast-disabled message', async () => {
     const adapter = createEvmAdapter(BSC, { client: mockClient() });

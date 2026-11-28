@@ -918,6 +918,29 @@ export async function lookupTransactionAnyChain(
 
 export type TrackerActivityResult = AdapterResult<AdapterTx[]>;
 
+// Watch-only display programme: the transfers of one token for one
+// address, so an asset-detail token route can show real history
+// instead of "No history for this token yet". Only adapters with
+// getTokenHistory answer (EVM today); the rest report honestly.
+export async function getRecentTokenActivity(
+  chain: ChainId,
+  contract: string,
+  address: string,
+  limit?: number,
+  opts?: { devnet?: boolean },
+): Promise<TrackerActivityResult> {
+  const requested = limit ?? 10;
+  const clamped = Math.max(1, Math.min(20, Math.trunc(Number.isNaN(requested) ? 10 : requested)));
+  const adapter = getAdapterForMode(chain, opts?.devnet === true);
+  if (!adapter) {
+    return { status: 'unavailable', reason: 'No history adapter is available for this chain.' };
+  }
+  if (adapter.getTokenHistory === undefined) {
+    return { status: 'unavailable', reason: 'Token history is not available for this chain yet.' };
+  }
+  return adapter.getTokenHistory(contract, address, clamped);
+}
+
 // An empty 'ok' list means 'no transactions found', never 'unused address'.
 // Indexer results may lag behind the chain; the UI says so.
 export async function getRecentActivity(

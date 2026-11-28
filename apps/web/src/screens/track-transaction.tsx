@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '../ui/components/badge';
 import { Link, useSearchParams } from 'react-router';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
@@ -174,7 +174,11 @@ export function TransactionDetails({ data, chain, checkedAt }: {
 }
 
 export function TrackTransactionScreen() {
-  const { devnetEnabled } = useWallet();
+  const { devnetEnabled, xpubs: xpubsRaw, addresses: addressesRaw } = useWallet();
+  // Older mocked contexts may not provide the new fields; default them
+  // so the screen still renders.
+  const xpubs = xpubsRaw ?? {};
+  const addresses = addressesRaw ?? {};
   const [searchParams] = useSearchParams();
   // P1 (Lane S1): the chain starts at the last-used chain — the
   // shared last-used pick — unless the URL names one (?chain=).
@@ -186,11 +190,32 @@ export function TrackTransactionScreen() {
   );
   const [hash, setHash] = useState(() => searchParams.get('hash') ?? '');
   const [tonAddress, setTonAddress] = useState('');
-  const [address, setAddress] = useState('');
+  // Watch-only display programme (audit F12): the address starts at
+  // ?address= when the URL names one, and is prefilled from the first
+  // watched wallet below — /track used to open on a blank generic
+  // lookup (Bitcoin) that ignored the watched wallet entirely.
+  const [address, setAddress] = useState(() => searchParams.get('address') ?? '');
+  const [addressTouched, setAddressTouched] = useState(false);
   const [lookup, setLookup] = useState<LookupState>({ kind: 'idle' });
   const [activity, setActivity] = useState<ActivityState>({ kind: 'idle' });
   const lookupRequest = useRef(0);
   const activityRequest = useRef(0);
+  // The first watched address, if any — the watched wallet's address
+  // for its first chain in registry order. The memo's value is the
+  // address string; the context objects change identity on every
+  // provider update, so the effect below guards on the value, not the
+  // object identity.
+  const firstWatchedAddress = useMemo(() => {
+    for (const id of SUPPORTED_CHAINS) {
+      if (xpubs[id] === null || xpubs[id] === undefined) continue;
+      const watched = addresses[id]?.[0]?.address;
+      if (typeof watched === 'string' && watched !== '') {
+        return { chain: id, address: watched };
+      }
+    }
+    return null;
+  }, [xpubs, addresses]);
+  const autoRanFor = useRef('');
   // The hash alone is enough to submit: a TON lookup without an address
   // is answered honestly by the tracker itself ('unsupported' + reason),
   // so the form never blocks the user from seeing that explanation.
@@ -209,6 +234,49 @@ export function TrackTransactionScreen() {
     setLookup({ kind: 'idle' });
     setActivity({ kind: 'idle' });
   }
+
+  // Watch-only display programme (audit F12): /track opens on the
+  // watched wallet's recent activity instead of a blank lookup. The
+  // URL wins (?address=, ?chain=); otherwise the first watched
+  // address is prefilled and its activity runs once. A 0x address
+  // with no ?chain= runs on Ethereum — the address is valid on every
+  // EVM chain, and the last-used chain may be a non-EVM one. A typed
+  // address is never overwritten, and the run happens once per
+  // address (the ref), not on every context update.
+  useEffect(() => {
+    const paramAddress = searchParams.get('address');
+    const target =
+      paramAddress !== null && paramAddress.trim() !== ''
+        ? {
+            address: paramAddress.trim(),
+            chain: searchParams.get('chain'),
+          }
+        : firstWatchedAddress;
+    if (target === null) return;
+    const key = `${target.chain ?? ''}:${target.address}`;
+    if (autoRanFor.current === key) return;
+    autoRanFor.current = key;
+    // ?chain= wins; a 0x address with no ?chain= runs on Ethereum
+    // (valid on every EVM chain, and the last-used chain may be a
+    // non-EVM one); otherwise the watched wallet's own chain.
+    const paramChain = searchParams.get('chain');
+    const targetChain =
+      paramChain !== null
+        ? (SUPPORTED_CHAINS.find((id) => id === paramChain) ?? chain)
+        : target.address.startsWith('0x')
+          ? 'eth'
+          : target.chain !== null && target.chain !== undefined
+            ? (SUPPORTED_CHAINS.find((id) => id === target.chain) ?? chain)
+            : chain;
+    if (paramAddress === null && !addressTouched && address.trim() === '') {
+      setAddress(target.address);
+    }
+    if (targetChain !== chain) setChain(targetChain);
+    void runActivity(target.address, targetChain);
+    // runActivity reads the render's state; the effect's own guards
+    // (the ref key, the touched/empty checks) are what prevent a
+    // second run, so it is intentionally not a dependency.
+  }, [firstWatchedAddress, addressTouched, address, chain, searchParams]);
 
   async function runLookup(hashOverride?: string, chainOverride?: ChainId) {
     const value = (hashOverride ?? hash).trim();
@@ -238,10 +306,11 @@ export function TrackTransactionScreen() {
     document.getElementById('transaction-hash')?.scrollIntoView?.();
   }
 
-  async function runActivity() {
-    if (!address.trim()) return;
+  async function runActivity(addressOverride?: string, chainOverride?: ChainId) {
+    const value = (addressOverride ?? address).trim();
+    if (!value) return;
+    const activityChain = chainOverride ?? chain;
     const request = ++activityRequest.current;
-    const value = address.trim();
     // P0-6: the history adapters load lazily — on a cold visit to
     // /track nothing has registered them yet, so the activity call
     // would fail at once with "No history adapter…", and a Retry
@@ -263,7 +332,7 @@ export function TrackTransactionScreen() {
       if (request !== activityRequest.current) return;
       setActivity({ kind: 'loading', attempt });
       try {
-        const result = await getRecentActivity(chain, value, 10, {
+        const result = await getRecentActivity(activityChain, value, 10, {
           devnet: devnetEnabled,
         });
         if (request !== activityRequest.current) return;
@@ -426,7 +495,10 @@ export function TrackTransactionScreen() {
             <Input
               id='activity-address'
               value={address}
-              onChange={(event) => setAddress(event.target.value)}
+              onChange={(event) => {
+                setAddressTouched(true);
+                setAddress(event.target.value);
+              }}
               required
             />
           </div>

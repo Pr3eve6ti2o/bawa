@@ -8,6 +8,7 @@ import { BawaIcon } from '../ui/components/icons';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { useLivePrices } from './use-live-prices';
+import { useLiveBalances } from './use-live-balances';
 
 /** A balance failure a refetch could fix: status 'error', or
     'unavailable' for a reason that is not a permanent never-fetch
@@ -40,7 +41,7 @@ function isFailedBalance(balance: BalanceState | undefined): boolean {
  * no-wallet branch hides the list entirely.
  */
 export function FailedBalancesRetry(): ReactNode {
-  const { vaultState, refreshBalances, refreshTokenBalances, balances, tokenBalances, addresses } =
+  const { vaultState, refreshBalances, refreshTokenBalances, balances, tokenBalances, watchBalances, watchTokenBalances, addresses } =
     useWallet();
   const [refreshing, setRefreshing] = useState(false);
   async function handleRefresh(): Promise<void> {
@@ -63,7 +64,11 @@ export function FailedBalancesRetry(): ReactNode {
     vaultState === 'unlocked' ||
     (vaultState === 'no-vault' && hasWatchAddresses)
       ? Object.values(balances ?? {}).filter(isFailedBalance).length +
-        Object.values(tokenBalances ?? {}).filter(isFailedBalance).length
+        Object.values(tokenBalances ?? {}).filter(isFailedBalance).length +
+        // Watch-only display programme: the watched balances fail
+        // too, and their retry is this same line.
+        Object.values(watchBalances ?? {}).filter(isFailedBalance).length +
+        Object.values(watchTokenBalances ?? {}).filter(isFailedBalance).length
       : 0;
   if (failedBalanceCount === 0) return null;
   return (
@@ -97,6 +102,9 @@ export function FailedBalancesRetry(): ReactNode {
  * never a fabricated number.
  */
 export function AssetListScreen() {
+  // Live balances (watch-only display programme): the 45 s poll that
+  // keeps the rows fresh and auto-retries failed fetches.
+  useLiveBalances();
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
   // Lane 2: the filter bar's search — 43 rows are not scannable by

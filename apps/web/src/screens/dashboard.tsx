@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { BawaIcon } from '../ui/components/icons';
-import { humanReasonMessage, useWallet } from '../state/wallet-context';
+import { humanReasonMessage, useWallet, type BalanceState } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
+import type { ChainId } from '../engine/boundary';
 import {
   fiatValueForBalance,
   formatChangePct,
@@ -12,6 +13,7 @@ import {
   type PortfolioTokenContribution,
 } from '../wallet/prices';
 import { fiatValueForTokenBalance } from '../wallet/token-prices';
+import { sumFiatUSD } from '../wallet/money';
 import { shortenAddress } from '../wallet/address-detection';
 import { tokenKey } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
@@ -24,7 +26,24 @@ import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
 import { Skeleton } from '../ui/components/skeleton';
 import { useLivePrices } from './use-live-prices';
+import { useLiveBalances } from './use-live-balances';
 import { useAnimatedHeroValue } from './use-hero-ticker';
+
+// A balance that can never be fetched for this wallet — no address
+// on the chain, no adapter, a disabled chain, a devnet token — is
+// not a failure and never makes a total partial: there is nothing
+// to count. Only a real fetch that failed (or a funded balance with
+// no fresh price) marks a total partial and gets named below.
+function isNeverFetchable(balance: BalanceState | undefined): boolean {
+  return (
+    balance !== undefined &&
+    balance.status === 'unavailable' &&
+    (balance.reason === 'no-address' ||
+      balance.reason === 'no-adapter' ||
+      balance.reason === 'disabled' ||
+      balance.reason === 'devnet-no-tokens')
+  );
+}
 
 // P1 item 6 (F1/F3): the four money actions — Send, Receive, Swap,
 // Copy (the hero's own address, one tap). Buy and Scan left this row:
@@ -49,13 +68,21 @@ const ACTION_LINKS = [
 export function DashboardScreen() {
   const {
     balances,
+    watchBalances,
     refreshBalances,
     vaultState,
     tokenBalances,
+    watchTokenBalances,
+    balancesUpdatedAtMs,
     vaultAddresses,
+    vaultAccount,
+    xpubs,
     addresses,
     devnetEnabled,
   } = useWallet();
+  // Live balances (watch-only display programme): the 45 s poll that
+  // keeps the hero and the rows fresh and auto-retries failed fetches.
+  useLiveBalances();
   const isLocked = vaultState === 'locked';
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
@@ -136,7 +163,13 @@ export function DashboardScreen() {
     const nowMs = Date.now();
     for (const token of tokenList) {
       const balance = (tokenBalances ?? {})[tokenKey(token.chain, token.contract)];
-      if (balance === undefined) continue;
+      // Never-fetchable is not a failure: refreshTokenBalances
+      // stores 'unavailable/no-address' for tokens on chains with
+      // no address (every non-EVM token in the watch-only-only
+      // state), and counting those as failed made the hero Partial
+      // forever with a Missing note that could name nothing — the
+      // same rule the watched-side memo below already applies.
+      if (balance === undefined || isNeverFetchable(balance)) continue;
       const entry = tokenPricesState.entries[tokenKey(token.chain, token.contract)];
       const value = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
       switch (value.kind) {
@@ -160,6 +193,45 @@ export function DashboardScreen() {
     return { minorUnits, partial, loadedZero, unpricedNonzero };
   }, [devnetEnabled, tokenList, tokenBalances, tokenPricesState.entries]);
 
+  // Watch-only display programme: the watched wallets' token fiat,
+  // same honesty rules as the vault's — except a token on a chain
+  // with no second (watched) address contributes nothing at all, not
+  // a failure: the watched wallet simply has no address there.
+  const watchTokenContribution: PortfolioTokenContribution = useMemo(() => {
+    if (devnetEnabled) {
+      return { minorUnits: [], partial: false, loadedZero: false, unpricedNonzero: false };
+    }
+    const minorUnits: number[] = [];
+    let partial = false;
+    let loadedZero = false;
+    let unpricedNonzero = false;
+    const nowMs = Date.now();
+    for (const token of tokenList) {
+      const balance = (watchTokenBalances ?? {})[tokenKey(token.chain, token.contract)];
+      if (balance === undefined || isNeverFetchable(balance)) continue;
+      const entry = tokenPricesState.entries[tokenKey(token.chain, token.contract)];
+      const value = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
+      switch (value.kind) {
+        case 'fiat':
+          minorUnits.push(value.minorUnits);
+          break;
+        case 'zero':
+          loadedZero = true;
+          break;
+        case 'balance-unavailable':
+          partial = true;
+          break;
+        case 'unavailable':
+        case 'expired':
+        case 'error':
+          unpricedNonzero = true;
+          partial = true;
+          break;
+      }
+    }
+    return { minorUnits, partial, loadedZero, unpricedNonzero };
+  }, [devnetEnabled, tokenList, watchTokenBalances, tokenPricesState.entries]);
+
   // Lane 4 (UX-major, data): the portfolio breakdown — one unified
   // list across chains and tokens, sorted by fiat value, with each
   // holding's share of the priced total and its 24 h movement where
@@ -175,104 +247,275 @@ export function DashboardScreen() {
     minorUnits: number | null;
     valueText: string | null;
     change24hPct: number | undefined;
+    /** Watch-only display programme: a holding of a watched wallet. */
+    watchOnly?: boolean;
+  };
+  type BreakdownMissing = {
+    label: string;
+    detail: string;
   };
   const breakdown = useMemo(() => {
     if (devnetEnabled) {
-      return { holdings: [] as BreakdownHolding[], zeroCount: 0, pricedTotal: 0 };
+      return {
+        holdings: [] as BreakdownHolding[],
+        missing: [] as BreakdownMissing[],
+        zeroCount: 0,
+        pricedTotal: 0,
+      };
     }
     const holdings: BreakdownHolding[] = [];
+    const missing: BreakdownMissing[] = [];
     let zeroCount = 0;
     let pricedTotal = 0;
     const nowMs = Date.now();
-    for (const chain of availableFor('balance')) {
-      const balance = balances[chain];
-      if (balance === undefined || balance.status === 'loading') continue;
-      if (balance.status === 'unavailable' || balance.status === 'error') continue;
-      if (balance.status === 'zero' || balance.value === '0') {
-        zeroCount += 1;
-        continue;
+    // One pass per wallet side — the vault's balances, then the
+    // watched wallets' — so the breakdown is the whole portfolio,
+    // largest first, with watched holdings marked as such. A holding
+    // whose balance failed (or whose price is missing) is never
+    // dropped silently: it lands in `missing`, named, so the hero's
+    // "(Partial)" always has an answer to "what's missing?".
+    const addNative = (
+      map: Partial<Record<string, BalanceState>>,
+      watchOnly: boolean,
+    ) => {
+      for (const chain of availableFor('balance')) {
+        const balance = map[chain];
+        if (balance === undefined) continue;
+        if (isNeverFetchable(balance)) continue;
+        const label = chainConfig(chain).displayName;
+        if (balance.status === 'loading') {
+          missing.push({ label, detail: 'balance still loading' });
+          continue;
+        }
+        if (balance.status === 'unavailable' || balance.status === 'error') {
+          missing.push({ label, detail: 'balance unavailable' });
+          continue;
+        }
+        if (balance.status === 'zero' || balance.value === '0') {
+          zeroCount += 1;
+          continue;
+        }
+        const entry = pricesState.entries[chain];
+        const fiat = fiatValueForBalance(chain, balance, entry, nowMs);
+        const change24hPct =
+          entry?.status === 'fresh' ? entry.quote.change24hPct : undefined;
+        if (fiat.kind === 'fiat') {
+          pricedTotal += fiat.minorUnits;
+          holdings.push({
+            key: `${watchOnly ? 'watch:' : ''}${chain}`,
+            label,
+            detail: watchOnly
+              ? `${chainConfig(chain).symbol} · Watch-only`
+              : chainConfig(chain).symbol,
+            minorUnits: fiat.minorUnits,
+            valueText: fiat.text,
+            change24hPct,
+            watchOnly: watchOnly || undefined,
+          });
+        } else {
+          missing.push({ label, detail: 'price unavailable' });
+          holdings.push({
+            key: `${watchOnly ? 'watch:' : ''}${chain}`,
+            label,
+            detail: watchOnly
+              ? `${chainConfig(chain).symbol} · Watch-only`
+              : chainConfig(chain).symbol,
+            minorUnits: null,
+            valueText: null,
+            change24hPct,
+            watchOnly: watchOnly || undefined,
+          });
+        }
       }
-      const entry = pricesState.entries[chain];
-      const fiat = fiatValueForBalance(chain, balance, entry, nowMs);
-      const change24hPct =
-        entry?.status === 'fresh' ? entry.quote.change24hPct : undefined;
-      if (fiat.kind === 'fiat') {
-        pricedTotal += fiat.minorUnits;
-        holdings.push({
-          key: chain,
-          label: chainConfig(chain).displayName,
-          detail: chainConfig(chain).symbol,
-          minorUnits: fiat.minorUnits,
-          valueText: fiat.text,
-          change24hPct,
-        });
-      } else {
-        holdings.push({
-          key: chain,
-          label: chainConfig(chain).displayName,
-          detail: chainConfig(chain).symbol,
-          minorUnits: null,
-          valueText: null,
-          change24hPct,
-        });
+    };
+    const addTokens = (
+      map: Record<string, BalanceState> | undefined,
+      watchOnly: boolean,
+    ) => {
+      for (const token of tokenList) {
+        const balance = (map ?? {})[tokenKey(token.chain, token.contract)];
+        if (balance === undefined) continue;
+        if (isNeverFetchable(balance)) continue;
+        const label = token.name;
+        if (balance.status === 'loading') {
+          missing.push({ label, detail: `${token.symbol} · ${chainConfig(token.chain).displayName} — balance still loading` });
+          continue;
+        }
+        const detail = watchOnly
+          ? `${token.symbol} · ${chainConfig(token.chain).displayName} · Watch-only`
+          : `${token.symbol} · ${chainConfig(token.chain).displayName}`;
+        if (balance.status === 'unavailable' || balance.status === 'error') {
+          missing.push({ label, detail: `${detail} — balance unavailable` });
+          continue;
+        }
+        if (balance.status === 'zero' || balance.value === '0') {
+          zeroCount += 1;
+          continue;
+        }
+        const entry = tokenPricesState.entries[tokenKey(token.chain, token.contract)];
+        const fiat = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
+        const change24hPct =
+          entry?.status === 'fresh' ? entry.quote.change24hPct : undefined;
+        if (fiat.kind === 'fiat') {
+          pricedTotal += fiat.minorUnits;
+          holdings.push({
+            key: `${watchOnly ? 'watch:' : ''}${tokenKey(token.chain, token.contract)}`,
+            label,
+            detail,
+            minorUnits: fiat.minorUnits,
+            valueText: fiat.text,
+            change24hPct,
+            watchOnly: watchOnly || undefined,
+          });
+        } else {
+          missing.push({ label, detail: `${detail} — price unavailable` });
+          holdings.push({
+            key: `${watchOnly ? 'watch:' : ''}${tokenKey(token.chain, token.contract)}`,
+            label,
+            detail,
+            minorUnits: null,
+            valueText: null,
+            change24hPct,
+            watchOnly: watchOnly || undefined,
+          });
+        }
       }
-    }
-    for (const token of tokenList) {
-      const balance = (tokenBalances ?? {})[tokenKey(token.chain, token.contract)];
-      if (balance === undefined || balance.status === 'loading') continue;
-      if (balance.status === 'unavailable' || balance.status === 'error') continue;
-      if (balance.status === 'zero' || balance.value === '0') {
-        zeroCount += 1;
-        continue;
-      }
-      const entry = tokenPricesState.entries[tokenKey(token.chain, token.contract)];
-      const fiat = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
-      const change24hPct =
-        entry?.status === 'fresh' ? entry.quote.change24hPct : undefined;
-      if (fiat.kind === 'fiat') {
-        pricedTotal += fiat.minorUnits;
-        holdings.push({
-          key: tokenKey(token.chain, token.contract),
-          label: token.name,
-          detail: `${token.symbol} · ${chainConfig(token.chain).displayName}`,
-          minorUnits: fiat.minorUnits,
-          valueText: fiat.text,
-          change24hPct,
-        });
-      } else {
-        holdings.push({
-          key: tokenKey(token.chain, token.contract),
-          label: token.name,
-          detail: `${token.symbol} · ${chainConfig(token.chain).displayName}`,
-          minorUnits: null,
-          valueText: null,
-          change24hPct,
-        });
-      }
-    }
+    };
+    addNative(balances, false);
+    addNative(watchBalances ?? {}, true);
+    addTokens(tokenBalances, false);
+    addTokens(watchTokenBalances, true);
     holdings.sort((a, b) => (b.minorUnits ?? -1) - (a.minorUnits ?? -1));
-    return { holdings, zeroCount, pricedTotal };
-  }, [devnetEnabled, balances, pricesState.entries, tokenList, tokenBalances, tokenPricesState.entries]);
+    return { holdings, missing, zeroCount, pricedTotal };
+  }, [devnetEnabled, balances, watchBalances, pricesState.entries, tokenList, tokenBalances, watchTokenBalances, tokenPricesState.entries]);
 
   // Only chains with a verified balance adapter count toward the hero.
   // The multichain-extension chains have no balance adapter yet, so their
   // 'unavailable' status must not fail the hero.
   const heroChains = availableFor('balance');
   const heroBalances = heroChains.map((chain) => balances[chain]);
+  // Watch-only display programme: the chains a watched wallet can
+  // actually contribute on. A chain with no second (watched) address
+  // is not a failure — the watched wallet simply has no address there
+  // — so it never makes the watched total partial.
+  const watchHeroChains = heroChains.filter((chain) => {
+    const balance = (watchBalances ?? {})[chain];
+    return balance !== undefined && !isNeverFetchable(balance);
+  });
+  // Watch-only display programme: the watch-only-only hero totals
+  // exactly the chains the watched wallet can actually hold on.
+  // portfolioTotal counts an 'unavailable' balance as a failed
+  // chain, so totalling all hero chains here made the hero Partial
+  // forever — the ~40 chains with no watched address (Bitcoin,
+  // TRON, TON, Solana, …) sit at 'unavailable/no-address', which is
+  // not a failure: the watched wallet simply has no address there.
+  // The same filter already exists for the watched side in State A
+  // (watchHeroChains); this is its no-vault twin over the main
+  // balances, which ARE the watched wallet's balances then.
+  const watchOnlyOnlyHeroChains = heroChains.filter((chain) => {
+    const balance = balances[chain];
+    return balance !== undefined && !isNeverFetchable(balance);
+  });
+  const hasVault = vaultState !== 'no-vault';
+
+  // P0-A (copy address 4 taps → 1): the primary receiving address on
+  // the hero, with a Copy button beside it. The Ethereum address is
+  // the same on all EVM chains, so it is the one address to copy; a
+  // wallet without one falls back to the first address on any balance
+  // chain. A public receiving address, never a secret — it stays
+  // visible even while the balance is masked. Locked (or no) vaults
+  // have no addresses in state, so the row hides itself there.
+  const primaryAddress = useMemo(() => {
+    const eth = vaultAddresses?.eth?.[0];
+    if (typeof eth === 'string' && eth !== '') return eth;
+    for (const chain of availableFor('balance')) {
+      const first = vaultAddresses?.[chain]?.[0];
+      if (typeof first === 'string' && first !== '') return first;
+    }
+    return undefined;
+  }, [vaultAddresses]);
+
+  // (3) Watch-only-only: no vault, but watched addresses exist. The
+  // dashboard's rows already read the watched addresses then; the
+  // fresh-zero note below stays off when any are present.
+  const hasWatchAddresses = useMemo(
+    () => Object.values(addresses ?? {}).some((list) => (list ?? []).length > 0),
+    [addresses],
+  );
+
+  // (3) Watch-only hero address: with no vault address in state —
+  // locked vault (derived addresses hidden) or no vault at all — the
+  // hero still copies an address when a watched one exists. Public
+  // data, like the vault address; labelled Watch-only where it
+  // renders, and never a send source (the Send screen never offers
+  // a watched address).
+  const watchAddress = useMemo(() => {
+    if (primaryAddress !== undefined) return undefined;
+    const watch = addresses ?? {};
+    for (const chain of availableFor('balance')) {
+      const first = watch[chain]?.[0]?.address;
+      if (typeof first === 'string' && first !== '') return first;
+    }
+    return undefined;
+  }, [addresses, primaryAddress]);
+
+  // Watch-only display programme: the distinct watched wallets, one
+  // per address (a 0x address fans out to 59 chains but is one
+  // wallet). The hero switcher lists them by label, or by shortened
+  // address when unlabelled.
+  const watchedWallets = useMemo(() => {
+    const seen = new Map<string, { address: string; label: string }>();
+    const watch = addresses ?? {};
+    for (const chain of Object.keys(watch)) {
+      const first = watch[chain as ChainId]?.[0]?.address;
+      if (typeof first !== 'string' || first === '') continue;
+      const key = first.toLowerCase();
+      if (seen.has(key)) continue;
+      const label = xpubs?.[chain as ChainId]?.label?.trim() ?? '';
+      seen.set(key, { address: first, label });
+    }
+    return [...seen.values()];
+  }, [addresses, xpubs]);
+
+  // Watch-only display programme: the hero wallet switcher (Phantom's
+  // account switcher pattern) — All wallets, the vault, or one watched
+  // wallet. The hero total, address, banner and rows follow it.
+  const [heroWallet, setHeroWallet] = useState<string>('all');
+  const selectedWatchAddress =
+    heroWallet.startsWith('watch:')
+      ? (watchedWallets.find(
+          (wallet) => `watch:${wallet.address.toLowerCase()}` === heroWallet,
+        )?.address ?? undefined)
+      : undefined;
+  const viewingWatchOnly =
+    selectedWatchAddress !== undefined || (!hasVault && hasWatchAddresses);
+  const viewingVaultOnly = heroWallet === 'vault';
+
   const heroLoading =
     heroBalances.some((b) => b?.status === 'loading') ||
     tokenList.some(
       (token) =>
         (tokenBalances ?? {})[tokenKey(token.chain, token.contract)]?.status ===
         'loading',
+    ) ||
+    watchHeroChains.some(
+      (chain) => (watchBalances ?? {})[chain]?.status === 'loading',
+    ) ||
+    tokenList.some(
+      (token) =>
+        (watchTokenBalances ?? {})[tokenKey(token.chain, token.contract)]
+          ?.status === 'loading',
     );
   // A failed chain contributes 0 to the total (portfolioTotal's partial
   // path) and is marked on its own row/strip entry — it never blanks the
   // hero. allHeroFailed is only for the message when NO balance loaded
   // at all, so the hero can say balances (not prices) are the cause.
+  const heroWatchBalances = watchHeroChains.map(
+    (chain) => (watchBalances ?? {})[chain],
+  );
   const allHeroFailed =
-    heroBalances.length > 0 &&
-    heroBalances.every(
+    (heroBalances.length > 0 || heroWatchBalances.length > 0) &&
+    [...heroBalances, ...heroWatchBalances].every(
       (b) => b?.status === 'unavailable' || b?.status === 'error',
     );
 
@@ -287,6 +530,224 @@ export function DashboardScreen() {
       ? (priceErrorReasons[0] ?? null)
       : null;
 
+  // Watch-only display programme: the hero is the COMBINED total —
+  // the vault's part plus the watched wallets' part — with the split
+  // shown underneath ("Your wallets $X · Watched $Y", MetaMask
+  // Portfolio's pattern), so watched money is never silently counted
+  // as the user's own and never silently dropped. With no vault the
+  // single part IS the watched total, exactly as before.
+  type HeroTotal = {
+    status: 'zero' | 'total' | 'partial' | 'unavailable';
+    text: string;
+    partial: boolean;
+    minorUnits: number;
+  };
+  const priceEntriesForTotal = devnetEnabled
+    ? idlePriceEntries()
+    : pricesState.entries;
+  const vaultPart: HeroTotal | null = hasVault
+    ? portfolioTotal(
+        balances,
+        priceEntriesForTotal,
+        Date.now(),
+        heroChains,
+        tokenContribution,
+      )
+    : null;
+  const watchPart: HeroTotal | null = !hasWatchAddresses
+    ? null
+    : hasVault
+      ? portfolioTotal(
+          watchBalances ?? {},
+          priceEntriesForTotal,
+          Date.now(),
+          watchHeroChains,
+          watchTokenContribution,
+        )
+      : portfolioTotal(
+          balances,
+          priceEntriesForTotal,
+          Date.now(),
+          watchOnlyOnlyHeroChains,
+          tokenContribution,
+        );
+  // A funded balance whose price is missing makes its side's total
+  // undecidable — it must read Unavailable, never $0.00 (the same
+  // rule portfolioTotal applies inside one side).
+  const sideHasUnpricedNonzero = (
+    map: Partial<Record<string, BalanceState>> | Record<string, BalanceState>,
+    chains: readonly string[],
+    tokenUnpriced: boolean,
+  ): boolean => {
+    if (tokenUnpriced) return true;
+    const nowMs = Date.now();
+    for (const chain of chains) {
+      const balance = (map as Record<string, BalanceState>)[chain];
+      if (balance === undefined) continue;
+      if (
+        balance.status !== 'available' ||
+        balance.value === undefined ||
+        balance.value === '0'
+      ) {
+        continue;
+      }
+      const fiat = fiatValueForBalance(
+        chain as (typeof heroChains)[number],
+        balance,
+        pricesState.entries[chain as (typeof heroChains)[number]],
+        nowMs,
+      );
+      if (fiat.kind !== 'fiat' && fiat.kind !== 'zero') return true;
+    }
+    return false;
+  };
+  const combineTotals = (a: HeroTotal | null, b: HeroTotal | null): HeroTotal => {
+    const parts = [a, b].filter((part): part is HeroTotal => part !== null);
+    if (parts.length === 0) {
+      return { status: 'unavailable', text: 'Unavailable', partial: false, minorUnits: 0 };
+    }
+    const minorUnits = parts.reduce((sum, part) => sum + part.minorUnits, 0);
+    const partial = parts.some((part) => part.partial);
+    if (minorUnits > 0) {
+      return {
+        status: partial ? 'partial' : 'total',
+        // The text stays plain: nextHero appends " (Partial)" once
+        // for the partial case. Appending it here too rendered
+        // "$8,233,510.41 (Partial) (Partial)" in the live build.
+        text: sumFiatUSD([minorUnits]),
+        partial,
+        minorUnits,
+      };
+    }
+    if (
+      sideHasUnpricedNonzero(balances, heroChains, tokenContribution.unpricedNonzero) ||
+      sideHasUnpricedNonzero(watchBalances ?? {}, watchHeroChains, watchTokenContribution.unpricedNonzero)
+    ) {
+      return { status: 'unavailable', text: 'Unavailable', partial: false, minorUnits: 0 };
+    }
+    if (parts.every((part) => part.status === 'zero')) {
+      return { status: 'zero', text: '$0.00', partial, minorUnits: 0 };
+    }
+    if (parts.some((part) => part.status === 'zero')) {
+      // One side zero, the other failed to load: the loaded total is
+      // genuinely $0.00 — portfolioTotal's zero+partial rule, across
+      // the two sides.
+      return { status: 'zero', text: '$0.00', partial: true, minorUnits: 0 };
+    }
+    return { status: 'unavailable', text: 'Unavailable', partial: false, minorUnits: 0 };
+  };
+  const combinedTotal = combineTotals(vaultPart, watchPart);
+  // The hero total follows the switcher: All wallets shows the
+  // combined total; one wallet shows that wallet's part. With a
+  // single watched wallet the watched part IS that wallet's total;
+  // with several, the watched part is their aggregate and the split
+  // line says so by showing the watched figure, never a per-wallet
+  // number the state cannot attribute.
+  const displayTotal: HeroTotal = viewingVaultOnly
+    ? (vaultPart ?? {
+        status: 'unavailable',
+        text: 'Unavailable',
+        partial: false,
+        minorUnits: 0,
+      })
+    : selectedWatchAddress !== undefined
+      ? (watchPart ?? {
+          status: 'unavailable',
+          text: 'Unavailable',
+          partial: false,
+          minorUnits: 0,
+        })
+      : combinedTotal;
+  // One side of the split line: the priced figure, $0.00 for a
+  // genuinely empty side, Unavailable when that side failed to load.
+  const partText = (part: HeroTotal): string =>
+    part.minorUnits > 0
+      ? sumFiatUSD([part.minorUnits])
+      : part.status === 'zero'
+        ? '$0.00'
+        : 'Unavailable';
+  // What the total is missing, named (F1/F10): failed balances and
+  // unpriced funded holdings, vault and watched alike — the answer to
+  // "what's missing?" that "(Partial)" never gave.
+  const missingHoldings = useMemo(() => {
+    if (devnetEnabled) return [] as string[];
+    const names: string[] = [];
+    const pushNative = (
+      map: Partial<Record<string, BalanceState>> | Record<string, BalanceState>,
+      chains: readonly string[],
+      watchOnly: boolean,
+    ) => {
+      const nowMs = Date.now();
+      for (const chain of chains) {
+        const balance = (map as Record<string, BalanceState>)[chain];
+        if (balance === undefined || isNeverFetchable(balance)) continue;
+        const suffix = watchOnly ? ' (watch-only)' : '';
+        // A balance still loading counts toward the hero's partial
+        // (portfolioTotal marks it failed, tokenContribution too),
+        // but the old code skipped it here — so a partial hero during
+        // a poll refresh named nothing at all. The note renders only
+        // for a settled partial hero, so this names the straggler
+        // instead of leaving "(Partial)" unanswered.
+        if (balance.status === 'loading') {
+          names.push(`${chainConfig(chain as (typeof heroChains)[number]).displayName}${suffix} balance (still loading)`);
+          continue;
+        }
+        if (balance.status === 'unavailable' || balance.status === 'error') {
+          names.push(`${chainConfig(chain as (typeof heroChains)[number]).displayName}${suffix} balance`);
+        } else if (
+          balance.status === 'available' &&
+          balance.value !== undefined &&
+          balance.value !== '0'
+        ) {
+          const fiat = fiatValueForBalance(
+            chain as (typeof heroChains)[number],
+            balance,
+            pricesState.entries[chain as (typeof heroChains)[number]],
+            nowMs,
+          );
+          if (fiat.kind !== 'fiat' && fiat.kind !== 'zero') {
+            names.push(`${chainConfig(chain as (typeof heroChains)[number]).displayName}${suffix} price`);
+          }
+        }
+      }
+    };
+    const pushTokens = (
+      map: Record<string, BalanceState> | undefined,
+      watchOnly: boolean,
+    ) => {
+      const nowMs = Date.now();
+      for (const token of tokenList) {
+        const balance = (map ?? {})[tokenKey(token.chain, token.contract)];
+        if (balance === undefined || isNeverFetchable(balance)) continue;
+        const suffix = watchOnly ? ' (watch-only)' : '';
+        // Same loading rule as the natives above: a token still
+        // loading makes the hero partial but was never named.
+        if (balance.status === 'loading') {
+          names.push(`${token.name} (${chainConfig(token.chain).displayName})${suffix} balance (still loading)`);
+          continue;
+        }
+        if (balance.status === 'unavailable' || balance.status === 'error') {
+          names.push(`${token.name} (${chainConfig(token.chain).displayName})${suffix} balance`);
+        } else if (
+          balance.status === 'available' &&
+          balance.value !== undefined &&
+          balance.value !== '0'
+        ) {
+          const entry = tokenPricesState.entries[tokenKey(token.chain, token.contract)];
+          const fiat = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
+          if (fiat.kind !== 'fiat' && fiat.kind !== 'zero') {
+            names.push(`${token.name} (${chainConfig(token.chain).displayName})${suffix} price`);
+          }
+        }
+      }
+    };
+    pushNative(balances, heroChains, false);
+    pushNative(watchBalances ?? {}, watchHeroChains, true);
+    pushTokens(tokenBalances, false);
+    pushTokens(watchTokenBalances, true);
+    return names;
+  }, [devnetEnabled, balances, watchBalances, watchHeroChains, heroChains, pricesState.entries, tokenList, tokenBalances, watchTokenBalances, tokenPricesState.entries]);
+
   const nextHero: typeof lastHeroRef.current | null = heroLoading
     ? null
     : (() => {
@@ -294,13 +755,7 @@ export function DashboardScreen() {
         // entries, never against live prices — test tokens are valueless,
         // so a funded test wallet must never show a dollar total. The
         // per-unit prices still show on the rows below.
-        const total = portfolioTotal(
-          balances,
-          devnetEnabled ? idlePriceEntries() : pricesState.entries,
-          Date.now(),
-          heroChains,
-          tokenContribution,
-        );
+        const total = displayTotal;
 
         switch (total.status) {
           case 'zero':
@@ -390,49 +845,16 @@ export function DashboardScreen() {
   // a missing total is never disguised as a hidden one.
   const heroText = isLocked ? 'Locked' : hideBalance && hero.text !== 'Unavailable' ? '••••••' : animatedHeroText;
 
-  // P0-A (copy address 4 taps → 1): the primary receiving address on
-  // the hero, with a Copy button beside it. The Ethereum address is
-  // the same on all EVM chains, so it is the one address to copy; a
-  // wallet without one falls back to the first address on any balance
-  // chain. A public receiving address, never a secret — it stays
-  // visible even while the balance is masked. Locked (or no) vaults
-  // have no addresses in state, so the row hides itself there.
-  const primaryAddress = useMemo(() => {
-    const eth = vaultAddresses?.eth?.[0];
-    if (typeof eth === 'string' && eth !== '') return eth;
-    for (const chain of availableFor('balance')) {
-      const first = vaultAddresses?.[chain]?.[0];
-      if (typeof first === 'string' && first !== '') return first;
-    }
-    return undefined;
-  }, [vaultAddresses]);
-
-  // (3) Watch-only-only: no vault, but watched addresses exist. The
-  // dashboard's rows already read the watched addresses then; the
-  // fresh-zero note below stays off when any are present.
-  const hasWatchAddresses = useMemo(
-    () => Object.values(addresses ?? {}).some((list) => (list ?? []).length > 0),
-    [addresses],
-  );
-
-  // (3) Watch-only hero address: with no vault address in state —
-  // locked vault (derived addresses hidden) or no vault at all — the
-  // hero still copies an address when a watched one exists. Public
-  // data, like the vault address; labelled Watch-only where it
-  // renders, and never a send source (the Send screen never offers
-  // a watched address).
-  const watchAddress = useMemo(() => {
-    if (primaryAddress !== undefined) return undefined;
-    const watch = addresses ?? {};
-    for (const chain of availableFor('balance')) {
-      const first = watch[chain]?.[0]?.address;
-      if (typeof first === 'string' && first !== '') return first;
-    }
-    return undefined;
-  }, [addresses, primaryAddress]);
-  const heroAddress = primaryAddress ?? watchAddress;
+  // Watch-only display programme: the hero address follows the
+  // switcher — the vault's address, the selected watched address, or
+  // the vault address with the watched one as the no-vault fallback
+  // (as before) on "All wallets".
+  const heroAddress =
+    selectedWatchAddress ??
+    (viewingVaultOnly ? primaryAddress : (primaryAddress ?? watchAddress));
   const heroAddressIsWatchOnly =
-    primaryAddress === undefined && watchAddress !== undefined;
+    selectedWatchAddress !== undefined ||
+    (primaryAddress === undefined && watchAddress !== undefined);
 
   // P0-A (Lane E M8): the button's own label flips to "Copied!" for 2 s
   // after a successful copy — no separate status line. A failed write
@@ -485,6 +907,15 @@ export function DashboardScreen() {
             stops the digits jittering while the ticker counts; normal
             totals render exactly as before. */}
         <p className="break-words tabular-nums text-display-lg font-bold tracking-tight text-ink"><NumberTicker text={heroText} /></p>
+        {/* Watch-only display programme: the combined total, with the
+            watched part shown separately (MetaMask Portfolio's
+            pattern) — "Your wallets $X · Watched $Y" — so the two are
+            never confused. Only on "All wallets" with both sides. */}
+        {heroWallet === 'all' && vaultPart !== null && watchPart !== null && !devnetEnabled && (
+          <p className="text-sm leading-5 font-medium text-ink">
+            {`Your wallets ${partText(vaultPart)} · Watched ${partText(watchPart)}`}
+          </p>
+        )}
         {heroAddress !== undefined && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="font-mono text-sm break-all text-ink" title={heroAddress}>
@@ -504,6 +935,51 @@ export function DashboardScreen() {
             </Button>
           </div>
         )}
+        {/* Watch-only display programme: the hero wallet switcher
+            (Phantom's account switcher pattern) — All wallets, the
+            vault, or one watched wallet, with the eye mark on the
+            watched options. Only when there is more than one wallet
+            to switch between. */}
+        {((hasVault && hasWatchAddresses) || watchedWallets.length > 1) && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <label htmlFor="hero-wallet" className="text-sm font-medium text-ink">
+              Wallet
+            </label>
+            <select
+              id="hero-wallet"
+              value={heroWallet}
+              onChange={(event) => setHeroWallet(event.target.value)}
+              className="min-w-0 flex-1 rounded-flat-sm border border-ink bg-paper px-2 py-2 text-base text-ink"
+            >
+              <option value="all">All wallets</option>
+              {hasVault ? (
+                <option value="vault">{`My wallet — Account ${(vaultAccount?.account ?? 0) + 1}`}</option>
+              ) : null}
+              {watchedWallets.map((wallet) => (
+                <option
+                  key={wallet.address}
+                  value={`watch:${wallet.address.toLowerCase()}`}
+                >
+                  {`${wallet.label !== '' ? wallet.label : shortenAddress(wallet.address)} — Watch-only`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {/* Watch-only display programme: the watching banner — the
+            viewed wallet is watched-only, so it is labelled on the
+            hero itself, not only in the rows below. */}
+        {viewingWatchOnly && heroAddress !== undefined && (
+          <p className="flex items-center gap-2 pt-1 text-sm font-medium text-ink">
+            <BawaIcon name="eye" className="size-4 shrink-0" aria-hidden="true" />
+            <span>
+              {`Watching ${selectedWatchAddress !== undefined
+                ? (watchedWallets.find((wallet) => wallet.address.toLowerCase() === selectedWatchAddress.toLowerCase())?.label ||
+                  shortenAddress(selectedWatchAddress))
+                : shortenAddress(heroAddress)} — view-only, can't send.`}
+            </span>
+          </p>
+        )}
         {hero.showAttribution && (
           <p className="text-xs leading-4 text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}
@@ -515,8 +991,22 @@ export function DashboardScreen() {
             {`Prices updated ${new Date(pricesState.lastFetchedAtMs).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}.`}
           </p>
         )}
+        {/* Watch-only display programme: when the balances were last
+            refreshed — the freshness signal for the balances half of
+            the total, beside the prices line. The 45 s poll keeps it
+            moving; a still timestamp means the poll is not running. */}
+        {hero.showAttribution && balancesUpdatedAtMs !== null && (
+          <p className="text-xs leading-4 text-panel-text-muted">
+            {`Balances updated ${new Date(balancesUpdatedAtMs).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}.`}
+          </p>
+        )}
         {hero.partialNote && (
-          <p className="text-xs leading-4 text-panel-text-muted">Partial total — some balances or prices are missing. Failed balances count as 0, so this total may understate.</p>
+          <p className="text-xs leading-4 text-panel-text-muted">
+            Partial total — some balances or prices are missing. Failed balances count as 0, so this total may understate.
+            {missingHoldings.length > 0
+              ? ` Missing: ${missingHoldings.slice(0, 3).join('; ')}${missingHoldings.length > 3 ? `; and ${missingHoldings.length - 3} more` : ''}.`
+              : ''}
+          </p>
         )}
         {hero.quietNote && (
           <p className="text-xs leading-4 text-panel-text-muted">Some balances couldn&apos;t be checked.</p>
@@ -586,23 +1076,46 @@ export function DashboardScreen() {
             word each, 1px hairline border, uniform 8px radius, flat
             sun disc (no 2px ink border, no wobble). P0 made them
             functional; this is the polished shape. */}
-        {ACTION_LINKS.map(({ to, icon, label }) => (
-          <Link
-            key={to}
-            to={to}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-flat-sm border border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun"
-          >
-            {/* UX-major Lane 2 (break-ui, measured first-hand): the 56 px
-                discs overflow their 49.6 px tracks at 320 px viewport
-                (page +14 px) — below 360 px they render at 44 px, which
-                fits the track with the label. 390 px and up are
-                untouched. */}
-            <span className="flex size-14 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink max-[359px]:size-11">
-              {icon}
-            </span>
-            <span className="text-xs leading-4 font-medium text-ink">{label}</span>
-          </Link>
-        ))}
+        {ACTION_LINKS.map(({ to, icon, label }) => {
+          // Watch-only display programme (Trust Wallet's rule): Send
+          // and Swap are never offered as if spendable from a watched
+          // wallet — they render disabled, with the reason on hover,
+          // instead of landing on an honest-but-dead empty state.
+          // Receive and Copy stay: the only actions that make sense.
+          const unavailable =
+            viewingWatchOnly && (label === 'Send' || label === 'Swap');
+          const inner = (
+            <>
+              {/* UX-major Lane 2 (break-ui, measured first-hand): the 56 px
+                  discs overflow their 49.6 px tracks at 320 px viewport
+                  (page +14 px) — below 360 px they render at 44 px, which
+                  fits the track with the label. 390 px and up are
+                  untouched. */}
+              <span className="flex size-14 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink max-[359px]:size-11">
+                {icon}
+              </span>
+              <span className="text-xs leading-4 font-medium text-ink">{label}</span>
+            </>
+          );
+          const tileClassName =
+            'flex cursor-pointer flex-col items-center gap-2 rounded-flat-sm border border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun';
+          return unavailable ? (
+            <button
+              key={to}
+              type="button"
+              disabled
+              title="Unavailable for watch-only wallets"
+              aria-label={`${label} (unavailable for watch-only wallets)`}
+              className={`${tileClassName} disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              {inner}
+            </button>
+          ) : (
+            <Link key={to} to={to} className={tileClassName}>
+              {inner}
+            </Link>
+          );
+        })}
         {/* P1 item 6: the fourth money action copies the same primary
             address as the hero Copy button above (same label flip to
             "Copied!" — one shared state, one address). Disabled with
@@ -680,7 +1193,7 @@ export function DashboardScreen() {
                   Devnet: 4 test networks only. No total — test tokens have no value. Prices below are live market prices.
                 </p>
               )}
-              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />
+              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} walletFilter={viewingVaultOnly ? 'vault' : selectedWatchAddress !== undefined ? { kind: 'watch', address: selectedWatchAddress } : 'all'} />
             </Card>
             {/* P1 item 6 (F1): the breakdown is a disclosure under the
                 list now, not a second copy of the holdings on the page
@@ -748,6 +1261,14 @@ export function DashboardScreen() {
                   {breakdown.zeroCount > 0 ? (
                     <p className="mt-2 text-xs leading-4 text-panel-text-muted">
                       {`${breakdown.zeroCount} asset${breakdown.zeroCount === 1 ? '' : 's'} at zero balance — not listed here.`}
+                    </p>
+                  ) : null}
+                  {/* Watch-only display programme: what the total is
+                      missing, named — a failed balance never reads as
+                      $0 inside the total without saying so. */}
+                  {breakdown.missing.length > 0 ? (
+                    <p className="mt-2 text-xs leading-4 text-panel-text-muted">
+                      {`Not included in the total: ${breakdown.missing.slice(0, 3).map((entry) => `${entry.label} (${entry.detail})`).join('; ')}${breakdown.missing.length > 3 ? `; and ${breakdown.missing.length - 3} more` : ''}.`}
                     </p>
                   ) : null}
                 </>

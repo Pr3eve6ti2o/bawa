@@ -888,21 +888,18 @@ export function ImportWalletScreen() {
             aria-busy={isAdding}
             onSubmit={(event) => void handleSubmit(event)}
           >
-            {/* UI/UX Round 2, item 3: the chain picker was one horizontal
-                row of 22 pills that slid sideways and cut the later
-                chains off past the edge. It is now a search bar: click
-                it and the full list opens, typing filters it, and the
-                chains picked before stay in a Recent row below it. */}
-            <ChainSearchSelect
-              chains={chains}
-              value={chain}
-              onChange={setChain}
-              id="watch-only-chain-search"
-              disabled={isAdding}
-            />
-
+            {/* Watch-only display programme (audit F7): the address
+                field is first now. The chain picker used to sit above
+                it, so a pasted address landed in the chain search and
+                dead-ended at "No chains match…". Detection already
+                worked — the field order was the trap. The picker stays
+                below, for the cases detection cannot settle (an xpub,
+                or an address valid on more than one chain). */}
             <div className="space-y-2">
               <Label htmlFor="wallet-xpub">{inputConfigByChain[chain].label}</Label>
+              <p className="text-xs text-muted-foreground">
+                Paste any address — the chain is detected automatically.
+              </p>
               <Input
                 id="wallet-xpub" name="xpub" type="text"
                 className="font-mono"
@@ -930,6 +927,24 @@ export function ImportWalletScreen() {
                   TON: this address only. No sending.
                 </p>
               )}
+            </div>
+
+            {/* UI/UX Round 2, item 3: the chain picker was one horizontal
+                row of 22 pills that slid sideways and cut the later
+                chains off past the edge. It is now a search bar: click
+                it and the full list opens, typing filters it, and the
+                chains picked before stay in a Recent row below it. */}
+            <div className="space-y-2">
+              <ChainSearchSelect
+                chains={chains}
+                value={chain}
+                onChange={setChain}
+                id="watch-only-chain-search"
+                disabled={isAdding}
+              />
+              <p className="text-xs text-muted-foreground">
+                Only needed when detection can’t settle the chain — an xpub, or an address valid on more than one chain.
+              </p>
             </div>
 
             <div className="space-y-2">

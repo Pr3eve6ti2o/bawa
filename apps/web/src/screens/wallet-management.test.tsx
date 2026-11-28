@@ -309,6 +309,59 @@ describe('wallet management — vault account selection', () => {
     }
   });
 
+  it('forgetting one watched wallet takes two taps on its card', async () => {
+    // Watch-only display programme (audit F11): the 59 per-chain
+    // "Forget stored key" buttons are gone — forgetting is one
+    // two-tap control per card. The first tap arms it; only the
+    // second forgets the wallet's chains.
+    const removeXpub = vi.fn();
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: {
+        btc: null,
+        eth: null,
+        trx: null,
+        ton: null,
+        sol: {
+          chain: 'sol',
+          xpub: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+          label: '',
+          derivedCount: 1,
+        },
+      },
+      removeXpub,
+      vaultAccount: { account: 0, index: 0 },
+      setVaultAccount: vi.fn(async () => {}),
+      vaultAddresses: TEST_ADDRESSES,
+      vaultAccounts: [0],
+      vaultPassphraseNeeded: false,
+      createVaultAccounts: vi.fn(async () => []),
+      selectVaultAccount: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      const first = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Forget this wallet',
+      ) as HTMLButtonElement;
+      expect(first).toBeDefined();
+      await act(async () => {
+        first.click();
+      });
+      expect(removeXpub).not.toHaveBeenCalled();
+      const armed = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) =>
+          candidate.textContent === 'Tap again to forget this wallet',
+      ) as HTMLButtonElement;
+      expect(armed).toBeDefined();
+      await act(async () => {
+        armed.click();
+      });
+      expect(removeXpub).toHaveBeenCalledTimes(1);
+      expect(removeXpub).toHaveBeenCalledWith('sol');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('lays the vault card beside the imported wallets on desktop widths', async () => {
     // Follow-up: the vault card sat left and the imported list
     // underneath it in a full-width two-column grid, which left the
@@ -373,8 +426,14 @@ describe('wallet management — vault account selection', () => {
       expect(dl?.className).toContain('lg:grid-cols-2');
       expect(dl?.className).toContain('space-y-3');
       expect(dl?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      // Watch-only display programme (audit F11): the 59 per-chain
+      // "Forget stored key" buttons are gone — forgetting is one
+      // two-tap "Forget this wallet" per card now — so the cards list
+      // is found by that button instead.
       const list = [...mounted.div.querySelectorAll('ul')].find((el) =>
-        el.querySelector('[aria-label="Forget stored Bitcoin key"]'),
+        [...el.querySelectorAll('button')].some(
+          (button) => button.textContent === 'Forget this wallet',
+        ),
       );
       expect(list?.className).toContain('lg:grid');
       expect(list?.className).toContain('lg:grid-cols-1');

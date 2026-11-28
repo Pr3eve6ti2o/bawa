@@ -13,6 +13,12 @@ type SidebarNavProps = {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onPreloadRoute?: (to: string) => void;
+  /**
+   * Watch-only display programme: whether a vault exists. When false
+   * the "Mnemonic backup" item is hidden — there is no phrase to back
+   * up. Undefined (older callers, tests) renders the full list.
+   */
+  hasVault?: boolean;
 };
 
 type SidebarNavGroup = {
@@ -25,10 +31,12 @@ type SidebarNavGroup = {
 // under the header "Account 1 ›" → Wallets screen, and the grouped
 // sidebar mirrors that split: Money holds the daily actions (Swap and
 // Activity promoted out of More), Wallets holds account management,
-// Settings holds Security, Networks and Mnemonic backup. Track lives
-// inside Transactions only (linked from there), and Add wallet
+// Settings holds Security, Networks and Mnemonic backup. Add wallet
 // (Create + Import merged) lives on the Wallets screen itself, which
 // already offers both. No route is deleted — only nav entries.
+// Watch-only display programme (audit F12/F16): Track is linked from
+// Money now (it used to live inside Transactions only), and Mnemonic
+// backup is hidden when there is no vault (see the hasVault prop).
 export const SIDEBAR_GROUPS: SidebarNavGroup[] = [
   {
     heading: "Money",
@@ -39,6 +47,7 @@ export const SIDEBAR_GROUPS: SidebarNavGroup[] = [
       { to: "/send", label: "Send", icon: "send" },
       { to: "/swap", label: "Swap", icon: "swap" },
       { to: "/transactions", label: "Activity", icon: "activity" },
+      { to: "/track", label: "Track", icon: "search" },
     ],
   },
   {
@@ -67,8 +76,20 @@ export function SidebarNav({
   collapsed = false,
   onToggleCollapse = () => {},
   onPreloadRoute,
+  hasVault,
 }: SidebarNavProps) {
   const collapseLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  // Watch-only display programme: with no vault there is no recovery
+  // phrase, so "Mnemonic backup" has nothing to back up. The exported
+  // SIDEBAR_GROUPS / SIDEBAR_LINKS stay the full list (tests pin them);
+  // only the rendered groups drop the item.
+  const visibleGroups =
+    hasVault === false
+      ? SIDEBAR_GROUPS.map((group) => ({
+          ...group,
+          items: group.items.filter((item) => item.to !== "/mnemonic-backup"),
+        }))
+      : SIDEBAR_GROUPS;
 
   return (
     // Width is owned by the shell in app.tsx (desktop:w-[224px] / desktop:w-[72px]);
@@ -107,7 +128,7 @@ export function SidebarNav({
         aria-label="Main navigation"
         className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4"
       >
-        {SIDEBAR_GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.heading} role="group" aria-label={group.heading}>
             {!collapsed && (
               <p

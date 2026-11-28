@@ -13,6 +13,19 @@ import { ChainSearchSelect } from './chain-search-select';
 import { TxRow } from './tx-row';
 import { Skeleton } from '../ui/components/skeleton';
 
+// Watch-only display programme: the live interval for the watched
+// history fetch, the same 45 s as the balance poll.
+const ACTIVITY_POLL_INTERVAL_MS = 45_000;
+
+function readStoredActivityWallet(): string | null {
+  try {
+    return window.localStorage.getItem(ACTIVITY_WALLET_KEY);
+  } catch {
+    // Best-effort only.
+    return null;
+  }
+}
+
 type Filter = 'all' | ChainId;
 
 interface RowTx extends AdapterTx {
@@ -179,12 +192,8 @@ export function TransactionHistoryScreen() {
     ],
   );
   const [selectedWalletId, setSelectedWalletId] = useState<string>(() => {
-    try {
-      const stored = window.localStorage.getItem(ACTIVITY_WALLET_KEY);
-      if (stored) return stored;
-    } catch {
-      // Best-effort only; the default below applies.
-    }
+    const stored = readStoredActivityWallet();
+    if (stored) return stored;
     return 'vault';
   });
   const selectedWallet =
@@ -297,6 +306,45 @@ export function TransactionHistoryScreen() {
     // Re-run when the wallet, its chains, the devnet mode, or a manual
     // retry changes — not on every context update.
   }, [selectedId, walletsSignature, directAttempt, devnetEnabled, isWatchOnly]);
+
+  // Watch-only display programme: the direct watch fetch polls on the
+  // same 45 s live interval as the balances, so the watched history
+  // stays fresh without a manual retry.
+  useEffect(() => {
+    if (selectedWallet === undefined || selectedWallet.kind !== 'watch-only') return;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      setDirectAttempt((attempt) => attempt + 1);
+    }, ACTIVITY_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [selectedWallet]);
+
+  // Watch-only display programme (audit F4/F5): Activity defaulted to
+  // the vault wallet even when it was empty and a watched wallet had
+  // history — a blank screen one tap in. The stored choice is never
+  // overridden; only when there is NO stored choice, the vault's
+  // history has settled with zero rows, and a watched wallet exists,
+  // does the screen open on the first watched wallet. The switcher
+  // stays visible to flip back.
+  useEffect(() => {
+    if (readStoredActivityWallet() !== null) return;
+    if (selectedWalletId !== 'vault') return;
+    if (walletOptions.length < 2) return;
+    const vaultSettled = chains.every(
+      (chain) =>
+        history[chain] === undefined || history[chain].status !== 'loading',
+    );
+    if (!vaultSettled) return;
+    const vaultHasRows = chains.some(
+      (chain) => (history[chain]?.txs ?? []).length > 0,
+    );
+    if (vaultHasRows) return;
+    const firstWatched = walletOptions.find(
+      (option) => option.kind === 'watch-only',
+    );
+    if (firstWatched === undefined) return;
+    setSelectedWalletId(firstWatched.id);
+  }, [selectedWalletId, walletOptions, chains, history]);
 
   // The source of truth for the rows below: context history for the
   // vault wallet, the direct-fetch state for a watch-only wallet.

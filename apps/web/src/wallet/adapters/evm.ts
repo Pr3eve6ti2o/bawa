@@ -247,9 +247,14 @@ export function createEvmAdapter(
     }
   };
 
-  const getHistory = async (
+  // Watch-only display programme: the txlist and tokentx calls share
+  // one fetch + parse (same host, same quota window, same entry shape);
+  // only the action and the token field differ.
+  const fetchAccountTransactions = async (
+    action: 'txlist' | 'tokentx',
     address: string,
-    limit = 20,
+    limit: number,
+    contract?: string,
   ): Promise<AdapterResult<AdapterTx[]>> => {
     const normalized = normalizeEvmAddress(address);
     if (!isAddress(normalized)) {
@@ -275,9 +280,12 @@ export function createEvmAdapter(
     // '?' otherwise. A second '?' would make the whole query one
     // opaque parameter and Etherscan would ignore the txlist module.
     const separator = historyBaseUrl.includes('?') ? '&' : '?';
+    const operation = action === 'tokentx' ? 'getTokenHistory' : 'getHistory';
+    const contractParam =
+      contract !== undefined ? `&contractaddress=${contract}` : '';
     const url =
-      `${historyBaseUrl}${separator}module=account&action=txlist` +
-      `&address=${normalized}&page=1&offset=${limit}&sort=desc`;
+      `${historyBaseUrl}${separator}module=account&action=${action}` +
+      `&address=${normalized}${contractParam}&page=1&offset=${limit}&sort=desc`;
     // Merge lane (2026-11-24): Etherscan V2's keyless tier allows 1
     // request per 5 s per IP, and answers NOTOK "Missing/Invalid API
     // Key" inside the window — the same message as a missing key, so
@@ -292,7 +300,7 @@ export function createEvmAdapter(
     let raw: unknown;
     for (let attempt = 1; ; attempt += 1) {
       try {
-        raw = await readJson(url, `${config.chain}.getHistory`);
+        raw = await readJson(url, `${config.chain}.${operation}`);
       } catch (error: unknown) {
         return toAdapterError(error);
       }
@@ -342,6 +350,12 @@ export function createEvmAdapter(
       const failed = receiptStatus === '0' || isError === '1';
       const fromSelf = from === lower;
       const toSelf = to === lower;
+      const tokenSymbol =
+        typeof entry['tokenSymbol'] === 'string' ? entry['tokenSymbol'] : '';
+      const tokenDecimal =
+        typeof entry['tokenDecimal'] === 'string'
+          ? Number(entry['tokenDecimal'])
+          : NaN;
       txs.push({
         hash,
         chain: config.chain,
@@ -356,9 +370,36 @@ export function createEvmAdapter(
           historyExplorerBase !== undefined
             ? `${historyExplorerBase}/tx/${hash}`
             : null,
+        // A tokentx entry names its token; the amount is in that
+        // token's smallest units, so the row carries the token with it.
+        ...(action === 'tokentx' &&
+        tokenSymbol !== '' &&
+        Number.isFinite(tokenDecimal)
+          ? { token: { symbol: tokenSymbol, decimals: tokenDecimal } }
+          : {}),
       });
     }
     return { status: 'ok', data: txs, source: historySource, fetchedAt: Date.now() };
+  };
+
+  const getHistory = async (
+    address: string,
+    limit = 20,
+  ): Promise<AdapterResult<AdapterTx[]>> =>
+    fetchAccountTransactions('txlist', address, limit);
+
+  // Watch-only display programme: the transfers of one token
+  // (Etherscan-compatible `tokentx`, same host as txlist), so the
+  // asset-detail token route can show real history.
+  const getTokenHistory = async (
+    contract: string,
+    address: string,
+    limit = 20,
+  ): Promise<AdapterResult<AdapterTx[]>> => {
+    if (!isAddress(contract)) {
+      return { status: 'error', reason: 'Invalid token contract address' };
+    }
+    return fetchAccountTransactions('tokentx', address, limit, contract);
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
@@ -465,6 +506,7 @@ export function createEvmAdapter(
     networkId,
     getBalance,
     getHistory,
+    getTokenHistory,
     estimateFee,
     estimateFeeTiers,
     getTxInputs,

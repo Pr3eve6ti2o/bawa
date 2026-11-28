@@ -5,6 +5,7 @@ import type { BalanceState } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { shortenAddress } from '../wallet/address-detection';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
+import { formatFiatUSD } from '../wallet/money';
 import { fiatValueForBalance, formatChangePct, isFreshQuote, quoteFreshnessLabel, unitPriceForChain } from '../wallet/prices';
 import type {
   FiatValueResult,
@@ -487,10 +488,17 @@ function getTokenRowModel(
   nowMs: number,
   tokenPricesLoading: boolean | undefined,
   devnet = false,
+  // Watch-only display programme: a watched address's own token row
+  // — the ~$354k of watched WETH/USDC/USDT that was invisible in
+  // State A (audit F3). Same shape as the native watch row: labelled
+  // Watch-only, never linked, same price + 24 h change as the HD row.
+  // The subtitle keeps the contract (the copycat check); the badge
+  // carries the watch label (see ListRow's subline rule).
+  watch?: { address: string; balance: BalanceState },
 ): AssetRowModel {
   const key = tokenKeyOf(token);
   const chainName = chainConfig(token.chain).displayName;
-  const link = `/assets/${token.chain}/${tokenSlug(token)}`;
+  const link = watch !== undefined ? '/wallets' : `/assets/${token.chain}/${tokenSlug(token)}`;
   // Token gaps, item 2: official tokens carry the VERIFIED tick.
   // Lane 2 (redesign): the short contract STAYS in the subtitle
   // ("USDC · Ethereum · 0xA0b8…eB48") — the verified-tick and Lane 4
@@ -504,10 +512,16 @@ function getTokenRowModel(
   // the loading skeleton, not a premature failure (same rule as
   // natives — see getNativeRowModel). Lane G: no wallet for this
   // chain — a balance that can never be fetched renders as zero.
-  const rawBalance: BalanceState = wallet.tokenBalances?.[key] ?? { status: 'loading' };
-  const balance: BalanceState = noWalletForChain(wallet, token.chain)
-    ? noWalletBalance(rawBalance)
-    : rawBalance;
+  const rawBalance: BalanceState =
+    watch !== undefined
+      ? watch.balance
+      : (wallet.tokenBalances?.[key] ?? { status: 'loading' });
+  const balance: BalanceState =
+    watch !== undefined
+      ? rawBalance
+      : noWalletForChain(wallet, token.chain)
+        ? noWalletBalance(rawBalance)
+        : rawBalance;
   const entry: PriceEntry | undefined = tokenPrices?.[key];
   const unit = unitPriceForChain(entry, nowMs);
   const displayUnit: UnitPrice =
@@ -521,7 +535,7 @@ function getTokenRowModel(
   if (balance.status === 'loading') {
     return {
       kind: 'loading',
-      key,
+      key: watch !== undefined ? `watch:${key}` : key,
       // Lane 4: the row title is the full token name ("USD Coin"),
       // not just the symbol — the owner reported the complete token
       // name was not displayed on the mobile homepage.
@@ -536,13 +550,14 @@ function getTokenRowModel(
       logoSymbol: token.symbol,
       logoIconUrl: token.iconUrl ?? null,
       logoAllowSymbol: isDefaultToken(token),
+      ...(watch !== undefined ? { watchOnly: true as const } : {}),
     };
   }
 
   if (balance.status === 'unavailable' || balance.status === 'error') {
     return {
       kind: 'unavailable',
-      key,
+      key: watch !== undefined ? `watch:${key}` : key,
       title: token.name,
       subtitle,
       // Lane 4 (UX-major, data): search matches the whole contract
@@ -563,6 +578,7 @@ function getTokenRowModel(
       logoIconUrl: token.iconUrl ?? null,
       logoAllowSymbol: isDefaultToken(token),
       verified,
+      ...(watch !== undefined ? { watchOnly: true as const } : {}),
     };
   }
 
@@ -594,7 +610,7 @@ function getTokenRowModel(
 
   return {
     kind: 'ready',
-    key,
+    key: watch !== undefined ? `watch:${key}` : key,
     title: token.name,
     subtitle,
     searchText: `${token.name} ${token.symbol} ${chainName} ${token.chain} ${token.contract}`,
@@ -615,6 +631,7 @@ function getTokenRowModel(
     logoIconUrl: token.iconUrl ?? null,
     logoAllowSymbol: isDefaultToken(token),
     verified,
+    ...(watch !== undefined ? { watchOnly: true as const } : {}),
   };
 }
 
@@ -966,6 +983,14 @@ interface AssetRowsProps {
   query?: string;
   /** Lane 2: clears the search from the no-match empty state. */
   onClearQuery?: () => void;
+  /**
+   * Watch-only display programme: which wallet's rows to show. The
+   * dashboard's hero switcher drives it — 'all' (both wallets),
+   * 'vault' (the HD wallet only), or one watched wallet (its rows
+   * only). Undefined is 'all': the asset list and every existing
+   * caller keep showing everything.
+   */
+  walletFilter?: 'all' | 'vault' | { kind: 'watch'; address: string };
 }
 
 /**
@@ -1037,6 +1062,7 @@ export function AssetRows({
   variant,
   query,
   onClearQuery,
+  walletFilter = 'all',
 }: AssetRowsProps) {
   const wallet = useWallet();
   // Defensive defaults: the existing screen tests mock useWallet with
@@ -1100,17 +1126,55 @@ export function AssetRows({
     return list;
   }, [enabledChains, wallet.addresses, wallet.devnetEnabled, wallet.vaultAddresses]);
 
-  // (3) The watched balances, fetched directly per chain (same
-  // adapter, same retry shape as the Wallets screen's
-  // WatchOnlyBalance): the context's refreshBalances cannot serve
-  // them while a vault exists. Fetch-on-mount and on watched-set /
-  // retry; a failed row keeps its honest error state (5a), and the
-  // section's Retry re-runs the fetch with the adapters' own
-  // backoff. The adapter chunk loads lazily here, as everywhere
-  // else — no watch addresses means no fetch and no chunk load.
+  // Watch-only display programme: the hero switcher filters these
+  // rows — 'vault' hides the watch section, one watched wallet shows
+  // only its chains. In the watch-only-only state the main rows
+  // already ARE the watched wallet, so a watch filter keeps them.
+  const hasVault = wallet.vaultState !== 'no-vault';
+  const showMain =
+    walletFilter === 'all' ||
+    walletFilter === 'vault' ||
+    (typeof walletFilter === 'object' && !hasVault);
+  const showWatch = walletFilter !== 'vault';
+  const visibleWatchedChains =
+    typeof walletFilter === 'object'
+      ? watchedChains.filter(
+          (entry) => entry.address.toLowerCase() === walletFilter.address.toLowerCase(),
+        )
+      : watchedChains;
+
+  // Watch-only display programme: in the watch-only-only state the
+  // main rows already ARE the watched wallet (watchedChains is empty
+  // there by design — it needs a vault address to differ from), so
+  // the allocation below reads the main balances instead of the
+  // watch maps. Without this the watched wallet has no allocation
+  // view at all in the state where it is the whole portfolio.
+  const watchOnlyOnly =
+    wallet.devnetEnabled !== true &&
+    !hasVault &&
+    Object.values(wallet.addresses ?? {}).some(
+      (list) => (list?.length ?? 0) > 0,
+    );
+
+  // (3) The watched balances. The context serves them now
+  // (refreshBalances reads the watched address alongside the vault's
+  // — see state/wallet-context), so the direct fetch below is only
+  // the fallback for older mocked contexts that do not provide
+  // watchBalances. Fetch-on-mount and on watched-set / retry; a
+  // failed row keeps its honest error state (5a), and the section's
+  // Retry re-runs the fetch with the adapters' own backoff. The
+  // adapter chunk loads lazily here, as everywhere else — no watch
+  // addresses means no fetch and no chunk load.
   const [watchAttempt, setWatchAttempt] = useState(0);
   const [watchBalances, setWatchBalances] = useState<Record<string, BalanceState>>({});
+  const contextWatchBalances = wallet.watchBalances;
+  const effectiveWatchBalances: Record<string, BalanceState> =
+    contextWatchBalances ?? watchBalances;
   useEffect(() => {
+    if (contextWatchBalances !== undefined) {
+      setWatchBalances({});
+      return;
+    }
     if (watchedChains.length === 0) {
       setWatchBalances({});
       return;
@@ -1185,7 +1249,7 @@ export function AssetRows({
     return () => {
       cancelled = true;
     };
-  }, [watchedChains, watchAttempt]);
+  }, [watchedChains, watchAttempt, contextWatchBalances]);
 
   if (chains.length === 0 && tokens.length === 0) {
     return <p className="p-4 text-sm text-muted-foreground">Balances aren't available yet.</p>;
@@ -1199,14 +1263,19 @@ export function AssetRows({
   const isLocked = wallet.vaultState === 'locked';
   const devnet = wallet.devnetEnabled === true;
 
-  const models: AssetRowModel[] = [
-    ...chains.map((chain) =>
-      getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, devnet),
-    ),
-    ...tokens.map((token) =>
-      getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading, devnet),
-    ),
-  ];
+  // Watch-only display programme: the hero switcher hides the main
+  // (vault) rows when one watched wallet is viewed — the watched
+  // rows below are the list then. 'all' and 'vault' keep them.
+  const models: AssetRowModel[] = showMain
+    ? [
+        ...chains.map((chain) =>
+          getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, devnet),
+        ),
+        ...tokens.map((token) =>
+          getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading, devnet),
+        ),
+      ]
+    : [];
   // Lane 2: the search query (asset list only) filters the same models
   // — name, symbol or chain, case-insensitive — after the zero filter,
   // so the two compose ("hide zero" + "usd" shows funded stablecoins).
@@ -1223,21 +1292,53 @@ export function AssetRows({
     );
   }
   // (3) The watch rows: same prices + 24 h change as the HD rows,
-  // built from the directly fetched watch balances. Zero watch
-  // balances collapse into one count line (an EVM watch import fans
-  // out to 59 chains): the section lists funded, failed and loading
-  // rows only. The same search query filters both lists.
-  const watchModels: AssetRowModel[] = watchedChains.map(({ chain, address }) =>
-    getNativeRowModel(
-      chain,
-      wallet,
-      prices,
-      nowMs,
-      pricesLoading,
-      devnet,
-      { address, balance: watchBalances[chain] ?? { status: 'loading' } },
-    ),
-  );
+  // built from the context's watch balances (or the direct fetch
+  // fallback). Zero watch balances collapse into one count line (an
+  // EVM watch import fans out to 59 chains): the section lists
+  // funded, failed and loading rows only. The same search query
+  // filters both lists.
+  // Watch-only display programme: the watched TOKENS ride here too —
+  // the WETH/USDC/USDT the watched address holds, from the context's
+  // watchTokenBalances, one row per token per watched chain. Without
+  // the context (older mocked contexts) there are no watch token
+  // rows, exactly as before.
+  const watchModels: AssetRowModel[] = showWatch
+    ? [
+        ...visibleWatchedChains.map(({ chain, address }) =>
+          getNativeRowModel(
+            chain,
+            wallet,
+            prices,
+            nowMs,
+            pricesLoading,
+            devnet,
+            { address, balance: effectiveWatchBalances[chain] ?? { status: 'loading' } },
+          ),
+        ),
+        ...(wallet.watchTokenBalances === undefined
+          ? []
+          : visibleWatchedChains.flatMap(({ chain, address }) =>
+              tokens
+                .filter((token) => token.chain === chain)
+                .map((token) =>
+                  getTokenRowModel(
+                    token,
+                    wallet,
+                    tokenPrices,
+                    tokenNowMs,
+                    tokenPricesLoading,
+                    devnet,
+                    {
+                      address,
+                      balance:
+                        (wallet.watchTokenBalances ?? {})[tokenKeyOf(token)] ??
+                        { status: 'loading' },
+                    },
+                  ),
+                ),
+            )),
+      ]
+    : [];
   let watchFiltered = watchModels;
   if (normalizedQuery !== '') {
     watchFiltered = watchFiltered.filter((model) =>
@@ -1248,6 +1349,123 @@ export function AssetRows({
   }
   const watchZeroCount = watchFiltered.filter(isZeroBalance).length;
   const watchVisible = watchFiltered.filter((model) => !isZeroBalance(model));
+  // Watch-only display programme: the per-chain allocation (OKX +
+  // Zerion's pattern) — one watched wallet's total, then each chain's
+  // subtotal and share of it. Only priced holdings count; an unpriced
+  // funded holding is listed in the rows below, never in the total.
+  const watchAllocation = useMemo(() => {
+    // State A: the watch maps, per watched chain. State B (no vault):
+    // the main maps — the main rows ARE the watched wallet there.
+    const allocationEntries =
+      visibleWatchedChains.length > 0
+        ? visibleWatchedChains
+        : watchOnlyOnly
+          ? availableFor('balance')
+              .filter(
+                (chain) =>
+                  (enabledChains === undefined ||
+                    enabledChains.includes(chain)) &&
+                  (wallet.addresses?.[chain]?.[0]?.address ?? '') !== '',
+              )
+              .map((chain) => ({
+                chain,
+                address: wallet.addresses?.[chain]?.[0]?.address ?? '',
+              }))
+          : [];
+    const allocationNatives =
+      visibleWatchedChains.length > 0
+        ? effectiveWatchBalances
+        : (wallet.balances ?? {});
+    const allocationTokens =
+      visibleWatchedChains.length > 0
+        ? wallet.watchTokenBalances
+        : wallet.tokenBalances;
+    if (allocationEntries.length === 0) {
+      return {
+        totalMinorUnits: 0,
+        chains: [] as Array<{
+          chain: ChainId;
+          label: string;
+          minorUnits: number;
+          sharePct: number;
+        }>,
+      };
+    }
+    const perChain = new Map<ChainId, number>();
+    const add = (chain: ChainId, minorUnits: number | null) => {
+      if (minorUnits === null) return;
+      perChain.set(chain, (perChain.get(chain) ?? 0) + minorUnits);
+    };
+    for (const { chain } of allocationEntries) {
+      const balance = allocationNatives[chain];
+      if (
+        balance !== undefined &&
+        balance.status === 'available' &&
+        balance.value !== undefined &&
+        balance.value !== '0'
+      ) {
+        const entry = prices?.[chain];
+        const fiat =
+          entry === undefined
+            ? null
+            : fiatValueForBalance(chain, balance, entry, nowMs);
+        add(chain, fiat !== null && fiat.kind === 'fiat' ? fiat.minorUnits : null);
+      }
+      if (allocationTokens !== undefined) {
+        for (const token of tokens) {
+          if (token.chain !== chain) continue;
+          const tokenBalance = allocationTokens[tokenKeyOf(token)];
+          if (
+            tokenBalance === undefined ||
+            tokenBalance.status !== 'available' ||
+            tokenBalance.value === undefined ||
+            tokenBalance.value === '0'
+          ) {
+            continue;
+          }
+          const entry = tokenPrices?.[tokenKeyOf(token)];
+          const fiat = fiatValueForTokenBalance(
+            tokenBalance,
+            token.decimals,
+            entry,
+            tokenNowMs,
+          );
+          add(chain, fiat.kind === 'fiat' ? fiat.minorUnits : null);
+        }
+      }
+    }
+    const list = [...perChain.entries()]
+      .filter(([, minorUnits]) => minorUnits > 0)
+      .map(([chain, minorUnits]) => ({
+        chain,
+        label: chainConfig(chain).displayName,
+        minorUnits,
+      }))
+      .sort((a, b) => b.minorUnits - a.minorUnits);
+    const totalMinorUnits = list.reduce((sum, entry) => sum + entry.minorUnits, 0);
+    return {
+      totalMinorUnits,
+      chains: list.map((entry) => ({
+        ...entry,
+        sharePct:
+          totalMinorUnits > 0 ? (entry.minorUnits / totalMinorUnits) * 100 : 0,
+      })),
+    };
+  }, [
+    visibleWatchedChains,
+    watchOnlyOnly,
+    effectiveWatchBalances,
+    wallet.watchTokenBalances,
+    wallet.balances,
+    wallet.tokenBalances,
+    wallet.addresses,
+    enabledChains,
+    prices,
+    tokenPrices,
+    tokens,
+    nowMs,
+    tokenNowMs,
+  ]);
   // Lane X (Lane D #49): hide the Value column while every visible
   // row is worth $0.00 — the column adds nothing then.
   const allZeroValue =
@@ -1279,12 +1497,66 @@ export function AssetRows({
     watchVisible.every(
       (model) => model.kind === 'ready' && model.valueText === '$0.00',
     );
-  const watchSection =
-    watchedChains.length === 0 ||
-    (normalizedQuery !== '' && watchFiltered.length === 0) ? null : (
-      <section aria-label="Watch-only balances" className="mt-6">
-        <div className="flex flex-wrap items-center gap-2 px-4">
+  // Watch-only display programme: the per-chain allocation — each
+  // chain's share of the watched total, largest first. Shared by the
+  // watch section (State A) and the standalone section below (State
+  // B, where there is no watch section because the main rows ARE the
+  // watched wallet).
+  const allocationBlock =
+    watchAllocation.chains.length > 0 ? (
+      <>
+        <ul className="space-y-1 px-4 pt-2" aria-label="Allocation by chain">
+          {watchAllocation.chains.slice(0, 5).map((entry) => (
+            <li key={entry.chain} className="flex items-center gap-2 text-sm">
+              <span className="w-28 shrink-0 truncate text-ink">{entry.label}</span>
+              <span className="h-2 min-w-0 flex-1 rounded-full bg-sun" aria-hidden="true">
+                <span
+                  className="block h-2 rounded-full bg-coral"
+                  style={{ width: `${Math.max(2, entry.sharePct)}%` }}
+                />
+              </span>
+              <span className="w-14 shrink-0 text-right text-panel-text-muted">
+                {`${entry.sharePct.toFixed(1)}%`}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {watchAllocation.chains.length > 5 ? (
+          <p className="px-4 pt-1 text-xs text-muted-foreground">
+            {`And ${watchAllocation.chains.length - 5} more chain${watchAllocation.chains.length - 5 === 1 ? '' : 's'} — see the rows below.`}
+          </p>
+        ) : null}
+      </>
+    ) : null;
+  // State B only: the watched wallet's allocation has nowhere else
+  // to live — the watch section above is null there, and the main
+  // rows below it are the watched wallet itself.
+  const watchOnlyOnlyAllocation =
+    watchOnlyOnly && watchAllocation.chains.length > 0 ? (
+      <section aria-label="Watch-only allocation" className="border-b border-border pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4">
           <h3 className="text-base font-semibold text-ink">Watch-only</h3>
+          {watchAllocation.totalMinorUnits > 0 ? (
+            <p className="text-base font-semibold text-ink">
+              {formatFiatUSD(watchAllocation.totalMinorUnits)}
+            </p>
+          ) : null}
+        </div>
+        {allocationBlock}
+      </section>
+    ) : null;
+  const watchSection =
+    !showWatch ||
+    visibleWatchedChains.length === 0 ||
+    (normalizedQuery !== '' && watchFiltered.length === 0) ? null : (
+      <section aria-label="Watch-only balances" className="border-b border-border pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4">
+          <h3 className="text-base font-semibold text-ink">Watch-only</h3>
+          {watchAllocation.totalMinorUnits > 0 ? (
+            <p className="text-base font-semibold text-ink">
+              {formatFiatUSD(watchAllocation.totalMinorUnits)}
+            </p>
+          ) : null}
         </div>
         <p className="px-4 pt-1 text-sm text-muted-foreground">
           Balances for addresses you watch. Watch-only wallets can’t send — manage them in{' '}
@@ -1293,6 +1565,7 @@ export function AssetRows({
           </Link>
           .
         </p>
+        {allocationBlock}
         {watchFailedCount > 0 ? (
           <div className="flex flex-wrap items-center gap-2 px-4 pt-2" role="status">
             <p className="text-base text-ink">
@@ -1305,7 +1578,17 @@ export function AssetRows({
               variant="secondary"
               size="sm"
               disabled={watchLoading}
-              onClick={() => setWatchAttempt((count) => count + 1)}
+              onClick={() => {
+                // The context serves the watch balances now: retry
+                // there. The direct-fetch fallback keeps its own
+                // retry (older mocked contexts).
+                if (contextWatchBalances !== undefined) {
+                  void wallet.refreshBalances?.();
+                  void wallet.refreshTokenBalances?.();
+                } else {
+                  setWatchAttempt((count) => count + 1);
+                }
+              }}
             >
               {watchLoading ? 'Retrying…' : 'Retry'}
             </Button>
@@ -1401,6 +1684,11 @@ export function AssetRows({
     return (
       <>
         {lockedNotice}
+        {/* Watch-only display programme: the watched holdings sit at
+            the TOP of the list (audit F4 — they were ~5½ phone-screens
+            down), with their allocation, so they are found at 0 taps. */}
+        {watchOnlyOnlyAllocation}
+        {watchSection}
         <div className="@container">
         {searchCount}
         {provenance !== null ? (
@@ -1434,7 +1722,6 @@ export function AssetRows({
           ))}
         </ul>
         </div>
-        {watchSection}
       </>
     );
   }
@@ -1442,6 +1729,11 @@ export function AssetRows({
   return (
     <>
       {lockedNotice}
+      {/* Watch-only display programme: the watched holdings sit at
+          the TOP of the list (audit F4 — they were ~5½ phone-screens
+          down), with their allocation, so they are found at 0 taps. */}
+      {watchOnlyOnlyAllocation}
+      {watchSection}
       {searchCount}
       {provenance !== null ? (
         <div className="px-4 pt-3 pb-1 text-right">
@@ -1458,7 +1750,6 @@ export function AssetRows({
           <ListRow key={model.key} model={model} />
         ))}
       </ul>
-      {watchSection}
     </>
   );
 }

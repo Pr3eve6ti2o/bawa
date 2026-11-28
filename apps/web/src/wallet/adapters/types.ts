@@ -42,6 +42,14 @@ export interface AdapterTx {
   timestamp: number | null;
   status: TxStatus;
   explorerUrl: string | null;
+  /**
+   * Watch-only display programme: the token a transfer moved, when
+   * the row came from a token-transfer list (getTokenHistory). The
+   * amount is then in this token's smallest units, not the chain's —
+   * TxRow formats it with these decimals + symbol instead of the
+   * native ones. Absent for native transfers.
+   */
+  token?: { symbol: string; decimals: number };
 }
 
 export interface FeeEstimate {
@@ -184,6 +192,20 @@ export interface ChainAdapter {
   networkId: string;
   getBalance(address: string): Promise<AdapterResult<AdapterBalance>>;
   getHistory(
+    address: string,
+    limit?: number,
+  ): Promise<AdapterResult<AdapterTx[]>>;
+  /**
+   * Watch-only display programme: the transfers of one token for one
+   * address (Etherscan-compatible `tokentx`), so an asset-detail
+   * token route can show real history instead of "No history for this
+   * token yet". Optional: only the EVM adapter implements it. Absent,
+   * the detail shows the honest "not available for this chain" note.
+   * The returned txs carry `token` (symbol + decimals) so the amount
+   * formats in the token's units, not the chain's.
+   */
+  getTokenHistory?(
+    contract: string,
     address: string,
     limit?: number,
   ): Promise<AdapterResult<AdapterTx[]>>;

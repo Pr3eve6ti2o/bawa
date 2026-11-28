@@ -245,6 +245,64 @@ describe('wallet context — adapter-backed balances and history', () => {
     }
   });
 
+  it('keeps the watched balance in watchBalances when a vault exists', async () => {
+    // Watch-only display programme: refreshBalances used to pick the
+    // vault address first per chain, so a watched balance never
+    // entered the hero total (or any row) while a vault existed. The
+    // vault and the watched address now fetch side by side — the
+    // vault's balance stays in balances, the watched one in
+    // watchBalances — so the dashboard can total them separately.
+    const WATCHED = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe';
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const mounted = await mountProvider();
+    try {
+      // Address-aware stub: the watched address reads 222, every other
+      // address (including the vault's) reads 111.
+      registerAdapter({
+        ...stubAdapter('eth', okBalance('0'), okTxs([])),
+        getBalance: async (address: string) => ({
+          status: 'ok' as const,
+          data: {
+            chain: 'eth' as const,
+            address,
+            networkId: 'test',
+            valueBaseUnits:
+              address.toLowerCase() === WATCHED.toLowerCase() ? '222' : '111',
+            decimals: 18,
+            source: 'stub',
+            fetchedAt: 0,
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        }),
+      });
+      await act(async () => {
+        await latest?.unlockVault(TEST_PASSWORD);
+      });
+      const vaultAddress = latest?.vaultAddresses.eth?.[0];
+      expect(typeof vaultAddress).toBe('string');
+      expect(vaultAddress?.toLowerCase()).not.toBe(WATCHED.toLowerCase());
+      await act(async () => {
+        await latest?.addWatchOnlyAddress('eth', WATCHED, '');
+      });
+      await act(async () => {
+        for (
+          let i = 0;
+          i < 100 && latest?.watchBalances.eth.status !== 'available';
+          i++
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(latest?.balances.eth.status).toBe('available');
+      expect(latest?.balances.eth.value).toBe('111');
+      expect(latest?.watchBalances.eth.status).toBe('available');
+      expect(latest?.watchBalances.eth.value).toBe('222');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('restores a stored watch-only Solana wallet on boot (hydration covers all 13 chains)', async () => {
     // Token gaps, item 6 + item 8: the boot hydration effect iterated
     // a stale four-chain list, so a SOL watch-only wallet persisted in

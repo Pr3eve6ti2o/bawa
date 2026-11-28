@@ -15,6 +15,8 @@ import {
 } from "../wallet/vault";
 import { readBackupDone } from "../wallet/backup-state";
 import { watchOnlyValueKind } from "../wallet/watch-only-families";
+import { fiatValueForBalance, type PriceEntry } from "../wallet/prices";
+import { useLivePrices } from "./use-live-prices";
 import { AddressIdenticon } from "../ui/components/address-identicon";
 import { ChainLogo } from "./token-logo";
 import { Badge } from "../ui/components/badge";
@@ -55,12 +57,17 @@ const exportChains: ReadonlyArray<{ id: ChainId; name: string }> = watchChains;
 // as the refresh path) so the screen's "can show their balances"
 // sentence is true. Fetch-on-mount only: revisiting the screen
 // re-fetches, matching the app's refresh-on-demand model.
+// Watch-only display programme: the row's fiat value comes from the
+// live price feed, passed in by the screen (one feed for the screen,
+// not one per row).
 function WatchOnlyBalance({
   chain,
   address,
+  priceEntry,
 }: {
   chain: ChainId;
   address: string;
+  priceEntry: PriceEntry | undefined;
 }) {
   const [balance, setBalance] = useState<
     'loading' | { value: string } | 'error' | 'unavailable'
@@ -117,6 +124,19 @@ function WatchOnlyBalance({
       </p>
     );
   }
+  // Watch-only display programme: the fiat value beside the balance
+  // (audit F8 — the rows showed balances with no fiat values). A
+  // missing or stale price shows no fiat line, never a guessed $0.
+  const fiatText = (() => {
+    if (priceEntry === undefined) return undefined;
+    const fiat = fiatValueForBalance(
+      chain,
+      { status: 'available', value: balance.value },
+      priceEntry,
+      Date.now(),
+    );
+    return fiat.kind === 'fiat' ? fiat.text : undefined;
+  })();
   return (
     <p className="text-base font-medium">
       Balance:{' '}
@@ -125,6 +145,7 @@ function WatchOnlyBalance({
         CHAIN_DECIMALS[chain],
         chainConfig(chain).symbol,
       )}
+      {fiatText !== undefined ? ` · ${fiatText}` : ''}
     </p>
   );
 }
@@ -206,6 +227,12 @@ export function WalletManagementScreen() {
   // Lane 5: forgetting every stored key at once is destructive, so
   // it takes two taps like Delete vault (DESIGN-SYSTEM §6).
   const [forgetAllArmed, setForgetAllArmed] = useState(false);
+  // Watch-only display programme: forgetting ONE watched wallet is
+  // destructive too, so it takes two taps per card (same pattern).
+  const [forgetWalletArmed, setForgetWalletArmed] = useState<string | null>(null);
+  // Watch-only display programme: the live price feed for the rows'
+  // fiat values (one feed for the screen, not one per row).
+  const { pricesState } = useLivePrices();
 
   async function showExtendedKey(chain: ChainId) {
     if (loadingKey !== null || !exportAccountExtendedPublicKey) return;
@@ -451,11 +478,24 @@ export function WalletManagementScreen() {
               exactly where it was. */}
           {!hasVault && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                You don&apos;t have a wallet yet. Create one from a new
-                recovery phrase, or import the phrase of a wallet you
-                already have.
-              </p>
+              {/* Watch-only display programme (audit F11): the "You
+                  don't have a wallet yet" line is false when watched
+                  wallets exist — the user HAS wallets here, just
+                  watched ones. The Create/Import actions stay. */}
+              {hasWallets ? (
+                <p className="text-sm text-muted-foreground">
+                  You don&apos;t have a wallet of your own yet — but
+                  you&apos;re watching wallets below. Create one from a
+                  new recovery phrase, or import the phrase of a wallet
+                  you already have.
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  You don&apos;t have a wallet yet. Create one from a new
+                  recovery phrase, or import the phrase of a wallet you
+                  already have.
+                </p>
+              )}
               <div className="flex flex-wrap gap-3">
                 <Button type="button" size="lg" asChild>
                   <Link to="/create-wallet">Create a wallet</Link>
@@ -961,7 +1001,8 @@ export function WalletManagementScreen() {
           <p className="text-sm text-muted-foreground">
             These wallets were imported by public key or address. The app
             can show their balances and history, but it cannot sign or send
-            from them. To stop watching one, choose “Forget stored key”.
+            from them. To stop watching one, use “Forget this wallet” on
+            its card.
           </p>
           {/* Follow-up: the imported-wallet cards stack in one column
               inside the right rail at lg — two columns there would be
@@ -988,6 +1029,10 @@ export function WalletManagementScreen() {
             return Object.entries(groups).map(([value, entries]) => {
               const first = entries[0];
               if (first === undefined) return null;
+              // The stored value keeps its 12+8 truncation (not the
+              // shared 6+4 shortenAddress): the tests pin the longer
+              // prefix, and a stored key needs more than 6 chars to
+              // tell two imports apart.
               const shortXpub = `${value.slice(0, 12)}…${value.slice(-8)}`;
               return (
                 <li key={value}>
@@ -1026,53 +1071,66 @@ export function WalletManagementScreen() {
                           {shortXpub}
                         </code>
                       )}
-                      <ul className="divide-y rounded-flat-sm border border-ink bg-paper">
-                        {entries.map(({ id, name, wallet }) => {
-                          // The watched address is the first derived
-                          // address for the entry (for an address entry
-                          // that IS the address; for an xpub entry its
-                          // first derived address) — the same address
-                          // the refresh path reads. Older mocked
-                          // contexts may not provide addresses; fall
-                          // back to the stored value.
-                          const watchedAddress =
-                            addresses[id]?.[0]?.address ?? wallet.xpub;
-                          return (
-                            <li
-                              key={id}
-                              className="px-3 py-2"
-                            >
-                              {/* Lane 5: the balance gets the full row
-                                  width below the header line. Squeezed
-                                  into the same flex row as the Forget
-                                  button it wrapped to three lines
-                                  ("Balance:" / number / ticker) at 390
-                                  px — the balance is the point of the
-                                  row, so it reads on one line now. */}
-                              <div className="flex items-start gap-3">
-                                <ChainLogo chain={id} size={32} />
-                                <p className="min-w-0 flex-1 text-base font-semibold">
-                                  {name}
-                                </p>
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  onClick={() => removeXpub(id)}
-                                  aria-label={`Forget stored ${name} key`}
-                                >
-                                  Forget stored key
-                                </Button>
-                              </div>
-                              <div className="mt-1">
-                                <WatchOnlyBalance
-                                  chain={id}
-                                  address={watchedAddress}
-                                />
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                      {/* Watch-only display programme (audit F11): the
+                          per-chain rows sit behind a disclosure — one
+                          import used to be 59 rows tall — and the 59
+                          per-chain "Forget stored key" buttons are
+                          gone. Forgetting is one two-tap control per
+                          card, below. */}
+                      <details>
+                        <summary className="cursor-pointer text-sm font-semibold">
+                          {`${entries.length} chain${entries.length === 1 ? '' : 's'} — show balances`}
+                        </summary>
+                        <ul className="mt-2 divide-y rounded-flat-sm border border-ink bg-paper">
+                          {entries.map(({ id, name, wallet }) => {
+                            // The watched address is the first derived
+                            // address for the entry (for an address entry
+                            // that IS the address; for an xpub entry its
+                            // first derived address) — the same address
+                            // the refresh path reads. Older mocked
+                            // contexts may not provide addresses; fall
+                            // back to the stored value.
+                            const watchedAddress =
+                              addresses[id]?.[0]?.address ?? wallet.xpub;
+                            return (
+                              <li
+                                key={id}
+                                className="px-3 py-2"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <ChainLogo chain={id} size={32} />
+                                  <p className="min-w-0 flex-1 text-base font-semibold">
+                                    {name}
+                                  </p>
+                                </div>
+                                <div className="mt-1">
+                                  <WatchOnlyBalance
+                                    chain={id}
+                                    address={watchedAddress}
+                                    priceEntry={pricesState.entries[id]}
+                                  />
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </details>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          if (forgetWalletArmed !== value) {
+                            setForgetWalletArmed(value);
+                            return;
+                          }
+                          for (const { id } of entries) removeXpub(id);
+                          setForgetWalletArmed(null);
+                        }}
+                      >
+                        {forgetWalletArmed === value
+                          ? 'Tap again to forget this wallet'
+                          : 'Forget this wallet'}
+                      </Button>
                     </CardContent>
                   </Card>
                 </li>

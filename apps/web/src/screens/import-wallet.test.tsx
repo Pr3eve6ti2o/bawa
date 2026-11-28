@@ -139,6 +139,32 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
     });
   }
 
+  it('puts the address field before the chain search on the Watch-only tab', async () => {
+    // Watch-only display programme (audit F7): the chain search used
+    // to sit above the address field, so a pasted address landed in
+    // it and dead-ended at "No chains match…". The address field is
+    // first now, with the chain picker below it for the cases
+    // detection cannot settle.
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickTabTrigger(div, 'Watch-only');
+      const addressInput = div.querySelector('#wallet-xpub');
+      const chainSearch = div.querySelector('#watch-only-chain-search');
+      expect(addressInput).not.toBeNull();
+      expect(chainSearch).not.toBeNull();
+      const position = (node: Element | null) =>
+        node === null
+          ? -1
+          : [...div.querySelectorAll('*')].indexOf(node);
+      expect(position(addressInput)).toBeLessThan(position(chainSearch));
+      expect(div.textContent).toContain(
+        'Paste any address — the chain is detected automatically.',
+      );
+    } finally {
+      await cleanup();
+    }
+  });
+
   it('switches the label to TON public address when TON is clicked', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {

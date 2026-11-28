@@ -68,6 +68,11 @@ export function TxRow({
   className?: string;
 }) {
   const symbol = chainConfig(chain).symbol;
+  // Watch-only display programme: a token transfer's amount is in
+  // the token's smallest units — format it with the token's decimals
+  // + symbol, not the chain's native ones.
+  const amountSymbol = tx.token?.symbol ?? symbol;
+  const amountDecimals = tx.token?.decimals ?? CHAIN_DECIMALS[chain];
   const directionIcon: BawaIconName =
     tx.direction === 'in'
       ? 'arrow-down-left'
@@ -122,7 +127,7 @@ export function TxRow({
         </span>
         <span className="shrink-0 text-right">
           <span className="block text-base font-semibold">
-            {formatNativeWithSymbol(tx.amountBaseUnits, CHAIN_DECIMALS[chain], symbol)}
+            {formatNativeWithSymbol(tx.amountBaseUnits, amountDecimals, amountSymbol)}
           </span>
           <span className="mt-0.5 block text-xs text-muted-foreground">
             {dateLine}

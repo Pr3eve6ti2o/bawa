@@ -6,7 +6,7 @@ import { isRecord } from '../wallet/guards';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { availableFor, canRotateReceiveAddress, SUPPORTED_CHAINS } from '../wallet/chains';
 import { watchOnlyFamilyChains } from '../wallet/watch-only-families';
-import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
+import type { AdapterResult, AdapterTx, ChainAdapter } from '../wallet/adapters/types';
 import { messageOf } from '../wallet/adapters/types';
 import {
   DEFAULT_TOKENS,
@@ -176,12 +176,29 @@ interface WalletState {
   vaultAddresses: PerChain<string[]>;
   vaultProfileIds: string[] | null;
   balances: PerChain<BalanceState>;
+  // Watch-only balances, separate from the vault's (watch-only display
+  // programme, 2026-11-28): refreshBalances is vault-first per chain,
+  // so while a vault exists a watched address's balances never enter
+  // `balances`. These hold them — one per chain, populated only when a
+  // vault address exists AND a watched address exists that differs
+  // from it. With no vault, `balances` already IS the watched value
+  // and these stay unpopulated, so a watched holding is never counted
+  // twice. Same BalanceState shape (last-good/stale) as `balances`.
+  watchBalances: PerChain<BalanceState>;
   history: PerChain<HistoryState>;
   // Token discovery: balances keyed by tokenKey (`${chain}:${contract}`),
   // the chains the user has enabled (default: all 13), and the
   // user-added token records (defaults live in wallet/tokens.ts, not
   // here). Public data only; the vault is untouched.
   tokenBalances: Record<string, BalanceState>;
+  // Same vault/watched split as watchBalances, for tokens: a watched
+  // address's token balances while a vault exists. With no vault,
+  // `tokenBalances` already IS the watched value.
+  watchTokenBalances: Record<string, BalanceState>;
+  // Epoch ms when the last balance/token refresh run settled. Screens
+  // show it as "Balances updated HH:MM" — the freshness signal for the
+  // hero total. Null until the first refresh settles.
+  balancesUpdatedAtMs: number | null;
   enabledChains: ChainId[];
   customTokens: TokenRecord[];
   // True until boot hydration finishes (watch-only xpubs validated and
@@ -782,8 +799,11 @@ function initialWalletState(): WalletState {
       : persisted.addresses,
     vaultProfileIds: null,
     balances,
+    watchBalances: clearedBalances(),
     history: mayFetch ? initialHistory() : clearedHistory(),
     tokenBalances: {},
+    watchTokenBalances: {},
+    balancesUpdatedAtMs: null,
     enabledChains: readEnabledChains(),
     customTokens: readCustomTokens(),
     hydrating: true,
@@ -931,9 +951,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           ? { status: 'unavailable', reason: 'no-adapter' }
           : { status: 'unavailable', reason: 'no-address' };
       }
+      const watchStartMerge: Partial<Record<ChainId, BalanceState>> = {};
+      for (const chain of ALL_CHAIN_IDS) {
+        watchStartMerge[chain] = { status: 'unavailable', reason: 'no-address' };
+      }
       update(previous => ({
         ...previous,
         balances: { ...previous.balances, ...startMerge },
+        watchBalances: { ...previous.watchBalances, ...watchStartMerge },
       }));
       return;
     }
@@ -954,48 +979,42 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const requests: Partial<Record<ChainId, number>> = {};
     const startMerge: Partial<Record<ChainId, BalanceState>> = {};
     const results: Partial<Record<ChainId, BalanceState>> = {};
-    const pending: Array<Promise<void> | null> = ALL_CHAIN_IDS.map((chain) => {
-      const request = ++balanceRequests.current[chain];
-      requests[chain] = request;
-      if (!availableFor('balance').includes(chain)) {
-        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
-        return null;
-      }
-      const adapter = resolveAdapter(chain);
-      if (!adapter) {
-        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
-        return null;
-      }
-      const address =
-        current.current.vaultAddresses[chain][0] ??
-        current.current.addresses[chain][0]?.address;
-      if (!address) {
-        startMerge[chain] = { status: 'unavailable', reason: 'no-address' };
-        return null;
-      }
-      const previous = current.current.balances[chain];
+    // Watch-only display programme (2026-11-28): the second fetch per
+    // chain — a watched address's own balance, read alongside the
+    // vault's through the same limiter + bounded retry. Only when a
+    // vault address exists AND a watched address exists that differs
+    // from it; with no vault, `balances` already IS the watched value.
+    const watchStartMerge: Partial<Record<ChainId, BalanceState>> = {};
+    const watchResults: Partial<Record<ChainId, BalanceState>> = {};
+    // One fetch, shared by the vault and watch tasks: the last-good /
+    // stale rules and the bounded retry are identical; only the result
+    // map (and the vault-only balance cache) differ.
+    const fetchInto = async (
+      adapter: ChainAdapter,
+      address: string,
+      previous: BalanceState,
+      request: number,
+      chain: ChainId,
+      into: Partial<Record<ChainId, BalanceState>>,
+      cache: boolean,
+    ): Promise<void> => {
       const hasLastGood = previous.status === 'available' || previous.status === 'zero';
-      if (hasLastGood) {
-        startMerge[chain] = { ...previous, refreshing: true, stale: false };
-      } else if (previous.status !== 'loading') {
-        startMerge[chain] = { status: 'loading' };
-      }
-      return (async () => {
-        const result = await refreshLimiter.current.run(() =>
-          fetchWithRetry(() => adapter.getBalance(address)),
-        );
-        if (request !== balanceRequests.current[chain]) return;
-        if (result.status === 'ok') {
-          const fetchedAtMs = Date.now();
-          // Lane F (FIX-ALL): keep the answering host on the state, so
-          // the Networks screen can show which RPC served this balance
-          // (result.source is the adapter's answering endpoint — the
-          // failover loop reports its own hostname, never the primary).
-          const next = {
-            ...balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs),
-            source: result.source,
-          };
-          results[chain] = next;
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() => adapter.getBalance(address)),
+      );
+      if (request !== balanceRequests.current[chain]) return;
+      if (result.status === 'ok') {
+        const fetchedAtMs = Date.now();
+        // Lane F (FIX-ALL): keep the answering host on the state, so
+        // the Networks screen can show which RPC served this balance
+        // (result.source is the adapter's answering endpoint — the
+        // failover loop reports its own hostname, never the primary).
+        const next = {
+          ...balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs),
+          source: result.source,
+        };
+        into[chain] = next;
+        if (cache) {
           try {
             const cached = readCachedBalances();
             cached[chain] = {
@@ -1008,23 +1027,85 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           } catch {
             // Cache writes are best-effort.
           }
-        } else if (hasLastGood) {
-          results[chain] = { ...previous, refreshing: false, stale: true, reason: result.reason };
-        } else if (result.status === 'unavailable') {
-          results[chain] = { status: 'unavailable', reason: result.reason };
-        } else {
-          results[chain] = { status: 'error', reason: result.reason };
         }
+      } else if (hasLastGood) {
+        into[chain] = { ...previous, refreshing: false, stale: true, reason: result.reason };
+      } else if (result.status === 'unavailable') {
+        into[chain] = { status: 'unavailable', reason: result.reason };
+      } else {
+        into[chain] = { status: 'error', reason: result.reason };
+      }
+    };
+    const pending: Array<Promise<void> | null> = ALL_CHAIN_IDS.map((chain) => {
+      const request = ++balanceRequests.current[chain];
+      requests[chain] = request;
+      if (!availableFor('balance').includes(chain)) {
+        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
+        watchStartMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
+        return null;
+      }
+      const adapter = resolveAdapter(chain);
+      if (!adapter) {
+        startMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
+        watchStartMerge[chain] = { status: 'unavailable', reason: 'no-adapter' };
+        return null;
+      }
+      const address =
+        current.current.vaultAddresses[chain][0] ??
+        current.current.addresses[chain][0]?.address;
+      if (!address) {
+        startMerge[chain] = { status: 'unavailable', reason: 'no-address' };
+        watchStartMerge[chain] = { status: 'unavailable', reason: 'no-address' };
+        return null;
+      }
+      const previous = current.current.balances[chain];
+      const hasLastGood = previous.status === 'available' || previous.status === 'zero';
+      if (hasLastGood) {
+        startMerge[chain] = { ...previous, refreshing: true, stale: false };
+      } else if (previous.status !== 'loading') {
+        startMerge[chain] = { status: 'loading' };
+      }
+      // Watch-only display programme: the watched address for this
+      // chain, when it is a second address beside the vault's. The
+      // no-adapter / no-address guards above already resolved the
+      // watch side for chains that cannot fetch at all.
+      const vaultAddress = current.current.vaultAddresses[chain][0];
+      const watchedAddress = current.current.addresses[chain][0]?.address;
+      const watchTarget =
+        typeof vaultAddress === 'string' && vaultAddress !== '' &&
+        typeof watchedAddress === 'string' && watchedAddress !== '' &&
+        watchedAddress !== vaultAddress
+          ? watchedAddress
+          : undefined;
+      const watchPrevious = current.current.watchBalances[chain];
+      if (watchTarget === undefined) {
+        watchStartMerge[chain] = { status: 'unavailable', reason: 'no-address' };
+      } else if (watchPrevious.status === 'available' || watchPrevious.status === 'zero') {
+        watchStartMerge[chain] = { ...watchPrevious, refreshing: true, stale: false };
+      } else if (watchPrevious.status !== 'loading') {
+        watchStartMerge[chain] = { status: 'loading' };
+      }
+      return (async () => {
+        // The vault fetch and the watched-address fetch run together
+        // through the shared limiter, so a watched balance lands with
+        // the vault's instead of a refresh behind.
+        await Promise.all([
+          fetchInto(adapter, address, previous, request, chain, results, true),
+          watchTarget === undefined
+            ? Promise.resolve()
+            : fetchInto(adapter, watchTarget, watchPrevious, request, chain, watchResults, false),
+        ]);
       })();
     });
     // Immediate resolutions + start states land in one update, before
     // any fetch completes - a chain with no adapter/address resolves at
     // once, exactly as before, instead of waiting behind the slowest
     // fetch.
-    if (Object.keys(startMerge).length > 0) {
+    if (Object.keys(startMerge).length > 0 || Object.keys(watchStartMerge).length > 0) {
       update(previous => ({
         ...previous,
         balances: { ...previous.balances, ...startMerge },
+        watchBalances: { ...previous.watchBalances, ...watchStartMerge },
       }));
     }
     const settled = await Promise.allSettled(
@@ -1033,18 +1114,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // Merge only chains whose request counter has not moved on since
     // their fetch started; a newer refresh owns those chains now.
     const freshResults: Partial<Record<ChainId, BalanceState>> = {};
+    const freshWatchResults: Partial<Record<ChainId, BalanceState>> = {};
     for (const chain of ALL_CHAIN_IDS) {
+      if (balanceRequests.current[chain] !== requests[chain]) continue;
       const result = results[chain];
-      if (result !== undefined && balanceRequests.current[chain] === requests[chain]) {
-        freshResults[chain] = result;
-      }
+      if (result !== undefined) freshResults[chain] = result;
+      const watchResult = watchResults[chain];
+      if (watchResult !== undefined) freshWatchResults[chain] = watchResult;
     }
-    if (Object.keys(freshResults).length > 0) {
-      update(previous => ({
-        ...previous,
-        balances: { ...previous.balances, ...freshResults },
-      }));
-    }
+    // The run settled: record when, so screens can show "Balances
+    // updated HH:MM" — the freshness signal for the hero total. The
+    // timestamp lands even when every chain resolved immediately
+    // (no fetch), because a refresh did run.
+    update(previous => ({
+      ...previous,
+      balances: { ...previous.balances, ...freshResults },
+      watchBalances: { ...previous.watchBalances, ...freshWatchResults },
+      balancesUpdatedAtMs: Date.now(),
+    }));
     // Preserve the old rejection contract: a chain whose fetch threw
     // rejects the refresh (callers catch it), but only after the other
     // chains' results have landed.
@@ -1188,6 +1275,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       update((previous) => ({
         ...previous,
         tokenBalances: { ...previous.tokenBalances, ...devnetUnavailable },
+        watchTokenBalances: { ...previous.watchTokenBalances, ...devnetUnavailable },
       }));
       return;
     }
@@ -1198,6 +1286,43 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const requests: Record<string, number> = {};
     const startMerge: Record<string, BalanceState> = {};
     const results: Record<string, BalanceState> = {};
+    // Watch-only display programme (2026-11-28): the watched
+    // address's token balances, same rule as the natives — only when a
+    // vault address exists AND a watched address exists that differs.
+    const watchStartMerge: Record<string, BalanceState> = {};
+    const watchResults: Record<string, BalanceState> = {};
+    const fetchTokenInto = async (
+      token: (typeof tokens)[number],
+      ownerAddress: string,
+      previous: BalanceState | undefined,
+      request: number,
+      key: string,
+      into: Record<string, BalanceState>,
+    ): Promise<void> => {
+      const hasLastGood =
+        previous !== undefined &&
+        (previous.status === 'available' || previous.status === 'zero');
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() =>
+          fetchTokenBalance({
+            chain: token.chain,
+            contract: token.contract,
+            ownerAddress,
+            decimals: token.decimals,
+          }),
+        ),
+      );
+      if (request !== tokenBalanceRequests.current[key]) return;
+      if (result.status === 'ok') {
+        into[key] = balanceStateFromValue(result.data.valueBaseUnits, Date.now());
+      } else if (hasLastGood && previous !== undefined) {
+        into[key] = { ...previous, refreshing: false, stale: true, reason: result.reason };
+      } else if (result.status === 'unavailable') {
+        into[key] = { status: 'unavailable', reason: result.reason };
+      } else {
+        into[key] = { status: 'error', reason: result.reason };
+      }
+    };
     const pending: Array<Promise<void> | null> = tokens.map((token) => {
       const key = tokenKeyOf(token);
       const request = (tokenBalanceRequests.current[key] ?? 0) + 1;
@@ -1205,6 +1330,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       requests[key] = request;
       if (!current.current.enabledChains.includes(token.chain)) {
         startMerge[key] = { status: 'unavailable', reason: 'disabled' };
+        watchStartMerge[key] = { status: 'unavailable', reason: 'disabled' };
         return null;
       }
       const address =
@@ -1212,6 +1338,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         current.current.addresses[token.chain][0]?.address;
       if (!address) {
         startMerge[key] = { status: 'unavailable', reason: 'no-address' };
+        watchStartMerge[key] = { status: 'unavailable', reason: 'no-address' };
         return null;
       }
       const previous = current.current.tokenBalances[key];
@@ -1223,52 +1350,69 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else if (previous === undefined || previous.status !== 'loading') {
         startMerge[key] = { status: 'loading' };
       }
+      // Watch-only display programme: the watched address's token
+      // balance for this token, when it is a second address beside
+      // the vault's.
+      const vaultAddress = current.current.vaultAddresses[token.chain][0];
+      const watchedAddress = current.current.addresses[token.chain][0]?.address;
+      const watchTarget =
+        typeof vaultAddress === 'string' && vaultAddress !== '' &&
+        typeof watchedAddress === 'string' && watchedAddress !== '' &&
+        watchedAddress !== vaultAddress
+          ? watchedAddress
+          : undefined;
+      const watchPrevious = current.current.watchTokenBalances[key];
+      if (watchTarget === undefined) {
+        watchStartMerge[key] = { status: 'unavailable', reason: 'no-address' };
+      } else if (
+        watchPrevious !== undefined &&
+        (watchPrevious.status === 'available' || watchPrevious.status === 'zero')
+      ) {
+        watchStartMerge[key] = { ...watchPrevious, refreshing: true, stale: false };
+      } else if (watchPrevious === undefined || watchPrevious.status !== 'loading') {
+        watchStartMerge[key] = { status: 'loading' };
+      }
       return (async () => {
-        const result = await refreshLimiter.current.run(() =>
-          fetchWithRetry(() =>
-            fetchTokenBalance({
-              chain: token.chain,
-              contract: token.contract,
-              ownerAddress: address,
-              decimals: token.decimals,
-            }),
-          ),
-        );
-        if (request !== tokenBalanceRequests.current[key]) return;
-        if (result.status === 'ok') {
-          const next = balanceStateFromValue(result.data.valueBaseUnits, Date.now());
-          results[key] = next;
-        } else if (hasLastGood && previous !== undefined) {
-          results[key] = { ...previous, refreshing: false, stale: true, reason: result.reason };
-        } else if (result.status === 'unavailable') {
-          results[key] = { status: 'unavailable', reason: result.reason };
-        } else {
-          results[key] = { status: 'error', reason: result.reason };
-        }
+        await Promise.all([
+          fetchTokenInto(token, address, previous, request, key, results),
+          watchTarget === undefined
+            ? Promise.resolve()
+            : fetchTokenInto(token, watchTarget, watchPrevious, request, key, watchResults),
+        ]);
       })();
     });
-    if (Object.keys(startMerge).length > 0) {
+    if (Object.keys(startMerge).length > 0 || Object.keys(watchStartMerge).length > 0) {
       update(previous => ({
         ...previous,
         tokenBalances: { ...previous.tokenBalances, ...startMerge },
+        watchTokenBalances: { ...previous.watchTokenBalances, ...watchStartMerge },
       }));
     }
     const settled = await Promise.allSettled(
       pending.filter((task): task is Promise<void> => task !== null),
     );
     const freshResults: Record<string, BalanceState> = {};
+    const freshWatchResults: Record<string, BalanceState> = {};
     for (const key of Object.keys(results)) {
       const result = results[key];
       if (result !== undefined && tokenBalanceRequests.current[key] === requests[key]) {
         freshResults[key] = result;
       }
     }
-    if (Object.keys(freshResults).length > 0) {
-      update(previous => ({
-        ...previous,
-        tokenBalances: { ...previous.tokenBalances, ...freshResults },
-      }));
+    for (const key of Object.keys(watchResults)) {
+      const result = watchResults[key];
+      if (result !== undefined && tokenBalanceRequests.current[key] === requests[key]) {
+        freshWatchResults[key] = result;
+      }
     }
+    // The run settled: record when, so screens can show "Balances
+    // updated HH:MM" — the freshness signal for the hero total.
+    update(previous => ({
+      ...previous,
+      tokenBalances: { ...previous.tokenBalances, ...freshResults },
+      watchTokenBalances: { ...previous.watchTokenBalances, ...freshWatchResults },
+      balancesUpdatedAtMs: Date.now(),
+    }));
     for (const entry of settled) {
       if (entry.status === 'rejected') throw entry.reason;
     }
@@ -1801,8 +1945,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultPassphraseNeeded: false,
       receiveAddresses: perChain<string | null>(() => null),
       balances: clearedBalances(),
+      watchBalances: clearedBalances(),
       history: clearedHistory(),
       tokenBalances: {},
+      watchTokenBalances: {},
     }));
   }, [update]);
 

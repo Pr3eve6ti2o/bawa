@@ -923,6 +923,7 @@ describe('portfolioTotal', () => {
   it('returns zero when all balances are zero', () => {
     expect(portfolioTotal(zeros, fresh, NOW_MS)).toEqual({
       status: 'zero', text: '$0.00', partial: false,
+      minorUnits: 0,
     });
   });
 
@@ -932,10 +933,19 @@ describe('portfolioTotal', () => {
     });
   });
 
+  it('reports the priced subtotal in minorUnits for the combined hero', () => {
+    // Watch-only display programme: the dashboard totals the vault
+    // and the watched wallets separately and sums the two minorUnits,
+    // so the combined hero and its split share one honest number.
+    expect(portfolioTotal({ ...zeros, btc }, fresh, NOW_MS).minorUnits).toBe(6268300);
+    expect(portfolioTotal(zeros, fresh, NOW_MS).minorUnits).toBe(0);
+  });
+
   it('excludes expired ETH from the partial subtotal', () => {
     const entries = { ...fresh, eth: expired.eth };
     expect(portfolioTotal({ ...zeros, btc, eth }, entries, NOW_MS)).toEqual({
       status: 'partial', text: '$62,683.00', partial: true,
+      minorUnits: 6268300,
     });
   });
 
@@ -960,6 +970,7 @@ describe('portfolioTotal', () => {
       status: 'partial',
       text: '$62,683.00',
       partial: true,
+      minorUnits: 6268300,
     });
   });
 
@@ -973,6 +984,7 @@ describe('portfolioTotal', () => {
       status: 'partial',
       text: '$62,683.00',
       partial: true,
+      minorUnits: 6268300,
     });
   });
 
@@ -992,6 +1004,7 @@ describe('portfolioTotal', () => {
       status: 'zero',
       text: '$0.00',
       partial: true,
+      minorUnits: 0,
     });
   });
 
@@ -1003,6 +1016,7 @@ describe('portfolioTotal', () => {
       status: 'unavailable',
       text: 'Unavailable',
       partial: false,
+      minorUnits: 0,
     });
   });
 
@@ -1014,6 +1028,7 @@ describe('portfolioTotal', () => {
       status: 'total',
       text: '$62,708.00',
       partial: false,
+      minorUnits: 6270800,
     });
   });
 
@@ -1025,6 +1040,7 @@ describe('portfolioTotal', () => {
       status: 'zero',
       text: '$0.00',
       partial: true,
+      minorUnits: 0,
     });
   });
 
@@ -1035,6 +1051,7 @@ describe('portfolioTotal', () => {
       status: 'unavailable',
       text: 'Unavailable',
       partial: false,
+      minorUnits: 0,
     });
   });
 
@@ -1044,6 +1061,7 @@ describe('portfolioTotal', () => {
       status: 'zero',
       text: '$0.00',
       partial: false,
+      minorUnits: 0,
     });
   });
 });

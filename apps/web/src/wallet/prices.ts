@@ -1218,13 +1218,19 @@ export function portfolioTotal(
   status: 'zero' | 'total' | 'partial' | 'unavailable';
   text: string;
   partial: boolean;
+  // Priced subtotal in fiat minor units (0 when nothing priced).
+  // Watch-only display programme (2026-11-28): the dashboard totals
+  // the vault and the watched wallets separately and sums the two, so
+  // the combined hero and its "Your wallets $X · Watched $Y" split
+  // share one honest number.
+  minorUnits: number;
 } {
   const list = chains.map((chain) => balances[chain]);
   // A chain still loading means the total is not decidable yet; the
   // dashboard holds the previous hero text in that case. Loading is not
   // a failure, so it is the one status that still yields 'unavailable'.
   if (list.some((balance) => balance?.status === 'loading')) {
-    return { status: 'unavailable', text: 'Unavailable', partial: false };
+    return { status: 'unavailable', text: 'Unavailable', partial: false, minorUnits: 0 };
   }
   const tokensSettledZero =
     tokenContribution === undefined ||
@@ -1239,7 +1245,7 @@ export function portfolioTotal(
         (balance.status === 'zero' || (balance.status === 'available' && balance.value === '0')),
     )
   ) {
-    return { status: 'zero', text: '$0.00', partial: false };
+    return { status: 'zero', text: '$0.00', partial: false, minorUnits: 0 };
   }
 
   // Partial total (Safe's aggregateBalance shape): sum the chains that
@@ -1304,14 +1310,15 @@ export function portfolioTotal(
     // alarming "$0.00 (Partial)" a fresh wallet used to see). Nothing
     // loaded at all stays 'unavailable'.
     if (hasUnpricedNonzero || !loadedZero) {
-      return { status: 'unavailable', text: 'Unavailable', partial: false };
+      return { status: 'unavailable', text: 'Unavailable', partial: false, minorUnits: 0 };
     }
-    return { status: 'zero', text: '$0.00', partial: true };
+    return { status: 'zero', text: '$0.00', partial: true, minorUnits: 0 };
   }
   return {
     status: partial ? 'partial' : 'total',
     text: sumFiatUSD(contributed),
     partial,
+    minorUnits: contributed.reduce((sum, value) => sum + value, 0),
   };
 }
 
