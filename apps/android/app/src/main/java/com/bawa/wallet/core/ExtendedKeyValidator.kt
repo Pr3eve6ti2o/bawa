@@ -3,8 +3,10 @@ package com.bawa.wallet.core
 import java.math.BigInteger
 import java.security.MessageDigest
 
-enum class Chain { BTC, ETH, TRX }
-
+// Chain now lives in :core (merged DerivationPolicy.kt, Step 4, Lane B):
+// the reference Chain (BTC/ETH/TRX/TON with derivation metadata)
+// replaces the bare 3-entry enum that was here. Same package, so this
+// file resolves it via the :core dependency with no import.
 enum class Reason {
     INVALID_BASE58,
     INVALID_LENGTH,
@@ -117,6 +119,9 @@ object ExtendedKeyValidator {
         val allowed = when (chain) {
             Chain.BTC -> version == "0488b21e" || version == "049d7cb2" || version == "04b24746"
             Chain.ETH, Chain.TRX -> version == "0488b21e"
+            // Step 4 merge: Chain gained TON. TON has no xpub, so no
+            // extended key is valid for it.
+            Chain.TON -> false
         }
         if (!allowed) {
             return ValidationResult.Invalid(

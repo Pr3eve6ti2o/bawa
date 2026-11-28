@@ -24,7 +24,7 @@ package com.bawa.wallet.ui
 //
 // Chain tints are the chains' standard brand colours, used only as
 // icon/avatar tints (text glyphs, no copied assets):
-//   BTC #F7931A, ETH #627EEA, TRX #FF0013.
+//   BTC #F7931A, ETH #627EEA, TRX #FF0013, TON #0098EA.
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -52,6 +52,7 @@ object BawaTokens {
     val BtcTint = Color(0xFFF7931A)
     val EthTint = Color(0xFF627EEA)
     val TrxTint = Color(0xFFFF0013)
+    val TonTint = Color(0xFF0098EA)
 }
 
 val BawaColors = darkColorScheme(
@@ -84,9 +85,10 @@ fun BawaTheme(content: @Composable () -> Unit) {
     )
 }
 
-/** Chain tint for avatars and chain rows. TON has no tint: this starter does not support it. */
+/** Chain tint for avatars and chain rows. */
 fun ChainTint(chain: Chain): Color = when (chain) {
     Chain.BTC -> BawaTokens.BtcTint
     Chain.ETH -> BawaTokens.EthTint
     Chain.TRX -> BawaTokens.TrxTint
+    Chain.TON -> BawaTokens.TonTint
 }

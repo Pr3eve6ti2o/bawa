@@ -14,7 +14,14 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Locally built Trust Wallet Core 4.8.4 AAR + proto JAR live in
+        // core/libs/ (Step 4). flatDir is declared here (not in the
+        // :core build file) because repositoriesMode is FAIL_ON_PROJECT_REPOS.
+        flatDir {
+            dirs("core/libs")
+        }
     }
 }
 rootProject.name = "bawa-android"
 include(":app")
+include(":core")

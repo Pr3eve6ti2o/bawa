@@ -457,6 +457,7 @@ private fun chainName(chain: Chain): String = when (chain) {
     Chain.BTC -> "Bitcoin"
     Chain.ETH -> "Ethereum"
     Chain.TRX -> "TRON"
+    Chain.TON -> "TON"
 }
 
 private fun truncatedXpub(xpub: String): String =
