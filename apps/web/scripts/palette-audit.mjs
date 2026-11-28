@@ -41,14 +41,6 @@ const allowed = new Set([
   // dE 19.47 from #011F29 — clearly a line, never a surface)
   '#A7C4C1', // QR Dark Teal secondary text (Lane B; 9.20:1 on #011F29,
   // was #7A9491 at 5.27:1)
-  '#0E2127', // QR Dark Teal footer band — in-app card retired it
-  // (Lane B); the PNG exporter still uses it until Lane C lands.
-  '#1B2023', // QR Dark Teal copy circle — in-app card retired it
-  // (Lane B, now solid coral); the PNG exporter still uses it.
-  '#121818', // QR Dark Teal brand bar — in-app card retired it
-  // (Lane B); the PNG exporter still uses it until Lane C lands.
-  '#7A9491', // QR Dark Teal secondary text — in-app card retired it
-  // (Lane B, now #A7C4C1); the PNG exporter still uses it.
   '#6B7280', // QR Minimal secondary text
   '#9CA3AF', // QR Minimal wordmark
   '#111111', // QR Minimal ink
