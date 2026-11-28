@@ -9,7 +9,23 @@ added by Orion as a follow-up task the same day. Coordinator: Orion
 the AgentRouter API is stopped by owner order; all work is hands-on Muse.
 
 Branch: `panel-rebuild/token-everywhere`, off `panel-rebuild/token-gaps`
-`f065128`. Merged into token-gaps at `<token-gaps tip after merge>`.
+`f065128`. Merged into token-gaps at `c8af598` (see "Pushes" below).
+
+## Currency note (2026-11-28, Lane A docs audit, token-gaps `ceade79`)
+
+This record is from 2026-11-24, retained as written above. Since
+then, open items 1–3 are resolved: (1) Lane 7 Scan QR was executed
+— see `docs/SCAN-QR-FIX.md` (branch `panel-rebuild/scan-qr-fix`,
+`b59d1f4`, merged into token-gaps as `2e8f128`); the live-camera
+confirmation on the owner's phone (item 5) is still open. (2) The
+PNG share path now draws the full QR card (QR-card programme, 7
+templates A–G, 1080 px export). (3) SOL sending now works — the
+Solana signer was replaced with `@solana/web3.js`, so native SOL and
+SPL USDC sign offline and verify in the browser (expansion
+programme, `192e53b`); the "SOL (SPL) — Not available" row in the
+per-chain coverage table below describes 2026-11-24, not today.
+Items 4 (token balances load only via the dashboard) and 6
+(review/sign CDP-unverified for funded flows) are still open.
 
 ## The owner's order, point by point
 
