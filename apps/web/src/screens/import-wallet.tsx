@@ -407,7 +407,9 @@ export function ImportWalletScreen() {
       const added = await createVaultAccounts(1);
       const next = added[0];
       if (next === undefined) throw new Error('No account was created.');
-      await selectVaultAccount(next);
+      // Same as the save path: no background fetch on the import
+      // screen — the viewing screens fetch on mount.
+      await selectVaultAccount(next, { skipBackgroundRefresh: true });
       setAddedAccount(next);
     } catch (cause) {
       setPhraseError(
@@ -456,7 +458,10 @@ export function ImportWalletScreen() {
       setVaultPasswordConfirm('');
       setPassphraseUsed(passphrase.length > 0);
       setSplitPassphrase('');
-      await refreshVaultAccounts();
+      // Import stays local: no balance/history fetch here (see
+      // addXpub in wallet-context) — the dashboard and the asset list
+      // fetch on mount when the user looks at the wallet.
+      await refreshVaultAccounts(undefined, { skipBackgroundRefresh: true });
       setPhraseStep('saved');
     } catch {
       setNormalizedMnemonic(null);

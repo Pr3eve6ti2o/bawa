@@ -218,26 +218,44 @@ describe('wallet context — adapter-backed balances and history', () => {
   // (owner order 2026-11-20): lockVault no longer exists, so there is no
   // lock that clears balances or history any more.
 
-  it('loads a watch-only balance right after addXpub, with no manual refresh', async () => {
-    // Token gaps, item 6: adding a watch-only wallet must fetch its
-    // balance (and history after it) at once — before this fix the row
-    // kept its boot-time 'unavailable' state until a reload or a
-    // manual refresh, because only the boot refresh called
-    // refreshBalances. The SOL address is the public Lane 1 address
-    // (live balance 0.00236821 SOL = 2368210 lamports).
+  it('issues no balance fetch at addXpub; an explicit refresh loads it', async () => {
+    // fix-import-err-name-not-resolved (2026-11-29): adding a
+    // watch-only wallet is a local operation and must issue no
+    // network request — the old add-time refresh fanned one address
+    // out to every chain's RPC endpoint, and any one host's DNS
+    // failure logged a console error on the import screen. Token
+    // gaps, item 6 still holds — the balance shows without a reload
+    // or a manual refresh — but it is kept by the viewing screens
+    // now: useLiveBalances refreshes on mount, and the explicit
+    // refreshBalances below is what that mount tick does. The SOL
+    // address is the public Lane 1 address (live balance
+    // 0.00236821 SOL = 2368210 lamports).
     const SOL_ADDRESS = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM';
     const mounted = await mountProvider();
     try {
-      registerAdapter(stubAdapter('sol', okBalance('2368210'), okTxs([])));
+      let balanceCalls = 0;
+      const counting = stubAdapter('sol', okBalance('2368210'), okTxs([]));
+      const originalGetBalance = counting.getBalance;
+      counting.getBalance = async (address) => {
+        balanceCalls += 1;
+        return originalGetBalance(address);
+      };
+      registerAdapter(counting);
       expect(latest?.balances.sol.status).toBe('unavailable');
       await act(async () => {
         await latest?.addXpub('sol', SOL_ADDRESS, '');
       });
+      // Let any fire-and-forget work settle: no fetch may be issued.
       await act(async () => {
-        for (let i = 0; i < 40 && latest?.balances.sol.status !== 'available'; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 50));
-        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
       });
+      expect(balanceCalls).toBe(0);
+      expect(latest?.balances.sol.status).toBe('unavailable');
+      // The viewing screen's mount tick is an explicit refresh: it loads.
+      await act(async () => {
+        await latest?.refreshBalances();
+      });
+      expect(balanceCalls).toBeGreaterThan(0);
       expect(latest?.balances.sol.status).toBe('available');
       expect(latest?.balances.sol.value).toBe('2368210');
     } finally {
@@ -284,6 +302,12 @@ describe('wallet context — adapter-backed balances and history', () => {
       expect(vaultAddress?.toLowerCase()).not.toBe(WATCHED.toLowerCase());
       await act(async () => {
         await latest?.addWatchOnlyAddress('eth', WATCHED, '');
+      });
+      // fix-import-err-name-not-resolved: the add no longer refreshes
+      // (import is local); the viewing screen's mount tick does — the
+      // explicit refreshBalances here is that tick.
+      await act(async () => {
+        await latest?.refreshBalances();
       });
       await act(async () => {
         for (
@@ -388,12 +412,19 @@ describe('wallet context — watch-only address fan-out (Lane B)', () => {
     }
   });
 
-  it('loads the fanned-out ETH balance through the normal refresh', async () => {
+  it('loads the fanned-out ETH balance on refresh, not at add', async () => {
+    // fix-import-err-name-not-resolved: the add issues no fetch; the
+    // balance loads on the viewing screen's mount tick, which the
+    // explicit refreshBalances below stands in for.
     const mounted = await mountProvider();
     try {
       registerAdapter(stubAdapter('eth', okBalance('123'), okTxs([])));
       await act(async () => {
         await latest?.addWatchOnlyAddress('eth', EVM_ADDRESS, '');
+      });
+      expect(latest?.balances.eth.status).toBe('unavailable');
+      await act(async () => {
+        await latest?.refreshBalances();
       });
       await act(async () => {
         for (

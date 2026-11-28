@@ -1229,12 +1229,14 @@ describe('dashboard screen', () => {
       await act(async () => {
         refresh.click();
       });
-      expect(mockRefreshBalances).toHaveBeenCalledTimes(1);
+      // fix-import-err-name-not-resolved: the mount tick already
+      // called it once, so Refresh makes 2 and Retry makes 3.
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(2);
       // The list-level Retry re-fetches too.
       await act(async () => {
         retryButtons[0]?.click();
       });
-      expect(mockRefreshBalances).toHaveBeenCalledTimes(2);
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(3);
     } finally {
       await mounted.cleanup();
     }
@@ -1351,7 +1353,9 @@ describe('dashboard screen', () => {
         (candidate) => candidate.textContent === 'Retry',
       );
       expect(retryButtons).toHaveLength(0);
-      expect(mockRefreshBalances).not.toHaveBeenCalled();
+      // fix-import-err-name-not-resolved: the mount tick refreshes once
+      // on mount; no Retry button is offered while locked.
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(1);
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
       expect(mounted.div.textContent).toContain('Locked. Unlock to see balances.');
     } finally {
@@ -1391,7 +1395,9 @@ describe('dashboard screen', () => {
         (candidate) => candidate.textContent === 'Retry',
       );
       expect(retryButtons).toHaveLength(0);
-      expect(mockRefreshHistory).not.toHaveBeenCalled();
+      // fix-import-err-name-not-resolved: the mount tick refreshes once
+      // on mount; no Retry button is offered for the empty state.
+      expect(mockRefreshHistory).toHaveBeenCalledTimes(1);
     } finally {
       await mounted.cleanup();
     }
@@ -1428,7 +1434,9 @@ describe('dashboard screen', () => {
         (candidate) => candidate.textContent === 'Retry',
       );
       expect(retryButtons).toHaveLength(0);
-      expect(mockRefreshHistory).not.toHaveBeenCalled();
+      // fix-import-err-name-not-resolved: the mount tick refreshes once
+      // on mount; no Retry button is offered while locked.
+      expect(mockRefreshHistory).toHaveBeenCalledTimes(1);
       expect(mounted.div.textContent).toContain('Locked. Unlock to see activity.');
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
     } finally {
