@@ -14,9 +14,8 @@ How-to guide.
 > web wallet is a mainnet wallet (87 chains from the same phrase) with
 > its own import/recovery flow — Import a wallet
 > (`apps/web/src/screens/import-wallet.tsx`) restores a mnemonic into
-> the vault, and Mnemonic backup
-> (`apps/web/src/screens/mnemonic-backup.tsx`) shows the phrase for
-> backup. The "testnet signing check" steps below cannot run in the web
+> the vault, and Backup (`apps/web/src/screens/backup.tsx`) shows the
+> phrase for backup. The "testnet signing check" steps below cannot run in the web
 > wallet on mainnet; sending there stays switched off and broadcast
 > stays disabled.
 
