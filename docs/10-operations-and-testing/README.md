@@ -527,7 +527,7 @@ Run `npm test` from the repository root; it invokes `npm --prefix tools/hdwallet
 
 ### Web
 
-> The web starter is in the repository (`apps/web`): 3,429 tests passed + 5 skipped across 129 vitest files on 2026-11-28 (token-gaps `1253bf6`), production build green, live previews screenshot-checked. The "31 offline unit tests … not shipped in any repo" line below is the 2026-11-08 validation-draft record, superseded.
+> The web starter is in the repository (`apps/web`): 3,479 tests passed + 5 skipped across 130 vitest files on 2026-11-29 (token-gaps `bcf180e`), production build green, live previews screenshot-checked. The "31 offline unit tests … not shipped in any repo" line below is the 2026-11-08 validation-draft record, superseded.
 >
 > **Web:** Fixture gate enforced in-engine and covered by offline engine tests; no live-network gate run exists.
 >

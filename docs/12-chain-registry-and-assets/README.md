@@ -543,7 +543,7 @@ A supported amount-less payload, including TRX's address-only form, is not by it
 
 Show the full recipient address and selected chain/testnet beside a matching QR, with any requested amount explicit. Validate explicit paste/scan against the chosen chain, review QR destination and amount, and reject unsupported payloads.
 
-Set QR error correction explicitly to `M` (~15%); do not rely on an encoder default. Decode and verify the actual QR output before presenting it as verified. Apply the same checks to generated and scanned payloads through `P.renderAndVerifyQr`, `P.scanPaymentRequest`, `E.parsePaymentRequest` and `E.verifyPaymentRequest`, as defined in docs/07. Successful verification is not proof of payment.
+Set QR error correction explicitly to at least `M` (~15%) — `H` (~30%) where a centre mark is excavated (the Receive card, `qr-card.tsx:634`); do not rely on an encoder default. Decode and verify the actual QR output before presenting it as verified. Apply the same checks to generated and scanned payloads through `P.renderAndVerifyQr`, `P.scanPaymentRequest`, `E.parsePaymentRequest` and `E.verifyPaymentRequest`, as defined in docs/07. Successful verification is not proof of payment.
 
 ## Preparing registry and asset metadata
 

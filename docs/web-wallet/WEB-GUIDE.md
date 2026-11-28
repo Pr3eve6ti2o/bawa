@@ -289,7 +289,7 @@ The 600,000-iteration count follows the OWASP 2023 password-hashing guidance cit
 
 ### Session lifetime
 
-The vault stays unlocked by default. Auto-lock is an optional setting on the /security page: a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period and unlocking needs the password. Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored (the lock must be real); while auto-lock is off, the raw derived key IS stored under `bawa-vault-key` so the vault can auto-unlock. Current implementation at 5e7eb1d: no lock exists; the optional restoration is not yet implemented.
+The vault unlocks by password only, and the password itself is optional (owner order 2026-11-28, `a606beb`): a password vault boots locked and unlocks with the password; a passwordless vault derives its envelope key from the empty password, so it is effectively unprotected and the UI says so plainly. Auto-lock is an optional setting on the /security page: a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled on a password vault, the vault locks after the chosen period and unlocking needs the password; on a passwordless vault auto-lock is inert — there is nothing to lock. Key-storage invariant: the derived key is never stored — no `bawa-vault-key`, no `autoUnlock()`; any legacy entry is deleted on boot, never read (`removeLegacyStoredKey()`, `vault.ts:353`). The derived key lives in memory only while the vault is open. Current implementation (token-gaps `bcf180e`, 2026-11-29): auto-lock is implemented (`apps/web/src/wallet/auto-lock.ts`); the vault unlocks by password only with the password optional (owner order 2026-11-28, `a606beb`).
 
 ### Complete the backup gate before receiving
 
@@ -606,7 +606,7 @@ If you want a starting point for the presentation layer, the UI-template appendi
 
 Receive-QR and scanning are both in scope, resolved by the user on 2026-11-08. Remaining OPEN items concern specification details, implementation/API integration and verification — not whether to include either feature.
 
-Receive must show the selected address, an explicit network label and an actual QR using the Receive QR payloads table in docs/07. Generate and verify the QR through `P.renderAndVerifyQr`, with error correction explicitly set to M. Display request information not carried by the QR separately.
+Receive must show the selected address, an explicit network label and an actual QR using the Receive QR payloads table in docs/07. Generate and verify the QR through `P.renderAndVerifyQr` (the docs/07 verification contract). The Receive card renders at error correction level H (`qr-card.tsx:634`, `level="H"`) — the centre-logo templates excavate modules under the mark, which needs the 30% tolerance; decode-verified in CDP, never trusted from the render alone. Backup-share QRs render at M (`backup.tsx:638`). Display request information not carried by the QR separately.
 
 QR payment-request scanning is specified in Section F. See Doc 3, Consolidated open-items register, `OI-037`.
 
