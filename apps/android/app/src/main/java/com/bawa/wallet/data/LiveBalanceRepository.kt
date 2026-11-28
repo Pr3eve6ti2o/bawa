@@ -1,5 +1,9 @@
 package com.bawa.wallet.data
 
+import com.bawa.wallet.data.network.HttpTransport
+import com.bawa.wallet.data.network.OkHttpHttpTransport
+import com.bawa.wallet.data.network.getText
+import com.bawa.wallet.data.network.postJsonText
 import java.math.BigInteger
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -28,7 +32,7 @@ import kotlinx.serialization.json.put
 class LiveBalanceRepository(
     private val registry: ChainRegistry,
     private val tokens: TokenRepository,
-    private val transport: HttpTransport = OkHttpTransport()
+    private val transport: HttpTransport = OkHttpHttpTransport()
 ) : BalanceRepository {
 
     override suspend fun balance(chainId: String, address: String): BalanceResult {
@@ -139,7 +143,7 @@ class LiveBalanceRepository(
 
     /** Trongrid GET /v1/accounts/{address}: data[0].balance in SUN; an empty data list is an exact zero. */
     private suspend fun tronGridBalance(base: String, address: String): String? {
-        val text = transport.get("$base/v1/accounts/$address")
+        val text = transport.getText("$base/v1/accounts/$address")
         val root = parseJsonObject(text) ?: return null
         val data = try {
             root["data"]?.jsonArray
@@ -161,7 +165,7 @@ class LiveBalanceRepository(
             put("address", address)
             put("visible", true)
         }.toString()
-        val text = transport.postJson("$base/wallet/getaccount", body)
+        val text = transport.postJsonText("$base/wallet/getaccount", body)
         val root = parseJsonObject(text) ?: return null
         if (root.stringField("Error") != null) return null
         val returned = root.stringField("address")
@@ -196,7 +200,7 @@ class LiveBalanceRepository(
             }
         }
         try {
-            val text = transport.get("$TONAPI_BASE_URL/v2/accounts/$address")
+            val text = transport.getText("$TONAPI_BASE_URL/v2/accounts/$address")
             val balance = parseJsonObject(text)?.stringField("balance")
                 ?.takeIf { it.matches(Regex("\\d+")) }
             if (balance != null) {
@@ -217,7 +221,7 @@ class LiveBalanceRepository(
         var lastError: String? = null
         for (base in chain.rpcEndpoints) {
             try {
-                val text = transport.get("$base/address/$address")
+                val text = transport.getText("$base/address/$address")
                 val stats = parseJsonObject(text)?.objectField("chain_stats")
                 if (stats == null) {
                     lastError = "unexpected response shape from $base"
@@ -244,7 +248,7 @@ class LiveBalanceRepository(
     private suspend fun dogeBalance(chain: ChainRecord, address: String): BalanceResult {
         // SoChain first, then BlockCypher — the web's order.
         try {
-            val text = transport.get("$SOCHAIN_BASE/balance/DOGE/$address")
+            val text = transport.getText("$SOCHAIN_BASE/balance/DOGE/$address")
             val data = parseJsonObject(text)?.objectField("data")
             val confirmed = data?.stringField("confirmed")
             if (parseJsonObject(text)?.stringField("status") == "success" && confirmed != null) {
@@ -258,7 +262,7 @@ class LiveBalanceRepository(
             // Fall through to BlockCypher.
         }
         try {
-            val text = transport.get("$BLOCKCYPHER_DOGE_BASE/addrs/$address/balance")
+            val text = transport.getText("$BLOCKCYPHER_DOGE_BASE/addrs/$address/balance")
             val balance = parseJsonObject(text)?.numberStringField("balance")
             if (balance != null) {
                 return BalanceResult.Available(BigInteger(balance).toString(), chain.decimals)
@@ -363,7 +367,7 @@ class LiveBalanceRepository(
                     put("parameter", parameter)
                     put("visible", false)
                 }.toString()
-                val text = transport.postJson("$base/wallet/triggerconstantcontract", body)
+                val text = transport.postJsonText("$base/wallet/triggerconstantcontract", body)
                 val root = parseJsonObject(text)
                 if (root == null) {
                     lastError = "unexpected response shape from $base"
@@ -450,7 +454,7 @@ class LiveBalanceRepository(
             put("method", method)
             put("params", params)
         }.toString()
-        val text = transport.postJson(url, body)
+        val text = transport.postJsonText(url, body)
         val root = parseJsonObject(text)
             ?: throw IllegalStateException("Invalid RPC response from $url")
         val error = root["error"]

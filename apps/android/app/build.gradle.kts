@@ -1,10 +1,10 @@
 // :app — Bawa Android wallet, watch-only. Mainnet data layer (Step 3):
 // the 87-chain registry + 21 tokens load from the generated export
-// bundled under src/main/assets/registry/. No signing, broadcast or
-// transaction-construction code. The :core engine module exists
-// (Step 4, Lane B) but the Trust Wallet Core 4.8.4 AAR is not yet in
-// core/libs/ (Lane A), so on-device derivation is still OPEN
-// (see docs/android-evidence.md). No UI call sites use the engine yet.
+// bundled under src/main/assets/registry/. Step 5 added the live
+// network stack (prices, balances, history, QR scanner); Step 6 wires
+// the UI to it, including watch-only address derivation through the
+// Trust Wallet Core 4.8.4 AAR in core/libs/ (Step 4, Lane A). No
+// signing, broadcast or transaction-construction code anywhere.
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -53,9 +53,10 @@ android {
 }
 
 dependencies {
-    // Step 4: the Trust Wallet Core binding module. No UI call sites
-    // yet (Steps 5/6 wire usage); :core does not compile until the
-    // 4.8.4 AAR lands in core/libs/ (Lane A).
+    // Step 4: the Trust Wallet Core binding module. Step 6 wires the
+    // engine into the UI for watch-only address derivation only
+    // (MainActivity's factory -> CoreAddressDeriver); no signing,
+    // broadcast or transaction-construction call sites exist.
     implementation(project(":core"))
 
     testImplementation("junit:junit:4.13.2")

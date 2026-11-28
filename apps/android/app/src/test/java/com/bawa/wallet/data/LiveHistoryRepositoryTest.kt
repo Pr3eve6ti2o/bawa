@@ -1,5 +1,7 @@
 package com.bawa.wallet.data
 
+import com.bawa.wallet.data.network.HttpResult
+import com.bawa.wallet.data.network.HttpTransport
 import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -84,10 +86,17 @@ class LiveHistoryRepositoryTest {
             throw IOException("No fake rule for $method $url")
         }
 
-        override suspend fun get(url: String): String = dispatch("GET", url, null)
+        override suspend fun get(url: String): HttpResult = try {
+            HttpResult.Response(200, dispatch("GET", url, null))
+        } catch (e: IOException) {
+            HttpResult.Failure(e.message ?: "fake failure")
+        }
 
-        override suspend fun postJson(url: String, body: String): String =
-            dispatch("POST", url, body)
+        override suspend fun postJson(url: String, body: String): HttpResult = try {
+            HttpResult.Response(200, dispatch("POST", url, body))
+        } catch (e: IOException) {
+            HttpResult.Failure(e.message ?: "fake failure")
+        }
     }
 
     private fun chainJson(

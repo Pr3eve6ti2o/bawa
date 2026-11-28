@@ -36,6 +36,9 @@ class PriceRepositoryTest {
             return stubs.firstOrNull { url.contains(it.first) }?.second
                 ?: HttpResult.Failure("no stub for url")
         }
+
+        override suspend fun postJson(url: String, body: String): HttpResult =
+            HttpResult.Failure("no POST stub for url")
     }
 
     private fun tokens(): TokenRepository =
