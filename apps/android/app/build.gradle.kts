@@ -75,6 +75,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("com.google.zxing:core:3.5.3")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
 
     // Step 3 data layer: the generated registry export is parsed with
     // kotlinx.serialization (JVM-safe, so the parsing is unit-tested
