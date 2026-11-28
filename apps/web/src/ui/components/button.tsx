@@ -46,12 +46,12 @@ const buttonVariants = cva(
           "border-0 bg-transparent text-ink underline underline-offset-4",
       },
       size: {
-        sm: "h-11 justify-center gap-2 rounded-bawa px-3 text-sm has-[>svg]:px-2.5",
-        md: "h-12 justify-center gap-2 rounded-bawa px-4 text-sm has-[>svg]:px-3",
-        lg: "h-14 justify-center gap-2 rounded-bawa px-6 text-base has-[>svg]:px-4",
-        wrap: "h-auto min-h-11 justify-center gap-2 rounded-bawa px-4 py-3 text-center text-sm whitespace-normal has-[>svg]:px-3",
+        sm: "h-11 justify-center gap-2 rounded-flat px-3 text-sm has-[>svg]:px-2.5",
+        md: "h-12 justify-center gap-2 rounded-flat px-4 text-sm has-[>svg]:px-3",
+        lg: "h-14 justify-center gap-2 rounded-flat px-6 text-base has-[>svg]:px-4",
+        wrap: "h-auto min-h-11 justify-center gap-2 rounded-flat px-4 py-3 text-center text-sm whitespace-normal has-[>svg]:px-3",
         "wrap-start":
-          "h-auto min-h-11 justify-start gap-2 rounded-bawa px-4 py-3 text-left text-sm whitespace-normal has-[>svg]:px-3",
+          "h-auto min-h-11 justify-start gap-2 rounded-flat px-4 py-3 text-left text-sm whitespace-normal has-[>svg]:px-3",
       },
     },
     defaultVariants: {
@@ -71,7 +71,7 @@ const buttonVariants = cva(
 // flat={false} (the QR card's buttons, which own the wobble, do not
 // use this component at all). Ghost gets .btn-flat-ghost (radius
 // only): ghost is borderless by contract and .btn-flat would add a
-// border, but the size variant's rounded-bawa still shows on the
+// border, but the size variant's rounded-flat still shows on the
 // :focus-visible outline without it.
 function Button({
   className,
@@ -98,7 +98,7 @@ function Button({
         buttonVariants({ variant, size, className }),
         // P3-B: ghost gets .btn-flat-ghost (radius only) — it is
         // borderless by contract, so .btn-flat would add a border,
-        // but the size variant's rounded-bawa still shows on the
+        // but the size variant's rounded-flat still shows on the
         // :focus-visible outline, which follows the border radius.
         flat ? (variant === "ghost" ? "btn-flat-ghost" : "btn-flat") : undefined,
       )}
