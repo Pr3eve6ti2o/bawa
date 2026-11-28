@@ -837,6 +837,41 @@ describe('asset list screen', () => {
     }
   });
 
+  it('links every asset row in every state in the wide table, so the row count never drops on a failed fetch', async () => {
+    // Lane 2 (dashboard row count): the settled linked-row count varied
+    // 41–43 live because failed rows rendered as a plain <li> with no
+    // link — a Dogecoin 429 and a TRON USDT 429 left them unlinked.
+    // Every main-list row is a link in every state now (ready, failed,
+    // still loading), in the table variant as on the dashboard, so the
+    // count is the full list whatever the network does. The mock's 4
+    // balance chains + the 9 default tokens on them = 13 rows; the
+    // default mock leaves every native failed and every token loading.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+      vaultState: 'unlocked',
+      customTokens: [],
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, 'Balance unavailable');
+      const links = [...mounted.div.querySelectorAll('ul.divide-y a[href^="/assets/"]')];
+      expect(links).toHaveLength(13);
+      // The failed row links to its detail page (which shows the same
+      // honest failure), and a still-loading token row links too.
+      expect(mounted.div.querySelector('a[href="/assets/btc"]')).not.toBeNull();
+      expect(mounted.div.querySelector('a[href="/assets/eth/usdc"]')).not.toBeNull();
+      expect(mounted.div.querySelector('a[href="/assets/eth/weth"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('filters the list by search text and offers to clear a no-match search', async () => {
     // Lane 2: 43 rows are unscannable without a filter — the filter
     // bar's search narrows by name, symbol or chain, and a search

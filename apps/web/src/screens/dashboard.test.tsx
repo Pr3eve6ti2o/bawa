@@ -1123,6 +1123,40 @@ describe('dashboard screen', () => {
     }
   });
 
+  it('links every asset row in every state, so the row count never drops on a failed fetch', async () => {
+    // Lane 2 (dashboard row count): the settled linked-row count varied
+    // 41–43 live because failed rows rendered as a plain <li> with no
+    // link — a Dogecoin 429 and a TRON USDT 429 left them unlinked, so
+    // any count of navigable rows dropped with the network. Every
+    // main-list row is a link in every state now (ready, failed, still
+    // loading), so the count is the full list whatever the network does.
+    // The mock's 4 balance chains + the 9 default tokens on them = 13 rows.
+    setWallet(
+      balancesFor({
+        btc: { status: 'error', reason: 'rpc-error' },
+        eth: { status: 'available', value: '1500000000000000000' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'loading' },
+      }),
+    );
+    const mounted = await mountScreen();
+    try {
+      const assetsSection = mounted.div.querySelector(
+        'section[aria-label="Assets"]',
+      );
+      const links = [...(assetsSection?.querySelectorAll('a[href^="/assets/"]') ?? [])];
+      expect(links).toHaveLength(13);
+      // The failed row links to its detail page (which shows the same
+      // honest failure), and a still-loading token row links too.
+      expect(assetsSection?.querySelector('a[href="/assets/btc"]')).not.toBeNull();
+      expect(assetsSection?.querySelector('a[href="/assets/eth/usdc"]')).not.toBeNull();
+      expect(assetsSection?.querySelector('a[href="/assets/eth/weth"]')).not.toBeNull();
+      expect(assetsSection?.querySelector('a[href="/assets/ton"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows four money actions on the homepage: Send, Receive, Swap, Copy', async () => {
     // P1 item 6 (F1/F3): the dashboard action row is the four money
     // actions only. Buy left the row (no on-ramp provider is

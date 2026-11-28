@@ -300,12 +300,31 @@ function fiatDetail(
   }
 }
 
-/** Shared loading row for the list and the wide table: same skeleton. */
-function RowLoadingStatus({ title }: { title: string }) {
-  return (
-    <li role="status" className="py-3">
+/**
+ * Shared loading row for the list and the wide table: same skeleton.
+ * Lane 2 (dashboard row count): a row still loading is still a row —
+ * with a link it navigates to its asset detail like a settled row, so
+ * the linked-row count is the full list from the first paint, not only
+ * after the slowest fetch lands. Watch-only rows pass no link (see
+ * ListRow / TableRow): a watched address can never send, so its rows
+ * are never links, in any state.
+ */
+function RowLoadingStatus({ title, link }: { title: string; link?: string }) {
+  const inner = (
+    <>
       <Skeleton className="h-[68px] w-full" />
       <span className="sr-only">{`Loading ${title} balance…`}</span>
+    </>
+  );
+  return (
+    <li role="status" className="py-3">
+      {link === undefined ? (
+        inner
+      ) : (
+        <Link to={link} className="block">
+          {inner}
+        </Link>
+      )}
     </li>
   );
 }
@@ -601,12 +620,22 @@ function getTokenRowModel(
 
 function ListRow({ model }: { model: AssetRowModel }) {
   if (model.kind === 'loading') {
-    return <RowLoadingStatus title={model.title} />;
+    return (
+      <RowLoadingStatus
+        title={model.title}
+        {...(model.watchOnly === true ? {} : { link: model.link })}
+      />
+    );
   }
 
   if (model.kind === 'unavailable') {
-    return (
-      <li className="flex items-center gap-3 px-4 py-3">
+    // Lane 2 (dashboard row count): a failed row is still a row — it
+    // links to its asset detail like a settled row (the detail page
+    // shows the same honest failure, never a fabricated balance), so
+    // the linked-row count stays the full list even when a balance
+    // fetch 429s. A watch-only row is never a link (see below).
+    const inner = (
+      <div className="flex items-center gap-3 px-4 py-3">
         <RowLogo model={model} />
         <span className="min-w-0 flex-1">
           <span className="block text-base font-bold text-foreground">
@@ -650,6 +679,19 @@ function ListRow({ model }: { model: AssetRowModel }) {
         ) : model.price.kind === 'state' ? (
           <span className="shrink-0 text-xs text-muted-foreground">{model.price.text}</span>
         ) : null}
+      </div>
+    );
+    if (model.watchOnly === true) {
+      return <li>{inner}</li>;
+    }
+    return (
+      <li>
+        <Link
+          to={model.link}
+          className="block"
+        >
+          {inner}
+        </Link>
       </li>
     );
   }
@@ -733,54 +775,72 @@ function TablePriceCell({ price, change }: { price: PriceCell; change?: RowChang
 
 function TableRow({ model, hideValue }: { model: AssetRowModel; hideValue?: boolean }) {
   if (model.kind === 'loading') {
-    return <RowLoadingStatus title={model.title} />;
+    return (
+      <RowLoadingStatus
+        title={model.title}
+        {...(model.watchOnly === true ? {} : { link: model.link })}
+      />
+    );
   }
 
   if (model.kind === 'unavailable') {
-    return (
-      <li>
-        <div className={hideValue === true ? TABLE_GRID_NO_VALUE : TABLE_GRID}>
-          <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
-            <RowLogo model={model} />
-            <span className="min-w-0">
-              {/* Lane 4: the name wraps instead of truncating — the
-                  narrow table used to ellipsise chain names ("Ethere…")
-                  and hide the rest of the name. */}
-              <span className="block text-base font-bold text-foreground">
-                {model.title}
-                {/* (3) A watch-only row is labelled on every state. */}
-                {model.watchOnly === true ? (
-                  <Badge size="sm" className="ml-2 whitespace-nowrap" aria-label="Watch-only">Watch-only</Badge>
-                ) : null}
-                {/* Lane 1: the wide table's failed row had no mark at
-                    all — the list variant already showed it. Merge: the
-                    tick never splits from its label, as on the other
-                    rows. */}
-                {model.verified === true ? (
-                  <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
-                ) : model.verified === false ? (
-                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
-                ) : null}
-              </span>
-              {/* Merge: the subtitle (symbol · chain · contract) stays
-                  visible on a failed table row too — the ListRow already
-                  shows it, and without it the symbol appears nowhere on
-                  the row once the title is the full token name. */}
-              <span className="block text-xs text-muted-foreground">
-                {model.subtitle}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {model.statusText}
-              </span>
+    // Lane 2 (dashboard row count): a failed row is still a row — it
+    // links to its asset detail like a settled row (see ListRow).
+    const inner = (
+      <div className={hideValue === true ? TABLE_GRID_NO_VALUE : TABLE_GRID}>
+        <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
+          <RowLogo model={model} />
+          <span className="min-w-0">
+            {/* Lane 4: the name wraps instead of truncating — the
+                narrow table used to ellipsise chain names ("Ethere…")
+                and hide the rest of the name. */}
+            <span className="block text-base font-bold text-foreground">
+              {model.title}
+              {/* (3) A watch-only row is labelled on every state. */}
+              {model.watchOnly === true ? (
+                <Badge size="sm" className="ml-2 whitespace-nowrap" aria-label="Watch-only">Watch-only</Badge>
+              ) : null}
+              {/* Lane 1: the wide table's failed row had no mark at
+                  all — the list variant already showed it. Merge: the
+                  tick never splits from its label, as on the other
+                  rows. */}
+              {model.verified === true ? (
+                <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
+              ) : model.verified === false ? (
+                <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
+              ) : null}
+            </span>
+            {/* Merge: the subtitle (symbol · chain · contract) stays
+                visible on a failed table row too — the ListRow already
+                shows it, and without it the symbol appears nowhere on
+                the row once the title is the full token name. */}
+            <span className="block text-xs text-muted-foreground">
+              {model.subtitle}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {model.statusText}
             </span>
           </span>
-          <span className="hidden text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:block">
-            —
-          </span>
-          <span className="col-start-1 row-start-2 @md:col-start-auto @md:row-start-auto @md:text-right">
-            <TablePriceCell price={model.price} change={model.change24h} />
-          </span>
-        </div>
+        </span>
+        <span className="hidden text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:block">
+          —
+        </span>
+        <span className="col-start-1 row-start-2 @md:col-start-auto @md:row-start-auto @md:text-right">
+          <TablePriceCell price={model.price} change={model.change24h} />
+        </span>
+      </div>
+    );
+    if (model.watchOnly === true) {
+      return <li>{inner}</li>;
+    }
+    return (
+      <li>
+        <Link
+          to={model.link}
+          className="block"
+        >
+          {inner}
+        </Link>
       </li>
     );
   }
@@ -929,7 +989,13 @@ interface AssetRowsProps {
  * pattern): the fetch layer already retries silently with backoff and
  * keeps the last good value, so a row button could only fail again —
  * the Dogecoin row proved it. The retry path is the single list-level
- * Refresh on the hosting screen. The row
+ * Refresh on the hosting screen. Lane 2 (dashboard row count): every
+ * main-list row IS a link to its asset detail in every state — ready,
+ * failed, or still loading — so the linked-row count is the full list
+ * (43 on the dashboard: 22 natives + 21 default tokens) whatever the
+ * network does; a 429 that fails a balance can no longer drop the
+ * count to 41–42. Only watch-only rows are never links (a watched
+ * address can never send). The row
  * model itself is Ivy Wallet's feature/accounts pattern (icon + name +
  * balance + one status line, no Retry — patterns only, GPL-3.0, no code
  * copied), and a failed row is an Aceternity Empty States shape
