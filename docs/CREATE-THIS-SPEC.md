@@ -931,15 +931,21 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   homepage total is the vault + all watched wallets together, and
   the hero follows the wallet switcher — All wallets shows the
   combined total, one wallet shows that wallet's part
-  (`screens/dashboard.tsx:640-660`, `displayTotal`; switcher state
-  `:483`, options `:939-954`). On "All wallets" with both sides the
-  split line reads "Your wallets $X · Watched $Y"
-  (`dashboard.tsx:913-916`) so watched money is never silently
+  (`screens/dashboard.tsx:646-660`, `displayTotal`; switcher state
+  `:483`, block `:904-937`, options `:923-935`). Hero switcher
+  placement (2026-11-29, DECISIONS.md §56): the `#hero-wallet`
+  select is its own compact row directly under the "Portfolio
+  balance" header and above the balance figure — width-to-content
+  with a 260 px cap (320 px at `sm`), no visible label
+  (`aria-label="Wallet"`), 12 px clear space above and below. On
+  "All wallets" with both sides the split line reads "Your wallets
+  $X · Watched $Y" (`dashboard.tsx:946-950`) so watched money is
+  never silently
   counted as the user's own (MetaMask Portfolio pattern). A watched
   selection gets the eye mark and a persistent "Watching <address>
-  — view-only, can't send." banner (`dashboard.tsx:976`); Send/Swap
+  — view-only, can't send." banner (`dashboard.tsx:975-985`); Send/Swap
   render disabled with the reason when viewing watch-only
-  (`dashboard.tsx:1082-1109`). The per-chain allocation (OKX +
+  (`dashboard.tsx:1082-1121`). The per-chain allocation (OKX +
   Zerion pattern): each watched wallet shows its Top-5 chains with
   shares and its total — in the Watch-only section in State A and as
   a standalone section in State B, where the main rows ARE the
@@ -957,10 +963,10 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   — a failed fetch recovers on the next tick and its last-good value
   stays visible meanwhile, so a failed balance never silently counts
   as $0 (`use-live-balances.ts:20-58`). "Balances updated HH:MM"
-  sits beside "Prices updated HH:MM" (`dashboard.tsx:998-1000`;
+  sits beside "Prices updated HH:MM" (`dashboard.tsx:994-1003`;
   stamp set in `state/wallet-context.tsx:1169`, `:1450`). A failed
   or unpriced holding is named in the hero's Missing note
-  ("Missing: Dogecoin balance.", `dashboard.tsx:1007`) — never just
+  ("Missing: Dogecoin balance.", `dashboard.tsx:1010`) — never just
   "(Partial)"; a balance that can never be fetched (no address / no
   adapter / disabled / devnet-no-tokens) no longer forces Partial
   forever (`dashboard.tsx:37-46`).
@@ -1802,7 +1808,7 @@ were re-measured from that tree (see the rows below).
 | §15.1 /wallets manage | `wallet-management.tsx:339`; `vault.ts:1031` (`renameAccountName`), `:934` (MAX 40) | /wallets screen undescribed; rename/delete absent before `65edc90` | Implemented (fix programme, 2026-11-28) |
 | §15.2 mobile overflow pattern | `ui/components/dialog.tsx:155-166`; `add-token.tsx:715-717`; `chain-search-select.tsx:292-294` | Overflow pattern undescribed; earlier "no overflow" claim wrong for the fixed dialog | Fixed in place (Lane A `aea4b58`, 2026-11-28) |
 | §19 Lane D audit | This lane, hands-on, 0 Sol calls; gates at `7f24ef1` | Not in the guide before | Added |
-| §9 watch-only display programme | `dashboard.tsx:916` (split), `:1000` (Balances updated), `:1007` (Missing note); `asset-rows.tsx:1302-1342` (watched tokens), `:1505-1531` (allocation Top-5); `use-live-balances.ts:18` (45 s poll); `transaction-history.tsx:322-355` (Activity default); `wallet-management.tsx:481`, `:1132` (/wallets disclosure + Forget); `track-transaction.tsx:182-279` (/track prefill); `sidebar-nav.tsx:50` (Track link) | Watch-only invisible outside /wallets; hero vault-only; no allocation; no balance polling; /track unlinked | Implemented (watch-only display programme, 2026-11-28, `4728ff1`; DECISIONS.md §51) |
+| §9 watch-only display programme | `dashboard.tsx:946-950` (split), `:1003` (Balances updated), `:1010` (Missing note); `asset-rows.tsx:1302-1342` (watched tokens), `:1505-1531` (allocation Top-5); `use-live-balances.ts:18` (45 s poll); `transaction-history.tsx:322-355` (Activity default); `wallet-management.tsx:481`, `:1132` (/wallets disclosure + Forget); `track-transaction.tsx:182-279` (/track prefill); `sidebar-nav.tsx:50` (Track link) | Watch-only invisible outside /wallets; hero vault-only; no allocation; no balance polling; /track unlinked | Implemented (watch-only display programme, 2026-11-28, `4728ff1`; DECISIONS.md §51) |
 | §20 Owner-configured API keys + Relay proxy | `apps/web/src/wallet/buy-providers.ts` (six `VITE_*` env vars, `readEnv`); `relay-quotes.ts` (`RELAY_PROXY_URL_ENV`, `relayProxyBaseUrl()`, `fetchRelayQuote`, `parseQuote`); `screens/swap.tsx:579`; `app/security-headers.ts:55` (CSP, proxy origin at deploy time); no `apiKey` anywhere in `apps/web/src/wallet/adapters/`; `stonfi-quotes.ts:307` (`flexibleIntegratorFee` only) | Not in the guide before | Added (docs-audit Lane A, 2026-11-28, owner orders 2026-11-28 ~20:40 IST; Relay proxy to AI-usable depth per the 2026-11-28 ~20:46 IST refinement) |
 
 **Not verified first-hand (re-check pass, 2026-11-26; providers
