@@ -201,9 +201,10 @@ export function NetworkModePill() {
 
   // UX-major Lane 2 (DESIGN-SYSTEM §2.5): the pill is a thumb-sized
   // 44 px control now (it was 24 px with a 10 px label — below both the
-  // touch rule and the 11 px readability floor). Same sun fill, 2 px ink
-  // border and bold label; text-xs (12 px) is the smallest token at or
-  // above the floor. The header is 72 px, so a 44 px pill fits as built.
+  // touch rule and the 11 px readability floor). Same sun fill, 1 px
+  // hairline border since P3-B, and bold label; text-xs (12 px) is the
+  // smallest token at or above the floor. The header is 72 px, so a
+  // 44 px pill fits as built.
   return (
     <>
       <button
@@ -220,7 +221,7 @@ export function NetworkModePill() {
         onClick={() => {
           void handleToggle();
         }}
-        className="flex h-11 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-xs font-bold text-ink disabled:opacity-60"
+        className="flex h-11 shrink-0 items-center rounded-flat-sm border border-ink bg-sun px-3 text-xs font-bold text-ink disabled:opacity-60"
       >
         {devnetEnabled ? 'Devnet test mode' : 'Mainnet'}
       </button>
@@ -307,7 +308,7 @@ function AppLayout() {
           caps for readability (see <main>); it just grows with the
           window now. At 1440px and below nothing changes: the cap never
           bound there. */}
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink desktop:max-w-none desktop:flex-row desktop:rounded-none desktop:border-0 desktop:min-h-dvh">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-flat-lg sm:border sm:border-ink desktop:max-w-none desktop:flex-row desktop:rounded-none desktop:border-0 desktop:min-h-dvh">
         {!isFocusedFlow && (
           <aside
             className={
@@ -337,12 +338,12 @@ function AppLayout() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b-2 border-ink px-6 desktop:flex xl:px-8">
+          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b border-ink px-6 desktop:flex xl:px-8">
             <Link
               to="/wallets"
               onMouseEnter={() => preloadRoute('/wallets')}
               onFocus={() => preloadRoute('/wallets')}
-              className="truncate text-sm font-semibold text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
+              className="truncate text-sm font-semibold text-ink hover:underline hover:underline-offset-4"
             >
               {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
             </Link>
@@ -356,7 +357,7 @@ function AppLayout() {
               render exactly as before). */}
           <header className="flex items-center justify-between gap-3 px-4 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] desktop:hidden">
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-flat-sm border border-ink bg-paper text-ink">
                 <BawaIcon name="wallet" className="size-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">
@@ -367,7 +368,7 @@ function AppLayout() {
                   to="/wallets"
                   onMouseEnter={() => preloadRoute('/wallets')}
                   onFocus={() => preloadRoute('/wallets')}
-                  className="block truncate text-xs leading-4 text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
+                  className="block truncate text-xs leading-4 text-ink hover:underline hover:underline-offset-4"
                 >
                   {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
                 </Link>
@@ -417,7 +418,7 @@ function AppLayout() {
           {!isFocusedFlow && (
             <nav
               aria-label="Main navigation"
-            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] desktop:hidden"
+            className="sticky bottom-0 z-10 border-t border-ink bg-paper pb-[env(safe-area-inset-bottom)] desktop:hidden"
           >
             <div className="grid grid-cols-5">
               {tabs.map(({ to, label, icon }) => (
@@ -427,16 +428,17 @@ function AppLayout() {
                   end={to === '/'}
                   onMouseEnter={() => preloadRoute(to)}
                   onFocus={() => preloadRoute(to)}
-                  className={({ isActive }) =>
-                    `flex flex-col items-center gap-1 py-3 text-xs font-semibold ${
-                      isActive ? 'text-ink bawa-squiggle-underline' : 'text-ink'
-                    }`
+                  className={() =>
+                    // P3-B (style B): the active tab is marked by its
+                    // sun tile below, not a wavy underline — the old
+                    // squiggle on the label is gone.
+                    'flex flex-col items-center gap-1 py-3 text-xs font-semibold text-ink'
                   }
                 >
                   {({ isActive }) => (
                     <>
                       <span
-                        className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
+                        className={`flex size-6 items-center justify-center rounded-flat-sm border border-ink ${
                           isActive ? 'bg-sun text-ink' : 'bg-paper text-ink'
                         }`}
                       >
@@ -462,7 +464,7 @@ function NotFound() {
   return (
     <section className="space-y-3">
       <h2 className="font-semibold text-ink">Page not found</h2>
-      <Link to="/" className="text-ink bawa-squiggle-underline">
+      <Link to="/" className="text-ink underline underline-offset-4">
         Back to dashboard
       </Link>
     </section>

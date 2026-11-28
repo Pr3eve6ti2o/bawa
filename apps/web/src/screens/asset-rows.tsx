@@ -60,11 +60,13 @@ function priceCell(displayUnit: UnitPrice): PriceCell {
  * a 429 by mergePreservingFreshEntries — → the same figure with a
  * "stale" marker, never dropped and never a fabricated 0.00%. A
  * fallback quote carries no change, and an error with no previous quote
- * has none either; both omit the movement. Colour is sign only: the
- * 4-colour cap (palette audit) admits no green/red until the P3 style
- * work restores semantic colours.
+ * has none either; both omit the movement. P3-B (style B): the change
+ * is coloured by direction — green up, red down, muted flat — on top
+ * of the +/- sign, never instead of it (colour is never the only
+ * signal). The 4-colour cap used to forbid this; DECISIONS.md §42
+ * restores semantic colours.
  */
-type RowChange24h = { text: string; stale: boolean };
+type RowChange24h = { text: string; stale: boolean; direction: 'up' | 'down' | 'flat' };
 
 function change24hForEntry(
   entry: PriceEntry | undefined,
@@ -73,14 +75,20 @@ function change24hForEntry(
   if (entry?.status !== 'fresh' && entry?.status !== 'expired') return undefined;
   const pct = entry.quote.change24hPct;
   if (typeof pct !== 'number' || !Number.isFinite(pct)) return undefined;
-  return { text: `24h ${formatChangePct(pct)}`, stale: !isFreshQuote(entry.quote, nowMs) };
+  return {
+    text: `24h ${formatChangePct(pct)}`,
+    stale: !isFreshQuote(entry.quote, nowMs),
+    direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat',
+  };
 }
 
-/** The change as a detail-line suffix (` · 24h +1.23%`, ` · stale` when stale). */
-function changeSuffix(change: RowChange24h | undefined): string {
-  return change === undefined
-    ? ''
-    : ` · ${change.text}${change.stale ? ' · stale' : ''}`;
+/** The change's colour class: green up, red down, muted flat. */
+function change24hClass(change: RowChange24h): string | undefined {
+  return change.direction === 'up'
+    ? 'text-success'
+    : change.direction === 'down'
+      ? 'text-error'
+      : undefined;
 }
 
 /**
@@ -380,10 +388,11 @@ function getNativeRowModel(
       devnet,
       balance.status === 'zero',
     ));
-    // P0-A: the 24 h movement rides on the existing detail line — no
-    // extra row height. The price line is the bare per-unit price, so
-    // the movement appends to it ("$61,706.00 · 24h +1.23%").
-    detail += changeSuffix(change24h);
+    // P0-A + P3-B: the 24 h movement rides on the detail line's own
+    // coloured span (AssetRow's change24h prop) — no extra row
+    // height, and the colour comes from the direction, not the
+    // string. It is NOT appended to `detail` any more: a coloured
+    // span cannot live inside a plain string.
   }
 
   return {
@@ -516,9 +525,9 @@ function getTokenRowModel(
       devnet,
       balance.status === 'zero',
     ));
-    // P0-A: the 24 h movement rides on the existing detail line — no
-    // extra row height (see the native model above).
-    detail += changeSuffix(change24h);
+    // P0-A + P3-B: the 24 h movement rides on the detail line's own
+    // coloured span (AssetRow's change24h prop) — see the native
+    // model above. Not appended to `detail`.
   }
 
   return {
@@ -584,7 +593,7 @@ function ListRow({ model }: { model: AssetRowModel }) {
                 alone, with the 24 h movement under it when the feed
                 sent one (same shape as the table price cell). */}
             {model.change24h !== undefined ? (
-              <span className="block text-xs text-muted-foreground">
+              <span className={`block text-xs ${change24hClass(model.change24h) ?? 'text-muted-foreground'}`}>
                 {model.change24h.text}
                 {model.change24h.stale ? ' · stale' : ''}
               </span>
@@ -609,6 +618,7 @@ function ListRow({ model }: { model: AssetRowModel }) {
           amount={model.amount}
           {...(model.valueText === undefined ? {} : { value: model.valueText })}
           detail={model.detail}
+          {...(model.change24h === undefined ? {} : { change24h: model.change24h })}
           {...(model.isToken ? { verified: model.verified === true } : {})}
           // Lane X (Lane D #49): no "Zero balance" subline — the
           // amount ("0 BTC") + $0.00 already say it. A token row
@@ -646,7 +656,7 @@ function TablePriceCell({ price, change }: { price: PriceCell; change?: RowChang
       <span>
         <span className="block text-base font-bold text-foreground">{price.text}</span>
         {change !== undefined ? (
-          <span className="block text-xs text-muted-foreground">
+          <span className={`block text-xs ${change24hClass(change) ?? 'text-muted-foreground'}`}>
             {change.text}
             {change.stale ? ' · stale' : ''}
           </span>

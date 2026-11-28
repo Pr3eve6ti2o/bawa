@@ -132,9 +132,12 @@ export function AssetListScreen() {
         prices"). Locked and unlocked vaults never see this state —
         they get the filter bar and the rows below.
       */}
+      {/* P3-B (style B): the no-wallet state is a flat card — no hard
+          offset shadow, no wobble. The shadow was the most cartoon
+          element on this screen after the radius. */}
       {vaultState === 'no-vault' ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-4 shadow-bawa">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+        <div className="flex flex-wrap items-center gap-3 rounded-flat-lg border border-ink bg-paper p-4">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink">
             <BawaIcon name="wallet" className="size-6" />
           </span>
           <p className="min-w-40 flex-1 text-base leading-6 font-medium text-ink">
@@ -164,8 +167,11 @@ export function AssetListScreen() {
         (search full-width, controls below) and fits one row on
         desktop.
       */}
+      {/* P3-B (style B): the filter bar is flat — no hard shadow, no
+          wobble. The Filters panel itself is untouched (owner: it is
+          a feature); only its frame is polished. */}
       <div
-        className="flex flex-wrap items-center gap-2 rounded-bawa border-2 border-ink bg-paper p-2 shadow-bawa"
+        className="flex flex-wrap items-center gap-2 rounded-flat-lg border border-ink bg-paper p-2"
         role="search"
         aria-label="Filter assets"
       >

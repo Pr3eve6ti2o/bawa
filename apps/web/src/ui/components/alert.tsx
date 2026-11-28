@@ -22,15 +22,15 @@ const alertVariants = cva(
 // screens use — a 1px hairline border + uniform 12px radius via the
 // .alert-flat utility (globals.css). It changes width + radius only,
 // never the border colour, so the destructive variant keeps its
-// coral border. Default stays wobbly until P3-B restyles the
-// remaining screens.
+// coral border. P3-B: flat defaults to true — every Alert in the app
+// is flat unless a call site opts out with flat={false}.
 function Alert({
   className,
   variant = "default",
-  flat = false,
+  flat = true,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof alertVariants> & {
-  /** Flat shape (P3-A): 1px hairline border, uniform 12px radius. */
+  /** Flat shape (P3-B default): 1px hairline border, uniform 12px radius. */
   flat?: boolean;
 }) {
   return (

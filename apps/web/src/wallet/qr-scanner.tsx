@@ -234,7 +234,7 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
         ref={videoRef}
         playsInline
         muted
-        className="aspect-video w-full rounded-bawa-sm bg-ink object-cover"
+        className="aspect-video w-full rounded-flat-sm bg-ink object-cover"
         aria-label="Camera preview"
       />
       <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
@@ -262,7 +262,7 @@ export function QrScanner({ onScan, onCancel }: QrScannerProps) {
         </Button>
       </div>
       {uploadMessage && (
-        <p role="alert" className="text-base text-ink bawa-squiggle-underline">
+        <p role="alert" className="text-base text-error">
           {uploadMessage}
         </p>
       )}

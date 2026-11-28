@@ -146,7 +146,7 @@ export function SendReview({
       {/* Redesign Lane 3: the amount is the hero — the eye lands on
           the number first, then checks the rows. It is the same amount
           string as the Amount row below, not a second figure. */}
-      <p className="text-center font-display text-4xl font-semibold tabular-nums">
+      <p className="text-center text-4xl font-semibold tabular-nums">
         {amount}
       </p>
       {fiatAmount && (
@@ -155,7 +155,7 @@ export function SendReview({
         </p>
       )}
 
-      <div className="rounded-xl border border-border p-4">
+      <div className="rounded-flat-lg border border-border p-4">
         <dl className="divide-y divide-border">
           <div className="flex items-start justify-between gap-4 pb-3">
             <dt className="shrink-0 text-sm text-muted-foreground">Network</dt>
@@ -271,7 +271,7 @@ export function SendReview({
       {tokenWarning !== undefined && (
         <div
           role="alert"
-          className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-3 text-warning-text"
+          className="space-y-2 rounded-flat-lg border border-warning-border bg-warning-surface p-3 text-warning-text"
         >
           <p className="font-semibold">Check the token</p>
           <p className="break-words text-base">{tokenWarning}</p>
@@ -279,7 +279,7 @@ export function SendReview({
       )}
 
       {contractCall !== undefined && (
-        <div className="space-y-2 rounded-xl border border-border p-4">
+        <div className="space-y-2 rounded-flat-lg border border-border p-4">
           <h2 className="font-semibold">Contract call</h2>
           {clearSigning === null ? (
             <>
@@ -323,7 +323,7 @@ export function SendReview({
 
       <div
         role="alert"
-        className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-3 text-warning-text"
+        className="space-y-2 rounded-flat-lg border border-warning-border bg-warning-surface p-3 text-warning-text"
       >
         {devnetNetworkName ? (
           <>
@@ -349,7 +349,7 @@ export function SendReview({
           decided. When the content fits, the row simply sits in flow.
           It is the last thing in the section, so nothing slides under
           it. */}
-      <div className="sticky bottom-0 -mx-6 -mb-6 border-t-2 border-ink bg-paper px-6 py-3">
+      <div className="sticky bottom-0 -mx-6 -mb-6 border-t border-ink bg-paper px-6 py-3">
         <div className="flex flex-wrap justify-between gap-3">
           <Button type="button" variant="secondary" size="md" onClick={onBack}>
             Back

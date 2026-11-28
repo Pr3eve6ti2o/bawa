@@ -36,7 +36,7 @@ export function TokenPickerRow({
 }) {
   return (
     <li
-      className={`flex items-center rounded-bawa-sm border-2 border-ink ${
+      className={`flex items-center rounded-flat-sm border border-ink ${
         selected ? 'bg-sun' : 'bg-paper'
       }`}
     >
@@ -44,7 +44,7 @@ export function TokenPickerRow({
         type="button"
         aria-pressed={selected}
         onClick={onSelect}
-        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-bawa-sm px-3 py-2 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-flat-sm px-3 py-2 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         {logo}
         <span className="block min-w-0 flex-1">

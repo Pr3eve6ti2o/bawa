@@ -68,7 +68,7 @@ function DerivedAddressItems({
       {addresses.map(({ index, address }) => (
         <li
           key={`${index}:${address}`}
-          className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-3"
+          className="flex flex-wrap items-center gap-3 rounded-flat-lg border border-ink bg-paper p-3"
         >
           <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
           {' '}
@@ -434,12 +434,12 @@ export function AssetDetailScreen() {
         <BawaIcon name="arrow-left" className="size-5" aria-hidden="true" />
       </Link>
 
-      <div className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-4">
+      <div className="space-y-4 rounded-flat-lg border border-ink bg-paper p-4">
         <div className="flex items-center gap-3">
           {/* Lane G: the real chain/token mark — the hand-drawn blob
               with the ticker text inside rendered as a crossed-out
-              logo. The bordered tile stays (the brand frame). */}
-          <span aria-hidden="true" className="inline-flex size-12 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+              logo. The tile stays (flat since P3-B, 1px hairline). */}
+          <span aria-hidden="true" className="inline-flex size-12 shrink-0 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink">
             {isToken && tokenRecord !== undefined ? (
               <TokenLogo
                 symbol={displaySymbol}
@@ -483,7 +483,7 @@ export function AssetDetailScreen() {
           <div role="status" className="space-y-2">
             <div
               aria-hidden="true"
-              className="h-10 w-48 rounded-bawa border-2 border-ink bg-paper"
+              className="h-10 w-48 rounded-flat-lg border border-ink bg-paper"
             />
             <p className="text-sm text-panel-text-muted">Loading balance…</p>
           </div>
@@ -535,7 +535,10 @@ export function AssetDetailScreen() {
             Omitted when the feed did not send one — never 0.00%. */}
         {change24hPct !== undefined ? (
           <p className="text-base text-ink">
-            {`24h ${formatChangePct(change24hPct)} · ${priceSource}`}
+            <span className={change24hPct > 0 ? 'text-success' : change24hPct < 0 ? 'text-error' : undefined}>
+              {`24h ${formatChangePct(change24hPct)}`}
+            </span>
+            {` · ${priceSource}`}
           </p>
         ) : null}
         {(effectiveBalance.status === 'available' || effectiveBalance.status === 'zero') && effectiveBalance.stale === true ? (
@@ -558,7 +561,7 @@ export function AssetDetailScreen() {
         shortcut cost 3 taps and saved nothing. Order and behaviour
         are unchanged otherwise — layout only.
       */}
-      <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-bawa border-2 border-ink bg-paper px-2 py-2">
+      <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-flat-lg border border-ink bg-paper px-2 py-2">
         <Button asChild size="sm">
           <Link
             to={sendHref}
@@ -667,7 +670,7 @@ export function AssetDetailScreen() {
         <h2 id="asset-details-heading" className="font-semibold">
           Details
         </h2>
-        <Card radius="xl">
+        <Card radius="flat" borderWidth="hairline">
           <CardContent className="pt-6">
             <dl className="space-y-2 text-base">
               <div className="flex items-center justify-between gap-3">
@@ -767,7 +770,7 @@ export function AssetDetailScreen() {
         Never a fabricated or empty-state list.
       */}
       {isToken ? (
-        <p className="rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-muted-foreground">
+        <p className="rounded-flat-lg border border-ink bg-paper p-4 text-sm text-muted-foreground">
           No history for this token yet.
         </p>
       ) : chainHistory.status === 'loading' && recentTxs.length === 0 ? (
@@ -799,11 +802,11 @@ export function AssetDetailScreen() {
           // unavailable" + a dead Retry. Only while locked does the
           // failure surface — with an Unlock prompt, not a Retry — and
           // only a chain with known transactions keeps its Retry.
-          <p className="rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-muted-foreground">
+          <p className="rounded-flat-lg border border-ink bg-paper p-4 text-sm text-muted-foreground">
             No transactions yet for this chain.
           </p>
         ) : (
-          <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
+          <div className="space-y-2 rounded-flat-lg border border-ink bg-paper p-4">
             <p className="text-base">
               {chainHistory.status === 'error'
                 ? 'Could not load transactions.'
@@ -827,7 +830,7 @@ export function AssetDetailScreen() {
         {hasWallet ? (
           <ul className="space-y-3">
             {vaultList.map((address) => (
-              <li key={`vault:${address}`} className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-3">
+              <li key={`vault:${address}`} className="flex flex-wrap items-center gap-3 rounded-flat-lg border border-ink bg-paper p-3">
                 <span className="text-sm text-muted-foreground">Vault</span>
                 {' '}
                 <AddressIdenticon address={address} size={24} />
@@ -849,7 +852,7 @@ export function AssetDetailScreen() {
           // labelled Skeleton names it inside the box.
           <Skeleton className="h-20 w-full" label="Loading derived addresses…" />
         ) : state === 'empty' ? (
-          <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
+          <div className="space-y-2 rounded-flat-lg border border-ink bg-paper p-4">
             <p>No wallet imported for this chain</p>
             <Button asChild variant="secondary" size="md">
               <Link to="/import-wallet">Import a wallet</Link>
@@ -878,7 +881,7 @@ export function AssetDetailScreen() {
         xpub a chain's addresses came from (T1-12). The row is
         restored here, inside the disclosure, truncated like before.
       */}
-      <details className="rounded-bawa border-2 border-ink bg-paper">
+      <details className="rounded-flat-lg border border-ink bg-paper">
         <summary className="cursor-pointer px-4 py-3 text-base font-semibold text-ink">Import source &amp; derivation</summary>
         <div className="px-4 pb-4">
           <dl className="space-y-4">

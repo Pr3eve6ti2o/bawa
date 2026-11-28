@@ -17,6 +17,16 @@ const allowed = new Set([
   // text only — the CTA button keeps #FF6B4A. No other screen may
   // use it as a fill or background.
   '#FFD93B', // Sun
+  // P3-B semantic colours (style B, 2026-11-28; decision in
+  // docs/DECISIONS.md §42). The 4-colour cap is lifted for semantic
+  // colour only: green success / up, red error / down, grey
+  // secondary text, light-green success surface. All ratios computed
+  // first-hand on paper #FFFDF7 (green 5.85:1, red 6.46:1, grey
+  // 6.98:1; green on the tint 5.22:1).
+  '#177245', // Success green — success text, up-moves, confirmed
+  '#B42318', // Error red — error text, down-moves, failed
+  '#5B5850', // Secondary grey — muted / secondary text
+  '#E7F3EA', // Success surface tint — success badge / toast bg
   // QR-card template colours (QR-cards programme, Lane E,
   // 2026-11-25; design/DESIGN.md in bawa-qr-cards). The one
   // confined exception to the 4-colour cap: named --qr-* tokens in

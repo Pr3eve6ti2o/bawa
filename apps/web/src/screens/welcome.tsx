@@ -36,7 +36,7 @@ export function WelcomeScreen() {
       </div>
 
       <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:sticky lg:top-6">
-        <Card radius="xl" tone="card">
+        <Card radius="flat" borderWidth="hairline" tone="card">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>
             <CardDescription>
@@ -49,7 +49,7 @@ export function WelcomeScreen() {
             </Button>
           </CardContent>
         </Card>
-        <Card radius="xl" tone="card">
+        <Card radius="flat" borderWidth="hairline" tone="card">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Import a wallet</CardTitle>
             <CardDescription>

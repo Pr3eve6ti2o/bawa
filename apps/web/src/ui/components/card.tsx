@@ -11,23 +11,26 @@ import { cn } from "../lib/utils"
 // (16px mobile / 24px desktop, all round) and one inner gap (12px).
 // P3-A (style B): radius="flat" + borderWidth="hairline" is the flat
 // card the recovery-phrase screens use (uniform 12px radius, 1px
-// hairline border) — the wobbly radius + 2px ink border stay the
-// default everywhere else until P3-B restyles the remaining screens.
+// hairline border). P3-B: flat + hairline is now the DEFAULT for
+// every Card in the app — the wobbly radius + 2px ink border stay
+// available as radius="bawa" / borderWidth="thick" for the QR card
+// and the Welcome illustration, which own them, and radius="xl"
+// stays for call sites that still ask for it.
 function Card({
   className,
-  radius = "bawa",
+  radius = "flat",
   tone = "paper",
   borderTone = "ink",
-  borderWidth = "thick",
+  borderWidth = "hairline",
   ...props
 }: React.ComponentProps<"div"> & {
-  /** Corner radius: "bawa" is the default; "xl" is the softer card used on detail screens; "flat" is the uniform 12px radius (P3-A, phrase screens). */
+  /** Corner radius: "flat" is the default (uniform 12px, P3-B style B); "bawa" is the wobbly radius (QR card / Welcome only); "xl" is the softer card used on detail screens. */
   radius?: "bawa" | "xl" | "flat"
   /** Surface: "paper" is the default; "card" matches the theme card surface. */
   tone?: "paper" | "card"
   /** Border colour: "ink" is the default; "border" is the muted border; "destructive" is the delete-zone border, rendered in the link token (#C23A1D, 5.27:1 on paper) — the bright coral at 40% opacity was a faint peach far below the 3:1 non-text bar, and even full-strength coral is only 2.77:1 (same fix as the destructive icon, F4). */
   borderTone?: "ink" | "border" | "destructive"
-  /** Border width: "thick" is the 2px ink border; "hairline" is the 1px border (P3-A, phrase screens). */
+  /** Border width: "hairline" is the 1px border (P3-B default); "thick" is the 2px ink border (QR card / Welcome only). */
   borderWidth?: "thick" | "hairline"
 }) {
   return (

@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "../lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-bawa-sm border-2 border-ink font-medium text-ink transition-colors [&>svg]:pointer-events-none [&>svg]:shrink-0",
+  "inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-flat-sm border border-ink font-medium text-ink transition-colors [&>svg]:pointer-events-none [&>svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -14,9 +14,12 @@ const badgeVariants = cva(
         destructive: "bg-coral",
         outline: "bg-paper",
         primary: "bg-sun",
-        success: "bg-sun",
+        // P3-B (style B): success/positive is the light-green tint,
+        // not sun — success and warning were the same yellow. Ink
+        // text on the tint is 12.41:1.
+        success: "bg-success-surface",
         neutral: "bg-paper",
-        positive: "bg-sun",
+        positive: "bg-success-surface",
       },
       size: {
         sm: "gap-1 px-2 py-0.5 text-xs [&>svg]:size-4",

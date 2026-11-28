@@ -109,7 +109,7 @@ export function RecentActivity() {
         return (
           <>
             {rows.length > 0 ? (
-              <ul className="divide-y divide-panel-border overflow-hidden rounded-bawa border-2 border-ink bg-paper">
+              <ul className="divide-y divide-panel-border overflow-hidden rounded-flat-lg border border-ink bg-paper">
                 {/*
                   Lane 2: the rows are the shared TxRow (direction tile,
                   counterparty, amount, date + status) — the old inline
@@ -136,7 +136,7 @@ export function RecentActivity() {
               // the box, so the wait is named.
               <Skeleton className="h-20 w-full" label="Loading recent activity…" />
             ) : anyLoaded ? (
-              <div className="rounded-bawa border-2 border-ink bg-paper p-4">
+              <div className="rounded-flat-lg border border-ink bg-paper p-4">
                 <p className="text-base font-semibold text-panel-text">No activity yet</p>
                 <p className="mt-1 text-sm text-panel-text-soft">
                   No transactions yet.
@@ -147,7 +147,7 @@ export function RecentActivity() {
             {showUnavailable && unavailableChains.map((chain) => (
               <div
                 key={`history-unavailable:${chain}`}
-                className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-flat-lg border border-ink bg-paper px-4 py-3"
               >
                 {/* One text node on purpose: the chain name used to render
                     as an expression followed by a text node, which some text
@@ -168,7 +168,7 @@ export function RecentActivity() {
               </div>
             ))}
             {isLocked && unavailableChains.length > 0 && (
-              <div className="flex items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-flat-lg border border-ink bg-paper px-4 py-3">
                 <p className="text-sm text-panel-text-soft">Locked. Unlock to see activity.</p>
                 <Button type="button" variant="secondary" asChild size="sm">
                   <Link to="/lock">Unlock</Link>

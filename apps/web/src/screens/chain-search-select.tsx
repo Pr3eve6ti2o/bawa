@@ -505,7 +505,7 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
           />
         </span>
         {open && (
-          <div className="absolute left-0 right-0 top-full z-10 mt-1 border-2 border-ink bg-paper shadow-lg">
+          <div className="absolute left-0 right-0 top-full z-10 mt-1 border border-ink bg-paper shadow-lg">
             {/* Lane P2-C (M5): family tabs filter the list — one tab
                 per family with its count, same set and styling as
                 the Networks screen. Hidden when the offered chains
@@ -534,7 +534,7 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
                     }}
                     onClick={() => selectFamily(tab.id)}
                     onKeyDown={(event) => handleFamilyTabKeyDown(event, tab.id)}
-                    className={`min-h-11 rounded-bawa-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
+                    className={`min-h-11 rounded-flat-sm px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
                       effectiveFamily === tab.id
                         ? 'bg-sun text-ink'
                         : 'text-ink hover:bg-sun'

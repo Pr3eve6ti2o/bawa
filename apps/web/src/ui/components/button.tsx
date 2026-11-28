@@ -17,9 +17,12 @@ import { cn } from "../lib/utils";
 //
 // Variants (plan §c): Primary (coral — the one action per screen),
 // Secondary (paper, hover sun — every other button), Ghost
-// (borderless, wavy underline — inline navigation only, never for an
-// action that changes state). Deleted: secondary≡outline (merged into
-// Secondary), default≡destructive (danger = Primary + the alert icon
+// (borderless, plain underline — inline navigation only, never for an
+// action that changes state). P3-B: the ghost's wavy coral underline
+// and the primary's wavy press underline are gone (style B — no
+// squiggle underlines anywhere); the ghost underlines plainly in ink.
+// Deleted: secondary≡outline (merged into Secondary),
+// default≡destructive (danger = Primary + the alert icon
 // at the call site, not a variant), foreground (use Primary),
 // sun as a variant (sun is the *selected* state, not a variant).
 // Disabled = 40% opacity + not-allowed cursor, never a dashed border
@@ -37,10 +40,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "border-2 border-ink bg-coral text-ink active:scale-[0.98] active:underline active:decoration-wavy active:decoration-sun active:underline-offset-4",
+          "border-2 border-ink bg-coral text-ink active:scale-[0.98]",
         secondary: "border-2 border-ink bg-paper text-ink enabled:hover:bg-sun",
         ghost:
-          "border-0 bg-transparent text-ink underline decoration-wavy decoration-coral underline-offset-4",
+          "border-0 bg-transparent text-ink underline underline-offset-4",
       },
       size: {
         sm: "h-11 justify-center gap-2 rounded-bawa px-3 text-sm has-[>svg]:px-2.5",
@@ -63,13 +66,18 @@ const buttonVariants = cva(
 // .btn-flat utility (globals.css), no wavy press underline. It is a
 // prop, not a className, so no conflicting class is ever passed: the
 // variant utilities still emit their own radius/border and .btn-flat
-// (same layer, later in file) wins. Default stays wobbly until P3-B
-// restyles the remaining screens.
+// (same layer, later in file) wins. P3-B: flat defaults to true —
+// every Button in the app is flat unless a call site opts out with
+// flat={false} (the QR card's buttons, which own the wobble, do not
+// use this component at all). Ghost gets .btn-flat-ghost (radius
+// only): ghost is borderless by contract and .btn-flat would add a
+// border, but the size variant's rounded-bawa still shows on the
+// :focus-visible outline without it.
 function Button({
   className,
   variant,
   size,
-  flat = false,
+  flat = true,
   asChild = false,
   type = "button",
   children,
@@ -77,7 +85,7 @@ function Button({
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
-    /** Flat shape (P3-A): 1px hairline border, uniform 10px radius. */
+    /** Flat shape (P3-B default): 1px hairline border, uniform 10px radius. */
     flat?: boolean;
   }) {
   const Comp = asChild ? Slot : "button";
@@ -88,7 +96,11 @@ function Button({
       type={type}
       className={cn(
         buttonVariants({ variant, size, className }),
-        flat ? "btn-flat" : undefined,
+        // P3-B: ghost gets .btn-flat-ghost (radius only) — it is
+        // borderless by contract, so .btn-flat would add a border,
+        // but the size variant's rounded-bawa still shows on the
+        // :focus-visible outline, which follows the border radius.
+        flat ? (variant === "ghost" ? "btn-flat-ghost" : "btn-flat") : undefined,
       )}
       {...props}
     >
