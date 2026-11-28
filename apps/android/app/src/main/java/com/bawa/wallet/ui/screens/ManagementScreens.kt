@@ -15,7 +15,9 @@ package com.bawa.wallet.ui.screens
 //   registry — 87 mainnet chains + 4 testnets — each row with its
 //   real logo, name and RPC count. Mainnet is the programme default.
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +32,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,101 +40,150 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.bawa.wallet.core.Chain
 import com.bawa.wallet.core.DerivationPolicy
+import com.bawa.wallet.data.HistoryResult
 import com.bawa.wallet.ui.ChainLogo
 import com.bawa.wallet.ui.OutlineActionButton
 import com.bawa.wallet.ui.PrimaryButton
+import com.bawa.wallet.ui.ScanTarget
 import com.bawa.wallet.ui.Screen
 import com.bawa.wallet.ui.ScreenHeader
 import com.bawa.wallet.ui.TestnetBadge
 import com.bawa.wallet.ui.WalletViewModel
+import com.bawa.wallet.ui.scanner.QrCodeScanner
 
 @Composable
 fun SendScreen(vm: WalletViewModel) {
     val selectedChain by vm.selectedChain.collectAsState()
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        ScreenHeader(title = "Send", onBack = { vm.goBack() })
-        Text(
-            text = "Sending is not implemented in this starter. " +
-                "There is no signing, broadcast or transaction-construction code."
-        )
-        // The chain the review rows describe, chosen explicitly —
-        // no silent switching (catalogue §6/§7).
-        Text("Chain", style = MaterialTheme.typography.titleSmall)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+    val sendRecipient by vm.sendRecipient.collectAsState()
+    val scanTarget by vm.scanTarget.collectAsState()
+    val scanError by vm.scanError.collectAsState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            listOf(Chain.BTC, Chain.ETH, Chain.TRX).forEach { chain ->
-                if (chain == selectedChain) {
-                    Button(onClick = { vm.selectChain(chain) }, modifier = Modifier.weight(1f)) {
-                        Text(chain.name)
-                    }
-                } else {
-                    OutlinedButton(onClick = { vm.selectChain(chain) }, modifier = Modifier.weight(1f)) {
-                        Text(chain.name)
+            ScreenHeader(title = "Send", onBack = { vm.goBack() })
+            Text(
+                text = "Sending is not implemented in this starter. " +
+                    "There is no signing, broadcast or transaction-construction code."
+            )
+            // The chain the review rows describe, chosen explicitly —
+            // no silent switching (catalogue §6/§7).
+            Text("Chain", style = MaterialTheme.typography.titleSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(Chain.BTC, Chain.ETH, Chain.TRX).forEach { chain ->
+                    if (chain == selectedChain) {
+                        Button(onClick = { vm.selectChain(chain) }, modifier = Modifier.weight(1f)) {
+                            Text(chain.name)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { vm.selectChain(chain) }, modifier = Modifier.weight(1f)) {
+                            Text(chain.name)
+                        }
                     }
                 }
             }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Future procedure — not implemented",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "frozen intent → human-readable details → " +
+                            "validate payload against intent → broadcast the exact signed payload"
+                    )
+                }
+            }
+            // The recipient is editable and can be filled by scanning
+            // a QR code (Step 6). The amount stays disabled: there is
+            // no send to complete, so no amount can be acted on.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Future procedure — not implemented",
-                    style = MaterialTheme.typography.titleMedium
+                OutlinedTextField(
+                    value = sendRecipient,
+                    onValueChange = { vm.setSendRecipient(it) },
+                    label = { Text("Recipient") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
                 )
+                OutlinedButton(onClick = { vm.openScanner(ScanTarget.SendRecipient) }) {
+                    Text("Scan")
+                }
+            }
+            scanError?.let { error ->
                 Text(
-                    text = "frozen intent → human-readable details → " +
-                        "validate payload against intent → broadcast the exact signed payload"
+                    error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            OutlinedTextField(
+                value = "",
+                onValueChange = {},
+                enabled = false,
+                label = { Text("Amount") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            // Review risk rows (Rabby Approval / SecurityListItem shape,
+            // layout only): the exact values the user would approve, shown
+            // before any Review button could exist. Nothing here is a
+            // risk score — the amount is empty because the form is.
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Review — check before you send",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text("Chain: ${selectedChain.name} (${DerivationPolicy.TESTNETS[selectedChain] ?: "Testnet"})")
+                    Text(
+                        "Recipient: " + if (sendRecipient.isBlank()) {
+                            "not entered — the full address will be shown here."
+                        } else {
+                            sendRecipient
+                        }
+                    )
+                    Text("Amount: not entered.")
+                    Text("Fee: not available — fee estimation is not implemented.")
+                }
+            }
+            PrimaryButton(title = "Review", enabled = false, onClick = {})
+            OutlineActionButton(title = "Receive", onClick = { vm.navigate(Screen.Receive) })
         }
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            enabled = false,
-            label = { Text("Recipient") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            enabled = false,
-            label = { Text("Amount") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        // Review risk rows (Rabby Approval / SecurityListItem shape,
-        // layout only): the exact values the user would approve, shown
-        // before any Review button could exist. Nothing here is a
-        // risk score — the fields are empty because the form is.
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Review — check before you send",
-                    style = MaterialTheme.typography.titleMedium
+        // Scanner overlay: covers the screen while open; Close exits
+        // without scanning anything.
+        if (scanTarget == ScanTarget.SendRecipient) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                QrCodeScanner(
+                    onScanned = { vm.onScanned(it) },
+                    onError = { vm.onScanError(it) }
                 )
-                Text("Chain: ${selectedChain.name} (${DerivationPolicy.TESTNETS[selectedChain] ?: "Testnet"})")
-                Text("Recipient: not entered — the full address will be shown here.")
-                Text("Amount: not entered.")
-                Text("Fee: not available — no provider is selected.")
+                Button(
+                    onClick = { vm.closeScanner() },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                ) { Text("Close") }
             }
         }
-        PrimaryButton(title = "Review", enabled = false, onClick = {})
-        OutlineActionButton(title = "Receive", onClick = { vm.navigate(Screen.Receive) })
     }
 }
 
@@ -141,6 +193,12 @@ fun TransactionHistoryScreen(vm: WalletViewModel) {
     var hash by remember { mutableStateOf("") }
     var lookupMessage by remember { mutableStateOf<String?>(null) }
     val selectedChain by vm.selectedChain.collectAsState()
+    val history by vm.history.collectAsState()
+    val refreshing by vm.refreshing.collectAsState()
+    val lookupResult by vm.lookupResult.collectAsState()
+    val lookupHash by vm.lookupHash.collectAsState()
+
+    LaunchedEffect(selectedChain) { vm.refreshLiveData(setOf(selectedChain)) }
 
     Column(
         modifier = Modifier
@@ -179,11 +237,11 @@ fun TransactionHistoryScreen(vm: WalletViewModel) {
         )
         Button(
             onClick = {
-                lookupMessage = if (hash.isBlank()) {
-                    "Enter a transaction hash to look it up."
+                if (hash.isBlank()) {
+                    lookupMessage = "Enter a transaction hash to look it up."
                 } else {
-                    "Transaction not found — no provider is selected, " +
-                        "so this starter cannot fetch transactions."
+                    lookupMessage = null
+                    vm.requestLookup(selectedChain, hash)
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -193,10 +251,96 @@ fun TransactionHistoryScreen(vm: WalletViewModel) {
         lookupMessage?.let { message ->
             Text(text = message, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(
-            text = "No transaction history — no provider is selected, " +
-                "so this starter cannot fetch transactions."
-        )
+        // The lookup answer: the record with its distinct status, an
+        // honest not-found, or the provider's reason.
+        when (val result = lookupResult) {
+            is HistoryResult.Available -> {
+                if (result.transactions.isEmpty()) {
+                    Text("Transaction not found on ${selectedChain.name}.")
+                } else {
+                    result.transactions.forEach { tx ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable(role = Role.Button) {
+                                    vm.openTransactionDetail(tx.hash, selectedChain)
+                                }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    "${tx.hash.take(12)}…${tx.hash.takeLast(8)}",
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Text(
+                                    "Status: ${tx.status.name}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            is HistoryResult.Unavailable -> {
+                if (lookupHash.isNotEmpty()) {
+                    Text(text = result.reason, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            null -> {
+                // No lookup has run yet.
+            }
+        }
+        Text("History", style = MaterialTheme.typography.titleMedium)
+        when (val chainHistory = history[selectedChain]) {
+            is HistoryResult.Available -> {
+                if (chainHistory.transactions.isEmpty()) {
+                    Text("No transactions for this address.")
+                } else {
+                    chainHistory.transactions.take(20).forEach { tx ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable(role = Role.Button) {
+                                    vm.openTransactionDetail(tx.hash, selectedChain)
+                                }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    "${tx.hash.take(12)}…${tx.hash.takeLast(8)}",
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Text(
+                                    "Status: ${tx.status.name}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                    if (chainHistory.transactions.size > 20) {
+                        Text(
+                            "Showing 20 of ${chainHistory.transactions.size}.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            is HistoryResult.Unavailable -> {
+                Text(
+                    text = chainHistory.reason,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            null -> {
+                Text(
+                    if (selectedChain in refreshing) "Loading…"
+                    else "No transaction history — no live data was fetched yet."
+                )
+            }
+        }
         Text(
             text = "How tracking works: paste a hash from the chain you received it on, " +
                 "and the lookup checks that chain's indexer. Statuses stay distinct — " +
@@ -210,6 +354,14 @@ fun TransactionHistoryScreen(vm: WalletViewModel) {
 @Composable
 fun TransactionDetailScreen(vm: WalletViewModel) {
     val requestedId by vm.detailTxId.collectAsState()
+    val requestedChain by vm.detailTxChain.collectAsState()
+    val lookupResult by vm.lookupResult.collectAsState()
+
+    LaunchedEffect(requestedId, requestedChain) {
+        val id = requestedId
+        val chain = requestedChain
+        if (id != null && chain != null) vm.lookupTransaction(chain, id)
+    }
 
     Column(
         modifier = Modifier
@@ -222,11 +374,49 @@ fun TransactionDetailScreen(vm: WalletViewModel) {
             title = "Transaction details",
             onBack = { vm.goBack() }
         )
-        Text(
-            text = "Transaction not found — no transaction data exists in this starter."
-        )
-        requestedId?.let { id ->
-            Text(text = "Requested transaction ID: $id")
+        val id = requestedId
+        val chain = requestedChain
+        if (id == null || chain == null) {
+            Text("No transaction selected.")
+        } else {
+            Text("Transaction: $id")
+            Text("Chain: ${chain.name}")
+            when (val result = lookupResult) {
+                is HistoryResult.Available -> {
+                    if (result.transactions.isEmpty()) {
+                        Text("Transaction not found on ${chain.name}.")
+                    } else {
+                        result.transactions.forEach { tx ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        tx.hash,
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    // The five statuses stay distinct.
+                                    Text("Status: ${tx.status.name}")
+                                    tx.explorerUrl?.let { url ->
+                                        Text(
+                                            "Explorer: $url",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                is HistoryResult.Unavailable -> {
+                    Text(text = result.reason, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                null -> {
+                    Text("Looking up…")
+                }
+            }
         }
         OutlinedButton(onClick = { vm.navigate(Screen.TransactionHistory) }) {
             Text("Back")

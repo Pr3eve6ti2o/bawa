@@ -1,5 +1,6 @@
 package com.bawa.wallet.data.network
 
+import com.bawa.wallet.data.ChainRecord
 import com.bawa.wallet.data.ChainRegistry
 import com.bawa.wallet.data.TokenRecord
 import com.bawa.wallet.data.TokenRepository
@@ -53,9 +54,7 @@ class PriceRepository(
 ) {
 
     suspend fun prices(tokenKeys: List<String>): Map<String, PriceResult> {
-        val nowMs = System.currentTimeMillis()
         val results = LinkedHashMap<String, PriceResult>()
-        var transportFailed = false
         val resolved = LinkedHashMap<String, TokenRecord>()
         for (key in tokenKeys.distinct()) {
             val token = tokenRepository.tokenByKey(key)
@@ -65,7 +64,47 @@ class PriceRepository(
                 resolved[key] = token
             }
         }
+        results.putAll(priceResolved(resolved))
+        return results
+    }
+
+    /**
+     * Prices for native assets, keyed by chain id ("btc", "eth", ...).
+     * The curated token export lists contract tokens only — there is
+     * no token record for a chain's native asset — so [prices] cannot
+     * price them. This resolves the native from the chain registry
+     * instead (its CoinGecko id + fallback ids) and runs the same
+     * A/B/C legs over a synthetic record. The synthetic record has no
+     * contract, so the DexScreener and TonAPI legs skip it (both need
+     * a contract address); CoinGecko, CoinLore and Coinbase price it
+     * from the chain's ids. Unknown chains are Unavailable, never 0.
+     */
+    suspend fun nativePrices(chainIds: List<String>): Map<String, PriceResult> {
+        val results = LinkedHashMap<String, PriceResult>()
+        val resolved = LinkedHashMap<String, TokenRecord>()
+        for (id in chainIds.distinct()) {
+            val chain = chainRegistry.chainById(id)
+            if (chain == null) {
+                results[id] = PriceResult.Unavailable("unknown chain \"$id\"")
+            } else {
+                resolved[id] = nativeTokenRecord(chain)
+            }
+        }
+        results.putAll(priceResolved(resolved))
+        return results
+    }
+
+    // Runs the A/B/C fallback legs over already-resolved records and
+    // returns the priced subset; unpriced records are Unavailable with
+    // the shared reason. Shared by [prices] and [nativePrices] so the
+    // two entry points can never drift apart.
+    private suspend fun priceResolved(
+        resolved: Map<String, TokenRecord>
+    ): Map<String, PriceResult> {
+        val nowMs = System.currentTimeMillis()
+        val results = LinkedHashMap<String, PriceResult>()
         if (resolved.isEmpty()) return results
+        var transportFailed = false
 
         // Phase A: CoinGecko, one batched call for every distinct id.
         val (coingeckoPriced, coingeckoFailed) = fetchCoingecko(resolved, nowMs)
@@ -152,6 +191,9 @@ class PriceRepository(
     ): LegOutcome {
         val byChain = LinkedHashMap<String, MutableList<Map.Entry<String, TokenRecord>>>()
         for (entry in tokens.entries) {
+            // A record with no contract (the synthetic native record
+            // from nativePrices) has no DexScreener address to query.
+            if (entry.value.contract.isBlank()) continue
             val slug = chainRegistry.chainById(entry.value.chain)
                 ?.priceFallbackIds?.dexscreenerChainId ?: continue
             byChain.getOrPut(slug) { mutableListOf() }.add(entry)
@@ -220,7 +262,9 @@ class PriceRepository(
     private suspend fun fetchTonApi(
         tokens: Map<String, TokenRecord>
     ): LegOutcome {
-        val ton = tokens.filterValues { it.chain == "ton" }
+        // TonAPI prices by master (contract) address; a record with no
+        // contract (the synthetic native record) has nothing to query.
+        val ton = tokens.filterValues { it.chain == "ton" && it.contract.isNotBlank() }
         if (ton.isEmpty()) return LegOutcome(emptyMap(), false)
         val masters = ton.values.map { it.contract }.distinct().joinToString(",")
         val url = "$TONAPI_BASE_URL/v2/rates?tokens=$masters&currencies=usd"
@@ -298,6 +342,22 @@ class PriceRepository(
         val nativeId = chainRegistry.coingeckoId(token.chain) ?: return false
         return token.coingeckoId.isNotEmpty() && token.coingeckoId == nativeId
     }
+
+    // Synthetic record for a chain's native asset (see nativePrices):
+    // priced by CoinGecko id, never by contract — there is none.
+    private fun nativeTokenRecord(chain: ChainRecord): TokenRecord = TokenRecord(
+        chain = chain.id,
+        contract = "",
+        tokenKey = chain.id,
+        name = chain.name,
+        symbol = chain.symbol,
+        decimals = chain.decimals,
+        coingeckoId = chain.coingeckoId,
+        coingeckoPlatform = "",
+        verifiedSource = "registry-native",
+        priceSource = "coingecko",
+        priceFallback = ""
+    )
 
     // A 200 response with a JSON object body, or null on any transport,
     // status or parse failure (the caller then falls through).

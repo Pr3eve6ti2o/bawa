@@ -19,8 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bawa.wallet.core.CoreWalletEngine
+import com.bawa.wallet.data.AddressDeriver
 import com.bawa.wallet.data.ChainRegistry
+import com.bawa.wallet.data.CoreAddressDeriver
+import com.bawa.wallet.data.LiveBalanceRepository
+import com.bawa.wallet.data.LiveHistoryRepository
 import com.bawa.wallet.data.TokenRepository
+import com.bawa.wallet.data.network.OkHttpHttpTransport
+import com.bawa.wallet.data.network.PriceRepository
 import com.bawa.wallet.ui.BawaTheme
 import com.bawa.wallet.ui.Screen
 import com.bawa.wallet.ui.WalletViewModel
@@ -66,6 +73,15 @@ class MainActivity : ComponentActivity() {
 // the generated export bundled in assets. A failed load falls back
 // to null (empty registry), never a crash — the screens fall back to
 // their hardcoded labels and the app stays usable.
+//
+// Step 6 live data: the same pattern builds the live repositories
+// (balances, history, prices) on one shared OkHttp transport, plus
+// the Trust Wallet Core address deriver. Each construction is guarded
+// on its own — a failure falls back to null for that piece only
+// (the ViewModel treats a missing piece as unavailable, never a
+// crash), so the app stays usable with whatever did load. The
+// engine's fixture gate does NOT run here: it runs lazily on the
+// first derivation, on a background thread (see CoreAddressDeriver).
 class WalletViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WalletViewModel::class.java)) {
@@ -79,8 +95,57 @@ class WalletViewModelFactory(private val context: Context) : ViewModelProvider.F
             } catch (_: Exception) {
                 null
             }
+            // One shared transport for every live repository (Step 6
+            // unification: the Lane B duplicate transport is gone).
+            val transport = try {
+                OkHttpHttpTransport()
+            } catch (_: Exception) {
+                null
+            }
+            val balances = if (registry != null && tokens != null && transport != null) {
+                try {
+                    LiveBalanceRepository(registry, tokens, transport)
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            val history = if (registry != null && transport != null) {
+                try {
+                    LiveHistoryRepository(registry, transport)
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            val prices = if (registry != null && tokens != null && transport != null) {
+                try {
+                    PriceRepository(tokens, registry, transport)
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            // Watch-only derivation through Trust Wallet Core 4.8.4.
+            // CoreWalletEngine() loads the native library and throws
+            // when it cannot — that is a null deriver, never a crash.
+            val deriver: AddressDeriver? = try {
+                CoreAddressDeriver(CoreWalletEngine())
+            } catch (_: Exception) {
+                null
+            }
             @Suppress("UNCHECKED_CAST")
-            return WalletViewModel(chainRegistry = registry, tokenRepository = tokens) as T
+            return WalletViewModel(
+                chainRegistry = registry,
+                tokenRepository = tokens,
+                balanceRepository = balances,
+                historyRepository = history,
+                priceRepository = prices,
+                addressDeriver = deriver
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

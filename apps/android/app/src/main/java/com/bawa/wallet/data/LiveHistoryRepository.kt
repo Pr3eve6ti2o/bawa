@@ -1,5 +1,10 @@
 package com.bawa.wallet.data
 
+import com.bawa.wallet.data.network.HttpStatusException
+import com.bawa.wallet.data.network.HttpTransport
+import com.bawa.wallet.data.network.OkHttpHttpTransport
+import com.bawa.wallet.data.network.getText
+import com.bawa.wallet.data.network.postJsonText
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -33,7 +38,7 @@ import kotlinx.serialization.json.put
 
 class LiveHistoryRepository(
     private val registry: ChainRegistry,
-    private val transport: HttpTransport = OkHttpTransport(),
+    private val transport: HttpTransport = OkHttpHttpTransport(),
     /** Delay before retrying an Etherscan V2 quota hit (1 request / 5 s per IP). Tests pass 0. */
     private val etherscanRetryDelayMs: Long = 6000
 ) : HistoryRepository {
@@ -117,7 +122,7 @@ class LiveHistoryRepository(
         while (true) {
             attempts++
             val text = try {
-                transport.get(url)
+                transport.getText(url)
             } catch (e: Exception) {
                 return HistoryResult.Unavailable(
                     "History request failed for ${chain.name}: " +
@@ -336,7 +341,7 @@ class LiveHistoryRepository(
     private suspend fun tronHistory(chain: ChainRecord, address: String): HistoryResult {
         // Trongrid first; TronScan as the fallback (the web's order).
         try {
-            val text = transport.get(
+            val text = transport.getText(
                 "https://api.trongrid.io/v1/accounts/$address/transactions" +
                     "?limit=20&order_by=block_timestamp,desc"
             )
@@ -377,7 +382,7 @@ class LiveHistoryRepository(
             // Fall through to TronScan.
         }
         return try {
-            val text = transport.get(
+            val text = transport.getText(
                 "https://apilist.tronscanapi.com/api/transaction" +
                     "?sort=-timestamp&limit=20&address=$address"
             )
@@ -419,7 +424,7 @@ class LiveHistoryRepository(
 
     private suspend fun tronLookup(chain: ChainRecord, txHash: String): HistoryResult {
         return try {
-            val text = transport.get("https://api.trongrid.io/v1/transactions/$txHash")
+            val text = transport.getText("https://api.trongrid.io/v1/transactions/$txHash")
             val data = parseJsonObject(text)?.let {
                 try {
                     it["data"]?.jsonArray
@@ -512,7 +517,7 @@ class LiveHistoryRepository(
         var lastError: String? = null
         for (base in chain.rpcEndpoints) {
             try {
-                val text = transport.get("$base/address/$address/txs")
+                val text = transport.getText("$base/address/$address/txs")
                 val list = parseJsonElement(text)?.let {
                     try {
                         it.jsonArray
@@ -573,7 +578,7 @@ class LiveHistoryRepository(
         }
         for (base in chain.rpcEndpoints) {
             try {
-                val text = transport.get("$base/tx/$txHash")
+                val text = transport.getText("$base/tx/$txHash")
                 val obj = parseJsonObject(text)
                     ?: return HistoryResult.Unavailable(
                         "The ${chain.name} answer was not a transaction."
@@ -613,10 +618,10 @@ class LiveHistoryRepository(
 
     private suspend fun dogeHistory(chain: ChainRecord, address: String): HistoryResult {
         try {
-            val inText = transport.get(
+            val inText = transport.getText(
                 "${LiveBalanceRepository.SOCHAIN_BASE}/transactions/DOGE/$address?direction=in"
             )
-            val outText = transport.get(
+            val outText = transport.getText(
                 "${LiveBalanceRepository.SOCHAIN_BASE}/transactions/DOGE/$address?direction=out"
             )
             val inTxs = parseSochainTxs(inText, chain.id)
@@ -628,7 +633,7 @@ class LiveHistoryRepository(
             // Fall through to BlockCypher.
         }
         return try {
-            val text = transport.get(
+            val text = transport.getText(
                 "${LiveBalanceRepository.BLOCKCYPHER_DOGE_BASE}/addrs/$address/full?limit=20"
             )
             val txs = parseJsonObject(text)?.let {
@@ -697,7 +702,7 @@ class LiveHistoryRepository(
 
     private suspend fun dogeLookup(chain: ChainRecord, txHash: String): HistoryResult {
         try {
-            val text = transport.get(
+            val text = transport.getText(
                 "${LiveBalanceRepository.SOCHAIN_BASE}/transaction/DOGE/$txHash"
             )
             val data = parseJsonObject(text)?.objectField("data")
@@ -723,7 +728,7 @@ class LiveHistoryRepository(
             // Fall through to BlockCypher.
         }
         return try {
-            val text = transport.get(
+            val text = transport.getText(
                 "${LiveBalanceRepository.BLOCKCYPHER_DOGE_BASE}/txs/$txHash"
             )
             val obj = parseJsonObject(text)
@@ -766,7 +771,7 @@ class LiveHistoryRepository(
             put("method", method)
             put("params", params)
         }.toString()
-        val text = transport.postJson(url, body)
+        val text = transport.postJsonText(url, body)
         val root = parseJsonObject(text)
             ?: throw IllegalStateException("Invalid RPC response from $url")
         val error = root["error"]
