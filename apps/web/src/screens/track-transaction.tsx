@@ -82,13 +82,13 @@ const GENESIS_BTC_HASH =
 // with its live lookup button.
 function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
   return (
-    <section aria-labelledby="track-guide-heading" className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-6">
+    <section aria-labelledby="track-guide-heading" className="space-y-4 rounded-flat-lg border border-ink bg-paper p-6">
       <h2 id="track-guide-heading" className="font-display font-semibold text-ink">
         How tracking works
       </h2>
 
 
-      <div className="mt-6 rounded-bawa border-2 border-ink bg-paper p-4">
+      <div className="mt-6 rounded-flat-lg border border-ink bg-paper p-4">
         <h3 className="font-semibold text-ink">
           Try the first Bitcoin transaction
         </h3>

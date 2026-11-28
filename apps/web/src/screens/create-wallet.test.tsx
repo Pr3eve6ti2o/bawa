@@ -7,6 +7,7 @@ import { CreateWalletScreen } from './create-wallet';
 import { createWallet } from '../wallet/core';
 import { loadCore } from '../engine/boundary';
 import { createVault, hasVault } from '../wallet/vault';
+import { readBackupDone } from '../wallet/backup-state';
 import { isPassphraseUsed } from '../wallet/passphrase';
 import { useWallet } from '../state/wallet-context';
 
@@ -255,6 +256,9 @@ describe('create wallet screen', () => {
         'bawa-starknet-bip44-v1',
       ], '');
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
+      // S3-A follow-up: Create completed, so the backup-done flag is
+      // set — Wallets shows "Backed up" instead of the nudge.
+      expect(readBackupDone()).toBe(true);
       // The mnemonic is cleared: no recovery word is shown any more.
       expect(mounted.div.textContent).not.toContain('abandon');
       expect(mounted.div.textContent).toContain('Your wallet is ready');
@@ -376,6 +380,8 @@ describe('create wallet screen', () => {
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
       // A new phrase starts HD receive rotation at index 0.
       expect(mockResetReceiveRotation).toHaveBeenCalledTimes(1);
+      // Create did not complete: the backup-done flag stays unset.
+      expect(readBackupDone()).toBe(false);
       const stepCards = mounted.div.querySelectorAll('[data-slot="step-card"]');
       expect(stepCards.length).toBe(4);
       expect(stepCards[3]?.getAttribute('data-state')).toBe('pending');
@@ -412,6 +418,8 @@ describe('create wallet screen', () => {
       await settle();
       expect(createVault).toHaveBeenCalledTimes(1);
       expect(mockRefreshVaultAccounts).not.toHaveBeenCalled();
+      // Create did not complete: the backup-done flag stays unset.
+      expect(readBackupDone()).toBe(false);
       const stepCards = mounted.div.querySelectorAll('[data-slot="step-card"]');
       expect(stepCards.length).toBe(4);
       expect(stepCards[3]?.getAttribute('data-state')).toBe('pending');

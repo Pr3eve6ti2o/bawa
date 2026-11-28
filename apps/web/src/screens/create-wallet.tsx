@@ -8,6 +8,7 @@ import { BawaIcon } from '../ui/components/icons';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
 import { createVault, hasVault } from '../wallet/vault';
+import { writeBackupDone } from '../wallet/backup-state';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
@@ -194,6 +195,12 @@ export function CreateWalletScreen() {
       setProgress('Deriving addresses…');
       await yieldFrame();
       await refreshVaultAccounts();
+      // S3-A follow-up: the phrase was shown in step 2 and confirmed
+      // in step 3, so a completed Create is itself the backup step on
+      // this device — record it so Wallets shows "Backed up" instead
+      // of the nudge. Only on success: a failed Create leaves the
+      // flag unset.
+      writeBackupDone();
       setPassphrase('');
       setStep(4);
     } catch {

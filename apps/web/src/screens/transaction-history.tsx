@@ -82,7 +82,7 @@ export function TransactionHistoryScreen() {
       </p>
 
       {chains.length === 0 ? (
-        <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
+        <div className="space-y-3 rounded-flat-lg border border-ink bg-paper p-6 text-panel-text">
           <h2 className="font-semibold text-panel-text">No transactions yet</h2>
           <p className="text-sm leading-5 text-panel-text-muted">
             No history on any chain yet.
@@ -134,7 +134,7 @@ export function TransactionHistoryScreen() {
               // the old screen rendered nothing at all below the
               // filter here (a blank void at every viewport). Say so,
               // with the way out.
-              <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
+              <div className="space-y-3 rounded-flat-lg border border-ink bg-paper p-6 text-panel-text">
                 <h2 className="font-semibold text-panel-text">No wallet yet</h2>
                 <div className="flex flex-wrap gap-3 pt-1">
                   <Button type="button" size="sm" asChild>
@@ -149,7 +149,7 @@ export function TransactionHistoryScreen() {
               // Lane 2: the settled empty state — a title, the honest
               // line, and the Receive action (DESIGN-SYSTEM §6). The
               // old screen showed the bare line alone.
-              <div className="space-y-3 rounded-bawa border-2 border-ink bg-paper p-6 text-panel-text">
+              <div className="space-y-3 rounded-flat-lg border border-ink bg-paper p-6 text-panel-text">
                 <h2 className="font-semibold text-panel-text">No transactions yet</h2>
                 <div className="flex flex-wrap gap-3 pt-1">
                   <Button type="button" size="sm" asChild>
@@ -172,7 +172,7 @@ export function TransactionHistoryScreen() {
               // with no address could only fail again). Chain names are
               // not repeated — the filter above already shows which
               // chain is selected.
-              <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
+              <div className="space-y-2 rounded-flat-lg border border-ink bg-paper p-4">
                 <p className="text-base">History unavailable.</p>
                 <Button
                   type="button"
@@ -196,7 +196,7 @@ export function TransactionHistoryScreen() {
               // no chain loaded and none failed — the old code fell
               // through to null and the screen was blank below the
               // filter. Match recent-activity: say so, with Unlock.
-              <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
+              <div className="space-y-2 rounded-flat-lg border border-ink bg-paper p-4">
                 <p className="text-base">Locked. Unlock to see activity.</p>
                 <Button type="button" variant="secondary" asChild>
                   <Link to="/lock">Unlock</Link>
@@ -218,7 +218,7 @@ export function TransactionHistoryScreen() {
               again. A failed chain WITH retained transactions keeps its
               block — its rows make rows.length > 0. */}
           {rows.length > 0 && failedChains.length > 0 && (
-            <div className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4">
+            <div className="space-y-2 rounded-flat-lg border border-ink bg-paper p-4">
               <p className="text-base">
                 {`${failedChains
                   .map((chain) => chainConfig(chain).displayName)

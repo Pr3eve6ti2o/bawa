@@ -1,10 +1,12 @@
 /**
  * Backup-completion state (P1 item 8, S3-A).
  *
- * One flag, set when the phrase has been revealed on the Backup screen
- * or a set of backup shares has been created. It records that the user
- * took a backup step on this device — it is not proof the words are
- * written down, and the Backup screen still says so in words.
+ * One flag, set when the phrase has been revealed on the Backup screen,
+ * a set of backup shares has been created, or a wallet is created
+ * end-to-end (Create shows the phrase and the user confirms words from
+ * it). It records that the user took a backup step on this device — it
+ * is not proof the words are written down, and the Backup screen still
+ * says so in words.
  *
  * This module stores the flag only, never a mnemonic, password, or key.
  * Deleting the vault clears the flag (see deleteVault in vault.ts), so
