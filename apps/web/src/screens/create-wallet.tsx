@@ -89,6 +89,9 @@ export function CreateWalletScreen() {
   const [vaultExists, setVaultExists] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // Whether the just-created vault was created without a password, so the
+  // "Your wallet is ready" card can say so plainly.
+  const [createdWithoutPassword, setCreatedWithoutPassword] = useState(false);
   // Optional BIP-39 passphrase (25th word): never stored. Distinct from the vault password.
   const [passphrase, setPassphrase] = useState('');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
@@ -193,6 +196,7 @@ export function CreateWalletScreen() {
       // A new phrase starts HD receive rotation at index 0.
       resetReceiveRotation();
       setMnemonic(null);
+      setCreatedWithoutPassword(password.length === 0);
       setPassword('');
       setConfirmPassword('');
       setPassphraseUsed(passphrase.length > 0);
@@ -595,8 +599,9 @@ export function CreateWalletScreen() {
           <CardHeader>
             <CardTitle>Your wallet is ready</CardTitle>
             <CardDescription>
-              Your recovery phrase is stored encrypted in this browser&apos;s
-              vault. These are your account addresses.
+              {createdWithoutPassword
+                ? "Your recovery phrase is stored in this browser's vault without a password — anyone with this device can open it. These are your account addresses."
+                : "Your recovery phrase is stored encrypted in this browser's vault. These are your account addresses."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
