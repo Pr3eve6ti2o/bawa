@@ -196,6 +196,11 @@ blacklisted by it (error 430); BlueWallet's rate-freshness rule is
 
 ## Still open (owner decisions)
 
+**Resolved since (2026-11-28, Lane A docs audit):** item 3 is
+closed — the owner decided 2026-11-23 that watch-only stays
+mainnet-only; devnet is not threaded through watch-only. The
+remaining items below are as recorded 2026-11-23 unless noted.
+
 1. Faucets: complete the captchas in the owner's own browser
    (wallet-A addresses in the Lane B report) — until then
    BTC/ETH/TRX stay NOT PROVEN on devnet.
