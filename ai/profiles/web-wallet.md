@@ -13,7 +13,7 @@
 
 - in-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses
 - watch-only address derivation in the browser for BTC/ETH/TRX via wallet-core WASM with pre-WASM validation (Base58Check, checksum, private rejection, per-chain versions, R-01 point validation)
-- 19 screens with honest loading/empty/stale/locked/gate-failed/error states (the 14-screen contract in docs/14 §5.1 plus swap, backup-shares, address-book, track-transaction and lock; routes counted in src/app/app.tsx at HEAD ceade79)
+- 19 screens with honest loading/empty/stale/locked/gate-failed/error states (the 14-screen contract in docs/14 §5.1 plus swap, backup-shares, address-book, track-transaction and lock; routes counted in src/app/app.tsx at HEAD bcf180e)
 - receive-QR display
 - import of extended public keys only
 - read-only mainnet balances and transaction history via per-chain adapters (87 chains, 169 RPCs; 4 chains history-blocked — bsc, opbnb, metis, fantom — balance-only; Gnosis fixed 2026-11-28 via gnosisscan.io keyless)
@@ -39,7 +39,7 @@
 
 ## Security notes
 
-- The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 129 test files: 3,437 tests passed and 5 skipped (gates at token-gaps `1a85258`, 2026-11-28, three findings; the 3,429-passed figure was the gates at `1253bf6`); vite build exits 0; live site serves index-B9gxTjOm.js, root 200, asset 200. 4.9.3 is the repository pin and the guides' reference engine. CLI derivation evidence alone does not verify this integration — the boundary tests do.
+- The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 130 test files: 3,479 tests passed and 5 skipped (gates at token-gaps `bcf180e`, 2026-11-29, fix-all programme; the 3,477-passed figure was the gates at `658937d`, the 3,459-passed figure the gates at `65daa64`); vite build exits 0; live site serves index-G8M1DjxZ.js, root 200, asset 200. 4.9.3 is the repository pin and the guides' reference engine. CLI derivation evidence alone does not verify this integration — the boundary tests do.
 - WEB-01 pre-approves token-ui, registry foundation web-01-token-ui, as the web UI foundation. Phase 5 inspection is complete (2026-11-10). token-ui (pin 6380d5d4, MIT) is vendored into apps/web/src/ui/; the 14-screen contract from docs/14 section 5.1 is implemented and the app now has 19 screens; send is implemented as offline signing (broadcast disabled).
 - The visual direction is style B (polished financial: flat, hairline, tabular, real semantic colour), owner-picked 2026-11-27, superseding Bawa Balanced (STYLE-04) and its 4-colour cap (docs/DECISIONS.md §34); only the QR share-card templates and the Welcome illustration keep the paper/comic touch. The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.
 - Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; the web boundary verifies it in-browser via the boundary tests.
