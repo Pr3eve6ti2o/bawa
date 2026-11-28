@@ -1,11 +1,15 @@
 /**
  * Optional auto-lock preferences. Auto-lock is OFF by default, so the vault
- * stays unlocked unless the user enables it.
+ * stays unlocked in the session unless the user enables it.
  *
- * Key-storage invariant:
- * - While auto-lock is ON, no stored vault key may exist: the `bawa-vault-key`
- *   entry must be absent, so unlocking requires the password.
- * - While auto-lock is OFF, the derived key IS stored so the vault auto-unlocks.
+ * Auto-lock locks a PASSWORD vault only: it drops the in-memory key after
+ * the chosen inactivity period (or immediately on leaving the page, when
+ * the duration is 0), and unlocking needs the password again. It never
+ * stores a key anywhere — the removed auto-unlock mechanism used to persist
+ * the derived key while auto-lock was off, and that is gone (owner order
+ * 2026-11-28). With auto-lock OFF the vault still locks on reload: the
+ * password is asked at boot. A vault with NO password has nothing to lock,
+ * so the setting is inert for it and the UI says so.
  *
  * This module stores preferences only, never a mnemonic, password, or key.
  */

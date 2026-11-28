@@ -22,12 +22,12 @@ type Wallet = ReturnType<typeof useWallet>;
 function setWallet(overrides: Partial<Wallet> = {}) {
   const wallet = {
     vaultState: 'unlocked',
+    vaultHasPassword: true,
     autoLockEnabled: false,
     autoLockMinutes: 5,
     setAutoLockMinutes: vi.fn(),
     setAutoLockEnabled: vi.fn(async () => {}),
     lockVault: vi.fn(),
-    unlockVault: vi.fn(async () => {}),
     ...overrides,
   } as Wallet;
 
@@ -67,38 +67,44 @@ function getSwitch(div: HTMLDivElement) {
   return toggle!;
 }
 
-function fillPassword(div: HTMLDivElement, password: string) {
-  const input = div.querySelector<HTMLInputElement>('input[type="password"]');
-  expect(input).not.toBeNull();
-
-  const form = input!.form;
-  expect(form).not.toBeNull();
-
-  const setValue = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    'value',
-  )!.set!;
-
-  act(() => {
-    setValue.call(input!, password);
-    input!.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-
-  return form!;
-}
-
 describe('AutoLockSetting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('explains that anyone with the device can open it when auto-lock is disabled', () => {
+  it('explains that off means unlocked until reload, with a password set', () => {
     setWallet();
     const { div, cleanup } = mount();
 
     try {
-      // Lane X (Lane D #129): "Off — anyone with this device can open it."
-      expect(div.textContent).toContain('Off — anyone with this device can open it.');
+      // Password-only: off no longer means anyone can open it — the
+      // vault still needs its password after a reload.
+      expect(div.textContent).toContain(
+        'Off — your wallet stays unlocked until you lock it or reload this page.',
+      );
+      expect(div.textContent).not.toContain(
+        'Off — anyone with this device can open it.',
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('is inert with no password: nothing to lock, switch disabled', () => {
+    setWallet({ vaultHasPassword: false });
+    const { div, cleanup } = mount();
+
+    try {
+      expect(div.textContent).toContain(
+        'No password is set, so there is nothing to lock',
+      );
+      expect(div.textContent).toContain(
+        'anyone with this device can open the wallet',
+      );
+      const toggle = getSwitch(div);
+      expect((toggle as HTMLButtonElement).disabled).toBe(true);
+      expect(div.textContent).not.toContain('Lock now');
+      expect(div.querySelector('select#auto-lock')).toBeNull();
     } finally {
       cleanup();
     }
@@ -202,14 +208,15 @@ describe('AutoLockSetting', () => {
     }
   });
 
-  it('requests a password while locked, then disables auto-lock before unlocking', async () => {
+  it('disables auto-lock while locked with no password step', async () => {
+    // Toggling is a preference flip only now: disabling while locked
+    // used to ask for the password (to re-store the key). There is no
+    // stored key any more, so the toggle just flips.
     const setAutoLockEnabled = vi.fn(async () => {});
-    const unlockVault = vi.fn(async () => {});
     setWallet({
       vaultState: 'locked',
       autoLockEnabled: true,
       setAutoLockEnabled,
-      unlockVault,
     });
 
     const { div, cleanup } = mount();
@@ -222,39 +229,23 @@ describe('AutoLockSetting', () => {
         toggle.click();
       });
 
-      expect(setAutoLockEnabled).not.toHaveBeenCalled();
-      expect(unlockVault).not.toHaveBeenCalled();
-
-      const password = 'correct horse battery staple';
-      const form = fillPassword(div, password);
-
-      await act(async () => {
-        form.dispatchEvent(
-          new Event('submit', { bubbles: true, cancelable: true }),
-        );
-      });
-
       expect(setAutoLockEnabled).toHaveBeenCalledTimes(1);
       expect(setAutoLockEnabled).toHaveBeenCalledWith(false);
-      expect(unlockVault).toHaveBeenCalledTimes(1);
-      expect(unlockVault).toHaveBeenCalledWith(password);
-      expect(setAutoLockEnabled.mock.invocationCallOrder[0]!).toBeLessThan(
-        unlockVault.mock.invocationCallOrder[0]!,
-      );
+      expect(div.querySelector('input[type="password"]')).toBeNull();
     } finally {
       cleanup();
     }
   });
 
-  it('shows the error text when unlocking fails', async () => {
-    const error = new Error('Incorrect password');
-    const setAutoLockEnabled = vi.fn(async () => {});
-    const unlockVault = vi.fn(async () => {}).mockRejectedValue(error);
+  it('shows the error text when toggling fails', async () => {
+    const error = new Error('Storage unavailable');
+    const setAutoLockEnabled = vi.fn(async () => {
+      throw error;
+    });
     setWallet({
-      vaultState: 'locked',
-      autoLockEnabled: true,
+      vaultState: 'unlocked',
+      autoLockEnabled: false,
       setAutoLockEnabled,
-      unlockVault,
     });
 
     const { div, cleanup } = mount();
@@ -265,18 +256,7 @@ describe('AutoLockSetting', () => {
         toggle.click();
       });
 
-      const password = 'wrong-password';
-      const form = fillPassword(div, password);
-
-      await act(async () => {
-        form.dispatchEvent(
-          new Event('submit', { bubbles: true, cancelable: true }),
-        );
-      });
-
-      expect(setAutoLockEnabled).toHaveBeenCalledWith(false);
-      expect(unlockVault).toHaveBeenCalledTimes(1);
-      expect(unlockVault).toHaveBeenCalledWith(password);
+      expect(setAutoLockEnabled).toHaveBeenCalledWith(true);
       expect(div.textContent).toContain(error.message);
     } finally {
       cleanup();
@@ -303,9 +283,13 @@ describe('AutoLockSetting', () => {
     }
   });
 
-  it('offers no Lock now button while locked or without a vault', () => {
-    for (const vaultState of ['locked', 'no-vault'] as const) {
-      setWallet({ vaultState });
+  it('offers no Lock now button while locked, without a vault, or with no password', () => {
+    for (const overrides of [
+      { vaultState: 'locked' },
+      { vaultState: 'no-vault' },
+      { vaultState: 'unlocked', vaultHasPassword: false },
+    ] as const) {
+      setWallet(overrides);
       const { div, cleanup } = mount();
 
       try {

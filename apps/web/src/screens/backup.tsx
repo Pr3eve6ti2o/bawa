@@ -36,12 +36,15 @@ import { Label } from '../ui/components/label';
 // redirects to /mnemonic-backup?tab=shares (see app.tsx), so the
 // Security link and any saved link still land on the right tab.
 //
-// The reveal is password-only. The safety quiz is gone: its three
-// questions always had the correct answer first, so it was friction
-// without a check — Phantom and Trust Wallet gate the reveal on the
-// password only. The guidance is one 4-line list, not the same facts
-// twice. The "Backed up" state is set when the phrase is revealed or
-// a set of shares is created, and shows here and on Wallets.
+// The reveal is password-gated when a password is set. With no password
+// there is no password to check — the reveal asks for an explicit
+// confirm instead, and says plainly that anyone with this device can see
+// the words. The safety quiz is gone: its three questions always had the
+// correct answer first, so it was friction without a check — Phantom and
+// Trust Wallet gate the reveal on the password only. The guidance is one
+// 4-line list, not the same facts twice. The "Backed up" state is set
+// when the phrase is revealed or a set of shares is created, and shows
+// here and on Wallets.
 
 type BackupTab = 'phrase' | 'shares';
 
@@ -83,7 +86,7 @@ const guidanceItems = [
   { id: 'photo', label: 'Never photographed' },
 ];
 
-type RevealStage = 'idle' | 'password' | 'revealed';
+type RevealStage = 'idle' | 'password' | 'confirm' | 'revealed';
 
 function RecoveryPhrasePanel({
   profiles,
@@ -92,6 +95,9 @@ function RecoveryPhrasePanel({
   profiles: string[];
   onBackedUp: () => void;
 }) {
+  // Screens mocked in tests may omit this; only an explicit false means
+  // "no password" — a password vault is the safe default.
+  const { vaultHasPassword = true } = useWallet();
   const [stage, setStage] = useState<RevealStage>('idle');
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -175,10 +181,16 @@ function RecoveryPhrasePanel({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-base leading-6">
-            The reveal below asks for your vault password first.
+            {vaultHasPassword
+              ? "The reveal below asks for your vault password first."
+              : "This wallet has no password, so the reveal below asks you to confirm instead — anyone with this device can see the words."}
           </p>
           <ol className="mt-3 list-decimal space-y-1 pl-5 text-base leading-6">
-            <li>Confirm your vault password.</li>
+            <li>
+              {vaultHasPassword
+                ? "Confirm your vault password."
+                : "Confirm you want to show the words — no password protects them."}
+            </li>
             <li>Write down the 24 words, in order, on paper.</li>
             <li>
               Test recovery before you need it: restore the words in a
@@ -265,13 +277,47 @@ function RecoveryPhrasePanel({
         {stage === 'idle' && (
           <>
             <p className="text-sm leading-5 text-muted-foreground">
-              Anyone with these words can spend. Showing needs your
-              password.
+              {vaultHasPassword
+                ? "Anyone with these words can spend. Showing needs your password."
+                : "Anyone with these words can spend. This wallet has no password, so showing them needs no password either — anyone with this device can see them."}
             </p>
-            <Button onClick={() => setStage('password')} flat>
+            <Button
+              onClick={() =>
+                setStage(vaultHasPassword ? 'password' : 'confirm')
+              }
+              flat
+            >
               Reveal recovery phrase
             </Button>
           </>
+        )}
+
+        {stage === 'confirm' && (
+          <div className="space-y-4">
+            <p className="text-base leading-6">
+              There is no password on this wallet, so nothing gates this
+              reveal except this confirm. Anyone with this device can see
+              these words once shown.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleReveal} flat>
+                Show the words
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setStage('idle')}
+                flat
+              >
+                Cancel
+              </Button>
+            </div>
+            {revealError && (
+              <p role="alert" className="text-base text-destructive">
+                {revealError}
+              </p>
+            )}
+          </div>
         )}
 
         {stage === 'password' && (

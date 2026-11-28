@@ -271,20 +271,32 @@ describe('backup shares', () => {
     expect(await exportUnlockedKeyBytes()).toBeNull();
   });
 
-  it('an auto-unlocked vault can export its key for shares', async () => {
+  it('a password-unlocked vault can export its key for shares', async () => {
     await setupVault();
     const keyBefore = await exportUnlockedKeyBytes();
     expect(keyBefore).not.toBeNull();
 
     // Fresh module, as if the page had reloaded: the closure starts empty
-    // while localStorage keeps the vault and (auto-lock off) the key.
+    // and no key is stored, so the vault is locked — shares need the
+    // password unlock first, exactly like any other use of the open key.
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(true);
+    expect(fresh.isLocked()).toBe(true);
+    expect(await fresh.exportUnlockedKeyBytes()).toBeNull();
+    await fresh.unlock(TEST_PASSWORD);
     const keyAfter = await fresh.exportUnlockedKeyBytes();
     expect(keyAfter).not.toBeNull();
     expect(keyAfter).toEqual(keyBefore);
     expect(await fresh.verifyReconstructedKey(keyAfter as Uint8Array)).toBe(
       true,
     );
+  });
+
+  it('a passwordless vault can export its key for shares after its prompt-free open', async () => {
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES);
+    const fresh = await freshVaultModule();
+    expect(await fresh.openVaultIfPasswordless()).toBe(true);
+    const key = await fresh.exportUnlockedKeyBytes();
+    expect(key).not.toBeNull();
+    expect(await fresh.verifyReconstructedKey(key as Uint8Array)).toBe(true);
   });
 });

@@ -10,9 +10,8 @@ import { createVault, deleteVault } from '../wallet/vault';
 
 // S3-A (P1 item 8): the locked-vault states of the Backup screen's
 // Shares tab. The screen is mounted directly (not via App) with the
-// wallet context mocked to 'locked', like the old backup-shares test
-// did — the real WalletProvider re-unlocks a stored-key vault on boot,
-// so a locked state cannot be reached through an App mount. The vault
+// wallet context mocked to 'locked' — a locked state cannot be reached
+// through an App mount without typing the password. The vault
 // itself is real, so the screen's hasVault gate reads true.
 vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),

@@ -15,9 +15,14 @@ const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
 
-function setWallet(vaultState: string, unlockVault: () => Promise<void>): void {
+function setWallet(
+  vaultState: string,
+  unlockVault: () => Promise<void>,
+  vaultHasPassword = true,
+): void {
   vi.mocked(useWallet).mockReturnValue({
     vaultState,
+    vaultHasPassword,
     unlockVault,
   } as unknown as ReturnType<typeof useWallet>);
 }
@@ -252,6 +257,42 @@ describe('lock screen', () => {
     try {
       await unlockWith(mounted.div, 'correct horse');
       expect(mounted.div.textContent).toContain('Dashboard marker');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('opens a passwordless wallet with no password field', async () => {
+    const unlockVault = vi.fn(async () => {});
+    setWallet('locked', unlockVault, false);
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Open your wallet');
+      expect(mounted.div.textContent).toContain(
+        'This wallet has no password, so there is nothing to unlock.',
+      );
+      expect(mounted.div.querySelector('#lock-password')).toBeNull();
+      const button = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Open wallet',
+      ) as HTMLButtonElement;
+      expect(button).not.toBeUndefined();
+      await act(async () => {
+        button.click();
+      });
+      expect(unlockVault).toHaveBeenCalledWith('', '');
+      expect(mounted.div.textContent).toContain('Dashboard marker');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows no auto-lock note for a passwordless vault', async () => {
+    setWallet('locked', vi.fn(async () => {}), false);
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).not.toContain(
+        'Auto-lock affects signing only.',
+      );
     } finally {
       await mounted.cleanup();
     }

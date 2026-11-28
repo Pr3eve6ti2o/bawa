@@ -306,6 +306,9 @@ export function ImportWalletScreen() {
   const [phraseError, setPhraseError] = useState<string | null>(null);
   const [vaultPassword, setVaultPassword] = useState('');
   const [vaultPasswordConfirm, setVaultPasswordConfirm] = useState('');
+  // Whether the just-saved vault was created without a password, so the
+  // "Wallet restored" card can say so plainly.
+  const [savedWithoutPassword, setSavedWithoutPassword] = useState(false);
   // The recovery passphrase (extra word) that came with the pasted
   // phrase, if any — from the split, never typed separately. It is never
   // stored; it shapes the previewed addresses below.
@@ -421,7 +424,11 @@ export function ImportWalletScreen() {
     event.preventDefault();
     if (isSaving || normalizedMnemonic === null) return;
     setPhraseError(null);
-    if (vaultPassword.length < MIN_PASSWORD_LENGTH) {
+    // The password is optional (owner order 2026-11-28): both fields
+    // empty means no password — the wallet is then unprotected and
+    // anyone with this device can open it. A password that IS set must
+    // be at least 8 characters and match its repeat.
+    if (vaultPassword.length > 0 && vaultPassword.length < MIN_PASSWORD_LENGTH) {
       setPhraseError(`Vault password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
@@ -444,6 +451,7 @@ export function ImportWalletScreen() {
       // A new phrase starts HD receive rotation at index 0.
       resetReceiveRotation();
       setNormalizedMnemonic(null);
+      setSavedWithoutPassword(vaultPassword.length === 0);
       setVaultPassword('');
       setVaultPasswordConfirm('');
       setPassphraseUsed(passphrase.length > 0);
@@ -826,7 +834,7 @@ export function ImportWalletScreen() {
              <form className="space-y-4" noValidate onSubmit={(event) => void handleSaveSubmit(event)}>
               <fieldset disabled={isSaving} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="import-vault-password">Vault password</Label>
+                  <Label htmlFor="import-vault-password">Vault password (optional)</Label>
                   <Input
                     id="import-vault-password"
                     type="password"
@@ -834,6 +842,11 @@ export function ImportWalletScreen() {
                     value={vaultPassword}
                     onChange={(event) => setVaultPassword(event.target.value)}
                   />
+                  <p className="text-base text-ink">
+                    Optional — leave both fields empty for no password. A
+                    password must be at least 8 characters. Without one,
+                    anyone with this device can open the wallet.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="import-vault-password-confirm">Repeat vault password</Label>
@@ -864,8 +877,9 @@ export function ImportWalletScreen() {
           <CardHeader>
             <CardTitle>Wallet restored</CardTitle>
             <CardDescription>
-              Your recovery phrase is stored encrypted in this browser&apos;s
-              vault. Your phrase was cleared from this screen.
+              {savedWithoutPassword
+                ? "Your recovery phrase is stored in this browser's vault without a password — anyone with this device can open it. Your phrase was cleared from this screen."
+                : "Your recovery phrase is stored encrypted in this browser's vault. Your phrase was cleared from this screen."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

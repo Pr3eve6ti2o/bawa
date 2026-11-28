@@ -419,40 +419,50 @@ previously said "Current implementation at 5e7eb1d: no lock exists; the
 optional restoration is not yet implemented." That is stale. Auto-lock IS
 implemented (owner order 2026-11-20). Implement and describe it as follows.
 
-- Vault: password-protected, AES-GCM-256, PBKDF2 with 600,000 iterations
-  (`apps/web/src/wallet/vault.ts:85`). Storage key for the derived key:
-  `bawa-vault-key` (`vault.ts:83`, `VAULT_KEY_STORAGE_KEY`).
+- Vault: password-optional, AES-GCM-256, PBKDF2 with 600,000 iterations
+  (`apps/web/src/wallet/vault.ts:97`). The envelope records a
+  `hasPassword` flag (`vault.ts:138`); envelopes written before the flag
+  existed all had a password and read as `hasPassword: true`.
 - Auto-lock is an **optional setting on the /security page, OFF by
   default**: a toggle plus a duration — Immediately / 1 minute / 5 minutes
   / 15 minutes / 1 hour / 1 day (`apps/web/src/wallet/auto-lock.ts`:
   `AUTO_LOCK_OPTIONS = [0, 1, 5, 15, 60, 1440]`, `AUTO_LOCK_LABELS`,
-  keys `bawa-auto-lock-enabled` / `bawa-auto-lock-minutes`).
-- **Key-storage invariant (absolute):** while auto-lock is ON, the raw
-  derived key is NOT stored (`bawa-vault-key` must be absent) so the lock
-  is real and unlocking needs the password. While auto-lock is OFF, the
-  raw derived key IS stored under `bawa-vault-key` so the vault can
-  auto-unlock. With auto-lock OFF the vault must never be described as
-  locked. Never silently change these settings or boundaries.
-- **RISK - auto-unlock key in localStorage (owner decision, 2026-11-28: KEEP auto-unlock, with the fix below ordered):** while auto-lock is OFF (the default), the raw derived key is stored under `bawa-vault-key` in `localStorage` as a base64 string, and `autoUnlock()` (`apps/web/src/wallet/vault.ts:624`) imports it extractable. That is the pattern OWASP warns against: `localStorage` is readable by any JavaScript on the page, and "a single Cross Site Scripting can be used to steal all the data in these objects" (OWASP HTML5 Security Cheat Sheet). One XSS, one compromised dependency, or one malicious extension reads the key and decrypts the vault. The key being extractable means it can be exported and reused elsewhere.
-- **FIX - non-extractable CryptoKey in IndexedDB (the Mauvely "Trust this device" model):** keep auto-unlock, but change where and how the key is kept. Store the vault key as a **non-extractable** `CryptoKey` in **IndexedDB**, not as raw base64 in `localStorage`. IndexedDB is the only place a non-extractable `CryptoKey` can persist (W3C WebCrypto recommendation; OWASP WSTG: keys in IndexedDB should be `extractable: false`). The browser can use the key to decrypt, but no script can read or export the raw key bytes - even if XSS lists the database it sees a key handle, not the bytes. `autoUnlock()` must use the key non-extractable. Keep the auto-lock timer so the in-memory key is dropped on inactivity, and add a "Forget this device" switch so the trust can be revoked. The vault envelope itself stays AES-GCM ciphertext. Honest caveat: a non-extractable key stops script from *reading* the key, not from *using* it while the page is open - an attacker running code could still call decrypt through the handle. It kills silent exfiltration (the key cannot be stolen and used elsewhere) but does not make XSS harmless. References: MetaMask `metamask-extension` + `@metamask/browser-passworder` (PBKDF2 600,000 + AES-GCM; keys only in memory, no persistent auto-unlock - the most secure model, at the cost of the convenience); Mauvely docs "Setting up your vault" ("Trust this device"); OWASP HTML5 Security Cheat Sheet; "Stop Storing Secrets in localStorage" (Pattern 3: non-extractable CEK + IndexedDB).
-- **Change password (fix programme, 2026-11-28, `f77b803`).** On
-  /security (`screens/security-settings.tsx:166`, "Change password"):
+  keys `bawa-auto-lock-enabled` / `bawa-auto-lock-minutes`). It applies
+  to password vaults only: with no password set there is nothing to lock,
+  so the setting is inert. OFF no longer means the vault opens on its
+  own — a password vault boots locked and needs the password; OFF means
+  it stays unlocked until reload or a manual lock.
+- **Key-storage invariant (absolute):** no derived key is EVER written to
+  storage. There is no `bawa-vault-key`, no `autoUnlock()`, and no code
+  path reads a stored key. The vault unlocks by password only
+  (`unlock()`, `wallet/vault.ts:649`); the derived key lives in memory
+  only while the vault is open and is dropped by `lock()` and by the
+  auto-lock timer. The only prompt-free open is
+  `openVaultIfPasswordless()` (`vault.ts:672`), which works solely for a
+  vault with no password set. Never silently change these boundaries.
+- **RISK - auto-unlock key in localStorage: REMOVED, not hardened (owner decision, 2026-11-28 ~22:25 IST, reversing the KEEP decision of 2026-11-28 ~14:05 IST recorded in `DECISIONS.md` §45/§46):** while auto-lock was OFF (the default), the raw derived key was stored under `bawa-vault-key` in `localStorage` as a base64 string, and `autoUnlock()` (`apps/web/src/wallet/vault.ts:624` at `d9732a6`) imported it extractable. That is the pattern OWASP warns against: `localStorage` is readable by any JavaScript on the page, and "a single Cross Site Scripting can be used to steal all the data in these objects" (OWASP HTML5 Security Cheat Sheet). One XSS, one compromised dependency, or one malicious extension read the key and decrypted the vault. The owner ordered the mechanism REMOVED instead of fixed in place: `autoUnlock()`, the stored-key helpers and `VAULT_KEY_STORAGE_KEY` are deleted, and `removeLegacyStoredKey()` (`vault.ts:353`) deletes any `bawa-vault-key` entry a pre-change install left behind on boot — it only ever deletes, never reads. The residual risk is the passwordless vault (see the FIX bullet): its envelope key derives from the empty password, so the seed is effectively unprotected and the UI says so plainly.
+- **FIX - password-only unlock, password optional (owner order 2026-11-28 ~22:25 IST; build `a606beb`):** the vault unlocks by password ONLY, and the password itself is OPTIONAL. With a password: the envelope is AES-GCM-256 under PBKDF2(password, salt, 600k); the vault boots locked and `unlock()` with the password is the only way in; the derived key lives in memory only while the vault is open. Without a password: the envelope keeps the same format, but the key is derived from the EMPTY password (PBKDF2('', salt, 600k)) — anyone with access to this origin can re-derive that key from the stored salt, so the seed is effectively unprotected: no lock, no password prompt, the vault opens at boot. No device key or obfuscation is invented to pretend otherwise; the UI says plainly that anyone with the device can open the wallet (create/import, /security, /lock, phrase reveal). Password vaults keep the duration/never-lock auto-lock choice; passwordless vaults: auto-lock is inert, nothing to lock. /security offers set/change/remove-password; changing or removing the password re-encrypts under a new key and cancels all Shamir backup-share sets (§13). The open vault's key stays extractable IN MEMORY only, never persisted, so Shamir share creation is unchanged. Phrase reveal with no password is an explicit confirm stage with no password field, and the UI says anyone with the device can see the words. The non-extractable CryptoKey in IndexedDB rework previously specified here (the Mauvely "Trust this device" model) is SUPERSEDED by this owner order — it was never implemented and must not be implemented.
+- **Change / set / remove password (fix programme, 2026-11-28, `f77b803`;
+  set/remove added 2026-11-28, `a606beb`).** On
+  /security (`screens/security-settings.tsx:228`, "Change password" /
+  "Set a password"):
   current password, new password (at least 8 characters,
   `MIN_PASSWORD_LENGTH = 8`), confirm. The current password is
   verified first by trial decrypt — `verifyVaultPassword`
-  (`wallet/vault.ts:592`) — with no state change, so a wrong current
+  (`wallet/vault.ts:620`) — with no state change, so a wrong current
   password fails honestly ("Incorrect password.") and leaves the
   vault untouched; a locked vault is unlocked through the context
   first, because `changePassword` needs the mnemonic in the closure.
-  `changePassword` (`wallet/vault.ts:771`) re-encrypts the vault
-  under the new password (a newly derived key), follows the
-  stored-key rule (stored key replaced when auto-lock is off so
-  auto-unlock keeps working, deleted when on — a stale old key must
-  not survive), refreshes the vault backup, and never changes the
-  stored recovery profileIds or key provenance. **A password change
-  cancels all Shamir backup-share sets** (§13): the shares split
-  the old vault key, and the new password derives a new key —
-  create fresh shares after changing the password.
+  `changePassword` (`wallet/vault.ts:748`) re-encrypts the vault
+  under the new password (a newly derived key), refreshes the vault
+  backup, and never changes the stored recovery profileIds or key
+  provenance. /security also offers set-password (for a passwordless
+  vault) and remove-password; both re-encrypt under a new key the same
+  way. **A password change — including setting a first password or
+  removing one — cancels all Shamir backup-share sets** (§13): the
+  shares split the old vault key, and the new password (or the empty
+  password) derives a new key — create fresh shares after changing
+  the password.
 - Seed storage on the CLI side: `secrets/` **0700**, `seed.enc.json`
   **0600**, `.env` **0600**; AAD `nova-shop-seed-v1`.
 - **Adapter boundary:** chain adapters NEVER receive mnemonics, seeds,
@@ -1432,6 +1442,11 @@ instead of being silently accepted). No restore-from-shares UI exists yet — ch
 password change cancels all share sets (§4): the shares split the
 vault key, and `changePassword` derives a new key under the new
 password — create fresh shares after changing the password.
+(Correction 2026-11-28, password-only vault `a606beb`: setting a first
+password or removing one also cancels all share sets — any re-encryption
+under a new key does, because the shares split the vault key. Removing
+auto-unlock itself does NOT invalidate existing shares: an old set still
+verifies against the unchanged envelope until the password changes.)
 
 The survey's verified facts, which Lane E implemented from:
 
@@ -1467,6 +1482,13 @@ The survey's verified facts, which Lane E implemented from:
   needs a second look at review time. The extractable-key rationale is
   recorded in `apps/web/src/wallet/vault.ts:463-465` so it is not
   missed.
+  (Correction 2026-11-28, password-only vault `a606beb`: the review flag
+  is closed by the removal itself — `autoUnlock()` and the stored key are
+  gone, so there is no stored key to import extractable. The open vault's
+  key stays extractable IN MEMORY only, never persisted, so share
+  creation is unchanged; the extractable-key rationale now lives in the
+  `apps/web/src/wallet/vault.ts` module doc comment, `vault.ts:39-45`,
+  and the `:463-465` citation above no longer applies.)
 - **Custody boundary:** Privy's model is the opposite of Bawa's
   self-custody — Privy embedded wallets route key material through
   Privy's infrastructure (TEE/HSM) with a Privy App ID/secret. Adopting
@@ -1739,7 +1761,7 @@ were re-measured from that tree (see the rows below).
 | §12 Coinbase Onramp | `apps/web/src/wallet/onramp.ts` (URL builder, no SDK); `receive.tsx` `?buy=1` panel; `package.json` has NO `cbpay-js` | Not in the guide before | Implemented (Lane D; live purchase NOT verified — needs onboarding/keys) |
 | §12.1 Buy provider picker | `apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rank order, key copy, readiness); `receive.tsx:1097` renders the table | Not in the guide before | Implemented (providers programme, 2026-11-26; TON confirmed live for Ramp/MoonPay/Banxa, Mercuryo TON unconfirmed; no live purchase verified). "Works today" wording qualified by docs-currency Lane 2, 2026-11-27: no provider key is configured, every provider shows "not set up yet" |
 | §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, installed; live RFQ client + TON order signing wired, signed BoC only); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes + TON order signing (providers programme, 2026-11-26; STON.fi Lanes B/C, 2026-11-27; Relay proxy not configured; execution approved by the owner 2026-11-27 but NOT implemented — broadcast stays disabled in code until it lands) |
-| §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup.tsx` (Shares tab under `/mnemonic-backup?tab=shares`; `/backup-shares` redirects there, `app.tsx:496`); `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only; screen/route citation corrected by docs-currency Lane B, 2026-11-28 — no separate `backup-shares.tsx` screen or lazy `/backup-shares` route exists at this tip, §13 body already had it right) |
+| §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup.tsx` (Shares tab under `/mnemonic-backup?tab=shares`; `/backup-shares` redirects there, `app.tsx:496`); `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only; screen/route citation corrected by docs-currency Lane B, 2026-11-28 — no separate `backup-shares.tsx` screen or lazy `/backup-shares` route exists at this tip, §13 body already had it right. Correction 2026-11-28 (password-only vault `a606beb`): `autoUnlock()` removed; the open key stays extractable in memory only, never persisted, so share creation is unchanged; the `vault.ts:431-433` extractable-key line citation in the code column no longer applies — see the §13 correction) |
 | §14 ERC-7730 | `apps/web/src/wallet/clear-signing.ts`; `clear-signing-snapshot.json` (1,523 B); `apps/web/src/wallet/caip.ts`; `send-review.tsx` | Not in the guide before | Implemented (Lane F) |
 | §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
 | §18 Lane H mining | Wallet-repos survey + agent-repos dirs (sandbox, read-only) + FEC skills (MIT) | Not in the guide before | Added |
@@ -1809,7 +1831,7 @@ not the current budget.**
 | Front-End-Checklist `performance-budget` | MIT | Guide + wallet: budgets enforced in CI | Verified, no code change: the bundle-size gate IS the budget (CI `ci.yml:194`, total + largest chunk). Lighthouse CI and production RUM are not wired — flagged, not added | This section |
 | Front-End-Checklist `code-splitting` | MIT | Wallet: heavy Part A modules behind dynamic import | Verified in the built `dist/`: WalletConnect and Shamir ship as separate lazy chunks, not in the main chunk (see the lane's bundle measurement) | This section |
 | Front-End-Checklist `leaked-secrets` | MIT | Wallet: secret hygiene | Ran `node scripts/secret-scan.mjs` on the worktree: exit 0, no findings. The new script carries no secrets or keys | This section |
-| Front-End-Checklist `token-storage-security` | MIT | Wallet: vault-key storage | Verified in code, no change: the skill's httpOnly-cookie prescription does not apply — Bawa has no server and no session tokens. The mitigation is the auto-lock key-storage invariant (§4): the derived key is stored under `bawa-vault-key` only while auto-lock is OFF, never while it is ON | This section |
+| Front-End-Checklist `token-storage-security` | MIT | Wallet: vault-key storage | Verified in code, no change: the skill's httpOnly-cookie prescription does not apply — Bawa has no server and no session tokens. The mitigation is the auto-lock key-storage invariant (§4): the derived key is stored under `bawa-vault-key` only while auto-lock is OFF, never while it is ON. Correction 2026-11-28 (password-only vault `a606beb`): that invariant is SUPERSEDED — no derived key is ever stored (`bawa-vault-key` removed; any legacy entry is deleted on boot, never read). The mitigation is now password-only unlock with the key in memory only while the vault is open; a passwordless vault is unprotected by design and the UI says so | This section |
 | `planning-with-files` (three-file method) + `ponytail` (lazy senior dev) | MIT, MIT | Guide: agent-workflow method for the AI Wallet Builder | None in the app | Recorded here as the standing method this lane followed: user-owned plan/design files agents never edit, findings + progress in files, smallest complete change, fix in place, one small test for non-trivial logic. Bawa already works this way (lane files, PROGRAMME.md); these two sources name the discipline, they do not change it |
 
 ### §18.2 Finds read and rejected (with reason)

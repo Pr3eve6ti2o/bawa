@@ -90,8 +90,9 @@ const ALL_CHAIN_IDS = [
 const perChain = <T,>(make: () => T): PerChain<T> =>
   Object.fromEntries(ALL_CHAIN_IDS.map((chain) => [chain, make()])) as PerChain<T>;
 
-// 'locked' is reachable only with auto-lock enabled or before the first
-// unlock of a vault with no stored key.
+// 'locked' is the boot state of a password vault: it needs the password to
+// open. A vault with no password never locks — it opens at boot with no
+// prompt (see openVaultIfPasswordless) — so 'locked' is unreachable for it.
 export type VaultState = 'no-vault' | 'locked' | 'unlocked';
 
 // Lane G, Phase 3 — boot rehydration (Safe's persistStore + useHydrateStore
@@ -156,6 +157,13 @@ interface WalletState {
   // The mnemonic never enters state. SOL and TON addresses now vary
   // with account/index (Lane A); account 0 index 0 is unchanged.
   vaultState: VaultState;
+  /**
+   * True when the vault was created with a password, false when the user
+   * chose no password (and false with no vault). Screens read this to
+   * decide whether a lock, a password prompt, or auto-lock can apply at
+   * all: with no password there is nothing to lock and no prompt to show.
+   */
+  vaultHasPassword: boolean;
   vaultAccount: { account: number; index: number };
   // Lane C, items 6/7/17: the accounts created from this vault's phrase
   // (indices; 0 is "Account 1"). One phrase holds many accounts.
@@ -328,7 +336,17 @@ function computeVaultState(): VaultState {
 
 function computeBootVaultState(): VaultState {
   if (!vault.hasVault()) return 'no-vault';
-  if (vault.hasStoredKey() && !readAutoLockEnabled()) return 'unlocked';
+  // Already open in this session (e.g. a provider remount after the
+  // vault was created or unlocked): the closure holds the mnemonic, so
+  // the first paint is unlocked and the persisted addresses rehydrate.
+  if (!vault.isLocked()) return 'unlocked';
+  // A vault with no password opens at boot with no prompt (its key is
+  // derived from the empty password — see vault.openVaultIfPasswordless);
+  // a password vault boots locked. The mount effect opens the
+  // passwordless vault into the closure; the first paint already
+  // rehydrates its addresses. (A real reload always starts with an
+  // empty closure, so a password vault can never boot unlocked.)
+  if (!vault.vaultHasPassword()) return 'unlocked';
   return 'locked';
 }
 
@@ -786,6 +804,7 @@ function initialWalletState(): WalletState {
     uiState: perChain<UiState>(() => 'empty'),
     errors: perChain<string | null>(() => null),
     vaultState: computeBootVaultState(),
+    vaultHasPassword: vault.vaultHasPassword(),
     vaultAccount: persisted === null
       ? { account: 0, index: 0 }
       : { account: persisted.account, index: persisted.index },
@@ -1575,29 +1594,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     index: number;
   }) => {
     const request = ++vaultDerivations.current;
-    // Lane D (FIX-ALL): attempt autoUnlock FIRST. The old order read
-    // computeVaultState() (in-memory lock state) before awaiting
+    // Lane D (FIX-ALL): attempt the prompt-free open FIRST. The old order
+    // read computeVaultState() (in-memory lock state) before awaiting
     // autoUnlock(), and || short-circuited - so a call made before the
-    // mount auto-unlock effect finished bailed to the persisted-restore
-    // path without ever attempting the unlock, even though the comment
-    // below promised autoUnlock restores the mnemonic. That made a boot
-    // re-derivation silently no-op. autoUnlock is idempotent: an already
-    // open vault returns true at once.
-    const unlocked = await vault.autoUnlock();
+    // mount open effect finished bailed to the persisted-restore path
+    // without ever attempting the open, even though the comment below
+    // promised it restores the mnemonic. That made a boot re-derivation
+    // silently no-op. openVaultIfPasswordless is idempotent: an already
+    // open vault returns true at once, and a password vault returns false
+    // without touching anything (the password is the only way in).
+    const unlocked = await vault.openVaultIfPasswordless();
     const vaultState = computeVaultState();
     const profileIds = vault.hasVault() ? vault.vaultProfiles() : null;
     const selected = selection ?? current.current.vaultAccount;
     const storedAccounts = syncedVaultAccounts();
     const passphraseNeeded = computePassphraseNeeded(vaultState);
-    // Derivation needs the mnemonic in the vault closure. autoUnlock()
-    // restores it from the stored key when it is not there yet (e.g. after
-    // a reload); it returns false for a vault that cannot auto-unlock
-    // (legacy vault without a stored key). The BIP-39 session passphrase
-    // is never persisted, so a passphrase wallet whose passphrase is
-    // unknown must not re-derive: deriving with '' would produce (and
-    // persist) the wrong addresses. In all of those cases the persisted
-    // public addresses for this selection are still usable for public
-    // balance reads (see VAULT_ADDRESSES_KEY). Any other selection has no
+    // Derivation needs the mnemonic in the vault closure.
+    // openVaultIfPasswordless() opens it when it can (a passwordless
+    // vault, e.g. after a reload); it returns false for a password vault
+    // that is still locked. The BIP-39 session passphrase is never
+    // persisted, so a passphrase wallet whose passphrase is unknown must
+    // not re-derive: deriving with '' would produce (and persist) the
+    // wrong addresses. In all of those cases the persisted public
+    // addresses for this selection are still usable for public balance
+    // reads (see VAULT_ADDRESSES_KEY). Any other selection has no
     // addresses in memory.
     const passphraseKnown =
       !isPassphraseUsed() || vault.getSessionPassphrase() !== '';
@@ -1620,6 +1640,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       update(previous => ({
         ...previous,
         vaultState,
+        vaultHasPassword: vault.vaultHasPassword(),
         vaultProfileIds: profileIds,
         vaultAddresses: restored,
         vaultAccounts: storedAccounts,
@@ -1657,6 +1678,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       update(previous => ({
         ...previous,
         vaultState,
+        vaultHasPassword: vault.vaultHasPassword(),
         vaultProfileIds: profileIds,
         vaultAddresses: perChain<string[]>(() => []),
         vaultAccounts: storedAccounts,
@@ -1672,6 +1694,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     update(previous => ({
       ...previous,
       vaultState,
+      vaultHasPassword: vault.vaultHasPassword(),
       vaultProfileIds: profileIds,
       vaultAddresses: addresses,
       vaultAccounts: storedAccounts,
@@ -1809,14 +1832,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // leaves every address unknown.
   const refreshReceiveAddresses = useCallback(async () => {
     // Lane D (FIX-ALL): own generation counter (see vaultDerivations
-    // above) and autoUnlock attempted before the state check, for the
-    // same short-circuit reason as refreshVaultAccounts.
+    // above) and the prompt-free open attempted before the state check,
+    // for the same short-circuit reason as refreshVaultAccounts.
     const request = ++receiveDerivations.current;
     const selection = current.current.vaultAccount;
     const indices = current.current.receiveIndices;
     const passphraseKnown =
       !isPassphraseUsed() || vault.getSessionPassphrase() !== '';
-    const unlocked = await vault.autoUnlock();
+    const unlocked = await vault.openVaultIfPasswordless();
     if (
       computeVaultState() !== 'unlocked' ||
       !passphraseKnown ||
@@ -1906,7 +1929,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     async (chain: ChainId): Promise<string | null> => {
       if (
         computeVaultState() !== 'unlocked' ||
-        !(await vault.autoUnlock())
+        !(await vault.openVaultIfPasswordless())
       ) {
         return null;
       }
@@ -1940,6 +1963,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     update(previous => ({
       ...previous,
       vaultState: computeVaultState(),
+      vaultHasPassword: vault.vaultHasPassword(),
       vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
       vaultAddresses: perChain<string[]>(() => []),
       vaultPassphraseNeeded: false,
@@ -1958,20 +1982,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setAutoLockMinutesState(minutes);
   }, []);
 
-  // Toggling handles the key-storage invariant: enabling deletes the
-  // stored key at once (the vault stays unlocked in memory until the
-  // timer fires or the page reloads); disabling stores the key when the
-  // vault is unlocked in memory. When the vault is locked, disabling
-  // stores nothing here — the caller unlocks with the password
-  // afterwards, and unlock() stores the key because the preference is
-  // already off by then.
+  // Toggling is a preference flip only. No key is stored or deleted anywhere:
+  // the removed auto-unlock mechanism used to persist the derived key while
+  // auto-lock was off, and that is gone (owner order 2026-11-28). Enabling
+  // leaves the vault open in memory until the timer fires or the page
+  // reloads; disabling while locked needs no password step any more.
   const setAutoLockEnabled = useCallback(async (enabled: boolean) => {
     writeAutoLockEnabled(enabled);
-    if (enabled) {
-      vault.deleteStoredKey();
-    } else {
-      await vault.storeCurrentKey();
-    }
     setAutoLockEnabledState(enabled);
   }, []);
 
@@ -1991,8 +2008,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // reloads, so an earlier-session deadline could fire minutes early even though
   // the setting said 5 minutes. Always count the FULL chosen duration from the
   // last unlock or activity, in the live session only.
+  // A vault with no password never arms the timer: there is nothing to
+  // lock, and locking it would be undone at once by the prompt-free open.
   useEffect(() => {
-    if (state.vaultState !== "unlocked" || !autoLockEnabled) {
+    if (
+      state.vaultState !== "unlocked" ||
+      !autoLockEnabled ||
+      !state.vaultHasPassword
+    ) {
       return;
     }
 
@@ -2036,7 +2059,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("wheel", handleActivity);
       window.clearTimeout(autoLockTimerId);
     };
-  }, [state.vaultState, autoLockEnabled, autoLockMinutes, lockVault]);
+  }, [state.vaultState, state.vaultHasPassword, autoLockEnabled, autoLockMinutes, lockVault]);
 
 
   useEffect(() => {
@@ -2088,19 +2111,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, [putWallet, update]);
 
-  // Vault auto-unlock on mount: a stored vault's mnemonic is restored
-  // into the vault closure (no password prompt), so the vault is open
-  // from boot. vaultState/vaultProfileIds are read from storage at the
-  // same time (no vault -> 'no-vault'). The public addresses rehydrated
-  // from storage in initialWalletState need no unlock to be read; fresh
-  // derivation happens in refreshVaultAccounts (e.g. setVaultAccount).
+  // Vault open on mount: a passwordless vault is opened into the vault
+  // closure with no prompt, so the vault is open from boot; a password
+  // vault stays locked until the user unlocks it. First, the one-time
+  // upgrade cleanup: any `bawa-vault-key` left by the removed auto-unlock
+  // mechanism is deleted (it is never read). vaultState/vaultProfileIds
+  // are read from storage at the same time (no vault -> 'no-vault'). The
+  // public addresses rehydrated from storage in initialWalletState need
+  // no unlock to be read; fresh derivation happens in refreshVaultAccounts
+  // (e.g. setVaultAccount).
   useEffect(() => {
     let cancelled = false;
-    void vault.autoUnlock().then(() => {
+    vault.removeLegacyStoredKey();
+    void vault.openVaultIfPasswordless().then(() => {
       if (cancelled) return;
       update(previous => ({
         ...previous,
         vaultState: computeVaultState(),
+        vaultHasPassword: vault.vaultHasPassword(),
         vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
         vaultAccounts: syncedVaultAccounts(),
         vaultAccountNames: syncedVaultAccountNames(),
@@ -2140,7 +2168,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     void (async () => {
-      await vault.autoUnlock();
+      await vault.openVaultIfPasswordless();
       if (computeVaultState() !== 'unlocked') return;
       // A passphrase wallet whose passphrase is unknown must not
       // re-derive: deriving with '' would produce (and persist) the
