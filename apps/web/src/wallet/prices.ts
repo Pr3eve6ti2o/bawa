@@ -52,7 +52,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isPlainObject, ownValue } from './guards';
-import { applyPriceFallbacks } from './price-fallbacks';
+import {
+  applyPriceFallbacks,
+  fetchCoinbaseChartHistory,
+} from './price-fallbacks';
 import {
   multiplyByPowerOfTen,
   parseDecimalString,
@@ -856,8 +859,12 @@ export function formatChangePct(pct: number): string {
 /** One point of a CoinGecko market chart: epoch ms + USD price. */
 export type PriceHistoryPoint = { timeMs: number; price: number };
 
-type PriceHistoryResult =
-  | { status: 'ok'; points: PriceHistoryPoint[] }
+export type PriceHistoryResult =
+  | {
+      status: 'ok';
+      source: 'CoinGecko' | 'Coinbase';
+      points: PriceHistoryPoint[];
+    }
   | { status: 'unavailable' }
   | {
       status: 'error';
@@ -892,33 +899,126 @@ export function parsePriceHistory(payload: unknown): PriceHistoryResult {
     points.push({ timeMs, price });
   }
   if (points.length < 2) return { status: 'unavailable' };
-  return { status: 'ok', points };
+  return { status: 'ok', source: 'CoinGecko', points };
 }
 
 /**
- * Lane 4 (UX-major, data): 7-day price history for one CoinGecko id
- * (a native asset's PRICE_IDS id, or a token's coingeckoId) — the
- * chart's only data source. One on-demand call when the asset screen
- * mounts, never on a timer: the chart is history, not a live feed, and
- * the keyless CoinGecko budget (~5 calls/min/shared IP) must not
- * spend a call a minute on it. A 429 / failure is `error`, an empty
- * or malformed payload is `unavailable` — the chart shows the honest
- * state, never invented points. Same origin as the price feed
- * (api.coingecko.com), so no new CSP origin is needed.
+ * One CoinGecko /market_chart attempt, keeping the provider's
+ * Retry-After (when it sent one) for the caller's backoff. The `ok`
+ * result carries its source so the chart can label it.
  */
-export async function fetchPriceHistory(
+async function fetchCoinGeckoHistory(
   fetchFn: typeof fetch,
   coingeckoId: string,
-  days = 7,
-): Promise<PriceHistoryResult> {
+  days: number,
+): Promise<{
+  result: PriceHistoryResult;
+  retryAfterMs?: number;
+}> {
   const url =
     `${PRICE_PROVIDER_BASE_URL}/coins/${encodeURIComponent(coingeckoId)}` +
     `/market_chart?vs_currency=usd&days=${days}`;
   const result = await fetchJsonWithTimeout(fetchFn, url, coingeckoHeaders());
   if (result.status === 'error') {
-    return { status: 'error', reason: result.error.reason };
+    return {
+      result: { status: 'error', reason: result.error.reason },
+      ...(typeof result.error.retryAfterMs === 'number'
+        ? { retryAfterMs: result.error.retryAfterMs }
+        : {}),
+    };
   }
-  return parsePriceHistory(result.payload);
+  return { result: parsePriceHistory(result.payload) };
+}
+
+/**
+ * Lane 4 (UX-major, data): 7-day price history for one CoinGecko id
+ * (a native asset's PRICE_IDS id, or a token's coingeckoId) — the
+ * chart's data source, now with retry + a second source (chart
+ * reliability fix, 2026-11-28). Lane B measured the chart loading
+ * only ~3 of 7 visits: a single CoinGecko /market_chart call with
+ * no retry, so a 429 on the keyless ~5 calls/min shared budget was
+ * a coin flip. The order below spends the CoinGecko budget
+ * sparingly and recovers fast on the failure the lane saw:
+ * 1. CoinGecko once. A success returns immediately — one call, the
+ *    same as before — and the chart labels its source CoinGecko.
+ * 2. A 429 goes straight to the Coinbase candles fallback (no
+ *    re-hit of a rate-limited endpoint: the budget is spent, waiting
+ *    on it is not a recovery). A network / timeout / provider
+ *    failure retries CoinGecko once after a 1 s backoff, then falls
+ *    back. An id with no Coinbase product retries CoinGecko once
+ *    after min(Retry-After, 5 s) on a 429 — a chart is not worth a
+ *    longer skeleton.
+ * 3. The fallback is Coinbase Exchange daily candles (keyless,
+ *    CORS `*`, already in CSP connect-src, verified live
+ *    2026-11-28) — see fetchCoinbaseChartHistory in
+ *    price-fallbacks.ts for the verified product map. Daily closes,
+ *    not intraday points: the chart is a 7-day shape, and the
+ *    component labels the source Coinbase when it serves.
+ * 4. When the fallback also fails, the CoinGecko failure is what
+ *    the chart reports — the primary source's reason, never a
+ *    blended one. No invented points anywhere: fewer than two
+ *    points from either source is `unavailable`, and the chart says
+ *    so honestly. The sleep is injectable so tests never wait.
+ */
+export async function fetchPriceHistory(
+  fetchFn: typeof fetch,
+  coingeckoId: string,
+  days = 7,
+  sleep: (ms: number) => Promise<void> = resolvePriceWait(),
+): Promise<PriceHistoryResult> {
+  const first = await fetchCoinGeckoHistory(fetchFn, coingeckoId, days);
+  if (first.result.status === 'ok') return first.result;
+  if (first.result.status === 'unavailable') {
+    const fallback = await fetchCoinbaseChartHistory(
+      fetchFn,
+      coingeckoId,
+      days,
+    );
+    return fallback.status === 'ok' ? fallback : first.result;
+  }
+  const firstError = first.result;
+  if (firstError.reason === 'rate-limited') {
+    const fallback = await fetchCoinbaseChartHistory(
+      fetchFn,
+      coingeckoId,
+      days,
+    );
+    if (fallback.status === 'ok') return fallback;
+    if (fallback.status === 'unavailable') {
+      // No Coinbase product for this id (or its candles are empty):
+      // one retry after the provider's Retry-After, capped at 5 s.
+      await sleep(
+        Math.min(
+          5_000,
+          Math.max(
+            0,
+            typeof first.retryAfterMs === 'number' &&
+              Number.isFinite(first.retryAfterMs)
+              ? first.retryAfterMs
+              : 1_000,
+          ),
+        ),
+      );
+      const retried = await fetchCoinGeckoHistory(fetchFn, coingeckoId, days);
+      return retried.result;
+    }
+    return firstError;
+  }
+  // Transient failure (network / timeout / provider): one retry
+  // after a 1 s backoff, then the fallback.
+  await sleep(1_000);
+  const second = await fetchCoinGeckoHistory(fetchFn, coingeckoId, days);
+  if (second.result.status === 'ok') return second.result;
+  if (second.result.status === 'unavailable') {
+    const fallback = await fetchCoinbaseChartHistory(
+      fetchFn,
+      coingeckoId,
+      days,
+    );
+    return fallback.status === 'ok' ? fallback : second.result;
+  }
+  const fallback = await fetchCoinbaseChartHistory(fetchFn, coingeckoId, days);
+  return fallback.status === 'ok' ? fallback : second.result;
 }
 
 export function usdPriceToMinorUnitsPerWhole(usdPrice: string): string {

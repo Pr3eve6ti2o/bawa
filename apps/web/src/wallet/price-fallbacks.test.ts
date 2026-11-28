@@ -9,9 +9,11 @@ import {
   NATIVE_WRAPPED_TOKENS,
   applyPriceFallbacks,
   fetchCoinLorePrices,
+  fetchCoinbaseChartHistory,
   fetchCoinbaseLtcPrice,
   fetchDexScreenerNativePrices,
   parseCoinLoreResponse,
+  parseCoinbaseCandles,
   parseCoinbaseResponse,
   parseDexScreenerNativeResponse,
 } from './price-fallbacks';
@@ -746,5 +748,120 @@ describe('applyPriceFallbacks', () => {
     }
     // CoinLore filled ETH, so no DexScreener call for it at all.
     expect(calls.some((u) => u.includes('tokens/v1'))).toBe(false);
+  });
+});
+
+// Chart reliability fix (2026-11-28): Coinbase daily candles as the
+// chart fallback when CoinGecko rate-limits. Live shape, Coinbase
+// /products/BTC-USD/candles?granularity=86400, 2026-11-28: newest
+// first, [time (seconds), low, high, open, close, volume].
+describe('parseCoinbaseCandles', () => {
+  const DAY_S = 86_400;
+
+  function candles(): unknown[][] {
+    const nowSec = Math.floor(NOW_MS / 1000);
+    const closes = [59000, 59500, 60000, 60500, 61000, 61500, 62000];
+    return closes
+      .map((close, index) => {
+        const daysAgo = closes.length - 1 - index;
+        return [
+          nowSec - daysAgo * DAY_S,
+          close - 100,
+          close + 100,
+          close - 50,
+          close,
+          1234,
+        ];
+      })
+      .reverse();
+  }
+
+  it('plots daily closes oldest first from newest-first candles', () => {
+    const result = parseCoinbaseCandles(candles(), NOW_MS);
+    expect(result).toEqual({
+      status: 'ok',
+      source: 'Coinbase',
+      points: [59000, 59500, 60000, 60500, 61000, 61500, 62000].map(
+        (price, index) => ({
+          timeMs: NOW_MS - (6 - index) * DAY_S * 1000,
+          price,
+        }),
+      ),
+    });
+  });
+
+  it('drops bad rows and candles outside the 7-day window', () => {
+    const payload = [
+      ...candles(),
+      [NOW_MS / 1000 - 30 * DAY_S, 1, 2, 3, 58000, 1], // 30 days old
+      ['bad', 1, 2, 3, 4, 5],
+      [NOW_MS / 1000, 1, 2, 3, Number.NaN, 5],
+      [NOW_MS / 1000, 1, 2, 3, 0, 5],
+      [NOW_MS / 1000, 1, 2, 3],
+    ];
+    const result = parseCoinbaseCandles(payload, NOW_MS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.points).toHaveLength(7);
+      expect(result.points.map((point) => point.price)).not.toContain(58000);
+    }
+  });
+
+  it('reports unavailable for a NotFound payload or fewer than two points', () => {
+    expect(parseCoinbaseCandles({ message: 'NotFound' }, NOW_MS)).toEqual({
+      status: 'unavailable',
+    });
+    expect(parseCoinbaseCandles([], NOW_MS)).toEqual({
+      status: 'unavailable',
+    });
+    expect(
+      parseCoinbaseCandles(
+        [[Math.floor(NOW_MS / 1000), 1, 2, 3, 60000, 1]],
+        NOW_MS,
+      ),
+    ).toEqual({ status: 'unavailable' });
+  });
+});
+
+describe('fetchCoinbaseChartHistory', () => {
+  it('fetches BTC-USD daily candles for the bitcoin id', async () => {
+    const nowSec = Math.floor(NOW_MS / 1000);
+    const { fetchFn, calls } = stubFetch([
+      {
+        match: 'api.exchange.coinbase.com',
+        body: [
+          [nowSec, 59000, 60000, 59500, 59800, 10],
+          [nowSec - 86_400, 58000, 59500, 59000, 59200, 10],
+        ],
+      },
+    ]);
+    const result = await fetchCoinbaseChartHistory(fetchFn, 'bitcoin', 7, NOW_MS);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toBe(
+      'https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400',
+    );
+    expect(result).toEqual({
+      status: 'ok',
+      source: 'Coinbase',
+      points: [
+        { timeMs: (nowSec - 86_400) * 1000, price: 59200 },
+        { timeMs: nowSec * 1000, price: 59800 },
+      ],
+    });
+  });
+
+  it('does not fetch for an id with no mapped product', async () => {
+    const { fetchFn, calls } = stubFetch([]);
+    const result = await fetchCoinbaseChartHistory(fetchFn, 'fantom', 7, NOW_MS);
+    expect(calls).toHaveLength(0);
+    expect(result).toEqual({ status: 'unavailable' });
+  });
+
+  it('maps a 429 to a rate-limited chart error', async () => {
+    const { fetchFn } = stubFetch([
+      { match: 'api.exchange.coinbase.com', body: null, status: 429 },
+    ]);
+    const result = await fetchCoinbaseChartHistory(fetchFn, 'bitcoin', 7, NOW_MS);
+    expect(result).toEqual({ status: 'error', reason: 'rate-limited' });
   });
 });

@@ -119,6 +119,8 @@ import {
 import {
   PRICE_ASSET_IDS,
   type PriceEntry,
+  type PriceHistoryPoint,
+  type PriceHistoryResult,
   type PriceMap,
   type PriceSource,
 } from './prices';
@@ -623,6 +625,144 @@ export async function fetchCoinbaseLtcPrice(
     return { ...result.entries };
   }
   return parseCoinbaseResponse(result.payload, 'ltc', resolvedNowMs);
+}
+
+/**
+ * Chart fallback: CoinGecko id -> Coinbase Exchange USD product for
+ * the daily-candles endpoint (chart reliability fix, 2026-11-28).
+ * Each product below was verified live the same day from the
+ * /products list plus a candles probe: the newest daily candle was
+ * under a day old. Only ids whose candles are current are mapped —
+ * a listed product with dead candles is worse than none, because it
+ * burns a call and still draws nothing.
+ *
+ * Excluded live (do not re-add without a fresh candles probe):
+ * - usd-coin (USDC-USD candles answer NotFound) and tron (TRX-USD
+ *   NotFound) — the endpoint has no candles for the pair at all.
+ * - wrapped-bitcoin (WBTC-USD newest candle 2024-12-19), dai
+ *   (DAI-USD newest ~2026-05-03), ronin (RONIN-USD 243 days old),
+ *   iotex (IOTX-USD 66 days old) — listed but no current candles.
+ * - weth (no WETH-USD product), fantom (no FTM-USD), celo (no
+ *   CELO-USD), xdai (no XDAI-USD) — no product to map to.
+ * ETH-native chains share the `ethereum` id, so one entry covers
+ * them all; the same holds for the other shared ids.
+ */
+const COINBASE_CHART_PRODUCTS: Record<string, string> = {
+  bitcoin: 'BTC-USD',
+  ethereum: 'ETH-USD',
+  solana: 'SOL-USD',
+  binancecoin: 'BNB-USD',
+  'polygon-ecosystem-token': 'POL-USD',
+  'avalanche-2': 'AVAX-USD',
+  litecoin: 'LTC-USD',
+  dogecoin: 'DOGE-USD',
+  'the-open-network': 'TON-USD',
+  'crypto-com-chain': 'CRO-USD',
+  kava: 'KAVA-USD',
+  filecoin: 'FIL-USD',
+  'berachain-bera': 'BERA-USD',
+  'sei-network': 'SEI-USD',
+  apecoin: 'APE-USD',
+  'sonic-3': 'S-USD',
+  hyperliquid: 'HYPE-USD',
+  monad: 'MON-USD',
+  'immutable-x': 'IMX-USD',
+  chiliz: 'CHZ-USD',
+  'ethereum-classic': 'ETC-USD',
+  'flare-networks': 'FLR-USD',
+  zetachain: 'ZETA-USD',
+  flow: 'FLOW-USD',
+  cosmos: 'ATOM-USD',
+  osmosis: 'OSMO-USD',
+  ripple: 'XRP-USD',
+  stellar: 'XLM-USD',
+  polkadot: 'DOT-USD',
+  near: 'NEAR-USD',
+  aptos: 'APT-USD',
+  tezos: 'XTZ-USD',
+  algorand: 'ALGO-USD',
+  'hedera-hashgraph': 'HBAR-USD',
+  'injective-protocol': 'INJ-USD',
+  celestia: 'TIA-USD',
+  axelar: 'AXL-USD',
+  cardano: 'ADA-USD',
+  mantle: 'MANTLE-USD',
+  'metis-token': 'METIS-USD',
+  starknet: 'STRK-USD',
+  tether: 'USDT-USD',
+  chainlink: 'LINK-USD',
+  uniswap: 'UNI-USD',
+};
+
+/**
+ * Parse a Coinbase Exchange /candles payload into chart points. The
+ * endpoint returns newest-first `[time, low, high, open, close,
+ * volume]` arrays with time in epoch SECONDS; the chart plots the
+ * daily CLOSE, one point per day inside the window, oldest first.
+ * Only finite [time, close] pairs with a positive close survive;
+ * fewer than two points in the window is not a chart —
+ * `unavailable`, never a line through one point or a flat line
+ * invented from a single price. A non-array payload (the endpoint
+ * answers `{"message":"NotFound"}` for pairs without candles) is
+ * `unavailable` too.
+ */
+export function parseCoinbaseCandles(
+  payload: unknown,
+  nowMs: number,
+  days = 7,
+): PriceHistoryResult {
+  if (!Array.isArray(payload)) return { status: 'unavailable' };
+  const windowStartMs = nowMs - days * 86_400_000;
+  const points: PriceHistoryPoint[] = [];
+  for (const candle of payload) {
+    if (!Array.isArray(candle) || candle.length < 5) continue;
+    const timeSeconds = candle[0];
+    const close = candle[4];
+    if (
+      typeof timeSeconds !== 'number' ||
+      !Number.isFinite(timeSeconds) ||
+      typeof close !== 'number' ||
+      !Number.isFinite(close) ||
+      close <= 0
+    ) {
+      continue;
+    }
+    const timeMs = timeSeconds * 1000;
+    if (timeMs < windowStartMs || timeMs > nowMs) continue;
+    points.push({ timeMs, price: close });
+  }
+  points.sort((a, b) => a.timeMs - b.timeMs);
+  if (points.length < 2) return { status: 'unavailable' };
+  return { status: 'ok', source: 'Coinbase', points };
+}
+
+/**
+ * 7-day chart history from Coinbase Exchange daily candles, for a
+ * CoinGecko id with a mapped product. Keyless, CORS
+ * `access-control-allow-origin: *`, and the origin is already in
+ * CSP connect-src (the ticker leg uses it). An unmapped id is
+ * `unavailable` without a fetch — there is no product to ask for.
+ * A failed fetch maps through the shared fetchJson shape: a 429 is
+ * `rate-limited`, other failures keep their reason, so the caller
+ * can report the primary source's failure honestly.
+ */
+export async function fetchCoinbaseChartHistory(
+  fetchFn: FetchFn,
+  coingeckoId: string,
+  days = 7,
+  nowMs?: number,
+): Promise<PriceHistoryResult> {
+  const product = COINBASE_CHART_PRODUCTS[coingeckoId];
+  if (product === undefined) return { status: 'unavailable' };
+  const resolvedNowMs = nowMs ?? Date.now();
+  const result = await fetchJson(
+    fetchFn,
+    `${COINBASE_BASE_URL}/products/${product}/candles?granularity=86400`,
+  );
+  if (result.status === 'error') {
+    return { status: 'error', reason: result.entries.reason };
+  }
+  return parseCoinbaseCandles(result.payload, resolvedNowMs, days);
 }
 
 /**

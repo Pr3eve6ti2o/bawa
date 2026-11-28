@@ -45,10 +45,13 @@ describe('price chart', () => {
   }
 
   async function flush() {
+    // Eight ticks: the chart fetch is now a chain (CoinGecko, then
+    // the Coinbase candles fallback on a 429, then the state update),
+    // and each link settles on its own microtask.
     await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
+      for (let index = 0; index < 8; index += 1) {
+        await Promise.resolve();
+      }
     });
   }
 
@@ -115,33 +118,45 @@ describe('price chart', () => {
   it('offers a Retry on a failed chart that refetches the chart only', async () => {
     // P0-6: the chart error said "try again" with nothing to tap.
     // The first fetch fails (rate limit); Retry refetches and the
-    // chart plots. No other screen state is touched.
-    const fetchStub = vi.fn(async () => ({
-      ok: false,
-      status: 429,
-      headers: { get: () => null },
-    }));
+    // chart plots. No other screen state is touched. The mount
+    // itself makes two calls (CoinGecko, then the Coinbase candles
+    // fallback — both 429 here), so the Retry is the third call.
+    const calls: string[] = [];
+    const fetchStub = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(String(url));
+      return {
+        ok: false,
+        status: 429,
+        headers: { get: () => null },
+      };
+    });
     vi.stubGlobal('fetch', fetchStub);
     const { div, cleanup } = await mountChart('bitcoin');
     try {
       await flush();
       expect(div.textContent).toContain('rate-limiting charts');
+      expect(calls[1]).toBe(
+        'https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400',
+      );
       const retry = Array.from(div.querySelectorAll('button')).find(
         (button) => button.textContent === 'Retry',
       );
       expect(retry).not.toBeUndefined();
-      fetchStub.mockImplementation(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          prices: [
-            [1000, 60000],
-            [2000, 61000],
-            [3000, 62683],
-          ],
-        }),
-        headers: { get: () => null },
-      }));
+      fetchStub.mockImplementation(async (url: RequestInfo | URL) => {
+        calls.push(String(url));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            prices: [
+              [1000, 60000],
+              [2000, 61000],
+              [3000, 62683],
+            ],
+          }),
+          headers: { get: () => null },
+        };
+      });
       await act(async () => {
         retry?.click();
         await Promise.resolve();
@@ -149,9 +164,45 @@ describe('price chart', () => {
         await Promise.resolve();
       });
       await flush();
-      expect(fetchStub).toHaveBeenCalledTimes(2);
+      expect(fetchStub).toHaveBeenCalledTimes(3);
       expect(div.querySelector('polyline')).not.toBeNull();
       expect(div.textContent).toContain('$60,000.00');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('plots Coinbase fallback candles and names the source when CoinGecko rate-limits', async () => {
+    // Chart reliability fix (2026-11-28): the 429 that used to be a
+    // coin flip now serves daily closes from Coinbase instead.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const fetchStub = vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes('api.exchange.coinbase.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [
+            [nowSec, 61000, 63000, 62000, 62683, 1234],
+            [nowSec - 86_400, 60000, 61500, 61000, 61000, 1234],
+            [nowSec - 2 * 86_400, 59000, 60500, 60000, 60000, 1234],
+          ],
+          headers: { get: (): string | null => null },
+        };
+      }
+      return {
+        ok: false,
+        status: 429,
+        headers: { get: (): string | null => null },
+      };
+    });
+    vi.stubGlobal('fetch', fetchStub);
+    const { div, cleanup } = await mountChart('bitcoin');
+    try {
+      await flush();
+      expect(div.querySelector('polyline')).not.toBeNull();
+      expect(div.textContent).toContain('$60,000.00');
+      expect(div.textContent).toContain('$62,683.00');
+      expect(div.textContent).toContain('Prices from Coinbase.');
     } finally {
       await cleanup();
     }

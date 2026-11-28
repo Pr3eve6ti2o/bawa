@@ -11,9 +11,12 @@ import { Skeleton } from '../ui/components/skeleton';
 /**
  * Lane 4 (UX-major, data): a small 7-day price chart for one asset,
  * lazy-loaded so its code never lands in the main bundle. The data is
- * real CoinGecko market-chart history only (see
- * fetchPriceHistory in wallet/prices.ts): one on-demand call when
- * the asset screen mounts, never on a timer. A missing id, an empty
+ * real history only (see fetchPriceHistory in wallet/prices.ts):
+ * CoinGecko market-chart first, with one retry on a transient
+ * failure, and Coinbase Exchange daily candles as the fallback when
+ * CoinGecko rate-limits — the chart footer names whichever source
+ * served, never a hardcoded provider. One on-demand call when the
+ * asset screen mounts, never on a timer. A missing id, an empty
  * chart, a rate limit or any fetch failure renders the honest state
  * below — never invented points, never a flat line through one price.
  * Drawing style follows the design system: a 2 px ink line on paper,
@@ -24,7 +27,11 @@ const MAX_PLOTTED_POINTS = 48;
 
 type ChartState =
   | { status: 'loading' }
-  | { status: 'ready'; points: PriceHistoryPoint[] }
+  | {
+      status: 'ready';
+      source: 'CoinGecko' | 'Coinbase';
+      points: PriceHistoryPoint[];
+    }
   | { status: 'unavailable' }
   | { status: 'error'; reason: string };
 
@@ -82,7 +89,11 @@ export function PriceChart({
     void fetchPriceHistory(globalThis.fetch, coingeckoId).then((result) => {
       if (!mounted) return;
       if (result.status === 'ok') {
-        setState({ status: 'ready', points: result.points });
+        setState({
+          status: 'ready',
+          source: result.source,
+          points: result.points,
+        });
       } else if (result.status === 'unavailable') {
         setState({ status: 'unavailable' });
       } else {
@@ -204,7 +215,7 @@ export function PriceChart({
         </>
       )}
       <p className="text-xs leading-4 text-panel-text-muted">
-        Prices from CoinGecko.
+        Prices from {state.status === 'ready' ? state.source : 'CoinGecko'}.
       </p>
     </section>
   );

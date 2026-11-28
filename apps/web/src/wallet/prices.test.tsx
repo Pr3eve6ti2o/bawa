@@ -1800,6 +1800,7 @@ describe('price history (Lane 4, UX-major data)', () => {
     });
     expect(result).toEqual({
       status: 'ok',
+      source: 'CoinGecko',
       points: [
         { timeMs: NOW_MS - 6 * 3_600_000, price: 60000 },
         { timeMs: NOW_MS - 3 * 3_600_000, price: 61000 },
@@ -1852,6 +1853,7 @@ describe('price history (Lane 4, UX-major data)', () => {
     );
     expect(result).toEqual({
       status: 'ok',
+      source: 'CoinGecko',
       points: [
         { timeMs: NOW_MS - 3_600_000, price: 60000 },
         { timeMs: NOW_MS, price: 62683 },
@@ -1870,5 +1872,169 @@ describe('price history (Lane 4, UX-major data)', () => {
       'bitcoin',
     );
     expect(result).toEqual({ status: 'error', reason: 'rate-limited' });
+  });
+
+  // Chart reliability fix (2026-11-28): a 429 goes straight to the
+  // Coinbase candles fallback — no re-hit of a rate-limited endpoint.
+  function coinbaseCandles(): unknown[][] {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const closes = [59000, 59500, 60000, 60500, 61000, 61500, 62000];
+    return closes
+      .map((close, index) => {
+        const daysAgo = closes.length - 1 - index;
+        return [
+          nowSec - daysAgo * 86_400,
+          close - 100,
+          close + 100,
+          close - 50,
+          close,
+          1234,
+        ];
+      })
+      .reverse();
+  }
+
+  function okJson(payload: unknown) {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => payload,
+      headers: { get: () => null },
+    };
+  }
+
+  function rateLimited(retryAfter: string | null = null) {
+    return {
+      ok: false,
+      status: 429,
+      headers: {
+        get: (name: string) =>
+          name === 'Retry-After' ? retryAfter : null,
+      },
+    };
+  }
+
+  it('falls back to Coinbase candles when CoinGecko rate-limits, without re-hitting CoinGecko', async () => {
+    const calls: string[] = [];
+    const sleep = vi.fn(async () => {});
+    const fetchFn = vi.fn(async (url: RequestInfo | URL) => {
+      const urlString = String(url);
+      calls.push(urlString);
+      if (urlString.includes('api.exchange.coinbase.com')) {
+        return okJson(coinbaseCandles());
+      }
+      return rateLimited();
+    });
+    const result = await fetchPriceHistory(
+      fetchFn as unknown as typeof fetch,
+      'bitcoin',
+      7,
+      sleep,
+    );
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toContain('api.coingecko.com');
+    expect(calls[1]).toBe(
+      'https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400',
+    );
+    // No backoff sleep: a 429 with a live fallback is not retried.
+    expect(sleep).not.toHaveBeenCalled();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.source).toBe('Coinbase');
+    expect(result.points.map((point) => point.price)).toEqual([
+      59000, 59500, 60000, 60500, 61000, 61500, 62000,
+    ]);
+    // Points are oldest first even though the candles arrive
+    // newest first.
+    expect(result.points[0]?.timeMs).toBeLessThan(
+      result.points[result.points.length - 1]?.timeMs ?? 0,
+    );
+  });
+
+  it('retries CoinGecko once after a transient failure, then falls back', async () => {
+    const calls: string[] = [];
+    const sleeps: number[] = [];
+    const sleep = vi.fn(async (ms: number) => {
+      sleeps.push(ms);
+    });
+    let coingeckoCalls = 0;
+    const fetchFn = vi.fn(async (url: RequestInfo | URL) => {
+      const urlString = String(url);
+      calls.push(urlString);
+      if (urlString.includes('api.exchange.coinbase.com')) {
+        return okJson(coinbaseCandles());
+      }
+      coingeckoCalls += 1;
+      throw new Error('network down');
+    });
+    const result = await fetchPriceHistory(
+      fetchFn as unknown as typeof fetch,
+      'ethereum',
+      7,
+      sleep,
+    );
+    expect(coingeckoCalls).toBe(2);
+    expect(sleeps).toEqual([1_000]);
+    expect(calls.some((url) => url.includes('api.exchange.coinbase.com'))).toBe(
+      true,
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.source).toBe('Coinbase');
+  });
+
+  it('retries CoinGecko once after a 429 when no Coinbase product exists', async () => {
+    const calls: string[] = [];
+    const sleeps: number[] = [];
+    const sleep = vi.fn(async (ms: number) => {
+      sleeps.push(ms);
+    });
+    const fetchFn = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(String(url));
+      return rateLimited('60');
+    });
+    const result = await fetchPriceHistory(
+      fetchFn as unknown as typeof fetch,
+      'fantom',
+      7,
+      sleep,
+    );
+    // Two CoinGecko attempts, no Coinbase call (fantom is unmapped),
+    // and the 60 s Retry-After is capped at 5 s.
+    expect(calls).toHaveLength(2);
+    expect(calls.every((url) => url.includes('api.coingecko.com'))).toBe(true);
+    expect(sleeps).toEqual([5_000]);
+    expect(result).toEqual({ status: 'error', reason: 'rate-limited' });
+  });
+
+  it('falls back to Coinbase candles on an empty CoinGecko payload', async () => {
+    const fetchFn = vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes('api.exchange.coinbase.com')) {
+        return okJson(coinbaseCandles());
+      }
+      return okJson({ prices: [] });
+    });
+    const result = await fetchPriceHistory(
+      fetchFn as unknown as typeof fetch,
+      'bitcoin',
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.source).toBe('Coinbase');
+  });
+
+  it('reports the CoinGecko failure when both sources fail', async () => {
+    const sleep = vi.fn(async () => {});
+    const fetchFn = vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes('api.exchange.coinbase.com')) {
+        return rateLimited();
+      }
+      throw new Error('network down');
+    });
+    const result = await fetchPriceHistory(
+      fetchFn as unknown as typeof fetch,
+      'bitcoin',
+      7,
+      sleep,
+    );
+    expect(result).toEqual({ status: 'error', reason: 'network' });
   });
 });
