@@ -130,7 +130,7 @@ ink text, never a coloured text). Green text never sits on sun
 | Deep coral `#C23A1D` on paper | 5.27:1 | Passes AA normal (§41, link/destructive text) |
 | Success green on sun `#FFD93B` | 4.32:1 | **FAILS AA normal** — green text never sits on sun |
 | White `#FFFFFF` on QR teal `#023139` | 13.99:1 | Passes (QR Template A only) |
-| QR muted `#7A9491` on QR teal `#023139` | 4.31:1 | **FAILS AA normal** (passes large-text 3:1 only) — inside the QR card, keep muted text large or decorative; never copy this pairing outside the QR card |
+| QR muted `#A7C4C1` on QR teal-deep `#011F29` | 9.20:1 | Passes AA normal (QR Template A only; 2026-11-29, DECISIONS §56 — was `#7A9491` on `#023139` at 4.31:1, FAILS AA normal; the old pairing is retired, never copy either pairing outside the QR card) |
 
 ### 2.2 The QR-card exception — confined, not a precedent
 
@@ -138,11 +138,15 @@ ink text, never a coloured text). Green text never sits on sun
 named `--qr-*` tokens (`--qr-teal #023139`, `--qr-teal-deep #011F29`,
 `--qr-teal-band #0E2127`, `--qr-teal-copy #1B2023`, `--qr-bar #121818`,
 `--qr-muted #7A9491`, `--qr-grey #6B7280`, `--qr-faint #9CA3AF`,
-`--qr-nearblack #111111`, `--qr-white-dim #FFE9E4`). They are used ONLY
+`--qr-nearblack #111111`, `--qr-white-dim #FFE9E4`). (Dated addition,
+2026-11-29, DECISIONS §56 — the QR-colour fix: the set is now EIGHT
+tokens. `--qr-teal-band`, `--qr-teal-copy` and `--qr-bar` are retired;
+`--qr-hairline-teal #2A4A52` is added; `--qr-muted` is now `#A7C4C1`.
+The §24 list above stays as the dated record.) They are used ONLY
 by the Receive QR card (`screens/qr-card.tsx`, seven templates A–G,
 default B) and its PNG exporter (`wallet/payment-links.ts`,
 `DEFAULT_QR_CARD_TEMPLATE = 'b'`). The palette audit allowlists exactly
-those ten literals. **No other screen may use them, and no further
+those eight literals (+ the minified `#111` form of `#111111`). **No other screen may use them, and no further
 literal may be added without a recorded decision in DECISIONS.md.**
 If your section needs a new colour, record it as an owner decision —
 do NOT silently add it.

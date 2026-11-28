@@ -86,11 +86,14 @@ above — Part A is the six lanes only.
    The WalletConnect lazy chunk (348,194 B) was removed with the feature
    in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Re-measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates): 4,509,097 bytes total JS, passing by 1,490,903 bytes; largest chunk 2,906,616 bytes. Re-measured at `bcf180e` (2026-11-29, fix-all programme merge, coordinator gates): 4,536,948 bytes total JS, passing by 1,463,052 bytes; largest chunk 2,906,616 bytes (re-measured at `bcf180e`, unchanged). Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
-3. **Visual direction: style B (owner pick, 2026-11-27).** Polished financial style everywhere — flat, hairline, tabular, real semantic colour — with illustration kept only for brand moments, plus a tiny bounded fraction of the paper/comic theme (the Welcome illustration, at most one small brand touch per screen — the QR card templates were paper/comic until Lane B flattened them to style B on 2026-11-28, §8). This supersedes the 2026-11-20 drawing-illustration order and its four-colour cap: the cap no longer governs new work. Transition state, stated honestly: the current tree still carries the four `--bawa-*` tokens in `apps/web/src/ui/styles/globals.css:60-63` (`--bawa-paper #FFFDF7`, `--bawa-ink #2B2B2B`, `--bawa-coral #FF6B4A`, `--bawa-sun #FFD93B`) while the P1 style lane migrates screens — do not cite the cap as the current rule, and do not re-impose it on migrated screens. The single confined exception that STANDS is the QR card: exactly ten named `--qr-*` tokens
-   (`--qr-teal`, `--qr-teal-deep`, `--qr-teal-band`, `--qr-teal-copy`,
-   `--qr-bar`, `--qr-muted`, `--qr-grey`, `--qr-faint`, `--qr-nearblack`,
-   `--qr-white-dim`) in `apps/web/src/ui/styles/globals.css`, used ONLY by
-   the QR card and its PNG exporter (`docs/DECISIONS.md` §24, line 2015).
+3. **Visual direction: style B (owner pick, 2026-11-27).** Polished financial style everywhere — flat, hairline, tabular, real semantic colour — with illustration kept only for brand moments, plus a tiny bounded fraction of the paper/comic theme (the Welcome illustration, at most one small brand touch per screen — the QR card templates were paper/comic until Lane B flattened them to style B on 2026-11-28, §8). This supersedes the 2026-11-20 drawing-illustration order and its four-colour cap: the cap no longer governs new work. Transition state, stated honestly: the current tree still carries the four `--bawa-*` tokens in `apps/web/src/ui/styles/globals.css:60-63` (`--bawa-paper #FFFDF7`, `--bawa-ink #2B2B2B`, `--bawa-coral #FF6B4A`, `--bawa-sun #FFD93B`) while the P1 style lane migrates screens — do not cite the cap as the current rule, and do not re-impose it on migrated screens. The single confined exception that STANDS is the QR card: exactly eight named `--qr-*` tokens
+   (`--qr-teal`, `--qr-teal-deep`, `--qr-hairline-teal`, `--qr-muted`,
+   `--qr-grey`, `--qr-faint`, `--qr-nearblack`, `--qr-white-dim`) in
+   `apps/web/src/ui/styles/globals.css`, used ONLY by the QR card and its
+   PNG exporter (`docs/DECISIONS.md` §24, line 2015; token list superseded
+   by §56, 2026-11-29 — the QR-colour fix retired `--qr-teal-band`,
+   `--qr-teal-copy` and `--qr-bar` and added `--qr-hairline-teal`
+   `#2A4A52`; `--qr-muted` lightened `#7A9491` → `#A7C4C1`).
    The QR card was redesigned to the polished flat style-B language by Lane B (2026-11-28, `fec71be`) — the wobbly paper/comic treatment is gone from it; see §8. No further literal colour may be added without a recorded decision there. `docs/DESIGN-SYSTEM.md`
    is owned by the P1 style lane; this spec states the direction, not the
    token list.
@@ -733,7 +736,13 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   patterns only — no competitor logo, colour-as-brand, cyan arrow, or
   "Deposit from Bitget Exchange" link is copied; the brand bar is Bawa's
   own wordmark. `QR_CARD_TEMPLATES` (`payment-links.ts:728`):
-  A "Dark Teal" (showcase variant, closest to the Bitget bar), B "Paper"
+  A "Dark Teal" (showcase variant, closest to the Bitget bar — since the
+  2026-11-29 QR-colour fix, `docs/DECISIONS.md` §56: ONE flat teal field
+  `#011F29` for the whole card, one 1 px `#2A4A52` hairline above the
+  address band, coral copy disc and coral accents, lighter muted text
+  `#A7C4C1`; the old five-dark stack — outer `#023139`, band `#0E2127`,
+  copy disc `#1B2023`, brand slab `#121818`, muted `#7A9491` — is retired
+  in-app and in the PNG, which stay in parity), B "Paper"
   (default), C "Minimal" (plain and quiet, the fallback), D "Poster"
   (bold, for sharing), E "Sun" (bright sun field), F "Ink" (dark
   card, safe code), G "Ticket" (two-tone ticket stub). The redesign
