@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { BawaIcon, type BawaIconName } from '../ui/components/icons';
 import { BawaLoading } from '../ui/components/loading';
 import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
@@ -132,9 +132,18 @@ const tabs: ReadonlyArray<{ to: string; label: string; icon: BawaIconName }> = [
 ];
 
 function HomeScreen() {
-  const { vaultState } = useWallet();
+  const { vaultState, addresses, hydrating } = useWallet();
+  // Watch-only-only: no vault, but watched addresses exist. The dashboard
+  // already shows the watched balances (lane C), so route there instead
+  // of Welcome — and don't decide until hydration has read the stored
+  // xpubs, or Welcome flashes briefly before the dashboard takes over.
+  const hasWatchAddresses = useMemo(
+    () => Object.values(addresses ?? {}).some((list) => (list ?? []).length > 0),
+    [addresses],
+  );
 
-  return vaultState === 'no-vault' ? <WelcomeScreen /> : <DashboardScreen />;
+  if (hydrating) return <BawaLoading />;
+  return vaultState === 'no-vault' && !hasWatchAddresses ? <WelcomeScreen /> : <DashboardScreen />;
 }
 
 // Outlet wrapper class for a route path, or null when the screen
@@ -236,7 +245,13 @@ export function NetworkModePill() {
 
 function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { vaultState, vaultAccount, vaultAccountNames } = useWallet();
+  const { vaultState, vaultAccount, vaultAccountNames, addresses } = useWallet();
+  // Watch-only-only: no vault, but watched addresses exist — the header
+  // says "Watch-only" (linking to /wallets) instead of "No wallet".
+  const hasWatchAddresses = useMemo(
+    () => Object.values(addresses ?? {}).some((list) => (list ?? []).length > 0),
+    [addresses],
+  );
   const location = useLocation();
   const pathname = location.pathname;
   const navigate = useNavigate();
@@ -345,7 +360,7 @@ function AppLayout() {
               onFocus={() => preloadRoute('/wallets')}
               className="truncate text-sm font-semibold text-ink hover:underline hover:underline-offset-4"
             >
-              {vaultState === 'no-vault' ? 'No wallet' : displayAccountName(vaultAccount.account, vaultAccountNames ?? {})} &#8250;
+              {vaultState === 'no-vault' ? (hasWatchAddresses ? 'Watch-only' : 'No wallet') : displayAccountName(vaultAccount.account, vaultAccountNames ?? {})} &#8250;
             </Link>
             <NetworkModePill />
           </header>
@@ -370,7 +385,7 @@ function AppLayout() {
                   onFocus={() => preloadRoute('/wallets')}
                   className="block truncate text-xs leading-4 text-ink hover:underline hover:underline-offset-4"
                 >
-                  {vaultState === 'no-vault' ? 'No wallet' : displayAccountName(vaultAccount.account, vaultAccountNames ?? {})} &#8250;
+                  {vaultState === 'no-vault' ? (hasWatchAddresses ? 'Watch-only' : 'No wallet') : displayAccountName(vaultAccount.account, vaultAccountNames ?? {})} &#8250;
                 </Link>
               </div>
             </div>
