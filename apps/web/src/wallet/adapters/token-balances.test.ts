@@ -113,6 +113,36 @@ const okTron = tronTransport({
   decimals: uint256Hex(6n),
 });
 
+/**
+ * TRON transport for the sandbox failure mode: Trongrid's keyless tier
+ * 429s the shared egress IP, PublicNode answers. Every Trongrid URL
+ * throws 'HTTP 429' (retryable, like the real fetchJson failure);
+ * PublicNode URLs delegate to the okTron fake.
+ */
+function tronTrongridDownTransport(): FetchTransportLike {
+  const request = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.startsWith('https://api.trongrid.io')) {
+      throw new Error('HTTP 429');
+    }
+    return (
+      okTron.request as unknown as (
+        url: string,
+        init?: RequestInit,
+      ) => Promise<unknown>
+    )(url, init);
+  });
+  return { request };
+}
+
+/** TRON transport where every endpoint 429s (no fallback can answer). */
+function tronAllDownTransport(): FetchTransportLike {
+  return {
+    request: vi.fn(async () => {
+      throw new Error('HTTP 429');
+    }),
+  };
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -296,6 +326,41 @@ describe('TRC-20 balanceOf', () => {
       expect(result.data.chain).toBe('trx');
     }
   });
+
+  it('reads the balance from PublicNode when Trongrid 429s', async () => {
+    // Fix programme, 2026-11-28: TRON USDT went missing in 3/10
+    // baseline runs on Trongrid triggerconstantcontract 429s while
+    // native TRX survived via its PublicNode fallback. The token
+    // read now sweeps Trongrid -> PublicNode in the same order.
+    const transport = tronTrongridDownTransport();
+    const result = await fetchTokenBalance(
+      { chain: 'trx', contract: TRON_USDT, ownerAddress: TRON_OWNER },
+      { transport },
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('5000000');
+      expect(result.data.decimals).toBe(6);
+      expect(result.data.chain).toBe('trx');
+      // The answering endpoint is the source — never the dead primary.
+      expect(result.data.source).toBe('tron-rpc.publicnode.com');
+      expect(result.source).toBe('tron-rpc.publicnode.com');
+    }
+    const urls = (
+      transport.request as ReturnType<typeof vi.fn>
+    ).mock.calls.map((call) => String(call[0]));
+    expect(urls.some((url) => url.includes('api.trongrid.io'))).toBe(true);
+    expect(urls.some((url) => url.includes('tron-rpc.publicnode.com'))).toBe(true);
+    expect(urls.every((url) => url.endsWith('/wallet/triggerconstantcontract'))).toBe(true);
+  });
+
+  it('errors when every TRON endpoint 429s', async () => {
+    const result = await fetchTokenBalance(
+      { chain: 'trx', contract: TRON_USDT, ownerAddress: TRON_OWNER },
+      { transport: tronAllDownTransport() },
+    );
+    expect(result.status).toBe('error');
+  });
 });
 
 describe('verifyTronToken', () => {
@@ -304,6 +369,22 @@ describe('verifyTronToken', () => {
       contract: TRON_USDT,
       ownerAddress: TRON_OWNER,
       transport: okTron,
+    });
+    expect(result).toEqual({
+      ok: true,
+      metadata: { name: 'Tether USD', symbol: 'USDT', decimals: 6 },
+      balanceBaseUnits: '5000000',
+    });
+  });
+
+  it('verifies via PublicNode when Trongrid 429s', async () => {
+    // Add Token by contract must not fail with "Could not read this
+    // token" while Trongrid throttles: metadata + balance both fall
+    // through to PublicNode.
+    const result = await verifyTronToken({
+      contract: TRON_USDT,
+      ownerAddress: TRON_OWNER,
+      transport: tronTrongridDownTransport(),
     });
     expect(result).toEqual({
       ok: true,
@@ -348,6 +429,27 @@ describe('fetchTronTokenMetadata', () => {
       ok: true,
       metadata: { name: 'Tether USD', symbol: 'USDT', decimals: 6 },
     });
+  });
+
+  it('reads metadata from PublicNode when Trongrid 429s', async () => {
+    // The Add Token probe (decimals) and the name/symbol reads each
+    // sweep Trongrid -> PublicNode, so verification survives a
+    // Trongrid 429 exactly like the balance read does.
+    const transport = tronTrongridDownTransport();
+    const result = await fetchTronTokenMetadata({
+      contract: TRON_USDT,
+      ownerAddress: TRON_OWNER,
+      transport,
+    });
+    expect(result).toEqual({
+      ok: true,
+      metadata: { name: 'Tether USD', symbol: 'USDT', decimals: 6 },
+    });
+    const urls = (
+      transport.request as ReturnType<typeof vi.fn>
+    ).mock.calls.map((call) => String(call[0]));
+    expect(urls.some((url) => url.includes('api.trongrid.io'))).toBe(true);
+    expect(urls.some((url) => url.includes('tron-rpc.publicnode.com'))).toBe(true);
   });
 });
 
