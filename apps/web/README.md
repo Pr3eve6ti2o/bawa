@@ -300,6 +300,6 @@ versions or invalid secp256k1 points. Run `npm test` to see them pass.
 Verified on this tree on 2026-11-29 (HEAD `bcf180e`, Node v22.23.4, first-hand on loud-stone): Vitest 130 files,
 3,479 passed + 5 skipped (3,484 total, exit 0, 96.14 s); `tsc --noEmit` 0 errors;
 `eslint` 0 errors; `vite build` passes; JS bundle 4,536,948 / 6,000,000
-budget (1,463,052 B headroom); entry `index-G8M1DjxZ.js`. The live site
+budget (1,463,052 B headroom). The live site
 (https://pr3eve6ti2o.github.io/bawa/) serves the latest published build
 of this branch.
