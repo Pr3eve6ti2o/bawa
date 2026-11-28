@@ -305,10 +305,12 @@ architecture sections `docs/13-wallet-app-architecture/` and
 ## How this page was verified
 
 - All three Mermaid blocks were rendered to SVG with
-  `@mermaid-js/mermaid-cli` on the development VM (Node v22.23.4,
-  headless Chromium) — a successful render proves the syntax is valid
-  Mermaid that GitHub's renderer can also parse. The rendered SVGs
-  contain every node label from all three diagrams.
+  `@mermaid-js/mermaid-cli` 12.2.0, installed persistently at
+  `/home/boxd/node22/bin/mmdc` on the development VM (Node v22.23.4,
+  headless Chromium from the Puppeteer cache) — see `docs/TOOLS.md`.
+  A successful render proves the syntax is valid Mermaid that
+  GitHub's renderer can also parse. The rendered SVGs contain every
+  node label from all three diagrams.
 - Both hand-crafted SVGs in `docs/diagrams/` were rendered in headless
   Chromium and viewed as screenshots at README width (900 px) and at
   mobile width (390 px). The architecture SVG is legible at README

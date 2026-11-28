@@ -46,6 +46,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [References](REFERENCES.md) — `DOCUMENTED_NOT_TESTED`: supporting sources.
 - [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 440 checks pass (README proof strip, verified 2026-11-24); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
 - [External tools](EXTERNAL-TOOLS.md) — `DOCUMENTED_NOT_TESTED`: evaluated external repositories and packages for building with Bawa.
+- [Tools](TOOLS.md) — persistent installs on the development VM (mmdc / Mermaid CLI path, install and verify commands); never install tools under `/tmp`.
 - [UI/UX catalogue](UI-UX-CATALOGUE.md) — `DOCUMENTED_NOT_TESTED`: design reference and the route into `docs/ui-ux-assets/`.
 - [UI template registry](UI-TEMPLATE-REGISTRY.yaml) — `DOCUMENTED_NOT_TESTED`: template metadata.
 
