@@ -194,7 +194,7 @@ describe('openCoinbaseOnramp', () => {
   // beforeEach re-sets its return value. Restoring it would hand
   // later tests jsdom's real window.open, which returns undefined.
 
-  it('opens a blank pop-up synchronously, then navigates it to the built URL', () => {
+  it('builds the URL first, then opens a pop-up directly onto it with noopener', () => {
     const outcome = openCoinbaseOnramp({
       appId: 'test-app-id',
       addresses: { '0xabc': ['ethereum', 'base'] },
@@ -202,12 +202,13 @@ describe('openCoinbaseOnramp', () => {
     });
     expect(outcome).toBe('opened');
     expect(openSpy).toHaveBeenCalledTimes(1);
+    const openedUrl = openSpy.mock.calls[0]?.[0] as string;
     expect(openSpy).toHaveBeenCalledWith(
-      'about:blank',
+      openedUrl,
       '_blank',
-      'width=430,height=600,noopener',
+      'noopener,width=430,height=600',
     );
-    const url = new URL(popup.location.href);
+    const url = new URL(openedUrl);
     expect(url.origin).toBe('https://pay.coinbase.com');
     expect(url.pathname).toBe('/buy/select-asset');
     expect(url.searchParams.get('appId')).toBe('test-app-id');
@@ -218,22 +219,30 @@ describe('openCoinbaseOnramp', () => {
     expect(popup.close).not.toHaveBeenCalled();
   });
 
-  it('reports blocked when the browser refuses the pop-up', () => {
+  it('reports opened even when window.open returns null (noopener)', () => {
+    // With noopener set, Chromium returns null even when the pop-up
+    // opened (verified first-hand: noopener => null, plain =>
+    // WindowProxy), so a null return cannot mean "blocked" here.
+    // A blocked pop-up is indistinguishable from an opened one, and
+    // is reported as opened — the old blank-then-navigate code read
+    // the same null as blocked and left a blank pop-up behind.
     openSpy.mockReturnValue(null);
     const outcome = openCoinbaseOnramp({
       appId: 'test-app-id',
       addresses: { '0xabc': ['ethereum'] },
     });
-    expect(outcome).toBe('blocked');
+    expect(outcome).toBe('opened');
+    expect(openSpy).toHaveBeenCalledTimes(1);
     expect(popup.close).not.toHaveBeenCalled();
   });
 
-  it('closes the pop-up and reports load failure when the URL cannot be built', () => {
+  it('reports load failure without opening anything when the URL cannot be built', () => {
     const outcome = openCoinbaseOnramp({
       appId: 'test-app-id',
       addresses: null as unknown as Record<string, string[]>,
     });
     expect(outcome).toBe('load-failed');
-    expect(popup.close).toHaveBeenCalledTimes(1);
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(popup.close).not.toHaveBeenCalled();
   });
 });

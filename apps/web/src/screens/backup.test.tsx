@@ -547,6 +547,27 @@ describe.sequential('BackupScreen (S3-A: one screen, two tabs)', () => {
     }
   });
 
+  it('scheme radio rows are at least 44px tall', async () => {
+    // Bug-hunt v2 (E F3 / H C2): the scheme radio rows were one text
+    // line tall (~24px), under the 44px tap target. Each row label
+    // now carries min-h-11. jsdom does no layout, so the test asserts
+    // the class that sets the height — the same min-h-11 the Security
+    // rows and Backup tabs use.
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountApp('/mnemonic-backup?tab=shares');
+    try {
+      const radios = div.querySelectorAll('input[name="backup-share-scheme"]');
+      expect(radios.length).toBe(3);
+      for (const radio of radios) {
+        const row = radio.closest('label');
+        expect(row).not.toBeNull();
+        expect(row?.className).toContain('min-h-11');
+      }
+    } finally {
+      await cleanup();
+    }
+  });
+
   it('shares tab: creates shares, shows each with a QR and a copy button, and defaults the check to the created scheme', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
     vi.mocked(createBackupShares).mockResolvedValue([...FAKE_SHARES]);

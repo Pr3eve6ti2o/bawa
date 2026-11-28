@@ -645,8 +645,9 @@ export function ImportWalletScreen() {
                     <p className="mt-2 text-sm text-muted-foreground">
                       If your wallet uses an extra word (a 25th word), paste
                       all 25 words here — the extra word is your recovery
-                      passphrase, used to derive the addresses below. It is
-                      never stored.
+                      passphrase, used to derive the addresses below (for
+                      most chains — Cardano addresses do not change with
+                      the extra word). It is never stored.
                     </p>
                   </details>
                 </div>
@@ -802,8 +803,10 @@ export function ImportWalletScreen() {
               <Alert>
                 <AlertDescription>
                   An extra word was used as your recovery passphrase to
-                  derive these addresses. It is never stored — you will
-                  need it again if you restore this wallet elsewhere.
+                  derive these addresses (Cardano addresses excepted —
+                  they do not change with the extra word). It is never
+                  stored — you will need it again if you restore this
+                  wallet elsewhere.
                 </AlertDescription>
               </Alert>
             )}
@@ -1009,6 +1012,16 @@ export function ImportWalletScreen() {
               <p id="watch-only-notice" className="text-sm leading-5 text-muted-foreground">
                 Public keys or addresses only — never a private key.
               </p>
+              {/* The tracking warning lives here, in this disclosure —
+                  one tap away — not in the nested "Which key?" one
+                  below it. Each sentence sits on one source line so
+                  the regression test's substring matches hold. */}
+              <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                An extended public key lets its holder track this account&apos;s derivable addresses, balances and transaction history.
+                Imported keys are stored in this browser (localStorage).
+                They are readable by this site&apos;s scripts and by extensions with access to this site.
+                Locking the wallet does not delete them — imported keys stay stored until you forget them.
+              </p>
               <details>
                 <summary className="cursor-pointer text-sm font-semibold text-ink">
                   Which key?
@@ -1017,12 +1030,7 @@ export function ImportWalletScreen() {
                   Import the account-level key (depth 3, account 0) for the
                   selected chain, or paste a public address — an address
                   watches every chain it belongs to. Private extended keys
-                  (xprv/zprv) are rejected. An extended public key lets its
-                  holder track this account&apos;s derivable addresses,
-                  balances and transaction history. Imported keys are stored
-                  in this browser (localStorage). They are readable by this
-                  site&apos;s scripts and by extensions with access to this
-                  site.
+                  (xprv/zprv) are rejected.
                 </p>
               </details>
             </div>

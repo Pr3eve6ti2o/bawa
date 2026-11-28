@@ -146,6 +146,46 @@ describe('validateRecipient (Sol p1, assembled hands-on)', () => {
       ),
     ).toEqual({ ok: false, reason: 'Invalid Bitcoin address.' });
   });
+
+  it('accepts a valid Kaspa address (no Wallet Core coin — in-app validator)', async () => {
+    // The OKX SDK's own test vector (kaspa-address.test.ts pins it).
+    // Before the fix this returned "Invalid Kaspa address." for ANY
+    // input, so a valid address never reached the honest
+    // "sending isn't available yet" message.
+    expect(
+      await validateRecipient(
+        'kaspa',
+        'kaspa:qqpet37fwqlql7q4jczr7zj7qp5ylps2r2c0ynz6jjf368sdjnztufeghvc9x',
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it('rejects a Kaspa address with a broken checksum', async () => {
+    expect(
+      await validateRecipient(
+        'kaspa',
+        'kaspa:qqpet37fwqlql7q4jczr7zj7qp5ylps2r2c0ynz6jjf368sdjnztufeghvc9y',
+      ),
+    ).toEqual({ ok: false, reason: 'Invalid Kaspa address.' });
+  });
+
+  it('accepts a valid Starknet address (no Wallet Core coin — in-app validator)', async () => {
+    // The OKX SDK's own test vector (starknet-derive.test.ts pins it):
+    // the counterfactual Argent account for the SDK's first vector.
+    expect(
+      await validateRecipient(
+        'starknet',
+        '0x027854ed5aa9f534c7aa0165c89b3915bc461f70e64ce9d64f4e2549037ebcf2',
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it('rejects a short Starknet address', async () => {
+    expect(await validateRecipient('starknet', '0x1234')).toEqual({
+      ok: false,
+      reason: 'Invalid Starknet address.',
+    });
+  });
 });
 
 describe('previewSendAmount (Sol p2, corrected hands-on)', () => {

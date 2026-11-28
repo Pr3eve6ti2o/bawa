@@ -373,23 +373,35 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
     try {
       const keyBytes = await exportUnlockedKeyBytes();
       if (keyBytes === null) {
+        // exportUnlockedKeyBytes returns null both when the vault is
+        // locked and when the key export itself fails, so the vault
+        // state at click time decides which message is honest. This
+        // branch only renders while unlocked, so a null here is
+        // normally an export failure, not a locked vault.
         setCreateError(
-          'The vault is locked. Unlock it first, then create shares.',
+          vaultState === 'locked'
+            ? 'The vault is locked. Unlock it first, then create shares.'
+            : 'Could not read the vault key. Lock the vault and unlock it again, then try once more.',
         );
         return;
       }
-      // The key bytes are dropped as soon as the shares exist: this
-      // local is the only copy, and it goes out of scope here.
-      const made = await createBackupShares(
-        keyBytes,
-        scheme.total,
-        scheme.threshold,
-      );
-      setShares(made);
-      // S3-A: the check form defaults to the scheme just created
-      // instead of asking again (Lane D §3, shares row).
-      handleCheckThreshold(scheme.threshold);
-      onBackedUp();
+      try {
+        const made = await createBackupShares(
+          keyBytes,
+          scheme.total,
+          scheme.threshold,
+        );
+        setShares(made);
+        // S3-A: the check form defaults to the scheme just created
+        // instead of asking again (Lane D §3, shares row).
+        handleCheckThreshold(scheme.threshold);
+        onBackedUp();
+      } finally {
+        // Wipe the raw key bytes as soon as the shares exist (or the
+        // split failed): this local is the only copy, and letting it
+        // go out of scope alone would leave the bytes in the buffer.
+        keyBytes.fill(0);
+      }
     } catch (cause) {
       setCreateError(
         cause instanceof Error ? cause.message : 'Could not create shares.',
@@ -518,7 +530,7 @@ function BackupSharesPanel({ onBackedUp }: { onBackedUp: () => void }) {
                 {BACKUP_SHARE_SCHEMES.map((option) => (
                   <label
                     key={option.label}
-                    className="flex items-center gap-2 text-base"
+                    className="flex min-h-11 items-center gap-2 text-base"
                   >
                     <input
                       type="radio"

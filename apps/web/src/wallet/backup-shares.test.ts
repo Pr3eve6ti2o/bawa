@@ -154,6 +154,33 @@ describe('backup shares', () => {
     });
   });
 
+  it('two distinct shares that share the first byte are not rejected as duplicates', async () => {
+    // Regression test for the share[0] bug: the share number lives in
+    // the LAST byte of a share (the library writes it there), while
+    // byte 0 is the first payload byte. Two distinct shares collide
+    // on byte 0 with probability 1/256 per pair, and the old check
+    // rejected them as "the same share". Forging the collision here
+    // (same byte 0, different last byte) must not trip the duplicate
+    // check — combine() still succeeds on distinct share numbers,
+    // even though the forged byte makes the rebuilt key wrong.
+    await setupVault();
+    const key = await exportUnlockedKeyBytes();
+    const shares = await createBackupShares(key as Uint8Array, 3, 2);
+    const first = decodeShare(shares[0] as string);
+    const second = decodeShare(shares[1] as string);
+    expect(first[32]).not.toBe(second[32]);
+    second[0] = first[0] as number;
+    const rebuilt = await reconstructKeyBytes([
+      encodeShare(first),
+      encodeShare(second),
+    ]);
+    expect(rebuilt.length).toBe(32);
+    // And a true duplicate is still caught.
+    await expect(
+      reconstructKeyBytes([shares[0] as string, shares[0] as string]),
+    ).rejects.toThrow('Two of the shares are the same share.');
+  });
+
   it('a corrupted share fails the trial decryption, clearly', async () => {
     await setupVault();
     const key = await exportUnlockedKeyBytes();

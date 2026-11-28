@@ -654,16 +654,15 @@ type BuyOpenOutcome = 'opened' | 'blocked';
 
 /**
  * Open a provider widget URL as a pop-up, the same way
- * openCoinbaseOnramp does: blank synchronously inside the click
- * (so the browser cannot mistake it for unprompted), then navigate
- * it to the built URL. 'opened' means the widget opened; 'blocked'
- * means the browser refused the pop-up. The purchase itself is
- * completed inside the pop-up.
+ * openCoinbaseOnramp does: open directly onto the built URL,
+ * synchronously inside the click (so the browser cannot mistake it
+ * for unprompted), with noopener. 'opened' means the pop-up was
+ * requested; with noopener the page cannot tell whether the browser
+ * blocked it, so 'blocked' is not returned from here. The purchase
+ * itself is completed inside the pop-up.
  */
 export function openBuyProviderUrl(url: string): BuyOpenOutcome {
-  const popup = window.open('about:blank', '_blank', 'width=430,height=600,noopener');
-  if (popup === null) return 'blocked';
-  popup.location.href = url;
+  window.open(url, '_blank', 'noopener,width=430,height=600');
   return 'opened';
 }
 

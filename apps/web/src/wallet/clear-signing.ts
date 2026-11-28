@@ -42,11 +42,17 @@ import { keccak256, stringToHex } from 'viem';
 import snapshotJson from './clear-signing-snapshot.json';
 
 // Compact snapshot schema (see the generator): function {s,i,p},
-// param {t,l,m?}, contract {n,a,c,f}. Display types: address | uint.
+// param {t,l,m?,h?}, contract {n,a,c,f}. Display types: address | uint.
+// h (hidden) marks a positional placeholder: the parameter stays in
+// p so decoding stays positional, but it is never shown as a row.
+// The 1inch `token` param is the only hidden one — the registry has
+// no display field for it (it appears only as tokenPath inside the
+// amount field), so the snapshot shows the registry's 4 rows.
 type ClearSigningParam = {
   readonly t: 'address' | 'uint';
   readonly l: string;
   readonly m?: boolean;
+  readonly h?: boolean;
 };
 
 type ClearSigningFunction = {
@@ -156,7 +162,10 @@ export function decodeCalldata(
   if (!HEX_DATA_PATTERN.test(data) || data.length < 10) return null;
   if (data.slice(0, 10).toLowerCase() !== selector) return null;
   const body = data.slice(10);
-  if (body.length < parsed.types.length * 64 || body.length % 64 !== 0) {
+  // Exact length: trailing words are not part of the signature, so
+  // calldata with extra bytes does not fit it and must not resolve
+  // as a clean reading of the first n words.
+  if (body.length !== parsed.types.length * 64) {
     return null;
   }
   const values: string[] = [];
@@ -258,14 +267,18 @@ export function resolveContractCall(
     return null;
   }
   // decodeCalldata already parsed the signature, so the name is
-  // everything before "(".
+  // everything before "(". Rows are positional: p stays aligned with
+  // the signature, and hidden params (h) are skipped, not shown.
   return {
     contractName: matched.contractName,
     intent: matched.fn.i,
     functionName: matched.fn.s.slice(0, matched.fn.s.indexOf('(')),
-    rows: matched.fn.p.map((param, index) => ({
-      label: param.l,
-      value: formatValue(values[index] as string, param, input.token),
-    })),
+    rows: matched.fn.p
+      .map((param, index) => ({ param, value: values[index] as string }))
+      .filter(({ param }) => param.h !== true)
+      .map(({ param, value }) => ({
+        label: param.l,
+        value: formatValue(value, param, input.token),
+      })),
   };
 }

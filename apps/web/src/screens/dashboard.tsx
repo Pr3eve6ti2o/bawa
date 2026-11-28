@@ -484,7 +484,7 @@ export function DashboardScreen() {
           </p>
         )}
         {hero.partialNote && (
-          <p className="text-xs leading-4 text-panel-text-muted">Partial total — some prices missing.</p>
+          <p className="text-xs leading-4 text-panel-text-muted">Partial total — some balances or prices are missing. Failed balances count as 0, so this total may understate.</p>
         )}
         {hero.quietNote && (
           <p className="text-xs leading-4 text-panel-text-muted">Some balances couldn&apos;t be checked.</p>
@@ -595,9 +595,14 @@ export function DashboardScreen() {
                 "Assets" + the three controls are ~300 px against 280 px of
                 room, and the row ran past the viewport edge (probe:
                 dashboard@320 overflow +14). */}
+            {/* Bug-hunt v2 (D-F1 follow-up): the outer wrap alone did
+                not fix it — the inner controls div was shrink-0 at
+                351 px wide, so on its own wrapped line it still ran
+                past the edge (probe: +7 at 360 px, +47 at 320 px).
+                The controls now wrap internally too. */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold text-ink">Assets</h2>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   onClick={() => setAddTokenOpen(true)}
@@ -632,7 +637,7 @@ export function DashboardScreen() {
             <Card className="mt-4">
               {devnetEnabled && (
                 <p className="border-b px-4 pt-4 text-base text-ink">
-                  Devnet: 4 test networks only. No total — test tokens have no value.
+                  Devnet: 4 test networks only. No total — test tokens have no value. Prices below are live market prices.
                 </p>
               )}
               <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />

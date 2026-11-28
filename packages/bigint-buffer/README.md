@@ -1,6 +1,5 @@
 # 💪🔢 bigint-buffer: Buffer Utilities for TC39 BigInt Proposal 
 [![NPM Package](https://img.shields.io/npm/v/bigint-buffer.svg?style=flat-square)](https://www.npmjs.org/package/bigint-buffer)
-[![Build Status](https://img.shields.io/travis/com/no2chem/bigint-buffer.svg?branch=master&style=flat-square)](https://travis-ci.com/no2chem/bigint-buffer)
 [![Coverage Status](https://img.shields.io/coveralls/no2chem/bigint-buffer.svg?style=flat-square)](https://coveralls.io/r/no2chem/bigint-buffer)
 ![node](https://img.shields.io/node/v/bigint-buffer.svg?style=flat-square)
 

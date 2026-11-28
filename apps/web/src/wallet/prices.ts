@@ -1104,7 +1104,7 @@ export function portfolioTotal(
   balances: Record<ChainId, BalanceState>,
   entries: PriceMap,
   nowMs: number,
-  // Chains to total. Defaults to all 84 registry chains; the dashboard
+  // Chains to total. Defaults to all 87 registry chains; the dashboard
   // passes availableFor('balance') so the hero totals exactly the chains
   // its loading/failed detection counts (in the screen tests that mock
   // is the original 4, which keeps the hero's 4-chain expectations).
