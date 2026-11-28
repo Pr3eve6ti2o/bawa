@@ -695,21 +695,27 @@ export function AddTokenDialog({
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-base font-medium text-ink">
                             {candidate.name} ({candidate.symbol})
-                            {/* Lane 1: the verified mark on the search
-                                result itself — a CoinGecko-confirmed
-                                match is verified, a registry token
-                                without a listing is not. */}
-                            {candidate.verified ? (
-                              <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
-                            ) : (
-                              <span className="ml-2 text-sm font-normal" aria-label="Unverified token">Unverified</span>
-                            )}
                           </span>
                           <span className="block text-xs text-ink/70">
                             {chainConfig(candidate.chain).displayName} ·{' '}
                             {shortContract(candidate.contract)}
                           </span>
                         </span>
+                        {/* Lane A (mobile overflow, 2026-11-28): the
+                            verified mark used to sit INSIDE the
+                            truncating name line — once the dialog
+                            stopped overflowing, a long name pushed the
+                            badge past the clip point and the mark
+                            vanished on phones. It is a flex item of
+                            the row now, so it stays visible while only
+                            the name ellipsises. Lane 1: a
+                            CoinGecko-confirmed match is verified, a
+                            registry token without a listing is not. */}
+                        {candidate.verified ? (
+                          <Badge size="sm" className="shrink-0 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
+                        ) : (
+                          <span className="shrink-0 text-sm font-normal" aria-label="Unverified token">Unverified</span>
+                        )}
                         <span className="shrink-0 text-sm font-medium text-ink/70">Use</span>
                       </button>
                     </li>
