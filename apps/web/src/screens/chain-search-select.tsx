@@ -27,7 +27,7 @@
 // the input carries role="combobox" with aria-expanded, aria-controls
 // and aria-activedescendant; the list is role="listbox" with
 // role="option" rows. Arrow keys move, Enter picks, Escape closes.
-import { Fragment, useMemo, useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig, filterChains, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Input } from '../ui/components/input';
@@ -278,6 +278,21 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  // Lane A (mobile overflow, 2026-11-28): the Add Token dialog now
+  // scrolls itself (max-h + overflow-y-auto), so a dropdown opened
+  // near its bottom edge sits below the fold until the user scrolls.
+  // Bring the open dropdown into view instead — block: 'nearest'
+  // is a no-op when it already fits (every full-page use), and only
+  // scrolls the nearest scrollable ancestor when it must.
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const el = dropdownRef.current;
+    // Guard: jsdom (vitest) and older engines do not implement
+    // scrollIntoView — an unguarded call crashes every screen that
+    // mounts the picker (2026-11-28: 115 tests failed on it).
+    if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' });
+  }, [open]);
   const [activeId, setActiveId] = useState<ChainPickerValue | null>(null);
   const [recent, setRecent] = useState<ChainId[]>(() => readRecentChains(recentKey));
   // Lane P2-C (M5): the active family tab — 'all' is the whole list,
@@ -505,7 +520,7 @@ export function ChainSearchSelect<T extends ChainPickerValue = ChainId>({
           />
         </span>
         {open && (
-          <div className="absolute left-0 right-0 top-full z-10 mt-1 border border-ink bg-paper shadow-lg">
+          <div ref={dropdownRef} className="absolute left-0 right-0 top-full z-10 mt-1 border border-ink bg-paper shadow-lg">
             {/* Lane P2-C (M5): family tabs filter the list — one tab
                 per family with its count, same set and styling as
                 the Networks screen. Hidden when the offered chains

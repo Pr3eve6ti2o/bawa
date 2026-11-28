@@ -151,7 +151,19 @@ function DialogContent({
         data-state="open"
         tabIndex={-1}
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 p-6 sm:max-w-lg",
+          // Lane A (mobile overflow, 2026-11-28): two guards the Add
+          // Token dialog needed. (1) grid-cols-[minmax(0,1fr)]: the
+          // single implicit `auto` column let a grid item's min-content
+          // (the search-result rows: long token name + Verified badge
+          // on one nowrap line) stretch the dialog to 617 px in a
+          // 390 px viewport — the fixed box stayed 358 px, so every
+          // child overflowed right and the Use buttons were
+          // unreachable. A 0-minimum track caps items at the box.
+          // (2) max-h + overflow-y-auto: with results the dialog is
+          // ~970 px tall, so a centred dialog cut its title off the
+          // top of a phone with no way to scroll to it (body scroll
+          // is locked while open). The dialog now scrolls itself.
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] grid-cols-[minmax(0,1fr)] max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 p-6 sm:max-w-lg",
           "rounded-flat-lg border border-ink bg-paper text-ink",
           "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
