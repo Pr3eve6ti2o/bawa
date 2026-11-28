@@ -49,7 +49,7 @@ wired from the Step 1 JSON export. Hands-on, 0 Sol calls.
 ## What is NOT done (later steps)
 
 - Live prices, balances, history — Step 5 (network stack).
-- On-device derivation (Trust Wallet Core AAR) — Step 4.
+- On-device derivation (Trust Wallet Core AAR) — Step 4 DONE 2026-11-28 (f9f312b): the 4.8.4 AAR is built and wired into :core; the on-device fixture gate has still never run.
 - QR scanner — Step 5. UI wiring to real data throughout — Step 6.
 
 ## Regenerating the bundled copies

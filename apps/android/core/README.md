@@ -20,9 +20,7 @@
   uses literal versions (AGP 8.2.2, Kotlin 1.9.22, matching the root
   `build.gradle.kts`), `compileSdk 35`, `minSdk 33`, Java 17.
 - The 4.8.4 AAR + proto JAR come ONLY from `core/libs/` (flatDir).
-  `core/libs/` is intentionally empty in this lane: Lane A is building
-  the artefacts from source (see `tools/build-core-aar.md`) and the
-  coordinator copies them in. Do not put anything else in `core/libs/`.
+  (Update 2026-11-28, docs-audit-b: Step 4, f9f312b, built both artefacts from source — `wallet-core-4.8.4.aar`, 29,994,177 bytes, SHA-256 `0a231bfe938c63d79cefe9e65e82819f5f04e785c7ecec7c9044d2f307ee055b`, and the proto JAR, 3,408,348 bytes — and they are in `core/libs/` now; `core/libs/` is no longer empty. Do not put anything else in `core/libs/`.)
 - flatDir carries no transitive metadata, so `core/build.gradle.kts`
   declares `protobuf-javalite:3.22.3` explicitly — verified first-hand
   from the 4.8.4 source (`android/wallet-core-proto/build.gradle`).
@@ -67,6 +65,7 @@ one `DerivationPolicy.kt` in `:core`:
   `ENGINE_BINDING_AVAILABLE` (false until the AAR lands and the
   fixture gate passes; the test
   `DerivationPolicyTest.engineBindingIsUnavailable` asserts both).
+  (Update 2026-11-28, docs-audit-b, Step 4 f9f312b: RESOLVED — `ENGINE_VERSION` is now `4.8.4` and `ENGINE_BINDING_AVAILABLE` is `true`; the AAR has landed. The fixture gate itself has still never run, so the binding is wired but on-device derivation is unverified.)
 
 No other overlaps: `Validation` (reference, light xpub/address checks)
 and `ExtendedKeyValidator` (app, deep extended-key checks) are
@@ -79,10 +78,7 @@ different classes and coexist; no other reference top-level name
 
 `CoreWalletEngine.kt` and `EthSendComposer.kt` compile ONLY when the
 4.8.4 AAR (`wallet-core-4.8.4.aar`) and proto JAR
-(`wallet-core-proto-4.8.4.jar`) are in `core/libs/`. Until Lane A
-delivers them, `:core` does NOT compile — this lane is "ready for
-AAR"; the coordinator runs `./gradlew :core:assembleDebug` after
-copying the artefacts in.
+(`wallet-core-proto-4.8.4.jar`) are in `core/libs/`. (Update 2026-11-28, docs-audit-b, Step 4 f9f312b: the artefacts are in `core/libs/` and `:core` compiles — `./gradlew assembleDebug` BUILD SUCCESSFUL, 77 unit tests pass. The "ready for AAR" state below is the 2026-11-02 record.)
 
 Verified 2026-11-02 against the 4.8.4 tag (NOT substitute versions):
 
@@ -100,8 +96,7 @@ Verified 2026-11-02 against the 4.8.4 tag (NOT substitute versions):
   TransactionCompiler pre-image/compile, coin values BTC 0 /
   ETH 60 / TRX 195 / TON 607.
 
-Status: entry points VERIFIED; artefact acquisition in progress
-(Lane A building from source). The app is structured around the
+Status: entry points VERIFIED; artefact acquisition DONE (Step 4, f9f312b, 2026-11-28 — the 4.8.4 AAR + proto JAR are built from source and in `core/libs/`). The app is structured around the
 `WalletEngine` interface, and the fixture gate blocks all wallet
 actions until a real Core build passes it. Derivation is NEVER
 re-implemented in Kotlin.
@@ -119,6 +114,7 @@ re-implemented in Kotlin.
    `CoinType.validate(address)` instance method (both follow
    standard codegen naming from the verified C API, but have not
    been compiled against the real AAR yet).
+   (Update 2026-11-28, docs-audit-b, Step 4 f9f312b: RESOLVED — `HDWallet.create(256, "")` does not exist in the 4.8.4 binding; the constructors `HDWallet(256, "")` are used instead. `CoinType.validate` compiles against the real AAR and is used in the fixture gate.)
 3. TON: `getAddressForCoin(TON)` returns Core's default TON
    address. The recorded `TonConfig` (contract version, wallet_id,
    workchain) is the user's chosen wallet contract; this build
@@ -129,7 +125,7 @@ re-implemented in Kotlin.
 
 Pure-module JVM harness (no Android, no AAR):
 `app-android/jvmtests/PureModuleTests.kt`, 55 checks, all passing
-2026-11-02 (kotlinc 2.1.0, JDK 21). Run from `app-android/`:
+2026-11-02 (kotlinc 2.1.0, JDK 21). (Update 2026-11-28, docs-audit-b: the Gradle gate now also exists — `./gradlew testDebugUnitTest`, 77 unit tests pass at Step 4, f9f312b. The 55-check harness record above is the 2026-11-02 run.) Run from `app-android/`:
 
 ```
 kotlinc $(ls core/src/main/java/com/bawa/wallet/core/*.kt | grep -v CoreWalletEngine) \
