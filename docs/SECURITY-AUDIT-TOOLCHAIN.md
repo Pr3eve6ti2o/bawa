@@ -29,6 +29,11 @@ Repo facts the toolchain is sized for (snapshot `981d0ba`):
 - Android: AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00,
   compileSdk 35, minSdk 33, JDK 17, ZXing core 3.5.3. Watch-only
   testnet app: no signing, no broadcast, no Trust Wallet Core AAR.
+  Update 2026-11-28 (Lane A docs audit): the AAR line above is the
+  2026-11-12 snapshot — the Trust Wallet Core 4.8.4 AAR is now built
+  from source and in-tree (Step 4, `f9f312b`, 2026-11-28),
+  `ENGINE_BINDING_AVAILABLE` is `true`, on-device derivation is
+  bound, not stubbed; on-device execution is still unverified.
 - CI today (`.github/workflows/ci.yml`, 2026-11-28, token-gaps `734cfef`) runs five jobs — `node-tests`, `python-tests`, `docs-checks`, `web` (typecheck, lint, vitest, build, bundle-size gate, `npm audit`) and `floor-guard` — and the manual `.github/workflows/security-audit.yml` runs `npm audit`, `pip-audit`, Bandit, Ruff, Semgrep and OSV-Scanner. No fuzzer in CI; no secret-scan step in CI (pre-commit `secret-scan.mjs` only).
 
 ## 1. Dependency-vulnerability scanning (run first — minutes, no new deps)
@@ -149,6 +154,10 @@ Full outputs: `T38/evidence/` in the fan-out lane dir
   react-router advisories are dev-server / SSR scoped; the shipped
   web starter is a static Vite build. Reachability must be
   adjudicated by T40+, not assumed.
+  Update 2026-11-28 (Lane A docs audit): the bumps landed and
+  `npm audit` for the web app is 0 vulnerabilities at token-gaps
+  `734cfef`, re-verified first-hand on loud-stone 2026-11-28; the
+  4-vulnerability figure above is the 2026-11-12 baseline.
 - `pip-audit -r requirements.txt`: **1 distinct advisory, 2
   entries** — `ecdsa` 0.19.2, PYSEC-2026-1325 (CVE-2024-23342,
   GHSA-wj6h-64fc-37mp), Minerva timing attack on P-256

@@ -1,6 +1,6 @@
 # Architecture
 
-This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `7f24ef1`, 2026-11-28 — the token-gaps tip after the fix programme and lanes A/B; the live site still serves the older `734cfef` build until this tip is republished). Read it alongside `README.md` and `CONTRIBUTING.md`.
+This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `1a85258`, 2026-11-28 — the token-gaps tip after the three findings (vite-dev WASM, TRON USDT fallback, mmdc persistent path); the live site serves this build, `index-B9gxTjOm.js`, gh-pages `e0bc252`). Read it alongside `README.md` and `CONTRIBUTING.md`.
 
 Branch state described here: `panel-rebuild/token-gaps`. The web wallet wires **87 chains** — 22 curated chains plus 65 expansion chains, all in `apps/web/src/wallet/chains.ts` in production; the 65-chain dataset is kept canonically in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAIN_COUNT = 65`; 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference: Cardano, Starknet, Kaspa). The registry lives in-tree at `registry/` (`capabilities.json` v4, 87 `chainSupport` keys) — see the chain diagram in `docs/12-chain-registry-and-assets/README.md` and the full 87-chain specification in `docs/CREATE-THIS-SPEC.md` §2.
 
@@ -19,7 +19,7 @@ flowchart TB
     generate["scripts/generate-project.mjs<br/>Project scaffolding"]
     output["generated/&lt;profile-id&gt;<br/>Scaffolded project"]
     contracts["packages/contracts<br/>TypeScript contracts<br/>Consumed by apps/web only"]
-    android["apps/android<br/>Kotlin + Compose; watch-only UI starter<br/>No signing; no broadcast; no data layer yet"]
+    android["apps/android<br/>Kotlin + Compose; watch-only UI starter<br/>Step 3 data layer done, Step 4 AAR wired in<br/>No signing; no broadcast"]
     docs["docs/<br/>Guides 01–16 + mainnet docs + CREATE-THIS-SPEC"]
 
     subgraph secretBoundary["tools/ + apps/web vault — TRUST BOUNDARY<br/>Mnemonic, seed and private keys never enter apps/android or public network layers"]
@@ -93,7 +93,7 @@ It has one consumer today, not two. It is not a contract layer shared by the web
 
 ### `docs/`
 
-`docs/` contains guides 01–16, the `web-wallet`, `android-wallet` and `mainnet` documentation, and the canonical guide `docs/CREATE-THIS-SPEC.md` (§0–§18) plus the design system `docs/DESIGN-SYSTEM.md`.
+`docs/` contains guides 01–16, the `web-wallet`, `android-wallet` and `mainnet` documentation, and the canonical guide `docs/CREATE-THIS-SPEC.md` (§0–§19) plus the design system `docs/DESIGN-SYSTEM.md`.
 
 Other named documents are `docs/CAPABILITY-MAP.md`, `docs/archive/branch-audit.md`, `docs/EXTERNAL-TOOLS.md` and `docs/archive/mainnet-gap-assessment.md`.
 
@@ -149,6 +149,7 @@ Update this map when components, boundaries or invariants change—not for every
 
 ## Change notes
 
+- 2026-11-28 (docs audit, Lane A): base commit moved to the token-gaps tip `ceade79` — honest remains (`ff63077` BSC third RPC, `3db591e` dashboard 43 linked rows, `1253bf6` BNB header icon, `98f6ad9` + `ceade79` docs); live site republished from this tip (gh-pages `c0cf697`, serving `index-Brm7r34g.js`, root 200); web gates at `1253bf6` (vitest 3,429 passed + 5 skipped, 129 files; total JS 4,509,662 / 6,000,000). Android Step 4 done (`f9f312b`, AAR in-tree, `ENGINE_BINDING_AVAILABLE` now `true`); the spec is now §0–§19.
 - 2026-11-28 (Lane C, README-preview lane): base commit moved to the token-gaps tip `7f24ef1` — fix programme (`f77b803`–`4adbd30`: change password, remove token, Activity switcher, wallets rename/delete, chart retry + Coinbase fallback, watch-only balances + TRON fallback, Gnosis history), mobile-overflow fix (`aea4b58`) and Receive QR-card redesign (`fec71be`); history coverage 17 -> 18 chains (Gnosis via gnosisscan.io); Android Step 4 done (`f9f312b`, AAR in-tree, `ENGINE_BINDING_AVAILABLE` now `true`); web gates re-verified first-hand on loud-stone (Node 22): build PASS, total JS 4,509,097 / 6,000,000, vitest 3,416 passed + 5 skipped (129 files, 0 failures). Live site still serves `734cfef` until this tip is republished.
 - 2026-11-28 (docs-currency Lane A): base commit moved to the token-gaps tip `734cfef`; Android Step 3 done (data layer, `e20cee6`), Step 4 running (owner-authorized, not done); web gates re-verified (vitest 3,351 passed + 5 skipped, bundle 4,482,622 / 6,000,000).
 - 2026-11-27 (docs-currency Lane 2): base commit moved to the token-gaps tip; registry validator now passes (exit 0, fixed at `2a0fa75`); Android JSON export exists and the toolchain builds the app — steps 3–6 blocked, not the toolchain; `broadcastSigned` returns `{ status: 'disabled' }` (this file already said so — the spec's "throws" wording was the wrong one).

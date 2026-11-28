@@ -10,6 +10,24 @@ file reference below was checked live on 2026-11-23 — on the repository
 itself or against the live endpoint — not guessed. Where a claim could
 not be checked, the document says so instead of filling the gap.
 
+> **Status update (2026-11-28, Lane A docs audit, token-gaps `ceade79`).**
+> The body below is the 2026-11-23/24 Lane E record, left as written.
+> What has changed since: **Gap 1 — Gnosis fixed** (`d06a224`,
+> 2026-11-28, keyless gnosisscan.io): history now covers **18 chains**,
+> and the four still blocked are **BSC, opBNB, Metis, Fantom** (the
+> "five remain" in the summary table and in "Decisions needed" §1, and
+> the "17 verified / five blocked" in the §3 guide-update note, are
+> the pre-Gnosis state). The "16 EVM chains" framing in §1 is the
+> curated-22 era — the tree now wires **61 EVM chains**. **Gap 8 —
+> the dashboard Retry is gone:** the fix programme (`3db591e`,
+> `docs/DECISIONS.md` §47) made every main-list row a link in every
+> state, so the "single remaining Retry (`retryCount: 1`)" measured
+> 2026-11-23 no longer exists. **Gap 19 — Receive tagline kept:**
+> "Share the card, keep the keys." stays on every QR card
+  (`QR_CARD_FOOTER`, `payment-links.ts:770`); the Networks "Mainnet
+  only" copy pick is still open. Everything else in the summary table
+  stands as recorded.
+
 ## How to read it
 
 Status words mean the same thing throughout:

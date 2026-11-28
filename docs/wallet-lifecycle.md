@@ -35,7 +35,9 @@ create / restore vault → unlock → derive addresses → refresh balances/hist
    (`apps/web/src/wallet/adapters/`). They run in the background after
    unlock, so the wallet shows immediately. A failed background refresh
    leaves the per-chain error/unavailable state (or the previous state);
-   the gated Retry buttons re-run it (dashboard hero only when every balance failed; history only when the wallet/chain has activity). Refresh
+   the gated Retry buttons re-run it (dashboard: one list-level Retry
+   when at least one balance failed, never per-row; history: only when
+   a failed chain has an address to refetch). Refresh
    is explicit: there is no automatic recovery, no silent retry in the
    transport (ADR-0009), and a failed fetch is never reported as zero.
    See `docs/runbooks/refresh-failure.md` for the failure states.
@@ -48,9 +50,12 @@ create / restore vault → unlock → derive addresses → refresh balances/hist
    signatures, never key bytes. Signing never touches the network.
 7. **Broadcast — DISABLED.** Broadcast is built but disabled by standing
    owner order (`BROADCAST_DISABLED_MESSAGE` in
-   `apps/web/src/wallet/adapters/types.ts`). No send has ever run on any
-   network. A pending broadcast is never auto-resubmitted: if a broadcast
-   outcome is unknown, it stays unknown (`markBroadcastUnknown`).
+   `apps/web/src/wallet/adapters/types.ts`). No send has ever run on
+   token-gaps on any network. (Devnet TON test sends ran on the
+   separate `panel-rebuild/devnet-temp` branch — see
+   `docs/DEVNET-ISSUES.md` — not on token-gaps.) A pending broadcast
+   is never auto-resubmitted: if a broadcast outcome is unknown, it
+   stays unknown (`markBroadcastUnknown`).
 8. **Explicit history refresh.** After any send attempt, history is
    re-read explicitly. There is no background poller that would turn an
    unknown broadcast into a presumed success.

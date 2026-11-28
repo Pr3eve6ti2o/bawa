@@ -63,7 +63,7 @@ Both are confirmation policies, not finality guarantees. BTC (6) and ETH
 
 - No transaction-reconciliation adapter exists yet (no `reconcileTx`, no
   `NetworkConfig.kt`, no testnet adapters; TON
-  `txid` is `null` per MAINNET-GUIDE §12). Balance/history chain-data
+  `txid` is `null` per MAINNET-GUIDE §12). (Note 2026-11-28, docs-audit-b: "no `NetworkConfig.kt`" refers to this web module — Android `:core` has its own `NetworkConfig.kt` since Step 4, a testnet connectivity config plus adapter contracts, which is a separate port, not this adapter.) Balance/history chain-data
   adapters do exist (`apps/web/src/wallet/adapters/`). This module evaluates
   observations only; fetching them and wiring the evaluator into a live
   send/receive flow is a separate follow-up.
@@ -77,6 +77,6 @@ Both are confirmation policies, not finality guarantees. BTC (6) and ETH
   with `ConfirmationPolicyTest.kt`); the Android constants in
   `DerivationPolicy.kt` are untouched.
 - `ai/profiles/web-wallet.md` now states the policies as implemented-but-unwired
-  (updated 2026-11-28, docs-currency pass, HEAD 734cfef); the CLI profiles
+  (updated 2026-11-28, docs-currency pass, HEAD 734cfef; current HEAD ceade79, docs-audit-b 2026-11-28); the CLI profiles
   retain the "not enforced in code" statement in their own scope, where it
   still holds.

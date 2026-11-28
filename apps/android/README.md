@@ -3,7 +3,7 @@
 This is a watch-only Android wallet built on the UI layer of the Tether WDK Starter Kotlin foundation
 (Apache-2.0, pinned at `a4fa2172`; see [upstream notes](../../templates/android/UPSTREAM.md)).
 It validates extended public keys; it never generates, stores or displays a mnemonic, seed, private key,
-private extended key, vault key or data key. It derives no address on-device.
+private extended key, vault key or data key. It derives no address on-device yet: the Trust Wallet Core 4.8.4 AAR is wired into :core (Step 4, f9f312b), but on-device derivation has never been exercised (the on-device fixture gate has never run).
 
 ## Layout (Phase 2 makeover)
 
@@ -28,7 +28,7 @@ The 14-screen contract is unchanged; only the navigation container differs from 
 - **Tokens:** Bawa Balanced direction-04 (`ui/BawaTheme.kt`), the same tokens as web adapted for the
   dark Android shell: background `#0B1326`, surface `#11172B`, raised `#243454`, border `#263454`,
   text `#EFF2FC`, muted `#AAB5D1`, accent violet `#8B7CFF` (primary on dark), primary-solid `#6258D9`
-  for filled buttons with white text. Chain tints: BTC `#F7931A`, ETH `#627EEA`, TRX `#FF0013`.
+  for filled buttons with white text. Chain tints: BTC `#F7931A`, ETH `#627EEA`, TRX `#FF0013`. (Update 2026-11-27, docs/DECISIONS.md §34: the owner picked style B — polished financial — as the wallet's direction; these direction-04 tokens are still in code pending the Android style pass.)
 - **Navigation:** `WalletViewModel` keeps a back stack — `navigate()` pushes, `goBack()` pops (system
   back included) and falls back to each screen's fixed parent when the stack is empty.
 
@@ -49,8 +49,8 @@ the `system-images;android-35;google_apis;x86_64` system image. The VM toolchain
 the repo; [docs/android-evidence.md](../../docs/android-evidence.md) records the exact paths.
 `JAVA_HOME` must point at a JDK 17 and `ANDROID_HOME` at the SDK.
 
-We use Gradle 8.7 because it is the foundation's wrapper. The local draft's 8.9 is unproven,
-and its `:core` assumes a non-existent AAR.
+We use Gradle 8.7 because it is the foundation's wrapper. The local draft's 8.9 is unproven.
+(Update 2026-11-28, docs-audit-b: Step 4, f9f312b, built the Trust Wallet Core 4.8.4 AAR from source and wired it into `:core`; the "non-existent AAR" premise no longer holds.)
 
 From the repository root, substitute your toolchain paths:
 
@@ -80,8 +80,8 @@ Open the installed app from the emulator's launcher.
 
 ## What is mock or unavailable
 
-- **On-device address derivation:** open. No Trust Wallet Core AAR is available to this starter for any version. The app validates extended public keys and displays paths only.
-- **Balances, prices and transaction history:** mock or unavailable. No provider has been selected.
+- **On-device address derivation:** open. The Trust Wallet Core 4.8.4 AAR is wired into :core (Step 4, f9f312b; ENGINE_BINDING_AVAILABLE true), but on-device derivation has never been exercised (the on-device fixture gate has never run). The app validates extended public keys and displays paths only.
+- **Balances, prices and transaction history:** mock or unavailable. The Step 3 data layer is in place (87 chains, 169 RPCs, 21 tokens bundled), but no provider has been selected and no network calls are made yet (Step 5).
 - **Sending, signing and broadcast:** not implemented. There is no signing code.
 - **Wallet creation on-device:** unavailable. Use [tools/make_wallet.py](../../tools/make_wallet.py) or [tools/hdwallet-gen/generate.js](../../tools/hdwallet-gen/generate.js) outside the app, then import only an extended public key.
 - **TON:** generation-only in repository policy; unsupported by the Android starter.
@@ -106,7 +106,7 @@ on-device derivations or live confirmation checks.
 - Imported xpubs live in memory only in `ui/WalletViewModel.kt`; they are not persisted. Treat them as privacy-sensitive public data.
 - Lock is a UI state only, not a security boundary.
 - No secrets reach telemetry or any provider: there is no telemetry and no provider.
-- The app requests no `INTERNET` permission.
+- The app requests `INTERNET` permission (declared in `AndroidManifest.xml` since Step 3, for the Step 5 network stack; the app makes no network calls yet).
 - Backups disabled (T47): `android:allowBackup="false"` — wallet data must never
   leave the device in a cloud or adb backup.
 - Screenshots blocked (T47): `MainActivity` sets `FLAG_SECURE`, so receive QR codes
@@ -121,7 +121,7 @@ on-device derivations or live confirmation checks.
 
 Paths below are relative to `app/src/main/java/com/bawa/wallet/`.
 
-- `ui/` — vendored WDK UI components, plus `BawaTheme.kt` (Bawa Balanced tokens + theme).
+- `ui/` — vendored WDK UI components, plus `BawaTheme.kt` (Bawa Balanced tokens + theme — direction-04 tokens still in code; style B picked 2026-11-27, §34, not yet applied to the Android theme).
 - `ui/screens/` — 14 screens in `WelcomeScreens.kt`, `PortfolioScreens.kt` and `ManagementScreens.kt`.
 - `ui/WalletViewModel.kt` — in-memory xpub state, UI-only locking, navigation back stack, hide-balance toggle.
 - `core/` — pure-Kotlin validation in `ExtendedKeyValidator.kt`; derivation and confirmation policy in `DerivationPolicy.kt`.

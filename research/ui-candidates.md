@@ -6,7 +6,7 @@ Part A records the Web candidates and local Web draft for the Bawa AI Wallet Bui
 
 **Evidence date: 2026-11-10.** Inspections below are marked **verified first-hand 2026-11-10**. Review pins are the inspected SHAs.
 
-**Status (2026-11-28 docs pass, HEAD `734cfef`):** this is a dated Phase 5 research record. Phases 6–7 are done: the Web starter exists in `apps/web` (19 screens at HEAD `734cfef`, up from the 14-screen contract) and the Android starter builds (`./gradlew assembleDebug`, Step 3 APK 53,712,159 bytes, e20cee6). The visual direction recorded below (Bawa Balanced — STYLE-04) is superseded: the owner picked style B (polished financial) on 2026-11-27 (docs/DECISIONS.md §34). The Android AAR is still open — Step 4 (Trust Wallet Core 4.8.4 AAR from the cloned source) is running, owner-authorized 2026-11-28, not done. The inspection evidence below (pins, licences, trees) stands as the 2026-11-10 record.
+**Status (2026-11-28 docs-audit-b, HEAD `ceade79`):** this is a dated Phase 5 research record. Phases 6–7 are done: the Web starter exists in `apps/web` (19 screens at HEAD `ceade79`, up from the 14-screen contract) and the Android starter builds (`./gradlew assembleDebug`, Step 3 APK 53,712,159 bytes, e20cee6; Step 4 APK 133,308,894 bytes, f9f312b). The visual direction recorded below (Bawa Balanced — STYLE-04) is superseded: the owner picked style B (polished financial) on 2026-11-27 (docs/DECISIONS.md §34). Step 4 is DONE (2026-11-28, f9f312b): the Trust Wallet Core 4.8.4 AAR was built from the cloned source and wired into :core (ENGINE_BINDING_AVAILABLE true); on-device derivation has still never been exercised (fixture gate never run). The inspection evidence below (pins, licences, trees) stands as the 2026-11-10 record.
 
 The review covered upstream commit metadata, pinned trees and licence files; token-ui source, demo structure and exclusion checks; and the local Web draft's source and test-file counts. The shadcn/ui inspection did not extend beyond tree and licence, apart from the commit metadata recorded below. Uninspected wallet-screen coverage and build compatibility remain **OPEN**. The draft's claimed screen count was not re-counted.
 
@@ -307,7 +307,7 @@ UX-security and accessibility references for **Phase 9**.
 | Android foundation | **SELECTED: AND-01**, Tether WDK Starter Kotlin | **UI layer only**; remove the WDK engine dependency and excluded implementation. Real Gradle build verification is required in Phase 7. |
 | Draft treatment — Web | **OPEN in this record** | No draft-specific Web retain/adapt/replace decision is established here. The verified decision is the `token-ui` starter; that does not establish the treatment of any existing Web draft. |
 | Draft treatment — Android | **ADAPT, UI only** | WDK UI-only supplies the new shell; reuse reviewed draft UI where it fits. Acceptance is gated by Phase 7 build verification. Engine packaging, the missing AAR and Phase 4 binding remain **OPEN**. |
-| Visual direction | **Bawa Balanced — STYLE-04** remains the default | Pre-approved. All five directions are design references only, not implementation foundations. |
+| Visual direction | **Bawa Balanced — STYLE-04** remains the default (2026-11-28, docs-audit-b: superseded — the owner picked style B, polished financial, 2026-11-27, docs/DECISIONS.md §34) | Pre-approved. All five directions are design references only, not implementation foundations. |
 | Licence posture | Retain the verified licence distinctions; research-only entries remain excluded from selection | AND-01–03: Apache-2.0. Edge: BSD-3-Clause, research only. XChain: AGPL-3.0-or-later, pin verified 2026-11-12, and no copying before an explicit licensing decision. AND-04 and OWASP/WCAG licence details remain **OPEN**. |
 
 ## Handoff to Phases 6–7
@@ -317,7 +317,7 @@ UX-security and accessibility references for **Phase 9**.
 1. Start from `token-ui`.
 2. Replace mock data with the engine boundary.
 3. Build the 14 screens.
-4. Keep Bawa Balanced (STYLE-04) as the default visual direction; the five directions remain design references only.
+4. Keep Bawa Balanced (STYLE-04) as the default visual direction (2026-11-28, docs-audit-b: superseded — style B picked 2026-11-27, docs/DECISIONS.md §34); the five directions remain design references only.
 
 No additional Web-draft disposition is inferred from the foundation choice.
 
@@ -333,9 +333,9 @@ No additional Web-draft disposition is inferred from the foundation choice.
 
 ### What stays OPEN
 
-- **Android build verification:** not established by this research. The local draft has produced no AAR or APK. (2026-11-28: superseded — APKs are produced; Step 3 APK 53,712,159 bytes, e20cee6. The AAR is still open; Step 4 build running, owner-authorized 2026-11-28.)
-- **Engine packaging and missing Android AAR:** remain unresolved. UI replacement or a UI build must not be treated as automatic closure. (2026-11-28: still open; Step 4 AAR build running, owner-authorized 2026-11-28, not done.)
-- **Phase 4 binding:** remains **OPEN**, despite Phase 4 being done.
+- **Android build verification:** not established by this research. The local draft has produced no AAR or APK. (2026-11-28, docs-audit-b: superseded — APKs are produced; Step 3 APK 53,712,159 bytes, e20cee6; Step 4 APK 133,308,894 bytes, f9f312b. The AAR exists since Step 4, f9f312b; on-device derivation still unexercised.)
+- **Engine packaging and missing Android AAR:** remain unresolved. UI replacement or a UI build must not be treated as automatic closure. (2026-11-28, docs-audit-b: the AAR packaging is resolved — Step 4, f9f312b, built the 4.8.4 AAR from source and wired :core to it. On-device derivation via the binding is still unverified; UI replacement or a UI build must not be treated as automatic closure.)
+- **Phase 4 binding:** remains **OPEN** as an on-device-verification item, despite Phase 4 being done. (2026-11-28, docs-audit-b: the binding to the 4.8.4 AAR now exists — ENGINE_BINDING_AVAILABLE true, CoreWalletEngine compiles against it — but the on-device fixture gate has never run, so derivation via the binding is unverified.)
 - **Draft test runtime count:** the claimed `55/55` has not been re-verified here.
 - **Web-draft treatment:** no draft-specific disposition is established in this record.
 - **AND-02:** current Gradle/Compose compatibility.

@@ -129,10 +129,9 @@ Selection of the foundation does not waive its UI-only boundary or establish tha
   WDK starter repo and the starter does not build with it) and every
   WdkCore import. The local draft's vault, signing, broadcast, adapter
   and `:core` (GitHub Packages AAR) code was NOT adopted — it assumes a
-  Trust Wallet Core AAR that does not exist for any version.
+  Trust Wallet Core AAR that does not exist for any version. (Update 2026-11-28, docs-audit-b: Step 4, f9f312b, built the 4.8.4 AAR from source and wired `:core` to it; the premise no longer holds. The GitHub Packages AAR route remains unadopted.)
 - Gradle 8.7 was chosen over the draft's 8.9 because 8.7 is the
-  foundation's wrapper; the draft's 8.9 is unproven and its `:core`
-  assumes the non-existent AAR.
+  foundation's wrapper; the draft's 8.9 is unproven. (Update 2026-11-28, docs-audit-b: `:core` no longer assumes a non-existent AAR — Step 4, f9f312b, built the 4.8.4 AAR from source and wired it in.)
 - Delivered: the 14 screens (docs/14 §5.1) as watch-only Compose screens,
   a watch-only ViewModel (xpubs in memory only; lock is a UI state only),
   a pure-Kotlin extended-key validator (base58check, checksum, private

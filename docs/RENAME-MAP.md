@@ -120,6 +120,12 @@ two, found by grep before moving): `apps/web/src/app/app.tsx:20`
 No other file imports `./create` (route strings such as `/create` are URL
 paths, not module paths, and are unchanged).
 
+**Note (2026-11-28, Lane A docs audit):** `create-hub.tsx` no longer
+exists at token-gaps `ceade79` — the `/create` hub was deleted in P0
+(2026-11-27, `33f1ff1`); there is one "Create wallet" button going
+straight to `/create-wallet`, and no `/create` route. The rename above
+is the 2026-11-20 record.
+
 ## 5. `apps/web` verification reports → `docs/archive/web-verification-2026-11-20/`
 
 | Old path | New path |
@@ -287,6 +293,13 @@ verbatim-preserved file must not be edited. Every other link resolves
 from `check-links`, or accept the 2 broken links as the known cost of the
 renames. Nothing else is broken — the same two paths are the only stale
 links in the tree.
+
+**Resolved (2026-11-28, Lane A docs audit):** the first option was
+taken — `tools/check-links.py` now excludes `docs/README-FULL.md`
+("Verbatim-preserved historical snapshots ... Excluded from the link
+check"), and `python tools/check-links.py` reports OK (181 files) at
+token-gaps `ceade79`. The 2 stale links still sit in the verbatim file
+by design; they are not checked.
 
 ## Verification per batch
 

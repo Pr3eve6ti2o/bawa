@@ -88,6 +88,17 @@ serve nothing.
 
 ## Still open
 
+**Resolved since (2026-11-28, Lane A docs audit):** TON Issue 5
+(first-send state init) is CLOSED with live proof and Issue 6
+(`/track` TON message-hash resolution) is FIXED — see
+`docs/DEEP-AUDIT-DEVNET-PROGRAMME.md` Lane B (2026-11-23). Item 7's
+`create-hub.tsx` no longer exists — the `/create` hub was deleted
+in P0 (2026-11-27, `33f1ff1`); bulk account creation lives in
+`wallet-management.tsx`. The GitHub Pages preview now serves the
+token-gaps build (`1a85258`, `index-B9gxTjOm.js`), not the saved
+adopt-proper build named in "Preview / Pages pointers" below.
+The remaining items below are as recorded 2026-11-23 unless noted.
+
 - E2E-03/06 need a stable-network run; non-zero DOGE watch-row render
   unproven; 1919 settled widths not captured (open from token-gaps).
 - TON Issue 5 (first send from a fresh wallet cannot deploy — no state

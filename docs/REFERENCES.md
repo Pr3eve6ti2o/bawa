@@ -2,6 +2,15 @@
 
 These are the primary specifications and upstream projects Bawa relies on. Re-check current implementation behavior before production releases.
 
+Link check 2026-11-28 (Lane A docs audit, from loud-stone): every link
+below resolves or answers as a live service, except the npmjs,
+Routescan and CoinGecko web pages, which return 403 from the shared
+egress IP (bot protection, not a dead link), and the CoinGecko API,
+which rate-limits the shared IP (429). The two BSC dataseeds answer
+`eth_chainId` `0x38` — their root-path 404 is expected for JSON-RPC
+endpoints, as is the CoinGecko API root 404 and the Bitget Agent API
+root 404.
+
 ## Standards
 
 - BIP-32 — https://bips.dev/32/

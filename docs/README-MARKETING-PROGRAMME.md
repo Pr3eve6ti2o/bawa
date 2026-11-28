@@ -96,6 +96,13 @@ RPC/price work).
   the stale 217 figure — flagged here, not changed in this programme.
 - **A11 Showcase slot — omitted.** Shape only; no builder run was done,
   so nothing was published. Needs a real `build-wallet.mjs` run + capture.
+- **217 figure flag — resolved (2026-11-28, Lane A docs audit).** The
+  "docs/index.md and docs/CAPABILITY-MAP.md still carry the stale 217
+  figure" note below is spent: `docs/index.md` no longer carries 217,
+  and `docs/CAPABILITY-MAP.md`'s 2026-11-25 update note records
+  "engine smoke 217 (now 440)". The remaining 217 in that file sits
+  inside the dated 2026-11-20 update note, which is a record of what
+  was true at `e493720`.
 - **A14 Community & support — omitted.** GitHub Discussions is disabled
   for this repo (`has_discussions: false`, GitHub API, 2026-11-24). No
   forum, chat or Telegram group for Bawa was found, and none was invented.

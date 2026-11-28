@@ -14,7 +14,7 @@ components/avatar, checklist-card, form, popover, progress, radio-group,
 select, separator, sheet, table, toggle, and hooks/use-mobile. They are
 still upstream; re-copy from token-ui if a screen needs one.
 
-Current state (2026-11-28 docs pass, HEAD `734cfef`): `src/ui/components/`
+Current state (2026-11-28 docs-audit-b, HEAD `ceade79`): `src/ui/components/`
 holds 21 components and `hooks/` is gone entirely. The 65-component copy
 count above is the Phase 6 event, not the current tree — later lanes
 removed further vendored files without itemising them here; the

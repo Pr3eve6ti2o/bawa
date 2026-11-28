@@ -13,6 +13,19 @@ During this phase main advanced to b438d3a7 (H7); the H6-to-H7 diff is two files
 only (derive_daemon.js and test/smoke.test.js — the daemon fix), and the suite
 was re-run at H7: 92 checks, 0 fail. See the post-draft updates below.
 
+Further supersessions (2026-11-28, Lane A docs audit, token-gaps `ceade79`):
+the §1.3/§5.6 "no vulnerability-disclosure procedure or private reporting
+contact" item is closed — root `SECURITY.md` now carries a disclosure
+procedure (GitHub private vulnerability reporting, verified at
+`SECURITY.md:76`); the §1.3/§4.6 "No AAR or APK has ever been produced" is
+closed — Trust Wallet Core 4.8.4 AAR built from source (Android Step 4,
+`f9f312b`, in-tree, `ENGINE_BINDING_AVAILABLE` true) and a debug APK
+(53,712,159 bytes) built, installed and launched on an emulator (Step 3,
+`e20cee6`); the daemon validation defects (§1.3/§5.1) were fixed at H7
+(`b438d3a7`) per post-draft update 2. The body below remains the
+2026-11-10 Phase 0/1 record; read its PROPOSED/OPEN statuses as of that
+date, not as today's state.
+
 Standing approval (owner, 2026-11-10 about 03:49 IST): proceed through ALL
 phases (0–10) without stopping for approval between phases. The plan is a
 starting point, not a gate. Lanes commit locally only and never push; Orion

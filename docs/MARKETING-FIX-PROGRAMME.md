@@ -284,6 +284,25 @@ Owner decision needed: keep 136 or restore 192.
 
 ## Still open / needs the owner's decision
 
+**Resolved since (2026-11-28, Lane A docs audit):** (1) the 136/192
+QR question is superseded — the QR card was flattened to polished
+style B with 7 templates A–G and QR codes at 60–62% of card width
+(QR-card programme); (2) the DOGE row Retry is gone — zero per-row
+Retry buttons, one list-level Retry only when at least one balance
+failed (P0, `3db591e`); (3) the 980 px breakpoint is merged
+(shell-only, `34849a2`); (4) the refresh re-wire is moot —
+`wallet-refresh.ts` was deleted by fix-all Lane H (823 lines);
+(5) devnet fiat suppression was a bug and was fixed by fix-all Lane
+H; (7) the `/create` hub is deleted (P0, `33f1ff1`) — one "Create
+wallet" button straight to `/create-wallet`, so the "Coming soon"
+cards question is gone with it; (8) partly — Gnosis and Linea
+history are fixed (keyless gnosisscan.io `d06a224`, Linea Etherscan
+V2 with retry), leaving 4 history-blocked chains (bsc, opbnb,
+metis, fantom), and Fantom pricing now has a CoinLore leg. Items
+6 (Receive QR on step 1), 9 (reference-repo link) and 10 (live
+camera scan; review/sign CDP-unverified) are still open, as is the
+keyed-indexer decision in item 8.
+
 1. Main QR 136 px vs the 192 px spec (see merge note).
 2. DOGE row Retry — keep it or remove per-row balance Retries entirely;
    DOGE provider path (no working browser fallback when SoChain rate-limits).

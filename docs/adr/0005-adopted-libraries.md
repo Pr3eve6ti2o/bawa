@@ -32,6 +32,8 @@ accepted
 
 Amendment (2026-11-26, guide-update pass): `dinero.js` 2.0.2 was removed by token-verify Lane C (2026-11-24) — the fiat-display role moved to the BigInt `decimal.ts`, which replaced both `decimal.js` and `dinero.js` at runtime; `decimal.js` 10.6.0 stays as the differential-test oracle. The Context and Decision entries above are annotated, not deleted, so the adoption history stays readable.
 
+Amendment (2026-11-28, Lane A docs audit): `decimal.js` 10.6.0 and `mnemonic-words` 2.0.0 are `apps/web` **devDependencies** (test oracles), not runtime dependencies — the Decision entries above saying "dependency" are corrected here, not rewritten. The live price feed now exists (CoinGecko, ADR-0007), so the "Fiat utilities have no live call site yet (no price feed)" consequence below no longer holds; ADR-0007's Consequences record the live call site.
+
 ## Consequences
 
 - All six libraries use the exact versions listed above, not version ranges.

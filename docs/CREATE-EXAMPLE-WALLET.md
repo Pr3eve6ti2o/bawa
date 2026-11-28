@@ -1,6 +1,6 @@
 # Create the example web wallet
 
-_Last verified: 2026-11-28, from `panel-rebuild/token-gaps` at `734cfef` (Node v22.23.4; `npm ci` 0 vulnerabilities; `npm run build` exit 0, total JS 4,482,622; live site root 200 serving `index-BxW-qfX0.js`, gh-pages `43fe69f`). The Welcome screen render in headless Chromium (Create, Import and Watch-a-wallet options) and the preview-root / `wallet-core.wasm` 200s were verified 2026-11-27 at `33f1ff1`._
+_Last verified: 2026-11-28, from `panel-rebuild/token-gaps` at `ceade79` (Node v22.23.4; `npm run build` exit 0, total JS 4,509,662 at `1253bf6`; live site root 200 serving `index-Brm7r34g.js`, gh-pages `c0cf697`). The Welcome screen render in headless Chromium (Create, Import and Watch-a-wallet options) and the preview-root / `wallet-core.wasm` 200s were verified 2026-11-27 at `33f1ff1`._
 
 ## What you will have
 
@@ -61,7 +61,11 @@ npm run preview
 
 Expected: Vite preview serves the built app at `http://localhost:4173`.
 For development with hot reload, run `npm run dev` instead and open
-`http://localhost:5173`.
+`http://localhost:5173`. Note (2026-11-28): wallet creation under `npm run dev` was broken — the wallet-core
+WASM 404d in dev (dev serves `public/` under `/bawa/` while `<base href="/">`
+made the loader request `/wallet-core.wasm`) — and is fixed at token-gaps `ae07a45`
+(2026-11-28); `npm run dev` now serves the WASM under `/bawa/` and wallet
+creation works.
 
 ### Step 5: Open it in the browser
 

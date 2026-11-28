@@ -1,6 +1,6 @@
 # M-35 — Small-Amount Mainnet Rehearsal Procedure (reviewed draft)
 
-> **DO NOT EXECUTE — FUNDING DECLINED (owner, 2026-11-13; re-checked 2026-11-28, token-gaps `734cfef`).** The owner declined to fund the four rehearsal addresses in §2. Those addresses are retired and must never be funded; the isolated test credentials were destroyed. This document is retained as a reviewed draft only — its funding and execution preconditions can no longer be met, and M-35 stays closed unless the owner separately re-authorises it. Do not fund any address in §2.
+> **DO NOT EXECUTE — FUNDING DECLINED (owner, 2026-11-13; re-checked 2026-11-28, token-gaps `ceade79`).** The owner declined to fund the four rehearsal addresses in §2. Those addresses are retired and must never be funded; the isolated test credentials were destroyed. This document is retained as a reviewed draft only — its funding and execution preconditions can no longer be met, and M-35 stays closed unless the owner separately re-authorises it. Do not fund any address in §2.
 
 > **Status of this document:** DRAFT for review. It is the reviewed
 > small-amount procedure required by the M-35 clearance condition

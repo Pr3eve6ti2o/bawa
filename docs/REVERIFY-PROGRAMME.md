@@ -361,6 +361,26 @@ item 10, commit `b089c28`).
 
 ## Still open
 
+**Resolved since (2026-11-28, Lane A docs audit):** (1) the
+SOL/LTC/DOGE history discrepancy is closed — the registry now
+records history I&V for 17 chains including sol, doge and ltc
+(`registry/capabilities.json`, v4); the `send.ts`/`core.ts` split
+is done — marketing-fix Lane 2 created `wallet/signing-intent.ts`;
+the `wallet-refresh.ts` re-wire is moot — fix-all Lane H deleted
+`wallet-refresh.ts` (823 lines); the four unwired modules
+(`engine/destination.ts`, `wallet/adapters/confirmation.ts`,
+`wallet/evm-typed-data.ts`, `wallet/secret-handoff.ts`) were all
+deleted by fix-all Lane H; the 7 orphaned `@radix-ui/*` packages
+plus `react-hook-form` are gone (5 Radix packages remain: checkbox,
+label, slot, switch, tabs); the E2E harness was fixed by deep-audit
+Lane E; devnet Issues 5 and 6 are closed/fixed (deep-audit Lane B);
+the Receive tagline was restored by fix-all Lane H; the README
+mobile dashboard shot was re-shot clean (marketing-fix Lane 4);
+GitHub Pages now serves the token-gaps build (`1a85258`), not the
+saved `67c48e2` build. Still open: the reference-repo link, the
+jscpd consolidation candidates, and the remaining O-01–O-12 items
+not listed here (see `docs/REVERIFY-CHECKLIST.md`).
+
 - **Lane 3's three discrepancies, recorded not resolved:**
   (1) SOL/LTC/DOGE history: `chains.ts` records history verified,
   `registry/capabilities.json` records it NOT_SUPPORTED for all 18

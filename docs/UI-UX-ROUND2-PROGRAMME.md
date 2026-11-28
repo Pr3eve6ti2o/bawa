@@ -120,6 +120,19 @@ its vite config change was reconciled into this tree instead.
 
 ## Still open
 
+**Resolved since (2026-11-28, Lane A docs audit):** the Receive
+tagline was restored by fix-all Lane H ("This is your address —
+share the drawing, keep the keys."; the QR card footer is now
+"Share the card, keep the keys."); TON Issue 5 is CLOSED with live
+proof and Issue 6 is FIXED (see
+`docs/DEEP-AUDIT-DEVNET-PROGRAMME.md` Lane B, 2026-11-23); the E2E
+harness was fixed by deep-audit Lane E (root-base `build:e2e` +
+`preview:e2e`) and E2E has run on later merged trees; the GitHub
+Pages preview now serves the token-gaps build (`1a85258`,
+`index-B9gxTjOm.js`), not the saved adopt-proper build named in
+"Preview / Pages pointers" above. The remaining items below are as
+recorded 2026-11-23 unless noted.
+
 - E2E harness versus `base: '/bawa/'` — needs a decision (see Gates).
 - The camera path itself is unverified on a real device (items 1
   and 9): headless Chromium denies `getUserMedia`, so the live camera
