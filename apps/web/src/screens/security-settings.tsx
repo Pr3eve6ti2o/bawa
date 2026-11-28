@@ -68,8 +68,16 @@ export function SecuritySettingsScreen() {
     setIsChanging(false);
     setRemovePassword("");
     setRemoveError(null);
-    setRemoveSuccess(null);
     setIsRemoving(false);
+    // F1: the remove-success line is hoisted outside the remove form so
+    // it stays visible after removal. Removal flips vaultHasPassword to
+    // false, which runs this reset — clearing the line here would erase
+    // the confirmation the moment it succeeds. Only clear it when a
+    // password is set again (or the vault is gone), so a stale line
+    // never survives re-setting a password.
+    if (vaultHasPassword || vaultState === "no-vault") {
+      setRemoveSuccess(null);
+    }
   }, [vaultState, vaultHasPassword]);
 
   // Lane E item 1e (broken): there was no change-password control
@@ -352,12 +360,6 @@ export function SecuritySettingsScreen() {
                 </p>
               )}
 
-              {removeSuccess && (
-                <p role="status" className="text-base leading-6">
-                  {removeSuccess}
-                </p>
-              )}
-
               <Button type="submit" disabled={isRemoving} flat>
                 {isRemoving ? "Removing…" : "Remove password"}
               </Button>
@@ -388,6 +390,18 @@ export function SecuritySettingsScreen() {
           </li>
         )}
       </ul>
+
+      {/* F1: section-level, not inside the password-gated remove form —
+          that form unmounts the moment removal succeeds, taking the
+          success line with it. Placed just below the list, where the
+          remove form was, so it is in view right after removal. Gated
+          on hasVault so a stale line never shows after the vault is
+          deleted. */}
+      {hasVault && removeSuccess && (
+        <p role="status" className="mt-4 text-base leading-6">
+          {removeSuccess}
+        </p>
+      )}
 
       <p className="mt-4 text-sm text-muted-foreground">
         Bawa Web Wallet · Version {APP_VERSION}

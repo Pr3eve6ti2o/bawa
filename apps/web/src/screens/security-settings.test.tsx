@@ -140,6 +140,17 @@ async function mountScreen() {
   });
   return {
     div,
+    // Re-render with the current useWallet mock, so a test can simulate
+    // the context flip removal causes (vaultHasPassword true -> false).
+    rerender: async () => {
+      await act(async () => {
+        root.render(
+          <MemoryRouter initialEntries={['/security']}>
+            <SecuritySettingsScreen />
+          </MemoryRouter>,
+        );
+      });
+    },
     cleanup: async () => {
       try {
         await act(async () => {
@@ -557,7 +568,7 @@ describe('security settings screen', () => {
     vi.mocked(changePassword).mockReset();
     vi.mocked(changePassword).mockResolvedValue(undefined);
     setWallet('unlocked');
-    const { div, cleanup } = await mountScreen();
+    const { div, rerender, cleanup } = await mountScreen();
     try {
       expect(div.textContent ?? '').toContain('Remove password');
       expect(div.textContent ?? '').toContain(
@@ -568,6 +579,19 @@ describe('security settings screen', () => {
       expect(verifyVaultPassword).toHaveBeenCalledWith('old password');
       expect(changePassword).toHaveBeenCalledWith('');
       expect(div.textContent ?? '').toContain('Password removed.');
+      // F1: in the real app removal flips vaultHasPassword to false,
+      // which unmounts the remove form. The success line is hoisted
+      // outside that form, so it must still be visible after the flip —
+      // alongside the durable "Set a password" form — not just
+      // transiently while the form is still mounted.
+      setWallet('unlocked', { vaultHasPassword: false });
+      await rerender();
+      expect(div.querySelector('#remove-current-password')).toBeNull();
+      expect(div.textContent ?? '').toContain('Set a password');
+      expect(div.textContent ?? '').toContain('Password removed.');
+      expect(div.textContent ?? '').toContain(
+        'Your wallet is now unprotected',
+      );
     } finally {
       await cleanup();
     }
