@@ -15,7 +15,7 @@ Bawa is an HD-wallet reference and command-line launcher for generating encrypte
 
 ## Showcase
 
-Real screenshots of the example web wallet running from the active development branch (`panel-rebuild/token-gaps`), taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. The shots below are the current live build — try it at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (bundle `index-Brm7r34g.js`, 87 chains, dashboard 43 rows).
+Real screenshots of the example web wallet running from the active development branch (`panel-rebuild/token-gaps`), taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. The shots below are the current live build — try it at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (bundle `index-B9gxTjOm.js`, 87 chains, dashboard 43 rows).
 
 <!-- Screenshots are served from the token-gaps branch via raw.githubusercontent.com so this page always shows the current wallet without duplicating images into main. To extend this grid, add a row to the table below: one image per cell, height="360" on every image so all shots render at the same height. -->
 
@@ -38,7 +38,7 @@ The earlier dashboard screenshots (`docs/images/web-wallet-dashboard-desktop.png
 
 ## Live wallet (current state)
 
-**Try it now: [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/)** — no install, no clone. It serves the latest build of the example wallet from `panel-rebuild/token-gaps` (`ceade79`, 2026-11-28; bundle `index-Brm7r34g.js`), not from `main`: `main` has no web wallet code.
+**Try it now: [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/)** — no install, no clone. It serves the latest build of the example wallet from `panel-rebuild/token-gaps` (`1a85258`, 2026-11-28; bundle `index-B9gxTjOm.js`), not from `main`: `main` has no web wallet code.
 
 What the live wallet is today (verified 2026-11-28):
 
@@ -47,7 +47,7 @@ What the live wallet is today (verified 2026-11-28):
 - **QR-card redesign:** polished flat style (the paper/comic treatment is kept only for the QR share-card templates and the Welcome illustration).
 - **Honest remains fixed:** BSC third RPC (DeFiBit), dashboard row count, BNB header icon (real chain logo, no fallback mark).
 - **Auto-lock is optional and off by default** (toggle plus duration on /security; 5-minute default when enabled).
-- **Still open at `ceade79`:** TRON USDT token-path PublicNode fallback, wallet creation under `vite dev` (WASM path), and a persistent path for `mmdc` (owner order 2026-11-28; fix in progress on `token-gaps`).
+- **Fixed 2026-11-28 (after `ceade79`, at `1a85258`):** TRON USDT token-path PublicNode fallback (Trongrid → PublicNode sweep), wallet creation under `vite dev` (base + favicon rebase now runs in dev and build), and a persistent path for `mmdc` (`docs/TOOLS.md` on `token-gaps`).
 
 ### Create your own
 
