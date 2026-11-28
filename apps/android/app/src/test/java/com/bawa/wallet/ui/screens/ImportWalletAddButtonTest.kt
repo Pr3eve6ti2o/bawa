@@ -38,7 +38,11 @@ class ImportWalletAddButtonTest {
         "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc"
 
     private fun openImportScreen() {
-        composeRule.onNodeWithText("Import a watch-only wallet").performClick()
+        // The button sits below the fold in the 320x470 test viewport:
+        // scroll it into view first, or the tap lands outside the window
+        // and is dropped silently (same as the Add button below), leaving
+        // the button off-screen so the assertion after it fails.
+        composeRule.onNodeWithText("Import a watch-only wallet").performScrollTo().performClick()
         composeRule.onNodeWithText("Import a watch-only wallet").assertIsDisplayed()
     }
 

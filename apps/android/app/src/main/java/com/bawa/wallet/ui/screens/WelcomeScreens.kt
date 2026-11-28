@@ -129,7 +129,9 @@ fun WelcomeScreen(vm: WalletViewModel) {
         SecondaryRow("Networks") { vm.navigate(Screen.NetworkSelection) }
         SecondaryRow("Manage wallets") { vm.navigate(Screen.WalletManagement) }
         SecondaryRow("Security") { vm.navigate(Screen.SecuritySettings) }
-        Text("Testnet by default; mainnet is out of scope.")
+        // Step 3: mainnet is the programme default — the 87 mainnet
+        // networks come from the registry; no provider is connected yet.
+        Text("Mainnet networks come from the registry; balances are not loaded yet.")
     }
 }
 

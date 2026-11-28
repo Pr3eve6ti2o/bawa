@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import com.bawa.wallet.core.Chain
 import com.bawa.wallet.core.ExtendedKeyValidator
 import com.bawa.wallet.core.ValidationResult
+import com.bawa.wallet.data.ChainRecord
+import com.bawa.wallet.data.ChainRegistry
+import com.bawa.wallet.data.TestnetRecord
+import com.bawa.wallet.data.TokenRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,10 +43,42 @@ enum class UiState { Loading, Empty, Ready, Error, Locked, GateFailed }
 /**
  * Holds validated extended public keys in memory only; persistence is OPEN.
  * On-device address derivation is OPEN and is not performed here.
+ *
+ * Step 3 data layer: the chain registry and token lists load from the
+ * generated export bundled in assets (built by MainActivity's factory).
+ * Both are optional so existing no-argument construction keeps working;
+ * with no registry the chains/testnets flows are empty and the screens
+ * fall back to their hardcoded labels.
  */
-class WalletViewModel : ViewModel() {
+class WalletViewModel(
+    private val chainRegistry: ChainRegistry? = null,
+    private val tokenRepository: TokenRepository? = null
+) : ViewModel() {
     private val _currentScreen = MutableStateFlow(Screen.Welcome)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
+
+    /** All 87 mainnet chains from the registry, in export order; empty when no registry was loaded. */
+    val registryChains: StateFlow<List<ChainRecord>> =
+        MutableStateFlow(chainRegistry?.allChains.orEmpty()).asStateFlow()
+
+    /** The 4 testnets from the registry; empty when no registry was loaded. */
+    val registryTestnets: StateFlow<List<TestnetRecord>> =
+        MutableStateFlow(chainRegistry?.testnets.orEmpty()).asStateFlow()
+
+    /** True when the bundled registry export loaded (Step 3 data layer present). */
+    val registryLoaded: Boolean = chainRegistry != null
+
+    /** Registry record for an importable chain (Chain.BTC -> "btc"); null when not loaded or not listed. */
+    fun chainRecord(chain: Chain): ChainRecord? =
+        chainRegistry?.chainById(chain.name.lowercase())
+
+    /** Registry network label for an importable chain ("Mainnet"); null when not loaded. */
+    fun chainNetworkLabel(chain: Chain): String? =
+        chainRecord(chain)?.network?.replaceFirstChar { it.uppercaseChar() }
+
+    /** Curated tokens on one chain from the token export; empty when not loaded or none listed. */
+    fun tokensForChain(chainId: String) =
+        tokenRepository?.tokensForChain(chainId).orEmpty()
 
     // Navigation stack (layout makeover, Phase 2): the app is a
     // single-screen state machine (WDK Screens.kt shape) with stack

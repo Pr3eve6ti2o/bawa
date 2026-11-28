@@ -1,10 +1,13 @@
-// :app — Bawa Android wallet, watch-only. Testnet only; mainnet is out
-// of scope. No signing, broadcast or transaction-construction code.
-// No engine binding: no Trust Wallet Core AAR exists for any version,
-// so on-device derivation is OPEN (see docs/android-evidence.md).
+// :app — Bawa Android wallet, watch-only. Mainnet data layer (Step 3):
+// the 87-chain registry + 21 tokens load from the generated export
+// bundled under src/main/assets/registry/. No signing, broadcast or
+// transaction-construction code. No engine binding: no Trust Wallet
+// Core AAR exists for any version, so on-device derivation is OPEN
+// (see docs/android-evidence.md).
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -66,4 +69,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("com.google.zxing:core:3.5.3")
+
+    // Step 3 data layer: the generated registry export is parsed with
+    // kotlinx.serialization (JVM-safe, so the parsing is unit-tested
+    // without Robolectric).
+    // 1.6.3 is the last release supporting Kotlin 1.9.x (1.7.x needs
+    // Kotlin 2.0+); do NOT upgrade without upgrading Kotlin first.
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }

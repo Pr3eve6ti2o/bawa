@@ -1,5 +1,6 @@
 package com.bawa.wallet
 
+import android.content.Context
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -15,7 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bawa.wallet.data.ChainRegistry
+import com.bawa.wallet.data.TokenRepository
 import com.bawa.wallet.ui.BawaTheme
 import com.bawa.wallet.ui.Screen
 import com.bawa.wallet.ui.WalletViewModel
@@ -50,10 +55,34 @@ class MainActivity : ComponentActivity() {
             // Bawa Balanced direction-04 tokens (ui/BawaTheme.kt).
             // The previous inline scheme was the vendored WDK palette.
             BawaTheme {
-                val vm: WalletViewModel = viewModel()
+                val vm: WalletViewModel = viewModel(factory = WalletViewModelFactory(applicationContext))
                 BawaApp(vm)
             }
         }
+    }
+}
+
+// Step 3 data layer: builds the chain registry and token lists from
+// the generated export bundled in assets. A failed load falls back
+// to null (empty registry), never a crash — the screens fall back to
+// their hardcoded labels and the app stays usable.
+class WalletViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(WalletViewModel::class.java)) {
+            val registry = try {
+                context.assets.open("registry/chains.json").use { ChainRegistry.load(it) }
+            } catch (_: Exception) {
+                null
+            }
+            val tokens = try {
+                context.assets.open("registry/tokens.json").use { TokenRepository.load(it) }
+            } catch (_: Exception) {
+                null
+            }
+            @Suppress("UNCHECKED_CAST")
+            return WalletViewModel(chainRegistry = registry, tokenRepository = tokens) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
 

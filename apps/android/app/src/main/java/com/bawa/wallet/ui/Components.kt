@@ -8,12 +8,18 @@ package com.bawa.wallet.ui
 //
 // Added in the Phase 2 layout makeover (Bawa originals, not copies):
 // ChainAvatar, FixedBottomActionBar, DetailActionBar.
+//
+// Added in Step 3 (data layer): ChainLogo — the bundled real logo for
+// a chain (assets/icons/chains/*.webp, Trust Wallet Assets, MIT),
+// falling back to the letter-disc ChainAvatar when the asset is
+// missing or undecodable. Never a wrong chain's mark.
 //   - FixedBottomActionBar: Rabby Mobile's fixed bottomContainer —
 //     the action row pinned to the bottom of home, no tab bar.
 //   - DetailActionBar: MetaMask's asset-sticky-actions — Send/Receive
 //     pinned to the bottom of the asset detail screen.
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -226,8 +233,7 @@ fun ActionCard(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Str
 }
 
 // Chain avatar: a tinted circle with the chain's initial. The tint is
-// the chain's standard brand colour (BawaTheme.ChainTint); no logo
-// assets are copied from any wallet.
+// the chain's standard brand colour (BawaTheme.ChainTint).
 @Composable
 fun ChainAvatar(chain: Chain, sizeDp: Int = 42) {
     Box(
@@ -243,6 +249,96 @@ fun ChainAvatar(chain: Chain, sizeDp: Int = 42) {
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
+    }
+}
+
+// Chain logo: the bundled real logo for a chain id (Step 3 data
+// layer, ChainIconResolver.assetPathFor). The WebP decodes natively;
+// any failure falls back to a letter disc (fallbackText on
+// fallbackColor), so a missing or corrupt asset never breaks the
+// row and never shows a wrong chain's mark.
+@Composable
+fun ChainLogo(
+    chainId: String,
+    fallbackText: String,
+    fallbackColor: Color,
+    sizeDp: Int = 42,
+    fallbackTextColor: Color = Color.White
+) {
+    val context = LocalContext.current
+    val assetPath = com.bawa.wallet.data.ChainIconResolver.assetPathFor(chainId)
+    val bitmap = remember(assetPath) {
+        if (assetPath == null) null
+        else try {
+            context.assets.open(assetPath).use { BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .size(sizeDp.dp)
+                .clip(CircleShape)
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(sizeDp.dp)
+                .clip(CircleShape)
+                .background(fallbackColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                fallbackText,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = fallbackTextColor
+            )
+        }
+    }
+}
+
+// Logo image for an asset row: the bundled logo for an asset path,
+// falling back to the tinted letter disc when the asset is missing
+// or undecodable.
+@Composable
+private fun AssetLogoImage(assetPath: String, iconText: String?, iconColor: Color, name: String) {
+    val context = LocalContext.current
+    val bitmap = remember(assetPath) {
+        try {
+            context.assets.open(assetPath).use { BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(iconColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                iconText ?: name.first().toString(),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
     }
 }
 
@@ -365,7 +461,10 @@ fun AssetRow(
     name: String,
     network: String,
     amount: String,
-    usd: String
+    usd: String,
+    // Step 3: bundled logo asset for the row's chain (ChainIconResolver);
+    // null keeps the letter disc.
+    logoAsset: String? = null
 ) {
     Column {
         Row(
@@ -374,19 +473,23 @@ fun AssetRow(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 14.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(iconColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    iconText ?: name.first().toString(),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+            if (logoAsset != null) {
+                AssetLogoImage(logoAsset, iconText, iconColor, name)
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(iconColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        iconText ?: name.first().toString(),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {

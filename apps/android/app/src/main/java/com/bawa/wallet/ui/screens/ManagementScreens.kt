@@ -11,8 +11,9 @@ package com.bawa.wallet.ui.screens
 //   14-screen contract is kept without adding a fifteenth screen —
 //   the catalogue's screen 10/11 are history/detail, and lookup is
 //   a function of history, not a new destination.
-// - Network selection: each network is a row with its chain avatar
-//   and explicit testnet name; TON is shown as not supported.
+// - Network selection (Step 3): every network comes from the
+//   registry — 87 mainnet chains + 4 testnets — each row with its
+//   real logo, name and RPC count. Mainnet is the programme default.
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,11 +35,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bawa.wallet.core.Chain
 import com.bawa.wallet.core.DerivationPolicy
-import com.bawa.wallet.ui.ChainAvatar
+import com.bawa.wallet.ui.ChainLogo
 import com.bawa.wallet.ui.OutlineActionButton
 import com.bawa.wallet.ui.PrimaryButton
 import com.bawa.wallet.ui.Screen
@@ -232,13 +234,14 @@ fun TransactionDetailScreen(vm: WalletViewModel) {
     }
 }
 
+// Network selection (Step 3): every network comes from the registry
+// — 87 mainnet chains + 4 testnets — instead of the hardcoded
+// 3-testnet list. Mainnet is the programme default. Selection still
+// changes nothing yet: no provider is connected.
 @Composable
 fun NetworkSelectionScreen(vm: WalletViewModel) {
-    val networks = listOf(
-        Chain.BTC to "Bitcoin testnet4 — default",
-        Chain.ETH to "Ethereum Sepolia — default",
-        Chain.TRX to "TRON Nile testnet — default"
-    )
+    val chains by vm.registryChains.collectAsState()
+    val testnets by vm.registryTestnets.collectAsState()
 
     Column(
         modifier = Modifier
@@ -248,55 +251,70 @@ fun NetworkSelectionScreen(vm: WalletViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         ScreenHeader(title = "Networks", onBack = { vm.goBack() })
-        Text("Testnet only, in line with repository policy.")
+        if (!vm.registryLoaded) {
+            Text("Network list unavailable — the registry did not load.")
+            Text(
+                text = "Network selection changes nothing yet — " +
+                    "no provider is connected."
+            )
+            return@Column
+        }
+        Text("Mainnet — ${chains.size} networks from the registry.")
         Text(
-            text = "Network selection changes nothing in this starter yet — " +
+            text = "Network selection changes nothing yet — " +
                 "no provider is connected."
         )
-        networks.forEach { (chain, defaultNetwork) ->
+        Text("Mainnet", style = MaterialTheme.typography.titleMedium)
+        chains.forEach { record ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ChainAvatar(chain, sizeDp = 36)
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ChainLogo(
+                        record.id,
+                        record.symbol.take(1),
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        sizeDp = 36,
+                        fallbackTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = defaultNetwork,
+                            text = record.name,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "${record.symbol} · ${record.rpcEndpoints.size} RPC endpoints",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        }
+        Text("Testnets", style = MaterialTheme.typography.titleMedium)
+        testnets.forEach { testnet ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ChainLogo(
+                        testnet.id,
+                        testnet.symbol.take(1),
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        sizeDp = 36,
+                        fallbackTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = testnet.devnetName,
                             style = MaterialTheme.typography.titleMedium
                         )
                         TestnetBadge()
                     }
                 }
-            }
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "${chainName(chain)} mainnet",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Mainnet — out of scope by default, " +
-                            "requires separate approval plus applicable gates"
-                    )
-                }
-            }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "TON",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = "Not supported by this starter (generation-only in the repo)."
-                )
             }
         }
     }
@@ -420,10 +438,4 @@ fun SecuritySettingsScreen(vm: WalletViewModel) {
             }
         }
     }
-}
-
-private fun chainName(chain: Chain): String = when (chain) {
-    Chain.BTC -> "Bitcoin"
-    Chain.ETH -> "Ethereum"
-    Chain.TRX -> "TRON"
 }

@@ -52,9 +52,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bawa.wallet.core.Chain
 import com.bawa.wallet.core.DerivationPolicy
+import com.bawa.wallet.data.ChainIconResolver
 import com.bawa.wallet.ui.AssetRow
 import com.bawa.wallet.ui.BawaTokens
-import com.bawa.wallet.ui.ChainAvatar
+import com.bawa.wallet.ui.ChainLogo
 import com.bawa.wallet.ui.ChainTint
 import com.bawa.wallet.ui.DetailActionBar
 import com.bawa.wallet.ui.FixedBottomActionBar
@@ -121,10 +122,15 @@ fun PortfolioScreen(vm: WalletViewModel) {
                             AssetRow(
                                 iconText = chain.name.take(1),
                                 iconColor = ChainTint(chain),
-                                name = chainName(chain),
-                                network = DerivationPolicy.TESTNETS[chain] ?: "Testnet",
+                                // Step 3: name, network and logo come from
+                                // the registry when it loaded; the hardcoded
+                                // testnet names are the no-registry fallback.
+                                name = vm.chainRecord(chain)?.name ?: chainName(chain),
+                                network = vm.chainNetworkLabel(chain)
+                                    ?: (DerivationPolicy.TESTNETS[chain] ?: "Testnet"),
                                 amount = if (wallets[chain] == null) "Not imported" else "Imported",
-                                usd = "Balance unavailable"
+                                usd = "Balance unavailable",
+                                logoAsset = ChainIconResolver.assetPathFor(chain.name.lowercase())
                             )
                         }
                     }
@@ -269,7 +275,9 @@ private fun PopularChainCard(chain: Chain, stateLine: String, onClick: () -> Uni
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ChainAvatar(chain, sizeDp = 32)
+                // Step 3: real logo from the registry icons, letter
+                // disc when the asset is missing.
+                ChainLogo(chain.name.lowercase(), chainName(chain).take(1), ChainTint(chain), sizeDp = 32)
                 Text(chainName(chain), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
             Text(stateLine, style = MaterialTheme.typography.bodySmall)
@@ -294,10 +302,12 @@ fun AssetListScreen(vm: WalletViewModel) {
                 AssetRow(
                     iconText = chain.name.take(1),
                     iconColor = ChainTint(chain),
-                    name = chainName(chain),
-                    network = DerivationPolicy.TESTNETS[chain] ?: "Testnet",
+                    name = vm.chainRecord(chain)?.name ?: chainName(chain),
+                    network = vm.chainNetworkLabel(chain)
+                        ?: (DerivationPolicy.TESTNETS[chain] ?: "Testnet"),
                     amount = if (wallets[chain] == null) "Not imported" else "Imported",
-                    usd = "Balance unavailable"
+                    usd = "Balance unavailable",
+                    logoAsset = ChainIconResolver.assetPathFor(chain.name.lowercase())
                 )
             }
         }
@@ -401,9 +411,9 @@ fun ReceiveScreen(vm: WalletViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ChainAvatar(option, sizeDp = 36)
+                    ChainLogo(option.name.lowercase(), chainName(option).take(1), ChainTint(option), sizeDp = 36)
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(chainName(option), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(vm.chainRecord(option)?.name ?: chainName(option), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         Text(
                             if (optionWallet == null) "Not imported"
                             else "Extended public key: ${truncatedXpub(optionWallet.xpub)}",

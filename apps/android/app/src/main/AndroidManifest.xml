@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Step 3 data layer: INTERNET is declared for the Step 5 network
+         stack (live prices, balances, history). The app makes no
+         network calls yet — the data layer loads the bundled registry
+         export from assets only. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- T47: allowBackup="false" — this is a wallet. App data (including any
          future persisted watch-only data) must never leave the device in a
          cloud backup or an adb backup. The starter currently keeps xpubs in
          memory only; this closes the backup exfiltration path before any
          persistence is added. networkSecurityConfig states the existing
          posture explicitly: no cleartext traffic (the app makes no network
-         calls at all and requests no INTERNET permission). -->
+         calls yet; INTERNET is declared for the Step 5 network stack). -->
     <application
         android:allowBackup="false"
         android:networkSecurityConfig="@xml/network_security_config"
