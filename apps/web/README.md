@@ -301,5 +301,5 @@ Verified on this tree on 2026-11-28 (HEAD `1a85258`): Vitest 129 files,
 3,437 passed + 5 skipped (3,442 total, exit 0, at 1a85258); `tsc --noEmit` 0 errors;
 `eslint` 0 errors; `vite build` passes; JS bundle 4,509,960 / 6,000,000
 budget (1,490,338 B headroom). The live site
-(https://pr3eve6ti2o.github.io/bawa/) serves `index-B9gxTjOm.js`, root 200,
-asset 200.
+(https://pr3eve6ti2o.github.io/bawa/) serves the latest published build
+of this branch.
