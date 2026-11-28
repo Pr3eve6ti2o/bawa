@@ -14,7 +14,7 @@ Required coverage — not all items below are implemented:
 
 Current automated coverage comprises BTC/ETH/TRX watch-only smoke derivations at indices 0–1, CLI and daemon checks, and an address-only differential test for BIP-84 Bitcoin and BIP-44 Ethereum at index 0. It does not cover BIP-39 mnemonic validation or mnemonic-to-seed vectors, or BIP-32 master/child vectors including hardened and leading-zero cases. No extended-key serialisation round-trip test was found, while checksum-rejection behaviour is tested.
 
-The current Trust Wallet Core generator contains public regression fixtures. The row at `docs/README-FULL.md:1248` lists **Full published-vector coverage** as **FAIL**: vectors covering TRX and indices 1–2, not only BTC/ETH index 0.
+The current Trust Wallet Core generator contains public regression fixtures. The row at `docs/README-FULL.md:1258` lists **Full published-vector coverage** as **FAIL**: vectors covering TRX and indices 1–2, not only BTC/ETH index 0.
 
 ## Independent differential verification
 
@@ -55,14 +55,14 @@ Required automated negative/security coverage — this is not a list of passing 
 
 Current safeguard: tools/hdwallet-gen/compare.js rejects private extended keys pre-WASM via validateExtendedKey; smoke.test.js section 8 covers this. The 2026-11-09 xprv probe (exit 0) is historical only and does not reproduce (live probe exits 1).
 
-- corrupted AES-GCM ciphertext — **covered** (smoke.test.js section 10: "verifySeedBundle: tampered ciphertext rejected" at :1166);
-- wrong data keys — **covered** (smoke.test.js section 10: "verifySeedBundle: wrong key rejected" at :1169);
+- corrupted AES-GCM ciphertext — **covered** (smoke.test.js section 10: "verifySeedBundle: tampered ciphertext rejected" at :1168);
+- wrong data keys — **covered** (smoke.test.js section 10: "verifySeedBundle: wrong key rejected" at :1171);
 - truncated recovery artifacts — **covered** (malformed-bundle rejection check);
 - symlinked secret paths — **no automated coverage**;
 - unexpected existing outputs — **no automated coverage**;
 - missing .env — **no automated coverage**.
 
-Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:52–57` enforces `MAX_INDEX 2147483647` and rejects private extended keys; `tools/hdwallet-gen/derive_daemon.js:71,87–91` rejects over-long lines ("request too large") and malformed JSON ("bad json").
+Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:89–90` enforces `MAX_INDEX 2147483647` and rejects private extended keys; `tools/hdwallet-gen/derive_daemon.js:71,87–91` rejects over-long lines ("request too large") and malformed JSON ("bad json").
 
 ## TON-specific coverage
 

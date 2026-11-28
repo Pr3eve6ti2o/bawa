@@ -104,12 +104,12 @@ In `registry.json` at 4.9.2, the `explorer` object is present on 168/168 entries
 
 **Sources**
 
-- [Core 4.9.2: field reference](https://github.com/trustwallet/wallet-core/blob/4.9.2/docs/registry-fields.md)
-- [Core 4.9.2: raw registry](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.2/registry.json)
+- [Core 4.9.3: field reference](https://github.com/trustwallet/wallet-core/blob/4.9.3/docs/registry-fields.md)
+- [Core 4.9.3: raw registry](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.3/registry.json)
 
-Pin for both sources: tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. The Core 4.8.4 comparison commit is `d40d24a63d92619167903369308bf0e2f7eb3a59`. The current target is 4.9.3, following the Core pin change on 2026-11-18; re-verification against 4.9.3 is outstanding and none is recorded here. Re-pin and re-verify whenever the Core pin moves.
+Pin for both sources: tag `4.9.3`, re-verified 2026-11-28 (both URLs HTTP 200; the raw registry holds 168 entries, and the four Bawa entries — bitcoin, ethereum, tron, ton — carry the same derivation paths as at 4.9.2). The previous pin was tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. The Core 4.8.4 comparison commit is `d40d24a63d92619167903369308bf0e2f7eb3a59`. Re-pin and re-verify whenever the Core pin moves.
 
-Verification recorded on 8 November 2026, on muse-vm, for repository snapshot e3b65fb832db287fdc8d54794980dd0b3456cc12. This page cites Wallet Core 4.9.2. Its registry was fetched live, and the 4.9.2 field reference returned HTTP 200. The four Bawa registry entries were byte-identical at 4.8.4, 4.9.2 and the then-current master. The equality check applies only to those four entries at that date, not to the whole registry or future master contents.
+Verification recorded on 8 November 2026, on muse-vm, for repository snapshot e3b65fb832db287fdc8d54794980dd0b3456cc12. This page cited Wallet Core 4.9.2; its registry was fetched live, and the 4.9.2 field reference returned HTTP 200. Re-verified against 4.9.3 on 2026-11-28 (see Sources above). The four Bawa registry entries were byte-identical at 4.8.4, 4.9.2 and the then-current master. The equality check applies only to those four entries at that date, not to the whole registry or future master contents.
 
 ## Bawa's four chains in the registry
 

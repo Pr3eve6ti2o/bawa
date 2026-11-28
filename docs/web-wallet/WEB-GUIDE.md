@@ -19,6 +19,8 @@ description: Build a non-custodial Web wallet from the Bawa repository for Bitco
 > - **Evidence:** repo clone at `082f7915`, validation-draft build logs
 > - **Sources fetched on:** 2026-11-08
 
+> **Finished wallet first:** this guide is the from-scratch testnet draft (verified 2026-11-08). For the finished example wallet, open the live site at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) or follow [Create the example web wallet](../CREATE-EXAMPLE-WALLET.md) — it runs on `panel-rebuild/token-gaps` (87 chains, mainnet, broadcast disabled), not on `main`.
+
 ## A. Scope and starting points
 
 Use this guide to build a non-custodial Web wallet for Bitcoin testnet4, Ethereum Sepolia, TRON Nile and TON testnet from the Bawa repo. Bawa supplies documentation and an engine reference; it is not a hosted wallet, a custody service or an exchange. You build the app by following this guide: fourteen screens, an encrypted local vault and watch-only derivation, using Trust Wallet Core. Follow only Web-specific steps here; use the repo guide for the derivation contract, fixture vectors, test taxonomy, release gates, repo-level troubleshooting and FAQ. Repo guide sections **13 (troubleshooting)** and **14 (FAQ)** are the canonical home for repo-level questions; this guide’s [Section K](#k-troubleshooting-by-symptom) covers only Web-specific recovery. Keep your build testnet-only. Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.

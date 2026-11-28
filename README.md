@@ -2,7 +2,7 @@
 
 [![CI (static-checks)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Amain)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/Pr3eve6ti2o/bawa?style=social)](https://github.com/Pr3eve6ti2o/bawa/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/Pr3eve6ti2o/bawa?style=social)](https://github.com/Pr3eve6ti2o/bawa)
 [![GitHub forks](https://img.shields.io/github/forks/Pr3eve6ti2o/bawa?style=social)](https://github.com/Pr3eve6ti2o/bawa/fork)
 [![Last commit](https://img.shields.io/github/last-commit/Pr3eve6ti2o/bawa/main)](https://github.com/Pr3eve6ti2o/bawa/commits/main)
 [![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://pr3eve6ti2o.github.io/bawa)
@@ -11,18 +11,43 @@ Bawa is an HD-wallet reference and command-line launcher for generating encrypte
 
 **[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of the example wallet, developed on `panel-rebuild/token-gaps`, not on `main`.
 
-**136 checks** passing (smoke) · **48 launcher tests** · **26 make_wallet tests** · **0 funds ever sent** — no signing or broadcast code on `main`.
+**136 checks** passing (smoke) · **48 launcher tests** · **26 make_wallet tests** · **0 funds ever sent** — no signing or broadcast code on `main`. (Counts verified at `667527e` on 2026-11-20; the test files are unchanged through `af828a9`, and the counts were re-confirmed statically at `af828a9` — see [Verification](#verification).)
 
 ## Showcase
 
-Real screenshots of the example web wallet running from the active development branch (`panel-rebuild/token-gaps`), taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. Both shots show the dashboard, the wallet homepage.
+Real screenshots of the example web wallet running from the active development branch (`panel-rebuild/token-gaps`), taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. The shots below are the current live build — try it at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (bundle `index-B9gxTjOm.js`, 87 chains, dashboard 43 rows).
 
-<!-- To extend this grid, add a row to the table below: one image per cell, height="360" on every image so all shots render at the same height. -->
+<!-- Screenshots are served from the token-gaps branch via raw.githubusercontent.com so this page always shows the current wallet without duplicating images into main. To extend this grid, add a row to the table below: one image per cell, height="360" on every image so all shots render at the same height. -->
 
 | Dashboard (desktop) | Dashboard (mobile) |
 | --- | --- |
-| <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" height="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" height="360"> |
+| <img src="https://raw.githubusercontent.com/Pr3eve6ti2o/bawa/panel-rebuild/token-gaps/docs/preview/home-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" height="360"> | <img src="https://raw.githubusercontent.com/Pr3eve6ti2o/bawa/panel-rebuild/token-gaps/docs/preview/home-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" height="360"> |
 | Portfolio, assets and recent activity. | The same wallet on mobile. |
+
+| Wallets (desktop) | Wallets (mobile) |
+| --- | --- |
+| <img src="https://raw.githubusercontent.com/Pr3eve6ti2o/bawa/panel-rebuild/token-gaps/docs/preview/wallets-desktop.png" alt="Wallets screen of the Bawa web wallet on desktop" height="360"> | <img src="https://raw.githubusercontent.com/Pr3eve6ti2o/bawa/panel-rebuild/token-gaps/docs/preview/wallets-mobile.png" alt="Wallets screen of the Bawa web wallet on mobile" height="360"> |
+| Vault and watch-only wallets, rename and per-account delete. | The same screen on mobile. |
+
+| Receive (desktop) | Receive (mobile) |
+| --- | --- |
+| <img src="https://raw.githubusercontent.com/Pr3eve6ti2o/bawa/panel-rebuild/token-gaps/docs/preview/receive-desktop.png" alt="Receive screen of the Bawa web wallet on desktop" height="360"> | <img src="https://raw.githubusercontent.com/Pr3eve6ti2o/bawa/panel-rebuild/token-gaps/docs/preview/receive-mobile.png" alt="Receive screen of the Bawa web wallet on mobile" height="360"> |
+| Receive with QR card and chain picker. | The same screen on mobile. |
+
+The earlier dashboard screenshots (`docs/images/web-wallet-dashboard-desktop.png` and `docs/images/web-wallet-dashboard-mobile.png`) are kept in the tree as the record of the 2026-11-23 showcase.
+
+## Live wallet (current state)
+
+**Try it now: [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/)** — no install, no clone. It serves the latest build of the example wallet from `panel-rebuild/token-gaps` (`1a85258`, 2026-11-28; bundle `index-B9gxTjOm.js`), not from `main`: `main` has no web wallet code.
+
+What the live wallet is today (verified 2026-11-28):
+
+- **87 chains**, dashboard **43 rows** (22 native assets + 21 default tokens), history verified on 18 chains; 4 stay history-blocked (bsc, opbnb, metis, fantom).
+- **Fix programme landed:** remove a user-added token, change password, watch-only balances, wallets rename and per-account delete, native TRX PublicNode fallback, price-chart retry, Activity wallet switcher.
+- **QR-card redesign:** polished flat style (the paper/comic treatment is kept only for the QR share-card templates and the Welcome illustration).
+- **Honest remains fixed:** BSC third RPC (DeFiBit), dashboard row count, BNB header icon (real chain logo, no fallback mark).
+- **Auto-lock is optional and off by default** (toggle plus duration on /security; 5-minute default when enabled).
+- **Fixed 2026-11-28 (after `ceade79`, at `1a85258`):** TRON USDT token-path PublicNode fallback (Trongrid → PublicNode sweep), wallet creation under `vite dev` (base + favicon rebase now runs in dev and build), and a persistent path for `mmdc` (`docs/TOOLS.md` on `token-gaps`).
 
 ### Create your own
 
@@ -220,7 +245,7 @@ Owner: `Pr3eve6ti2o`.
 
 ## Verification
 
-Verified at commit `667527e` on 2026-11-20:
+Verified at commit `667527e` on 2026-11-20, and re-confirmed at `af828a9` on 2026-11-28: the test files (`test/`, `tools/`) are unchanged between `667527e` and `af828a9`, the smoke suite is deterministic and network-free, and the static counts at `af828a9` are 48 launcher tests (`test/test_bawa_cli.py`) and 26 `make_wallet` tests (`test/test_make_wallet.py`).
 
 - Smoke: `136 checks 0 failures`
 - Launcher: `48 tests OK`
