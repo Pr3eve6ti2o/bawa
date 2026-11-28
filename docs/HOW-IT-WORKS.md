@@ -1,6 +1,6 @@
 # How Bawa works
 
-> Scope: this page describes the wallet as built on `panel-rebuild/token-gaps`, where the traced files live. `main` has no `apps/web/`, `registry/` or `scripts/build-wallet.mjs`. The trace table below was verified against `panel-rebuild/token-gaps` at `2c161b7` on 28 November 2026; the current tip is `1a85258` (2026-11-28), and the live site serves that build — [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (bundle `index-B9gxTjOm.js`, 87 chains, dashboard 43 rows). The trace table has not been re-verified line by line against `ceade79`; where it disagrees with that tree, the tree is authoritative.
+> Scope: this page describes the wallet as built on `panel-rebuild/token-gaps`, where the traced files live. `main` has no `apps/web/`, `registry/` or `scripts/build-wallet.mjs`. The trace table below was verified against `panel-rebuild/token-gaps` at `2c161b7` on 28 November 2026; the live site serves the latest published build — [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (87 chains, dashboard 43 rows). The trace table has not been re-verified line by line against `ceade79`; where it disagrees with that tree, the tree is authoritative.
 
 This page explains, in plain terms, how this repository works, how it
 starts, and what it can do. The same architecture is drawn as

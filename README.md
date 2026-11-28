@@ -11,7 +11,7 @@ Bawa is an HD-wallet reference and command-line launcher for generating encrypte
 
 **[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the latest build of the example wallet, developed on `panel-rebuild/token-gaps`, not on `main`.
 
-**136 checks** passing (smoke) · **48 launcher tests** · **26 make_wallet tests** · **0 funds ever sent** — no signing or broadcast code on `main`. (Counts verified at `667527e` on 2026-11-20; the test files are unchanged through `af828a9`, and the counts were re-confirmed statically at `af828a9` — see [Verification](#verification).)
+**136 checks** passing (smoke) · **48 launcher tests** · **26 make_wallet tests** · **0 funds ever sent** — no signing or broadcast code on `main`. (Counts verified at `667527e` on 2026-11-20 and re-confirmed by running at `985a4a3` on 2026-11-29; the test files are unchanged between `667527e` and `985a4a3` — see [Verification](#verification).)
 
 ## Showcase
 
@@ -245,7 +245,7 @@ Owner: `Pr3eve6ti2o`.
 
 ## Verification
 
-Verified at commit `667527e` on 2026-11-20, and re-confirmed at `af828a9` on 2026-11-28: the test files (`test/`, `tools/`) are unchanged between `667527e` and `af828a9`, the smoke suite is deterministic and network-free, and the static counts at `af828a9` are 48 launcher tests (`test/test_bawa_cli.py`) and 26 `make_wallet` tests (`test/test_make_wallet.py`).
+Verified at commit `667527e` on 2026-11-20, re-confirmed at `af828a9` on 2026-11-28, and re-confirmed by running at `985a4a3` on 2026-11-29: the test files (`test/`, `tools/`) are unchanged between `667527e` and `985a4a3`, the smoke suite is deterministic and network-free, and the counts at `985a4a3` are 48 launcher tests (`test/test_bawa_cli.py`) and 26 `make_wallet` tests (`test/test_make_wallet.py`).
 
 - Smoke: `136 checks 0 failures`
 - Launcher: `48 tests OK`
