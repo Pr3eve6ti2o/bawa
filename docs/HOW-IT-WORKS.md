@@ -1,6 +1,6 @@
 # How Bawa works
 
-> Scope: this page describes the wallet as built on `panel-rebuild/token-gaps`, where the traced files live. `main` has no `apps/web/`, `registry/` or `scripts/build-wallet.mjs`; the trace below was verified against `panel-rebuild/token-gaps` at `2c161b7` on 28 November 2026.
+> Scope: this page describes the wallet as built on `panel-rebuild/token-gaps`, where the traced files live. `main` has no `apps/web/`, `registry/` or `scripts/build-wallet.mjs`. The trace table below was verified against `panel-rebuild/token-gaps` at `2c161b7` on 28 November 2026; the current tip is `ceade79` (65 commits ahead), and the live site serves that build — [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (bundle `index-Brm7r34g.js`, 87 chains, dashboard 43 rows). The trace table has not been re-verified line by line against `ceade79`; where it disagrees with that tree, the tree is authoritative.
 
 This page explains, in plain terms, how this repository works, how it
 starts, and what it can do. The same architecture is drawn as
@@ -145,7 +145,10 @@ What each part means, in the wallet's own terms:
   (SHA-256). No plaintext secret is stored anywhere. Auto-unlock keeps
   the raw derived key in `bawa-vault-key` next to the ciphertext it
   decrypts; backups live in `bawa-vault-backup`, accounts in
-  `bawa-vault-accounts:v1`.
+  `bawa-vault-accounts:v1`. Auto-lock is optional and off by default
+  (toggle plus duration on /security; 5-minute default when enabled):
+  with auto-lock off the derived key is stored so the vault
+  auto-unlocks, with it on no key is stored while locked.
 - **Watch-only** — instead of a phrase, the wallet stores only public
   extended keys (`bawa-watch-only-xpubs`) and derives addresses from
   them, so it can show balances without ever holding a secret.

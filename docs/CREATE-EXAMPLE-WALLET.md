@@ -1,6 +1,6 @@
 # Create the example web wallet
 
-_Last verified: 2026-11-23, from a clean checkout of `panel-rebuild/readme-showcase-token` at `bded0df` (Node v22.23.4; `npm ci` exit 0; `npm run build` exit 0; preview served the app and the Welcome screen rendered in headless Chromium)._
+_Last verified: 2026-11-23, from a clean checkout of `panel-rebuild/readme-showcase-token` at `bded0df` (Node v22.23.4; `npm ci` exit 0; `npm run build` exit 0; preview served the app and the Welcome screen rendered in headless Chromium). Current state (2026-11-28): the steps below still match `panel-rebuild/token-gaps` at `ceade79` (`apps/web/package.json` scripts and `apps/web/.npmrc` `engine-strict=true` re-checked); or skip the build and open the live site at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (bundle `index-Brm7r34g.js`)._
 
 ## What you will have
 

@@ -70,6 +70,6 @@ JavaScript/WebAssembly memory cannot provide a cryptographic guarantee of perfec
 
 An external security review is required before any real funds are involved, whether in production or non-production use.
 
-No vulnerability-disclosure procedure or private reporting contact is currently provided in this repository. Establishing and publishing a private disclosure channel remains an open maintainer action. Do not post exploit details publicly.
+Vulnerability reports go through [GitHub Issues](https://github.com/Pr3eve6ti2o/bawa/issues) — there is no separate private disclosure channel (maintainer decision, 2026-11-18; OI-065 closed; see [SECURITY.md](../SECURITY.md)). Do not post exploit details publicly; describe the issue at a level that lets the maintainer reproduce it without publishing working exploit material.
 
-No session or inactivity timeout is implemented in the repository code. The 10-minute auto-lock is specified only in the Web draft. The 120-second subprocess timeout in `make_wallet.py` applies to generation, not inactivity; the daemon has no timeout.
+No session or inactivity timeout is implemented in the repository code on `main`. The live web wallet (on `panel-rebuild/token-gaps`) implements auto-lock as an optional setting, off by default, with a toggle plus duration on /security (5-minute default when enabled). The 120-second subprocess timeout in `make_wallet.py` applies to generation, not inactivity; the daemon has no timeout.

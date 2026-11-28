@@ -104,7 +104,7 @@ Treat these as unlocked dependency installs, not as evidence of a reproducible d
 
 ### Release blockers
 
-1. Install boundary. `tools/hdwallet-gen/package-lock.json` was committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (2026-11-08) and pins `@trustwallet/wallet-core` to 4.8.4. Use `npm ci` inside `tools/hdwallet-gen`; D22 verified that this succeeds on 2026-11-08. No root lockfile exists, but the root package has no dependencies. Remove the root install step rather than adding a root lockfile.
+1. Install boundary. `tools/hdwallet-gen/package-lock.json` was committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (2026-11-08) pinning `@trustwallet/wallet-core` to 4.8.4; it was re-pinned to 4.9.3 on 2026-11-18 (owner order; see CHANGELOG), which is the current pin. Use `npm ci` inside `tools/hdwallet-gen`; D22 verified that this succeeds on 2026-11-08. No root lockfile exists, but the root package has no dependencies. Remove the root install step rather than adding a root lockfile.
 
 2. **Failing pinned CI.** The syntax failures and the missing smoke-test file were resolved by the phase-1 repair (main @ e3b65fb832db287fdc8d54794980dd0b3456cc12, 2026-11-08); require a passing complete workflow on the candidate revision. Do not substitute a differential-test pass or a result from the repair copy.
 
@@ -975,7 +975,7 @@ npm install
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at `4.9.3`; the procedure below runs `npm ci`, a clean, lockfile-based installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
+The tooling package declares `@trustwallet/wallet-core` at `4.9.3`; the procedure below runs `npm ci`, a clean, lockfile-based installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.10.0` now the latest stable (npm `latest`, checked 2026-11-28) and `4.9.3` the installed pin, the release-verification target must be re-confirmed before any re-pin.
 
 Run entry, installation and return as a single gated chain, so a failure stops the sequence before the return:
 

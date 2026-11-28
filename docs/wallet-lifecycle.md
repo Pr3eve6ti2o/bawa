@@ -66,9 +66,7 @@ create / restore vault → unlock → derive addresses → refresh balances/hist
   and is cleared afterwards. Deletion from JavaScript memory is not
   guaranteed erasure; the wallet documents that limit where it matters
   instead of claiming otherwise.
-- Auto-lock (default 5 minutes, configurable 0–1440) clears in-memory
-  vault access and vault-derived addresses. Locking is not a security
-  boundary for public xpubs, which remain in state and storage.
+- Auto-lock is optional and off by default (toggle plus duration on /security; 5-minute default when enabled — `apps/web/src/wallet/auto-lock.ts`). When on, it clears in-memory vault access and vault-derived addresses. Locking is not a security boundary for public xpubs, which remain in state and storage.
 
 ## What does not exist yet
 
@@ -80,7 +78,7 @@ create / restore vault → unlock → derive addresses → refresh balances/hist
 
 ## Related documents
 
-- `CONSTRAINTS.md` — the quality bar this lifecycle is held to.
-- `docs/adr/0009-fetchjson-no-retry.md` — why the transport never retries.
-- `docs/runbooks/refresh-failure.md` — what each refresh failure state means.
-- `docs/adr/0001-wallet-core-pin.md` — the engine pin the lifecycle runs on.
+- [CONSTRAINTS.md](https://github.com/Pr3eve6ti2o/bawa/blob/panel-rebuild/token-gaps/CONSTRAINTS.md) — the quality bar this lifecycle is held to (lives on `panel-rebuild/token-gaps`, not on `main`).
+- [docs/adr/0009-fetchjson-no-retry.md](https://github.com/Pr3eve6ti2o/bawa/blob/panel-rebuild/token-gaps/docs/adr/0009-fetchjson-no-retry.md) — why the transport never retries (lives on `panel-rebuild/token-gaps`, not on `main`).
+- [docs/runbooks/refresh-failure.md](https://github.com/Pr3eve6ti2o/bawa/blob/panel-rebuild/token-gaps/docs/runbooks/refresh-failure.md) — what each refresh failure state means (lives on `panel-rebuild/token-gaps`, not on `main`).
+- [docs/adr/0001-wallet-core-pin.md](https://github.com/Pr3eve6ti2o/bawa/blob/panel-rebuild/token-gaps/docs/adr/0001-wallet-core-pin.md) — the engine pin the lifecycle runs on (lives on `panel-rebuild/token-gaps`, not on `main`).

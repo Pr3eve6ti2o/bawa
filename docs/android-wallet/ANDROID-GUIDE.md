@@ -23,6 +23,8 @@ _How-to guide. Read from top to bottom on your first pass._
 > - Evidence: w4-and-a/verify-fixtures/verify.mjs and verify-ton-path.cjs; NOTES.md; REWRITE-NOTES.md.
 > - Sources fetched on: 2026-11-08.
 
+> **Finished wallet first:** this guide is the from-scratch testnet draft (verified 2026-11-08); its procedures have not been executed end to end, and there is no Android starter on `main` — the Android wallet is built from this guide on `panel-rebuild/token-gaps`. For the finished example wallet (web), open the live site at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) or follow [Create the example web wallet](../CREATE-EXAMPLE-WALLET.md).
+
 ## Pick a starting point
 
 Read from top to bottom on your first pass. If you're building and only need one part, read section A first, then jump to that section; you must still pass the fixture gate in D.7 before any wallet action.
