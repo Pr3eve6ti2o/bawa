@@ -112,4 +112,6 @@ Verification record (2026-11-09, muse-vm, Node v24.22.2 — outside the declared
 
 Verification record (2026-11-27, loud-stone, Node v22.23.4, token-gaps `33f1ff1`, docs-currency Lane 4): root `npm test` — smoke suite 412 ok / 0 not-ok, register-links 28 PASS, exit 0; web `npm run test` — 120 files, 3,216 passed + 5 skipped, 0 failed, 92.66 s; web `npm run build` exit 0, total JS 4,473,583 bytes, largest chunk 2,906,489 bytes.
 
+Verification record (2026-11-28, loud-stone, publish gates at token-gaps `2205f15`, P2/P3 merge + bughunt-v2-fixes — NOT a fresh run, figures as verified first-hand before pushing): web typecheck 0, eslint 0, build 0; web `npm run test` — 129 files, 3,347 passed + 5 skipped, 0 failed; total JS 4,482,619 bytes (budget 6,000,000, passing by 1,517,381); diagram-references test 5/5; live site root 200 serving `index-B2tRFRuM.js` (gh-pages `5d64609`). A fresh full verification run at `2205f15` — including the root smoke and register-links suites — is still owed; these are the pre-push publish gates, not a re-run.
+
 The CI workflow is `.github/workflows/ci.yml`.

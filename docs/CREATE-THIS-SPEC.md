@@ -28,7 +28,7 @@ branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
-the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 121 files / 3,245 passed + 5 skipped (loud-stone run at token-gaps `f1f0e6c`, 2026-11-27, follow-up verification — re-run first-hand by the bug-hunt-v2 docs lane from a clean worktree at `f1f0e6c`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
+the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 129 files / 3,347 passed + 5 skipped (publish gates at token-gaps `2205f15`, 2026-11-28 — P2/P3 merge + bughunt-v2-fixes, verified first-hand on loud-stone before pushing; the earlier 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -49,7 +49,7 @@ calls): removed WalletConnect (§11), added the Buy provider picker
 table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
-**Bundle note:** the merged tree passes the budget — total JS 4,457,308 vs the 6,000,000 budget (§0.2), passing by 1,542,692 bytes; largest chunk 2,906,489 (under the 3,050,000 cap). Measured on token-gaps `f1f0e6c` (2026-11-27, follow-up verification — re-measured first-hand by the bug-hunt-v2 docs lane from a clean worktree at `f1f0e6c`, Node 22). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
+**Bundle note:** the merged tree passes the budget — total JS 4,482,619 vs the 6,000,000 budget (§0.2), passing by 1,517,381 bytes; largest chunk 2,906,489 (under the 3,050,000 cap). Measured on token-gaps `2205f15` (2026-11-28, publish gates — P2/P3 merge + bughunt-v2-fixes, verified first-hand on loud-stone before pushing). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
@@ -133,7 +133,7 @@ ninth profile. Profile selection is routing, not a capability claim.
 | `bitcoin-wallet` | Bitcoin-focused; transaction support must not be assumed |
 | `evm-wallet` | ETH/EVM-oriented; support beyond the specified ETH policy is OPEN |
 | `multichain-wallet` | Combined BTC, ETH, TRX, TON; TON remains generation-only, single-address |
-| `multichain-extended-wallet` | As registered, combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge). The web wallet now wires 87 chains (§2); the registry was re-validated for the 87-chain set in the registry v4 update (commit `2a0fa75`, 2026-11-26; validator exits 0, 0 errors), so the wider set is no longer OPEN on this count |
+| `multichain-extended-wallet` | As registered in `registry/profiles.json`, 9 chains (sol, bsc, matic, arb, op, base, avax, ltc, doge) — the extended nine; combined with the 4 base chains (btc, eth, trx, ton, from `multichain-wallet`) the profile covers 13-chain requests. The web wallet now wires 87 chains (§2); the registry was re-validated for the 87-chain set in the registry v4 update (commit `2a0fa75`, 2026-11-26; validator exits 0, 0 errors), so the wider set is no longer OPEN on this count |
 | `web-wallet` | Browser wallet; starter scope only, not a complete wallet |
 | `android-wallet` | Android wallet; approved starter is UI layer only |
 | `watch-only-wallet` | Public-data-only observation; no secret intake, no signing |
@@ -329,7 +329,7 @@ guide must not let an agent assume otherwise:
   version, so on-device derivation is OPEN.
 - Tests: 57 `@Test` annotations across 5 Kotlin test files, executed
   count NOT-RUN — the unit tests have not been run yet. (`AGENTS.md` §3.)
-- Toolchain — INSTALLED and proven (2026-11-27, loud-stone): JDK 17 (OpenJDK 17.0.21.1), Android SDK at `/home/boxd/Android/Sdk` with platform-tools 37.0.3, platforms `android-34` + `android-35`, build-tools 34.0.0 + 35.0.0, cmake 3.22.1, ndk 27.2.12479018. `./gradlew assembleDebug` succeeds (clean build re-run first-hand by the docs-currency lane, BUILD SUCCESSFUL in 32 s; the earlier proven run took 1 m 49 s). The build needs `ANDROID_HOME=/home/boxd/Android/Sdk` in the shell (or `sdk.dir` in `local.properties`) — without it Gradle fails with "SDK location not found". AGP is 8.2.2 with compileSdk 35 (`build.gradle.kts:3-4,12`). Steps 3–6 of the Android programme are BLOCKED: the Step 3 lane's report was removed by safety classifiers before the coordinator could see it, and the coordinator was instructed not to continue that request — the same pattern that blocked Step 2. No data layer, no chain registry and no derivation exist in the app yet; that work is the blocked steps, not a toolchain gap.
+- Toolchain — INSTALLED and proven (2026-11-27, loud-stone): JDK 17 (OpenJDK 17.0.21.1), Android SDK at `/home/boxd/Android/Sdk` with platform-tools 37.0.3, platforms `android-34` + `android-35`, build-tools 34.0.0 + 35.0.0, cmake 3.22.1, ndk 27.2.12479018. `./gradlew assembleDebug` succeeds (clean build re-run first-hand by the docs-currency lane, BUILD SUCCESSFUL in 32 s; the earlier proven run took 1 m 49 s). The build needs `ANDROID_HOME=/home/boxd/Android/Sdk` in the shell (or `sdk.dir` in `local.properties`) — without it Gradle fails with "SDK location not found". AGP is 8.2.2 with compileSdk 35 (`build.gradle.kts:3-4,12`). Step 3 of the Android programme is now IN PROGRESS hands-on (dispatched 2026-11-28 ~08:35 IST — data layer + build fix, from the Step 1 export); steps 4–6 still await Step 3. Steps 3–6 were BLOCKED before that: the Step 3 lane's report was removed by safety classifiers before the coordinator could see it, and the coordinator was instructed not to continue that request — the same pattern that blocked Step 2. No data layer, no chain registry and no derivation exist in the app yet; that work is the in-progress/blocked steps, not a toolchain gap.
 - **Policy tension, recorded not resolved:** watch-only is
   mainnet-only by owner order 2026-11-23 (`docs/DECISIONS.md`,
   Gap 21) — while the Android starter's own header states testnet-only
@@ -357,7 +357,7 @@ guide must not let an agent assume otherwise:
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
-  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 121 files; the 3,245-passed + 5-skipped figure is the loud-stone run at token-gaps `f1f0e6c` (2026-11-27, follow-up verification), re-run first-hand by the bug-hunt-v2 docs lane from a clean worktree at `f1f0e6c`, exit 0; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
+  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 129 files; the 3,347-passed + 5-skipped figure is the publish gates at token-gaps `2205f15` (2026-11-28, P2/P3 merge + bughunt-v2-fixes), verified first-hand on loud-stone before pushing; the earlier 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -1131,11 +1131,16 @@ The survey's verified facts, which Lane E implemented from:
 - **Shares are raw bytes, not words.** This is NOT SLIP-39 (shares are
   raw bytes, incompatible with SLIP-39 word-shares). Bawa must add
   user-facing encoding (base64 and/or QR) for the shares.
-- **Measured cost in Bawa's build:** the backup-shares route chunk is
-  10,085 B (`dist/assets/backup-shares-*.js`, verified 2026-11-26 on
-  this tree — build log: 10.08 kB); the Shamir library alone is 4,785
-  B — do not quote the library size as the chunk cost. Main-bundle
-  delta +923 B. The library is loaded by dynamic import on the backup
+- **Measured cost in Bawa's build:** the Backup screen chunk is
+  17,019 B (`dist/assets/backup-*.js`, measured on the `2205f15`
+  publish build, 2026-11-28) — the whole Backup screen (both tabs,
+  Shamir library included, `bawa-share-v1:` present in the chunk) ships
+  as this one lazy chunk. The 10,085 B `backup-shares-*.js` figure was
+  the 2026-11-26 measurement, before the Shares tab moved into the
+  single Backup screen — do not quote it as the current chunk. The
+  Shamir library alone was 4,785 B and the main-bundle delta +923 B
+  at the 2026-11-26 measurement; neither has been re-measured at this
+  tip. The library is loaded by dynamic import on the backup
   screen only.
 - **Vault change (flagged for review):** `autoUnlock()` now imports the
   stored key extractable so an auto-unlocked vault can create shares.
@@ -1154,6 +1159,27 @@ The survey's verified facts, which Lane E implemented from:
   re-check pass (2026-11-26): the share creation, the `bawa-share-v1:`
   encoding, the trial-decrypt restore check and the lazy chunk are
   all in the merged tree.
+
+- **Backup-completion flag (P1 item 8, S3-A).** One flag,
+  `bawa-backup-done` in `localStorage`
+  (`apps/web/src/wallet/backup-state.ts` — stores the flag only, never
+  a mnemonic, password or key). It is set only when the user takes a
+  backup step on the Backup screen: revealing the phrase
+  (`RecoveryPhrasePanel` `onBackedUp`) or creating a set of shares
+  (`BackupSharesPanel` `onBackedUp`) calls `markBackedUp()`
+  (`apps/web/src/screens/backup.tsx:737-740`), which calls
+  `writeBackupDone()`. The Wallets screen reads it
+  (`apps/web/src/screens/wallet-management.tsx:153`): a backed-up
+  wallet shows a "Backed up" badge, otherwise a "Back up your recovery
+  phrase" nudge linking to `/mnemonic-backup`. Deleting the vault
+  clears the flag (`vault.ts:851`), so a fresh vault never inherits a
+  previous wallet's "Backed up". **Follow-up (S3-a, OPEN):** Create
+  shows the 24 words and confirms 3 of them
+  (`apps/web/src/screens/create-wallet.tsx`) but never calls
+  `writeBackupDone()`, so a fresh wallet shows the backup nudge on
+  Wallets until the user visits the Backup screen — the flag should
+  also be set at the end of Create. That is a code change, not a docs
+  change; recorded here, not fixed here.
 
 ## §14. ERC-7730 clear signing — IMPLEMENTED (Lane F)
 
@@ -1253,9 +1279,10 @@ The survey's verified facts, which Lane F implemented from:
   no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP
   8.2.2 + compileSdk 35. The JSON export in §2.6 exists (Step 1,
   2026-11-27) and the toolchain is installed and proven
-  (`./gradlew assembleDebug` succeeds) — Android steps 3–6 are
-  BLOCKED (Step 3 lane's report removed by safety classifiers), not
-  the toolchain or the export — and the owner still has to resolve
+  (`./gradlew assembleDebug` succeeds) — Android Step 3 is IN
+  PROGRESS hands-on (dispatched 2026-11-28; steps 4–6 still await
+  it — they were BLOCKED, Step 3 lane's report removed by safety
+  classifiers), not the toolchain or the export — and the owner still has to resolve
   the mainnet-only vs testnet-only tension (§2.6).
 - Style B governs the visual direction (§0.3); the four-colour cap no
   longer governs new work. The `--qr-*` exception is confined to the
@@ -1321,14 +1348,14 @@ were re-measured from that tree (see the rows below).
 | §2.3 RPCs verified live | `chains-expanded.ts` header (`rpcEvidence`) | Correct | Verified |
 | §2.4 XRP/Stellar/NEAR | Coordinator first-hand registry check, 2026-11-25 (survey) | Not previously recorded in the guide | Added |
 | §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1832` (cardano), `:1859` (kaspa), `:1886` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
-| §2.6 Android JSON export + toolchain | `registry/chains.json` (87 chains, 169 RPCs, 4 testnets, `sourceCommit 7efba14`), `registry/tokens.json` (21 tokens); `apps/web/scripts/generate-android-registry.mjs`; `./gradlew assembleDebug` BUILD SUCCESSFUL (clean, 32 s, 2026-11-27) | Was "Proposal (not yet implemented)" with no SDK/JDK on loud-stone | Fixed in place (docs-currency Lane 2, 2026-11-27; export Step 1 commit `58d85c5`; steps 3–6 BLOCKED, Step 3 report removed by safety classifiers) |
+| §2.6 Android JSON export + toolchain | `registry/chains.json` (87 chains, 169 RPCs, 4 testnets, `sourceCommit 7efba14`), `registry/tokens.json` (21 tokens); `apps/web/scripts/generate-android-registry.mjs`; `./gradlew assembleDebug` BUILD SUCCESSFUL (clean, 32 s, 2026-11-27) | Was "Proposal (not yet implemented)" with no SDK/JDK on loud-stone | Fixed in place (docs-currency Lane 2, 2026-11-27; export Step 1 commit `58d85c5`; steps 3–6 were BLOCKED, Step 3 report removed by safety classifiers; Step 3 now in progress hands-on, dispatched 2026-11-28) |
 | §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files — the 2,945 + 5 skipped figure is Lane C's loud-stone run, not reproduced in this sandbox, 2026-11-26; smoke 440; dinero.js dropped) |
 | §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:2`, `:82`; `auto-lock.ts:21-26` | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |
 | §5 offline signing | `apps/web/src/wallet/send.ts:2527-2530` (Solana); capability table in `WALLET_BUILDER.md` | Correct; SOL `@solana/web3.js` route added from code | Verified |
 | §6 token verification | `apps/web/src/wallet/token-verification.ts:25-45`, `:101` | Correct in code; `docs/TOKEN-VERIFY-PROGRAMME.md` records the programme | Verified |
 | §6.6 Bitget Agent API | `token-verification.ts` (Lane A browser leg, read first-hand); live answers verified by Lane H (USDC/PEPE VERIFIED, fake UNVERIFIED, 2026-11-26) | Not in the guide before | Implemented (Lane A browser leg + Lane H agent-side) |
 | §6.6 Bitget Agent API (Lane H) | `token-verification.ts` (Lane A browser leg, read first-hand); `scripts/verify-token-bitget.mjs` + test (9 tests); live USDC/PEPE VERIFIED, fake UNVERIFIED, 2026-11-26 | Browser leg wired but fail-closed at the CORS preflight; no agent-side form existed | Implemented (agent-side) + browser leg recorded |
-| §11 WalletConnect (Lane H) | `repo1.maven.org/.../com/walletconnect/web3wallet/maven-metadata.xml` (1.35.2, live); `Web3Wallet.kt` `approveSession`; Apache-2.0 LICENSE | Android route named but unversioned | Added (Android record only; no Gradle change — no SDK on loud-stone, app has no signing path) |
+| §11 WalletConnect (Lane H) | `repo1.maven.org/.../com/walletconnect/web3wallet/maven-metadata.xml` (1.35.2, live); `Web3Wallet.kt` `approveSession`; Apache-2.0 LICENSE | Android route named but unversioned | Added (Android record only; no Gradle change — no SDK on loud-stone at the time, toolchain installed 2026-11-27, §2.6; app has no signing path) |
 | §7 prices + fallbacks | `apps/web/src/wallet/price-fallbacks.ts` header; `dex-prices.ts` trap note | Correct | Verified |
 | §7.1 okx-cex-market skill | `custom-skills/okx-cex-market/okx-cex-market/SKILL.md` (MIT v1.5.2; `okx` CLI binary required) | Not in the guide before | Added (agent skill only) |
 | §8 QR cards | `apps/web/src/screens/qr-card.tsx`; `payment-links.ts:727-760` (`QR_CARD_TEMPLATES`, 7 entries; `QR_CARD_TEMPLATE_QR`); `docs/DECISIONS.md` §24 + §25 (redesign E/F/G) | Said four templates (A–D); the redesign added E/F/G on token-gaps | Fixed in place (four → seven) |
@@ -1338,7 +1365,7 @@ were re-measured from that tree (see the rows below).
 | §12 Coinbase Onramp | `apps/web/src/wallet/onramp.ts` (URL builder, no SDK); `receive.tsx` `?buy=1` panel; `package.json` has NO `cbpay-js` | Not in the guide before | Implemented (Lane D; live purchase NOT verified — needs onboarding/keys) |
 | §12.1 Buy provider picker | `apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rank order, key copy, readiness); `receive.tsx:1025` renders the table | Not in the guide before | Implemented (providers programme, 2026-11-26; TON confirmed live for Ramp/MoonPay/Banxa, Mercuryo TON unconfirmed; no live purchase verified). "Works today" wording qualified by docs-currency Lane 2, 2026-11-27: no provider key is configured, every provider shows "not set up yet" |
 | §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, installed; live RFQ client + TON order signing wired, signed BoC only); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes + TON order signing (providers programme, 2026-11-26; STON.fi Lanes B/C, 2026-11-27; Relay proxy not configured; execution approved by the owner 2026-11-27 but NOT implemented — broadcast stays disabled in code until it lands) |
-| §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup-shares.tsx`; `app.tsx` lazy route `/backup-shares`; `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only) |
+| §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup.tsx` (Shares tab under `/mnemonic-backup?tab=shares`; `/backup-shares` redirects there, `app.tsx:496`); `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only; screen/route citation corrected by docs-currency Lane B, 2026-11-28 — no separate `backup-shares.tsx` screen or lazy `/backup-shares` route exists at this tip, §13 body already had it right) |
 | §14 ERC-7730 | `apps/web/src/wallet/clear-signing.ts`; `clear-signing-snapshot.json` (1,523 B); `apps/web/src/wallet/caip.ts`; `send-review.tsx` | Not in the guide before | Implemented (Lane F) |
 | §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
 | §18 Lane H mining | Wallet-repos survey + agent-repos dirs (sandbox, read-only) + FEC skills (MIT) | Not in the guide before | Added |
@@ -1389,7 +1416,7 @@ not the current budget.**
 | Find | Licence | Useful for | Applied in code | Applied in guide |
 | --- | --- | --- | --- | --- |
 | Bitget Agent API, agent-side deep check (token-info + security audit + dev/rug + holder concentration) | MIT (`bitget-wallet-skill`) | Wallet: the browser leg cannot fire (CORS preflight); the same calls work from Node, so a dev/CI token check is the useful form | `scripts/verify-token-bitget.mjs` + `scripts/verify-token-bitget.test.mjs` (9 tests); live: USDC VERIFIED, PEPE VERIFIED, fake UNVERIFIED | §6.6 |
-| WalletConnect Kotlin SDK, Android route | Apache-2.0 | Wallet (Android): dApp connectivity where the web bundle budget does not apply | Not added to `apps/android/app/build.gradle.kts` — the app is watch-only/testnet-only with no signing path, and no Android SDK/JDK exists on loud-stone to build-verify it | §11 (coordinates `com.walletconnect:web3wallet` 1.35.2, Maven-verified; `approveSession` / WalletKit note; projectId still an owner step) |
+| WalletConnect Kotlin SDK, Android route | Apache-2.0 | Wallet (Android): dApp connectivity where the web bundle budget does not apply | Not added to `apps/android/app/build.gradle.kts` — the app is watch-only/testnet-only with no signing path, and no Android SDK/JDK existed on loud-stone at the time to build-verify it (toolchain installed 2026-11-27, §2.6 — a future lane can build-verify it) | §11 (coordinates `com.walletconnect:web3wallet` 1.35.2, Maven-verified; `approveSession` / WalletKit note; projectId still an owner step) |
 | OKX sonar, Solana tx simulation | MIT | Wallet (dev tooling): simulate a Solana send construction locally before signing; never shipped | None — no cargo on loud-stone, build not run | §14 (commands + `sonar send` never on mainnet) |
 | Front-End-Checklist `touch-targets` | MIT | Wallet: touch-target floor for the web app | Audit only, no code change: class audit finds no interactive element below 24 px (default 40, sm 32, xs 28 — xs unused, icon-sm 32); WCAG 2.2 AA 24 px floor passes. The 44 px AAA gap is the known, owner-saved-layout state — restyling it is an owner decision, not a lane fix | This section |
 | Front-End-Checklist `performance-budget` | MIT | Guide + wallet: budgets enforced in CI | Verified, no code change: the bundle-size gate IS the budget (CI `ci.yml:194`, total + largest chunk). Lighthouse CI and production RUM are not wired — flagged, not added | This section |
@@ -1455,7 +1482,8 @@ run was needed.
   the merge was not blocked on it (owner order).
 - **Not verified first-hand by Lane H:** `sonar` release build (no
   cargo on loud-stone); the WalletConnect Kotlin dependency inside
-  a Gradle build (no Android SDK/JDK on loud-stone);
+  a Gradle build (no Android SDK/JDK on loud-stone at the time;
+  toolchain installed 2026-11-27, §2.6);
   `okx-cex-market` end-to-end (needs the `okx` CLI binary);
   `dev_rug_percent` scale at a non-zero value (normalised like its
   sibling fields — stated in the script, not hidden). All still
