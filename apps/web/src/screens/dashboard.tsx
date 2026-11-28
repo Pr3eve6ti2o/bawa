@@ -901,6 +901,40 @@ export function DashboardScreen() {
             )}
           </button>
         </div>
+        {/* Hero wallet switcher (Phantom's account switcher pattern) —
+            moved up with the header: it decides what the balance figure
+            means, so it sits directly under "Portfolio balance" and
+            above the figure, as its own compact row — not beside the
+            heading (too little room at 390 px) and not down with the
+            address/banner cluster. pt-2/pb-2 give it >=8 px clear space
+            both sides on top of the card's 4 px space-y-1; the select is
+            width-to-content with a cap, and carries an aria-label
+            instead of a visible label. Only when there is more than one
+            wallet to switch between. */}
+        {((hasVault && hasWatchAddresses) || watchedWallets.length > 1) && (
+          <div className="pt-2 pb-2">
+            <select
+              id="hero-wallet"
+              aria-label="Wallet"
+              value={heroWallet}
+              onChange={(event) => setHeroWallet(event.target.value)}
+              className="w-auto min-w-0 max-w-[min(100%,260px)] rounded-flat-sm border border-ink bg-paper px-2 py-2 text-base text-ink sm:max-w-[320px]"
+            >
+              <option value="all">All wallets</option>
+              {hasVault ? (
+                <option value="vault">{`My wallet — Account ${(vaultAccount?.account ?? 0) + 1}`}</option>
+              ) : null}
+              {watchedWallets.map((wallet) => (
+                <option
+                  key={wallet.address}
+                  value={`watch:${wallet.address.toLowerCase()}`}
+                >
+                  {`${wallet.label !== '' ? wallet.label : shortenAddress(wallet.address)} — Watch-only`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {/* UX-major Lane 2: break-words — a long total (whale wallet,
             "$12,345,678.90 (Partial)") wraps inside the card at 390 px
             instead of clipping past its edge; tabular-nums (break-ui)
@@ -933,37 +967,6 @@ export function DashboardScreen() {
             >
               {copyLabel === 'copied' ? 'Copied!' : copyLabel === 'failed' ? "Couldn't copy" : 'Copy'}
             </Button>
-          </div>
-        )}
-        {/* Watch-only display programme: the hero wallet switcher
-            (Phantom's account switcher pattern) — All wallets, the
-            vault, or one watched wallet, with the eye mark on the
-            watched options. Only when there is more than one wallet
-            to switch between. */}
-        {((hasVault && hasWatchAddresses) || watchedWallets.length > 1) && (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <label htmlFor="hero-wallet" className="text-sm font-medium text-ink">
-              Wallet
-            </label>
-            <select
-              id="hero-wallet"
-              value={heroWallet}
-              onChange={(event) => setHeroWallet(event.target.value)}
-              className="min-w-0 flex-1 rounded-flat-sm border border-ink bg-paper px-2 py-2 text-base text-ink"
-            >
-              <option value="all">All wallets</option>
-              {hasVault ? (
-                <option value="vault">{`My wallet — Account ${(vaultAccount?.account ?? 0) + 1}`}</option>
-              ) : null}
-              {watchedWallets.map((wallet) => (
-                <option
-                  key={wallet.address}
-                  value={`watch:${wallet.address.toLowerCase()}`}
-                >
-                  {`${wallet.label !== '' ? wallet.label : shortenAddress(wallet.address)} — Watch-only`}
-                </option>
-              ))}
-            </select>
           </div>
         )}
         {/* Watch-only display programme: the watching banner — the
