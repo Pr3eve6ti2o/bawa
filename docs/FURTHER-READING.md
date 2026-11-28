@@ -1,6 +1,6 @@
 ---
 title: Further reading
-description: Primary specifications, Wallet Core sources, vendor documentation and community research to consult alongside this guide set; Link availability was checked on 9 November 2026. Known exceptions and verified alternatives are noted alongside the affected links. Availability is not evidence of what Bawa implements.
+description: Primary specifications, Wallet Core sources, vendor documentation and community research to consult alongside this guide set; Link availability was checked on 9 November 2026 and re-checked on 28 November 2026 (all 24 links HTTP 200, verified first-hand on loud-stone). Known exceptions and verified alternatives are noted alongside the affected links. Availability is not evidence of what Bawa implements.
 last-updated: 2026-11-08
 ---
 

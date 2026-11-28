@@ -29,7 +29,7 @@ node scripts/build-wallet.mjs "Create an Android wallet" --out reports/android-r
   the required toolchain is present. If either `JAVA_HOME` or `ANDROID_HOME`
   is missing, Android setup is `SKIPPED`, not `FAILED` or `VERIFIED`; this
   must not be presented as a verified Android build or test.
-- Capability boundary: on-device derivation still awaits the AAR (Step 4 running, owner-authorized 2026-11-28); the data layer is done (Step 3, `e20cee6`: 87 chains, 169 RPCs, 4 testnets, 21 tokens, 77 unit tests).
+- Capability boundary: on-device derivation is bound via the source-built Trust Wallet Core 4.8.4 AAR (Step 4 DONE, `f9f312b`, 2026-11-28 — `apps/android/core/libs/wallet-core-4.8.4.aar`, `ENGINE_BINDING_AVAILABLE` is `true`); on-device derivation execution is still unverified. The data layer is done (Step 3, `e20cee6`: 87 chains, 169 RPCs, 4 testnets, 21 tokens, 77 unit tests).
   Balances (no provider) and send are not implemented.
 
 ## 3. Create a multi-chain wallet
