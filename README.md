@@ -15,7 +15,7 @@ Bawa is an HD-wallet reference and command-line launcher for generating encrypte
 
 ## Showcase
 
-Real screenshots of the example web wallet running from the active development branch (`panel-rebuild/token-gaps`), taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. The shots below are the current live build — try it at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (bundle `index-B9gxTjOm.js`, 87 chains, dashboard 43 rows).
+Real screenshots of the example web wallet running from the active development branch (`panel-rebuild/token-gaps`), taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. The shots below are from the current live build — try it at [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/) (the latest published build of the example wallet, 87 chains, dashboard 43 rows).
 
 <!-- Screenshots are served from the token-gaps branch via raw.githubusercontent.com so this page always shows the current wallet without duplicating images into main. To extend this grid, add a row to the table below: one image per cell, height="360" on every image so all shots render at the same height. -->
 
@@ -38,7 +38,7 @@ The earlier dashboard screenshots (`docs/images/web-wallet-dashboard-desktop.png
 
 ## Live wallet (current state)
 
-**Try it now: [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/)** — no install, no clone. It serves the latest build of the example wallet from `panel-rebuild/token-gaps` (`1a85258`, 2026-11-28; bundle `index-B9gxTjOm.js`), not from `main`: `main` has no web wallet code.
+**Try it now: [https://pr3eve6ti2o.github.io/bawa/](https://pr3eve6ti2o.github.io/bawa/)** — no install, no clone. It serves the latest published build of the example wallet from `panel-rebuild/token-gaps`, not from `main`: `main` has no web wallet code.
 
 What the live wallet is today (verified 2026-11-28):
 
