@@ -2546,7 +2546,7 @@ hash, not the fetched text, when checking the live chain count.
 
 ## §50 — Frame-buster: NOT dead — kept, mechanism corrected (2026-11-28)
 
-**Owner order 2026-11-28 ~20:40 IST, hands-on, 0 Sol calls; lane branch `panel-rebuild/framebuster-csp`, commit `bff4e84`.** The §49 caveat said the frame-buster inline script "appears dead in the production build" because preview probes show it blocked by the CSP. That premise was wrong for the production host, and this lane proves it first-hand — so the script was **kept, not removed**. Removing it would have left the live GitHub Pages site with no framing defence at all.
+**Owner order 2026-11-28 ~20:40 IST, hands-on, 0 Sol calls; lane branch `panel-rebuild/framebuster-csp`, content commit `549eec9`.** The §49 caveat said the frame-buster inline script "appears dead in the production build" because preview probes show it blocked by the CSP. That premise was wrong for the production host, and this lane proves it first-hand — so the script was **kept, not removed**. Removing it would have left the live GitHub Pages site with no framing defence at all.
 
 **Assessment — two delivery modes, both probed in Chromium 159.0.8154.6 against the production build (`dist/`, base `/bawa/`, JS bundle 4,509,960):**
 
