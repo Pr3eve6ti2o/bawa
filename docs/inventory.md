@@ -91,7 +91,7 @@ Staleness is decided by the drift check (below), not by this table.
 | --- | --- | --- | --- |
 | `docs/index.md` | Pr3eve6ti2o | 2026-11-28 | The docs sidebar/index. No second docs root. |
 | `docs/README.md` | Pr3eve6ti2o | 2026-11-21 | Documentation map. |
-| `docs/README-FULL.md` | Pr3eve6ti2o | 2026-11-14 | Preserved 1,308-line README, verbatim. |
+| `docs/README-FULL.md` | Pr3eve6ti2o | 2026-11-14 | Preserved README, 1,316 lines (was 1,308 at the 2026-11-14 preservation; the currency note at the top is updated as the tree moves). |
 | `docs/CAPABILITY-MAP.md` | Pr3eve6ti2o | 2026-11-28 | |
 | `docs/GLOSSARY.md` | Pr3eve6ti2o | 2026-11-27 | |
 | `docs/FAQ.md` | Pr3eve6ti2o | 2026-11-27 | |
