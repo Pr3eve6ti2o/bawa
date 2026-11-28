@@ -50,7 +50,7 @@ pass.** Tightening the bar is silent; loosening it is loud (see
 | Metric | Today (2026-11-26, this tree) | Direction |
 | --- | --- | --- |
 | Web vitest | 129 files — PASSES on loud-stone (3,351 passed + 5 skipped, 0 failed, Node 22, at token-gaps `734cfef`, 2026-11-28). FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run — environment artefacts, not code defects | must not fall |
-| Web bundle JS | 4,482,622 bytes total (measured 2026-11-28 on token-gaps `734cfef`, fresh build, Node 22); largest chunk (boundary) 2,906,616 bytes (measured 2026-11-28 at `734cfef`, fresh build, Node 22); passes the 6,000,000 budget by 1,517,378 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
+| Web bundle JS | 4,509,097 bytes total (measured 2026-11-28 on token-gaps `7f24ef1`, fresh build, Node 22, first-hand on loud-stone); largest chunk (boundary) 2,906,616 bytes (measured 2026-11-28 at `7f24ef1`, fresh build, Node 22, first-hand on loud-stone); passes the 6,000,000 budget by 1,490,903 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
 | Web test duration | ~93 s (`vitest run`, 2026-11-27, 92.66 s at token-gaps `33f1ff1`) | must not grow without a reason |
 | Root smoke checks | 440 checks pass, 0 fail (412 smoke + 28 register-links, re-verified 2026-11-28 at token-gaps `734cfef` on loud-stone, Node 22) | must not fall |
 
