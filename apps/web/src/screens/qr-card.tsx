@@ -662,7 +662,7 @@ export function QrCard({
       <div
         data-testid="qr-card"
         data-template="a"
-        className="flex w-full flex-col items-center gap-5 rounded-[24px] bg-qr-teal p-6"
+        className="flex w-full flex-col items-center gap-5 rounded-[24px] bg-qr-teal-deep p-6"
       >
         <div
           data-testid="qr-card-header"
@@ -713,7 +713,7 @@ export function QrCard({
               Stacking gives the line the whole 236 px band width.
               The PNG export keeps its measured single-row band
               (canvas measureText proves 17 px fits its 252 px band). */}
-          <div className="space-y-3 bg-qr-teal-band p-5">
+          <div className="space-y-3 border-t border-qr-hairline-teal p-5">
             <div className="flex items-center gap-3">
               {/* Lane P2-C (M6): the identicon pairs the receiving
                   address — the receiver checks the picture, not just
@@ -725,7 +725,7 @@ export function QrCard({
                 onClick={onCopyAddress}
                 disabled={onCopyAddress === undefined}
                 aria-label="Copy receiving address"
-                className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-qr-teal-copy text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-coral text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <CopyGlyph className="size-5 shrink-0" />
               </button>
@@ -741,7 +741,7 @@ export function QrCard({
             showed on B. */}
         <QrCardFooter className="text-center text-[15px] text-qr-muted" />
         <p className="text-[15px] text-qr-muted">{QR_CARD_SHARE_LINK_TEXT}</p>
-        <div className="flex w-full items-center justify-center gap-3 rounded-[16px] bg-qr-bar px-4 py-5">
+        <div className="flex w-full items-center justify-center gap-3 rounded-[16px] px-4 py-5">
           <BrandMark
             markClassName="size-12 rounded-[12px] bg-coral text-2xl"
             textClassName="text-2xl font-extrabold text-white"

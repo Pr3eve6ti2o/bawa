@@ -13,7 +13,7 @@ function containingAll(...patterns: RegExp[]): RegExp {
 
 describe('globals.css', () => {
   it('uses exactly the permitted palette colours, case-insensitively', () => {
-    // The four Bawa colours, plus the ten QR-card template colours
+    // The four Bawa colours, plus the eight QR-card template colours
     // (QR-cards programme, Lane E, 2026-11-25; design/DESIGN.md in
     // bawa-qr-cards). The --qr-* tokens are the one confined
     // exception to the 4-colour cap, used only by the Receive QR
@@ -34,7 +34,7 @@ describe('globals.css', () => {
       .join(' ');
 
     expect(palette).toMatch(
-      /^#011F29 #023139 #0E2127 #111111 #121818 #177245 #1B2023 #2B2B2B #5B5850 #6B7280 #7A9491 #9CA3AF #B42318 #C23A1D #E7F3EA #FF6B4A #FFD93B #FFE9E4 #FFFDF7$/,
+      /^#011F29 #023139 #111111 #177245 #2A4A52 #2B2B2B #5B5850 #6B7280 #9CA3AF #A7C4C1 #B42318 #C23A1D #E7F3EA #FF6B4A #FFD93B #FFE9E4 #FFFDF7$/,
     );
   });
 

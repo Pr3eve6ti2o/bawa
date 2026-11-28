@@ -101,22 +101,31 @@
 
   /* QR-card template colours (QR-cards programme, Lane E,
      2026-11-25; design/DESIGN.md in bawa-qr-cards). The 4-colour
-     cap above still governs the whole app — these ten values are
+     cap above still governs the whole app — these eight values are
      the one confined exception, used ONLY by the Receive QR card's
      four templates (screens/qr-card.tsx) and the PNG exporter that
      draws the same card (wallet/payment-links.ts). Template A
-     (Dark Teal) needs its dark-teal family; Template C (Minimal)
+     (Dark Teal) is a single flat field; Template C (Minimal)
      needs its greys; Template D's subtitle is white at 85% over
      coral, pre-blended to a solid so no rgba literal is needed
      (--qr-white-dim is that blend, not a new colour job). No other
      screen may use them; the palette audit allowlists exactly
-     these literals (scripts/palette-audit.mjs). */
+     these literals (scripts/palette-audit.mjs).
+     QR-colour fix, Lane B, 2026-11-29 (owner order ~01:34 IST):
+     Template A stacked five near-identical darks (dE 4-10 between
+     neighbours) and read as one uneven, dirty wash. Collapsed to
+     Bitget's structure: ONE flat field --qr-teal-deep, with a 1px
+     hairline --qr-hairline-teal above the address band, a solid
+     coral copy disc, and the brand row directly on the field.
+     --qr-teal is Bitget's PAGE colour, kept only as the PNG
+     export's outer backdrop (payment-links.ts, Lane C owns it);
+     the in-app card no longer uses it. The retired band/copy/bar
+     tokens are gone from this file; --qr-muted is lightened for
+     crisp secondary text on the field. */
   --qr-teal: #023139;
   --qr-teal-deep: #011F29;
-  --qr-teal-band: #0E2127;
-  --qr-teal-copy: #1B2023;
-  --qr-bar: #121818;
-  --qr-muted: #7A9491;
+  --qr-hairline-teal: #2A4A52;
+  --qr-muted: #A7C4C1;
   --qr-grey: #6B7280;
   --qr-faint: #9CA3AF;
   --qr-nearblack: #111111;
@@ -425,9 +434,7 @@
      Utilities: bg-qr-teal, text-qr-muted, and so on. */
   --color-qr-teal: var(--qr-teal);
   --color-qr-teal-deep: var(--qr-teal-deep);
-  --color-qr-teal-band: var(--qr-teal-band);
-  --color-qr-teal-copy: var(--qr-teal-copy);
-  --color-qr-bar: var(--qr-bar);
+  --color-qr-hairline-teal: var(--qr-hairline-teal);
   --color-qr-muted: var(--qr-muted);
   --color-qr-grey: var(--qr-grey);
   --color-qr-faint: var(--qr-faint);
