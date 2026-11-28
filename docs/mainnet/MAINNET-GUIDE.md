@@ -4,6 +4,8 @@ Doc 4 is one new standalone document: the mainnet guide for creating a non-custo
 
 Evidence baseline: 2026-11-09 (research slices M01–M36; live checks dated 2026-11-09). The code pin is the repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12` (short `e3b65fb8`), decided 2026-11-10 — see §5 and M-33.
 
+> **Currency note (2026-11-28, docs-audit-b, token-gaps ceade79).** This guide is a pinned-baseline document (2026-11-09..13); its pinned values are intentionally not rewritten here — re-issue remains a coordinator/owner decision per §5. The pinned baseline no longer matches the current tree: the root README is 278 lines at ceade79 (the guide pins 1275/1295 lines from 2026-11-10/12), main is at af828a9, and several 2026-11-12 evidence notes describe the web starter as having no signing code — offline signing now exists in apps/web (broadcast still disabled). The M-35 row's "no reviewed small-amount rehearsal procedure exists" is also superseded: the reviewed draft now exists at docs/mainnet/M35-REHEARSAL-PROCEDURE.md (E04, 2026-11-13); funding was declined by the owner 2026-11-13 and M-35 stays closed unless separately re-authorised (see the dated note on the M-35 row).
+
 **"Complete" in this guide means the prose is done and checked — never authorisation for real-fund use.**
 
 ## Mainnet warnings — read before anything else
@@ -4236,6 +4238,8 @@ T13 re-check 2026-11-12: M-35 remains OPEN; rehearsal execution remains unauthor
 T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the new §13.0 diagram states this boundary visually — a hard gate between the read-only watch-only side and everything below it, with the note that no live send/sign/broadcast has ever been exercised on any network and execution is NOT authorised. The diagram adds no procedure and changes no status.
 
 **Status:** OPEN (amounts approved for review only 2026-11-10; execution NOT authorised).
+
+**Currency note (2026-11-28, docs-audit-b, token-gaps ceade79):** the row heading ("no reviewed small-amount rehearsal procedure exists") and the T13 evidence ("the 2026-11-10 rehearsal-procedure draft is absent from the repo") describe 2026-11-12, not today — the reviewed draft now exists at `docs/mainnet/M35-REHEARSAL-PROCEDURE.md` (E04, 2026-11-13). Funding was declined by the owner 2026-11-13, the four rehearsal addresses are retired and must never be funded, and the isolated test credentials were destroyed — so the clearance condition (procedure exists, separately authorised, executed with recorded evidence) cannot be met as written. M-35 stays closed unless the owner separately re-authorises it. The pinned row evidence above is not rewritten; re-issue is a coordinator/owner decision per §5.
 
 **Operational restriction:** No real funds move on the strength of this guide; no rehearsal procedure may be improvised from the capability table; §13 states the boundary only. No funds move without separate explicit approval.
 

@@ -1,5 +1,7 @@
 # Runbook — price-feed flakiness (by reference)
 
+> **Scope note (updated 2026-11-28, docs-audit-b, token-gaps ceade79).** The price feed is in this tree since the Lane C merge (2026-11-24): `apps/web/src/wallet/prices.ts` with last-good retention, CoinLore / DexScreener / TonAPI / Coinbase fallbacks and per-source row labels; the dashboard shows fiat totals and per-unit prices. The "no price feed" paragraph below describes the tree as it was on 2026-11-20 and is kept as history; the "by reference" sections still describe that tree, not this one.
+>
 > **Scope note.** This checkout has no price feed. There is no CoinGecko
 > client, no `prices.ts`, and no per-unit price display in this tree; the
 > dashboard shows native amounts only and never invents a fiat value.
@@ -69,9 +71,7 @@ feed are **wrong** and are corrected here — do not repeat them:
   otherwise. Zero-balance rows and locked rows show no price slot.
 - The hero total (`portfolioTotal`) honestly returns `unavailable`
   (never `$0.00`) when any balance or price is missing/expired/error,
-  and `partial` when only some chains contribute. One TON failure
-  blanks the whole portfolio total even when BTC/ETH/TRX loaded. That
-  is display logic, documented, not a feed failure.
+  and `partial` when only some chains contribute. (Update 2026-11-28, docs-audit-b, token-gaps ceade79: the shipped hero rule sums the chains that loaded and marks the total partial — a failed chain contributes 0 and the hero shows a partial note (`apps/web/src/screens/dashboard.tsx`); "one TON failure blanks the whole portfolio total" describes the 2026-11-20 multichain-create tree, not this one.)
 
 ## Failure modes (reference)
 
@@ -106,6 +106,7 @@ feed are **wrong** and are corrected here — do not repeat them:
 - **Cause:** the hero goes `Unavailable` when ANY chain fails. Fix by
   changing the hero rule (sum the chains that loaded and mark the
   total partial), not by hiding the failed chain.
+- **Update 2026-11-28 (docs-audit-b, token-gaps ceade79):** the fix above has landed in this tree — the shipped hero sums loaded chains and marks the total partial (`apps/web/src/screens/dashboard.tsx`). This failure mode describes the 2026-11-20 multichain-create tree.
 
 ## What not to do
 
