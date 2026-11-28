@@ -1,7 +1,7 @@
 # Constraints
 
-Last reviewed: 2026-11-27 by the docs-currency pass, Lane 4 (hands-on, 0 Sol calls).
-Base: `panel-rebuild/token-gaps` at `33f1ff1` (P0, live).
+Last reviewed: 2026-11-28 by the docs-currency pass, Lane A (hands-on, 0 Sol calls).
+Base: `panel-rebuild/token-gaps` at `2205f15` (P2/P3 + 122-defect publish, live).
 
 This is Bawa's written quality contract. It outlives any single session:
 a number here is a decision, not an aspiration. Every enforced row names
@@ -49,8 +49,8 @@ pass.** Tightening the bar is silent; loosening it is loud (see
 
 | Metric | Today (2026-11-26, this tree) | Direction |
 | --- | --- | --- |
-| Web vitest | 121 files — PASSES on loud-stone (3,245 passed + 5 skipped, 0 failed, Node 22, at token-gaps `f1f0e6c`, 2026-11-27). FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run — environment artefacts, not code defects | must not fall |
-| Web bundle JS | 4,457,308 bytes total (measured 2026-11-27 on token-gaps `f1f0e6c`, fresh build, Node 22); largest chunk (boundary) 2,906,489 bytes; passes the 6,000,000 budget by 1,542,692 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
+| Web vitest | 129 files — PASSES on loud-stone (3,347 passed + 5 skipped, 0 failed, Node 22, at token-gaps `2205f15`, 2026-11-28). FAILS in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped (guide-update tip), 79 failed / 2,866 passed + 5 skipped (pristine token-gaps `7a170f4`); timeout-dominated, varies run to run — environment artefacts, not code defects | must not fall |
+| Web bundle JS | 4,482,619 bytes total (measured 2026-11-28 on token-gaps `2205f15`, fresh build, Node 22); largest chunk (boundary) 2,906,616 bytes (measured 2026-11-28 at `2205f15`, fresh build, Node 22); passes the 6,000,000 budget by 1,517,381 bytes | must not grow (ratchet: budgets above are the owner-ordered 6,000,000) |
 | Web test duration | ~93 s (`vitest run`, 2026-11-27, 92.66 s at token-gaps `33f1ff1`) | must not grow without a reason |
 | Root smoke checks | 440 checks pass, 0 fail (412 smoke + 28 register-links, re-verified 2026-11-27 at token-gaps `33f1ff1` on loud-stone, Node 22) | must not fall |
 
