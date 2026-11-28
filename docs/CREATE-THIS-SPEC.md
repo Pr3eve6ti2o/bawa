@@ -911,6 +911,93 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   backoff, showing "Retrying, attempt N of 3"; a non-transient
   failure ("Indexer unavailable") is one attempt only, then the
   honest error.
+- **Watch-only display programme — combined hero, allocation, live
+  balances (owner order 2026-11-28 ~20:17 IST, `4728ff1`;
+  audit `/home/boxd/workspace/bawa-watchonly-audit/report.md`,
+  research
+  `/home/boxd/workspace/bawa-watchonly-research/REPORT.md`,
+  decisions §51).** The hero rule above (a watched address as the
+  no-vault fallback) is superseded by the combined hero: the
+  homepage total is the vault + all watched wallets together, and
+  the hero follows the wallet switcher — All wallets shows the
+  combined total, one wallet shows that wallet's part
+  (`screens/dashboard.tsx:640-660`, `displayTotal`; switcher state
+  `:483`, options `:939-954`). On "All wallets" with both sides the
+  split line reads "Your wallets $X · Watched $Y"
+  (`dashboard.tsx:913-916`) so watched money is never silently
+  counted as the user's own (MetaMask Portfolio pattern). A watched
+  selection gets the eye mark and a persistent "Watching <address>
+  — view-only, can't send." banner (`dashboard.tsx:976`); Send/Swap
+  render disabled with the reason when viewing watch-only
+  (`dashboard.tsx:1082-1109`). The per-chain allocation (OKX +
+  Zerion pattern): each watched wallet shows its Top-5 chains with
+  shares and its total — in the Watch-only section in State A and as
+  a standalone section in State B, where the main rows ARE the
+  watched wallet (`screens/asset-rows.tsx:1352-1383`, `:1505-1531`,
+  `:1533-1549`); more than 5 chains reads "And N more chains — see
+  the rows below." The Watch-only sections on Home and /assets
+  include token rows, not natives only — one row per token per
+  watched chain from `watchTokenBalances`
+  (`asset-rows.tsx:1302-1342`). **Live balances (polling-guide
+  pattern):** balances poll every 45 s while a portfolio screen is
+  mounted (`screens/use-live-balances.ts:18`,
+  `BALANCE_POLL_INTERVAL_MS = 45_000`), pause while the tab is
+  hidden, refresh when it becomes visible again, and keep the manual
+  "Refresh balances" button; the poll is also the bounded auto-retry
+  — a failed fetch recovers on the next tick and its last-good value
+  stays visible meanwhile, so a failed balance never silently counts
+  as $0 (`use-live-balances.ts:20-58`). "Balances updated HH:MM"
+  sits beside "Prices updated HH:MM" (`dashboard.tsx:998-1000`;
+  stamp set in `state/wallet-context.tsx:1133`, `:1414`). A failed
+  or unpriced holding is named in the hero's Missing note
+  ("Missing: Dogecoin balance.", `dashboard.tsx:1007`) — never just
+  "(Partial)"; a balance that can never be fetched (no address / no
+  adapter / disabled / devnet-no-tokens) no longer forces Partial
+  forever (`dashboard.tsx:37-46`).
+- **Watch-only display programme — Activity default, add flow, asset
+  detail, /track (same order, `4728ff1`; decisions §51).**
+  **Activity default:** with no stored choice, if the vault's
+  history has settled with zero rows and a watched wallet exists,
+  Activity opens on the first watched wallet; the stored choice is
+  never overridden (`screens/transaction-history.tsx:322-355`).
+  **Add flow:** the address field is first on the Watch-only tab
+  ("Paste any address — the chain is detected automatically."), the
+  chain picker below for xpubs and multi-chain addresses only
+  (`screens/import-wallet.tsx:899-904`, `:938`). **Asset detail:** a
+  known imported address never reads "No address is available" —
+  the error is "Could not load the balance." with "The address is
+  imported — this is a load failure. Try Retry below."
+  (`screens/asset-detail.tsx:640-644`); the addresses block reads
+  "Watched address" for a watched wallet
+  (`asset-detail.tsx:1005`); token history loads the token's
+  transfers (EVM `tokentx`,
+  `wallet/adapters/evm.ts:392-402`) with the adapter registration
+  awaited first and one delayed retry on error
+  (`asset-detail.tsx:233-247`), a failed load saying "Could not load
+  token transactions. {reason}" with Retry
+  (`asset-detail.tsx:934`). **/track:** linked from the nav
+  (`app/sidebar-nav.tsx:37-50`) and prefilled from `?address=` /
+  `?chain=` or the first watched wallet, auto-running its recent
+  activity once (`screens/track-transaction.tsx:182-197`,
+  `:239-279`). **Research sources (patterns only, no code copied):**
+  Phantom help centre — watch-only addresses and
+  add-another-wallet; OKX help — manage-my-wallet (web); MetaMask
+  Portfolio review + `@metamask/watch-only-keyring` (licence NOT
+  verified — pattern only); Trust Wallet help — watch-only wallets;
+  Bitget Wallet v7.3.1 blog; Zerion / DeBank / Rabby tracker layout;
+  Web3 dashboard polling guide (khalilahmed.dev) + wallet-tracking
+  API comparison (bitquery.io). Full URLs in the research report.
+  **Known partial (2026-11-28, Blockscout 429s on loud-stone's
+  shared egress IP):** USDC token-history rows and /track
+  recent-activity rows did not load in verification — "Could not
+  load token transactions. HTTP 429" / "Tried 3 times — the indexer
+  stayed unreachable." They load once the rate-limit window resets,
+  a different egress IP is used, or a keyed history source is
+  configured (the owner decision already pending for the four
+  history-blocked chains, §2.7). **Not changed by this programme:**
+  the hero count-up still animates from $0 at first paint; amounts
+  still render at full precision; "Hide zero balances" is still a
+  manual toggle, off by default.
 
 ## §10. Devnet mode — temporary, exception E1, expires 2027-02-20
 
@@ -1545,6 +1632,16 @@ Deleting the Current account moves Current to the first remaining
 account; the only account has no Delete button at all (removing it
 is what Delete vault on /security is for), and the store refuses a
 last-account delete.
+**Watch-only cards (watch-only display programme, 2026-11-28,
+`4728ff1`; decisions §51):** the per-chain "Forget stored key"
+buttons are gone — one watched address used to render 59 rows each
+with its own Forget. The per-chain rows sit behind a "N chains —
+show balances" disclosure
+(`wallet-management.tsx:1080-1082`), each row carrying its fiat
+value (`WatchOnlyBalance`, `:63`, `:1107`), and forgetting is one
+two-tap "Forget this wallet" control per card (`:1132`). The "You
+don't have a wallet yet" line no longer shows when watched wallets
+exist. This supersedes the "per-chain Forget" wording above.
 
 ### §15.2 Mobile overflow — the Add Token dialog fix, and the pattern to copy (Lane A, 2026-11-28)
 
@@ -1658,6 +1755,7 @@ were re-measured from that tree (see the rows below).
 | §15.1 /wallets manage | `wallet-management.tsx:312`; `vault.ts:1066`, `:969` (MAX 40) | /wallets screen undescribed; rename/delete absent before `65edc90` | Implemented (fix programme, 2026-11-28) |
 | §15.2 mobile overflow pattern | `dialog.tsx:155-166`; `add-token.tsx:715-717`; `chain-search-select.tsx:292-294` | Overflow pattern undescribed; earlier "no overflow" claim wrong for the fixed dialog | Fixed in place (Lane A `aea4b58`, 2026-11-28) |
 | §19 Lane D audit | This lane, hands-on, 0 Sol calls; gates at `7f24ef1` | Not in the guide before | Added |
+| §9 watch-only display programme | `dashboard.tsx:916` (split), `:1000` (Balances updated), `:1007` (Missing note); `asset-rows.tsx:1302-1342` (watched tokens), `:1505-1531` (allocation Top-5); `use-live-balances.ts:18` (45 s poll); `transaction-history.tsx:322-355` (Activity default); `wallet-management.tsx:1080`, `:1132` (/wallets disclosure + Forget); `track-transaction.tsx:182-279` (/track prefill); `sidebar-nav.tsx:50` (Track link) | Watch-only invisible outside /wallets; hero vault-only; no allocation; no balance polling; /track unlinked | Implemented (watch-only display programme, 2026-11-28, `4728ff1`; DECISIONS.md §51) |
 
 **Not verified first-hand (re-check pass, 2026-11-26; providers
 programme additions, 2026-11-26):** Relay quotes with a live proxy (no
@@ -1857,3 +1955,21 @@ stacked-band difference; (§3 + Part A) test counts 3,351 → 3,416
 passed and total JS 4,482,622 → 4,509,097 at `7f24ef1`.
 
 **Dashboard row count — FIXED (Lane 2, 2026-11-28, `3db591e`, hands-on, 0 Sol calls):** the live count varied 41–43 because failed rows rendered as a plain `<li>` with no link — the count of navigable rows was 43 minus the rows whose balance fetch had failed (native Dogecoin, SoChain 429s on the shared egress with BlockCypher CORS-blocked as its only fallback; TRON USDT, Trongrid `triggerconstantcontract` 429 — the native TRX row survives the same 429s via its PublicNode fallback, the token path has none). The `<li>` count itself was always 43 (`e6a2727` held: failed rows stay visible). Fix in `screens/asset-rows.tsx`: every main-list row is a link to its asset detail in every state — ready, failed, or still loading — in both the list and table variants, so the linked-row count is the full 43 whatever the network does; watch-only rows are never links (a watched address can never send). Verified first-hand in the real browser (production build, fresh disposable test wallet per viewport, phrases never logged): 5 reloads at 390 px + 5 at 1280 px, `li` = 43 and linked = 43 at every sample (40 samples, including mid-load and with 1 balance failed), with count logs + screenshots. Gates at `3db591e`: tsc 0, eslint clean, build exit 0, vitest 3,428 passed + 5 skipped (129 files) on the worktree as tested (which also held other lanes' uncommitted test edits; this lane's own suites, dashboard + asset-list, 61 passed), total JS 4,509,662 / 6,000,000.
+
+**Watch-only display programme — documented (docs lane, 2026-11-28,
+hands-on, 0 Sol calls, 0 external-model calls).** Build `4728ff1`
+on `panel-rebuild/token-gaps` (merged `0640e1e`); the guide records
+it in §9 (combined hero, allocation, live balances, Activity
+default, add flow, asset detail, /track), §15.1 (/wallets
+disclosure + one "Forget this wallet" per card) and the §17 trace
+row; DECISIONS.md §51 is the programme record. Two file:line
+citations were corrected first-hand before commit
+(import-wallet address field `:899-904` with the chain picker at
+`:938`, not `:899-909` / `:943`; State B allocation block
+`:1533-1549`, not `:1533-1550`). Docs gates run first-hand on
+loud-stone after the edit: `python tools/check-links.py` OK (183
+files); `node tests/diagram-references.test.mjs` 4 pass / 1 fail —
+the same pre-existing failure as the baseline before this edit
+(test 3, "validation-draft files stay out of the repo",
+`EthSendComposer.kt` on the branch; recorded in §49). No code
+changed; nothing pushed.
