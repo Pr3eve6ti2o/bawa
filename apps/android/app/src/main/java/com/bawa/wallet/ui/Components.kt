@@ -64,8 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bawa.wallet.core.Chain
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import com.bawa.wallet.ui.scanner.encodeQrCode
 
 @Composable
 fun ScreenHeader(title: String, onBack: () -> Unit) {
@@ -170,8 +169,9 @@ fun QrCodeImage(content: String, size: Int = 200) {
     val bitmap = remember(content) {
         if (content.isEmpty()) null
         else try {
-            val writer = QRCodeWriter()
-            val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size)
+            // Step 5, Lane C: encoded with error correction level M
+            // (see ui/scanner/QrCodeCodec.kt), not ZXing's default L.
+            val bitMatrix = encodeQrCode(content, size)
             val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
             for (x in 0 until size) {
                 for (y in 0 until size) {
