@@ -28,7 +28,7 @@ The last two rows use the clean-checkout workflow as the end-to-end route. The o
 
 - Engine: **`@trustwallet/wallet-core` 4.9.3**, the repository pin (upgraded 2026-11-13, R08 qualification + E02 application; the former pin 4.9.1 is superseded). **Do not substitute 4.9.2** or imply coverage beyond the qualified version.
 - Web starter: derives **in-browser from extended public keys only**. This is not a signing capability.
-- Android starter: derives **nothing on-device**. There is **no wallet-core AAR**; passing its unit tests does not demonstrate on-device derivation.
+- Android starter: on-device derivation is bound via the source-built Trust Wallet Core 4.8.4 AAR (Step 4, commit `f9f312b`, 2026-11-28 — `apps/android/core/libs/wallet-core-4.8.4.aar`, `ENGINE_BINDING_AVAILABLE` is `true`; see `apps/android/TWC-AAR.md`), but on-device derivation execution is still unverified; passing its unit tests does not demonstrate on-device derivation.
 
 | Chain | Derivation policy |
 | --- | --- |
@@ -115,7 +115,7 @@ Mainnet activation requires a **separate explicit approval**, plus all applicabl
 
 ### CLOSED — `SECURITY.md` disclosure procedure
 
-`docs/SECURITY.md` now documents a vulnerability-disclosure procedure, with private reporting through GitHub's private vulnerability reporting for this repository (verified 2026-11-28, token-gaps `734cfef`). No private email contact is published. Do not post exploit details publicly.
+`docs/SECURITY.md` now documents a vulnerability-disclosure procedure, with private reporting through GitHub's private vulnerability reporting for this repository (verified 2026-11-28, token-gaps `ceade79`). No private email contact is published. Do not post exploit details publicly.
 
 ### OPEN — D06 F8 environment-name collision
 
