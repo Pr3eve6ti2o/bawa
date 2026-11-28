@@ -1,8 +1,21 @@
 // QR card (UI/UX Round 2, item 1; Lane H redesign; Lane 5 full-card
-// redesign, 2026-11-24; QR-cards programme, Lane E, 2026-11-25): the
-// Receive QR shown as a full card, not a bare QR — the form the owner
-// asked for ("the type of card QR I wanted you to create but you were
-// messing with the QR only").
+// redesign, 2026-11-24; QR-cards programme, Lane E, 2026-11-25;
+// Lane B card redesign, 2026-11-28, hands-on, 0 Sol): the Receive QR
+// shown as a full card, not a bare QR — the form the owner asked for
+// ("the type of card QR I wanted you to create but you were messing
+// with the QR only").
+//
+// Lane B restyled all seven templates in the polished style-B
+// language (flat, clean, strong hierarchy, generous spacing, real
+// contrast — the Bitget bar the owner showed us): the wobbly
+// rounded-bawa radii, the 2 px ink frames and the hard offset
+// --bawa-shadow are gone from the card — every surface is a clean
+// 24/20/16 px radius with a 1 px hairline (border-border) and, on
+// the card root and the tiles over coloured fields, the soft
+// shadow-lg. Nothing of Bitget's branding, logo, colours-as-brand
+// or "Deposit from Bitget Exchange" link is copied: the card is
+// Bawa's own treatment, Bawa's wording, and Bawa's logos (the
+// in-repo Trust Wallet assets, screens/token-logo).
 //
 // The card, top to bottom: the asset's logo in a circle with the
 // network's mark as a small badge on it, a "Receive {TOKEN}" title, a
@@ -13,13 +26,15 @@
 // label with the FULL address and a copy button, and a footer in
 // Bawa's own words.
 //
-// The shape follows the Bitget Wallet Receive card the owner showed
-// us (logo circle + badge, title, network subtitle, big QR with a
-// centre mark, address + copy, footer line) — but nothing of
-// Bitget's branding, logo, colours-as-brand or "Deposit from Bitget
-// Exchange" link is copied: the card is Bawa's own paper/ink/sun
-// treatment, Bawa's wording, and Bawa's logos (the in-repo Trust
-// Wallet assets, screens/token-logo). The three-template behaviour
+// The address is split into balanced lines (splitAddressLines: a
+// 42-char address reads as two 21-char lines, like Bitget's
+// 21 + 21) — never break-all mid-address, and never a 41 + 1 orphan
+// line. The tagline (QR_CARD_FOOTER, wallet/payment-links — that is
+// where it lives, not in this file) is rendered in EVERY template
+// now, not only in B: A, C, D, E, F and G each carry it above their
+// brand row, in their own colours.
+//
+// The three-template behaviour
 // (Address / Payment request / Share link) is untouched — the card
 // shows whichever template is selected, and Share/Download send this
 // same card.
@@ -85,6 +100,74 @@ import { chainLogoFor, FallbackMark, tokenLogoFor } from './token-logo';
 import { AddressIdenticon } from '../ui/components/address-identicon';
 
 export { QR_CARD_FOOTER };
+
+/**
+ * Split an address into balanced lines at clean boundaries — a
+ * 42-char EVM address reads as two 21-char lines, exactly like the
+ * Bitget bar (0x4e2C…A5Cd / 02c27B71bb092); a 44-char address as
+ * 22 + 22; a 66-char Starknet address as 22 + 22 + 22. No line is
+ * ever a 1–2 char orphan (the old greedy wrap left 'BD' alone on a
+ * line in the PNG export), and no break ever falls mid-address at a
+ * random fill point. Pure, so tests can check it without rendering.
+ */
+export function splitAddressLines(address: string): string[] {
+  if (address.length === 0) return [];
+  // A short address fits on one line everywhere (the narrowest
+  // band, A's, holds 21 mono chars at 16 px bold) — only split a
+  // longer one: two balanced lines up to 44 chars, then 22s.
+  if (address.length <= 21) return [address];
+  const perLine =
+    address.length <= 44 ? Math.ceil(address.length / 2) : 22;
+  const lines: string[] = [];
+  for (let i = 0; i < address.length; i += perLine) {
+    lines.push(address.slice(i, i + perLine));
+  }
+  return lines;
+}
+
+/**
+ * The full address as chunked lines: one block span per line, so
+ * the break is always at a chunk boundary and never mid-address.
+ * The element's textContent is still the whole address, character
+ * for character — a receiver copying it, and the tests asserting
+ * it, see the same string as before.
+ */
+function AddressLines({
+  address,
+  className,
+}: {
+  address: string;
+  className: string;
+}): React.ReactElement {
+  return (
+    <p data-testid="qr-card-address" className={className}>
+      {splitAddressLines(address).map((line, index) => (
+        <span key={`${index}-${line}`} className="block">
+          {line}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/**
+ * The footer tagline, in Bawa's own words — rendered in EVERY
+ * template (Lane B, 2026-11-28): before this lane only B carried
+ * it, and the other six templates ended at their brand row. The
+ * wording lives in wallet/payment-links (QR_CARD_FOOTER) — that is
+ * where the owner's screenshot shows it coming from, not this file.
+ */
+function QrCardFooter({
+  className,
+}: {
+  className: string;
+}): React.ReactElement {
+  return (
+    <p data-testid="qr-card-footer" className={className}>
+      {QR_CARD_FOOTER}
+    </p>
+  );
+}
 
 /**
  * The short chain tag in the card label: the chain id, except BNB
@@ -389,7 +472,7 @@ interface QrCardProps {
 /**
  * The centred card skeleton shared by templates E (Sun) and F (Ink):
  * header disc, title, subtitle, white tile, amount + underline, address
- * strip, brand row. The two differ only in colours, the tile frame, and
+ * strip, footer tagline, brand row. The two differ only in colours, the tile frame, and
  * the strip — passed in as props, so the skeleton is written once.
  */
 function CentredQrCard({
@@ -404,6 +487,7 @@ function CentredQrCard({
   amountSizeClassName,
   underlineClassName,
   strip,
+  footerClassName,
   markClassName,
   markTextClassName,
   brandTextClassName,
@@ -432,6 +516,8 @@ function CentredQrCard({
   amountSizeClassName: string;
   underlineClassName: string;
   strip: React.ReactNode;
+  /** The footer tagline's colours in this template (E: ink on sun; F: faint on ink). */
+  footerClassName: string;
   markClassName: string;
   markTextClassName: string;
   brandTextClassName: string;
@@ -449,7 +535,7 @@ function CentredQrCard({
     <div
       data-testid="qr-card"
       data-template={template}
-      className={`flex w-full flex-col items-center gap-5 rounded-bawa-sm p-6 ${rootClassName}`}
+      className={`flex w-full flex-col items-center gap-5 rounded-[24px] p-6 ${rootClassName}`}
     >
       <div
         data-testid="qr-card-header"
@@ -494,6 +580,7 @@ function CentredQrCard({
         />
       </div>
       {strip}
+      <QrCardFooter className={footerClassName} />
       <div className="flex w-full items-center">
         <BrandMark
           markClassName={markClassName}
@@ -571,7 +658,7 @@ export function QrCard({
       <div
         data-testid="qr-card"
         data-template="a"
-        className="flex w-full flex-col items-center gap-5 rounded-bawa-sm bg-qr-teal p-6"
+        className="flex w-full flex-col items-center gap-5 rounded-[24px] bg-qr-teal p-6"
       >
         <div
           data-testid="qr-card-header"
@@ -614,35 +701,45 @@ export function QrCard({
               {amountText ?? 'Any amount'}
             </p>
           </div>
-          <div className="flex items-center gap-3 bg-qr-teal-band p-5">
-            {/* Lane P2-C (M6): the identicon pairs the receiving
-                address — the receiver checks the picture, not just
-                the hex. Same addition in all seven templates. */}
-            <AddressIdenticon address={address} size={32} />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <span className="text-sm text-qr-muted">Receiving address</span>
-              <p
-                data-testid="qr-card-address"
-                className="break-all font-mono text-[17px] font-bold leading-6 text-white"
+          {/* Lane B: stacked band — the address gets the full band
+              width on its own row. CDP-measured (2026-11-28): in the
+              single-row band the address column was 136 px while a
+              21-char line needs 168 px at 14 px bold, so the tail
+              ran under the copy circle at both 16 px and 14 px.
+              Stacking gives the line the whole 236 px band width.
+              The PNG export keeps its measured single-row band
+              (canvas measureText proves 17 px fits its 252 px band). */}
+          <div className="space-y-3 bg-qr-teal-band p-5">
+            <div className="flex items-center gap-3">
+              {/* Lane P2-C (M6): the identicon pairs the receiving
+                  address — the receiver checks the picture, not just
+                  the hex. Same addition in all seven templates. */}
+              <AddressIdenticon address={address} size={32} />
+              <span className="min-w-0 flex-1 text-sm text-qr-muted">Receiving address</span>
+              <button
+                type="button"
+                onClick={onCopyAddress}
+                disabled={onCopyAddress === undefined}
+                aria-label="Copy receiving address"
+                className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-qr-teal-copy text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {address}
-              </p>
+                <CopyGlyph className="size-5 shrink-0" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onCopyAddress}
-              disabled={onCopyAddress === undefined}
-              aria-label="Copy receiving address"
-              className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-qr-teal-copy text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <CopyGlyph className="size-5 shrink-0" />
-            </button>
+            <AddressLines
+              address={address}
+              className="font-mono text-[14px] font-bold leading-6 text-white"
+            />
           </div>
         </div>
+        {/* Lane B: the footer tagline lives here too now — A used to
+            end its copy at the link line, and the tagline only ever
+            showed on B. */}
+        <QrCardFooter className="text-center text-[15px] text-qr-muted" />
         <p className="text-[15px] text-qr-muted">{QR_CARD_SHARE_LINK_TEXT}</p>
-        <div className="flex w-full items-center justify-center gap-3 rounded-bawa-sm bg-qr-bar px-4 py-5">
+        <div className="flex w-full items-center justify-center gap-3 rounded-[16px] bg-qr-bar px-4 py-5">
           <BrandMark
-            markClassName="size-12 rounded-xl bg-coral text-2xl"
+            markClassName="size-12 rounded-[12px] bg-coral text-2xl"
             textClassName="text-2xl font-extrabold text-white"
           />
         </div>
@@ -656,11 +753,14 @@ export function QrCard({
     // and the wordmark floated far below Copy, which is why C read as
     // unfinished). Tighter top/bottom pads, larger title and amount,
     // 13 px address, grey wordmark instead of faint.
+    // Lane B: the bare card gets a hairline + soft shadow, so the
+    // white reads as a card on the paper page, and the footer
+    // tagline sits above the wordmark.
     return (
       <div
         data-testid="qr-card"
         data-template="c"
-        className="flex w-full flex-col items-center gap-6 bg-white px-6 py-6"
+        className="flex w-full flex-col items-center gap-6 rounded-[24px] border border-border bg-white px-6 py-6 shadow-lg"
       >
         <LogoImage src={centreLogoSrc} alt={`${tokenSymbol} logo`} size="xl" />
         <h2
@@ -695,12 +795,10 @@ export function QrCard({
         </p>
         <div className="flex w-full items-center justify-center gap-2">
           <AddressIdenticon address={address} size={24} />
-          <p
-            data-testid="qr-card-address"
-            className="min-w-0 flex-1 break-all text-center font-mono text-[13px] text-qr-grey"
-          >
-            {address}
-          </p>
+          <AddressLines
+            address={address}
+            className="min-w-0 flex-1 text-center font-mono text-[13px] leading-[19px] text-qr-grey"
+          />
         </div>
         <button
           type="button"
@@ -711,6 +809,7 @@ export function QrCard({
         >
           Copy
         </button>
+        <QrCardFooter className="text-center text-sm text-qr-grey" />
         <p className="text-[13px] font-semibold tracking-wide text-qr-grey">
           Bawa
         </p>
@@ -723,7 +822,7 @@ export function QrCard({
       <div
         data-testid="qr-card"
         data-template="d"
-        className="flex w-full flex-col items-start gap-6 rounded-bawa-sm bg-coral p-6"
+        className="flex w-full flex-col items-start gap-6 rounded-[24px] bg-coral p-6"
       >
         <div className="flex w-full items-start justify-between gap-4">
           <div className="min-w-0 space-y-3">
@@ -754,7 +853,7 @@ export function QrCard({
         </div>
         <div
           data-testid="qr-card-tile"
-          className="self-center rounded-[24px] bg-white p-6"
+          className="self-center rounded-[24px] bg-white p-6 shadow-lg"
         >
           <div id="qr-card-qr" className="shrink-0">
             {qrCode}
@@ -766,14 +865,15 @@ export function QrCard({
           </p>
           <span className="block h-1 w-12 bg-sun" aria-hidden="true" />
         </div>
-        <div className="-mx-6 flex w-[calc(100%+3rem)] items-center gap-3 bg-ink px-6 py-4">
+        {/* Lane B: the strip is an inset rounded panel now, not a
+            full-bleed band — the card's 24 px radius shows on all
+            four sides, and the footer tagline sits under it. */}
+        <div className="flex w-full items-center gap-3 rounded-[16px] bg-ink px-4 py-4">
           <AddressIdenticon address={address} size={28} />
-          <p
-            data-testid="qr-card-address"
-            className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-white"
-          >
-            {address}
-          </p>
+          <AddressLines
+            address={address}
+            className="min-w-0 flex-1 font-mono text-sm leading-5 text-white"
+          />
           <button
             type="button"
             onClick={onCopyAddress}
@@ -784,8 +884,9 @@ export function QrCard({
             <CopyGlyph className="size-5 shrink-0" />
           </button>
         </div>
+        <QrCardFooter className="text-[15px] text-qr-white-dim" />
         <BrandMark
-          markClassName="size-9 rounded-lg bg-ink text-xl"
+          markClassName="size-9 rounded-[8px] bg-ink text-xl"
           textClassName="font-display text-[22px] font-extrabold text-white"
         />
       </div>
@@ -806,19 +907,17 @@ export function QrCard({
             className="text-center text-[13px] leading-[19px] text-ink"
           />
         }
-        tileClassName="rounded-[24px] border-2 border-ink bg-white p-6 shadow-[var(--bawa-shadow)]"
+        tileClassName="rounded-[24px] bg-white p-6 shadow-lg"
         amountClassName="text-ink"
         amountSizeClassName="text-[22px]"
         underlineClassName="bg-coral"
         strip={
-          <div className="-mx-6 flex w-[calc(100%+3rem)] items-center gap-3 bg-ink px-6 py-4">
+          <div className="flex w-full items-center gap-3 rounded-[16px] bg-ink px-4 py-4">
             <AddressIdenticon address={address} size={28} />
-            <p
-              data-testid="qr-card-address"
-              className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-white"
-            >
-              {address}
-            </p>
+            <AddressLines
+              address={address}
+              className="min-w-0 flex-1 font-mono text-sm leading-5 text-white"
+            />
             <button
               type="button"
               onClick={onCopyAddress}
@@ -830,7 +929,8 @@ export function QrCard({
             </button>
           </div>
         }
-        markClassName="size-9 rounded-lg bg-ink text-xl"
+        footerClassName="text-center text-[15px] text-ink"
+        markClassName="size-9 rounded-[8px] bg-ink text-xl"
         markTextClassName="text-white"
         brandTextClassName="font-display text-[22px] font-extrabold text-ink"
         tokenLogo={tokenLogo}
@@ -860,21 +960,19 @@ export function QrCard({
             className="text-center text-[13px] leading-[19px] text-white"
           />
         }
-        tileClassName="rounded-[24px] bg-white p-6"
+        tileClassName="rounded-[24px] bg-white p-6 shadow-lg"
         amountClassName="text-white"
         // UX-major Lane 1: F's amount is 22 px like E's (was 20) —
         // the two centred cards share one amount step now.
         amountSizeClassName="text-[22px]"
         underlineClassName="bg-sun"
         strip={
-          <div className="flex w-full items-center gap-3 rounded-xl bg-paper px-4 py-4">
+          <div className="flex w-full items-center gap-3 rounded-[16px] bg-paper px-4 py-4">
             <AddressIdenticon address={address} size={28} />
-            <p
-              data-testid="qr-card-address"
-              className="min-w-0 flex-1 break-all font-mono text-sm leading-5 text-ink"
-            >
-              {address}
-            </p>
+            <AddressLines
+              address={address}
+              className="min-w-0 flex-1 font-mono text-sm leading-5 text-ink"
+            />
             <button
               type="button"
               onClick={onCopyAddress}
@@ -886,7 +984,8 @@ export function QrCard({
             </button>
           </div>
         }
-        markClassName="size-9 rounded-lg bg-sun text-xl"
+        footerClassName="text-center text-[15px] text-qr-faint"
+        markClassName="size-9 rounded-[8px] bg-sun text-xl"
         markTextClassName="text-ink"
         brandTextClassName="font-display text-[22px] font-extrabold text-white"
         tokenLogo={tokenLogo}
@@ -907,11 +1006,11 @@ export function QrCard({
       <div
         data-testid="qr-card"
         data-template="g"
-        className="relative flex w-full flex-col items-center gap-5 rounded-bawa-sm border-2 border-ink bg-paper p-5"
+        className="relative flex w-full flex-col items-center gap-5 rounded-[24px] border border-border bg-paper p-5 shadow-lg"
       >
         <div
           data-testid="qr-card-header"
-          className="relative mt-1 rounded-full border-2 border-ink bg-paper p-1"
+          className="relative mt-1 rounded-full border border-border bg-paper p-1"
         >
           <LogoImage src={tokenLogo} alt={`${tokenSymbol} logo`} size="lg" />
           <span className="absolute -bottom-1 -right-1 flex rounded-full border-2 border-paper bg-paper">
@@ -940,7 +1039,7 @@ export function QrCard({
         />
         <div
           data-testid="qr-card-tile"
-          className="rounded-bawa-sm border-2 border-ink bg-paper p-4 shadow-[var(--bawa-shadow)]"
+          className="rounded-[20px] border border-border bg-white p-4"
         >
           <div id="qr-card-qr" className="shrink-0">
             {qrCode}
@@ -948,44 +1047,43 @@ export function QrCard({
         </div>
         <div className="relative w-[calc(100%+2.5rem)]">
           <div
-            className="border-t-2 border-dashed border-ink"
+            className="border-t border-dashed border-ink"
             aria-hidden="true"
           />
           <span
-            className="absolute -left-2 -top-2 size-4 rounded-full border-2 border-ink bg-paper"
+            className="absolute -left-2 -top-2 size-4 rounded-full border border-ink bg-paper"
             aria-hidden="true"
           />
           <span
-            className="absolute -right-2 -top-2 size-4 rounded-full border-2 border-ink bg-paper"
+            className="absolute -right-2 -top-2 size-4 rounded-full border border-ink bg-paper"
             aria-hidden="true"
           />
         </div>
-        <div className="-mx-5 -mb-5 flex w-[calc(100%+2.5rem)] flex-col items-center gap-4 rounded-b-bawa-sm bg-sun px-5 pb-5 pt-5">
+        <div className="-mx-5 -mb-5 flex w-[calc(100%+2.5rem)] flex-col items-center gap-4 rounded-b-[24px] bg-sun px-5 pb-5 pt-5">
           <p className="text-center font-display text-[22px] font-bold text-ink">
             {amountText ?? 'Any amount'}
           </p>
           <div className="flex w-full items-center justify-center gap-2">
             <AddressIdenticon address={address} size={24} />
-            <p
-              data-testid="qr-card-address"
-              className="min-w-0 flex-1 break-all text-center font-mono text-[13px] text-ink"
-            >
-              {address}
-            </p>
+            <AddressLines
+              address={address}
+              className="min-w-0 flex-1 text-center font-mono text-[13px] leading-[19px] text-ink"
+            />
           </div>
           <button
             type="button"
             onClick={onCopyAddress}
             disabled={onCopyAddress === undefined}
             aria-label="Copy receiving address"
-            className="flex min-h-11 cursor-pointer items-center gap-1 rounded-bawa-sm border-2 border-ink bg-sun px-3 text-xs font-semibold text-ink hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex min-h-11 cursor-pointer items-center gap-1 rounded-[10px] border border-border bg-white px-3 text-xs font-semibold text-ink hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CopyGlyph className="size-4 shrink-0" />
             Copy
           </button>
-          <div className="flex w-full items-center justify-center border-t-2 border-ink pt-3">
+          <QrCardFooter className="text-center text-sm text-ink" />
+          <div className="flex w-full items-center justify-center border-t border-border pt-3">
             <BrandMark
-              markClassName="size-7 rounded-[6px] bg-coral text-lg"
+              markClassName="size-7 rounded-[8px] bg-coral text-lg"
               textClassName="font-display text-lg font-bold text-ink"
             />
           </div>
@@ -994,15 +1092,17 @@ export function QrCard({
     );
   }
 
-  // Template B (default): Bawa's own paper card, respaced — gaps
-  // 8 px to 20 px, title 24 px to 28 px, QR 192 px to 200 px, brand
-  // strip added. The header, title, subtitle, tile, amount, address
-  // strip and footer are the Lane 5 card, tidied, not redesigned.
+  // Template B (default): Lane B restyled it flat and premium —
+  // white card, 24 px clean radius, 1 px hairline, soft shadow; the
+  // QR tile is paper on white with a hairline, the address sits in
+  // its own soft panel, and the tagline and brand row are quiet
+  // secondary grey under a hairline rule. The wobbly radius, the
+  // 2 px ink frames and the hard offset shadow are gone.
   return (
     <div
       data-testid="qr-card"
       data-template="b"
-      className="flex flex-col items-center gap-5 rounded-bawa-sm border-2 border-ink bg-paper p-5"
+      className="flex flex-col items-center gap-5 rounded-[24px] border border-border bg-white p-6 shadow-lg"
     >
       {/* The header: the asset's mark in a circle, with the network's
           mark as a small badge on its bottom-right edge — the card's
@@ -1010,10 +1110,10 @@ export function QrCard({
           network this card is for. */}
       <div
         data-testid="qr-card-header"
-        className="relative mt-1 rounded-full border-2 border-ink bg-paper p-1"
+        className="relative mt-1 rounded-full bg-white p-1 shadow-sm"
       >
         <LogoImage src={tokenLogo} alt={`${tokenSymbol} logo`} size="lg" />
-        <span className="absolute -bottom-1 -right-1 flex rounded-full border-2 border-paper bg-paper">
+        <span className="absolute -bottom-1 -right-1 flex rounded-full border-2 border-white bg-white">
           <LogoImage
             src={chainLogo}
             alt={`${config.displayName} logo`}
@@ -1030,24 +1130,22 @@ export function QrCard({
       <NetworkSubtitle
         subtitle={subtitle}
         networkName={networkName}
-        className="text-center text-sm text-ink"
-        boldClassName="font-bold"
+        className="text-center text-sm text-text-secondary-gray"
+        boldClassName="font-bold text-ink"
       />
       <StarknetWarning
         chain={chain}
         className="text-center text-[13px] leading-[19px] text-ink"
       />
-      {/* Lane H: the QR in its own bordered tile — the tile's ink
-          frame is what makes the code read as a card, not a bare
-          printout. The tile carries the hard offset shadow
-          (Oishi system, formalised as --bawa-shadow): one fixed
-          ink offset, no blur, no gradient. The asset's mark sits
-          in the centre of the code (imageSettings, excavated, level
-          H) — the same mark as the header circle, so the code and
-          the card read as one thing. */}
+      {/* Lane B: the QR in its own clean tile — a paper panel with a
+          1 px hairline on the white card, 20 px radius, no ink frame
+          and no hard offset shadow. The asset's mark sits in the
+          centre of the code (imageSettings, excavated, level H) —
+          the same mark as the header circle, so the code and the
+          card read as one thing. */}
       <div
         data-testid="qr-card-tile"
-        className="rounded-bawa-sm border-2 border-ink bg-paper p-4 shadow-[var(--bawa-shadow)]"
+        className="rounded-[20px] border border-border bg-paper p-4"
       >
         <div id="qr-card-qr" className="shrink-0">
           {qrCode}
@@ -1059,49 +1157,46 @@ export function QrCard({
       <p className="text-center font-display text-[22px] font-bold text-ink">
         {amountText ?? 'Any amount'}
       </p>
-      {/* The address in its own framed strip: the full string, never
+      {/* The address in its own soft panel: the full string, never
           truncated — a receiver who cannot see the whole address
           cannot check it. The label names it, and the copy button
-          beside the label copies the whole address. */}
-      <div className="w-full space-y-1">
+          beside the label copies the whole address. The address
+          reads as balanced lines (21 + 21 for a 42-char address),
+          never break-all mid-address. */}
+      <div className="w-full rounded-[16px] border border-border bg-paper px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-ink">Receiving address</span>
+          <span className="text-sm text-text-secondary-gray">
+            Receiving address
+          </span>
           <button
             type="button"
             onClick={onCopyAddress}
             disabled={onCopyAddress === undefined}
             aria-label="Copy receiving address"
-            className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1 text-xs font-semibold text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-[10px] border border-border bg-white px-2 py-1 text-xs font-semibold text-ink hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CopyGlyph className="size-4 shrink-0" />
             Copy
           </button>
         </div>
-        <div className="flex w-full items-start gap-2">
+        <div className="mt-2 flex w-full items-start gap-2">
           <AddressIdenticon address={address} size={24} />
-          <p
-            data-testid="qr-card-address"
-            className="min-w-0 flex-1 break-all rounded-bawa-sm border-2 border-ink bg-paper px-2 py-1.5 text-center font-mono text-[13px] text-ink"
-          >
-            {address}
-          </p>
+          <AddressLines
+            address={address}
+            className="min-w-0 flex-1 text-center font-mono text-[13px] leading-[19px] text-ink"
+          />
         </div>
       </div>
       {/* The token's full name and network — only for tokens, where
           the symbol alone does not say which coin this is. A native
           coin's title and subtitle already name it and its network. */}
       {token !== null && (
-        <p className="text-center text-sm text-ink">{subline}</p>
+        <p className="text-center text-sm text-text-secondary-gray">{subline}</p>
       )}
-      <p
-        data-testid="qr-card-footer"
-        className="text-center text-sm text-ink"
-      >
-        {QR_CARD_FOOTER}
-      </p>
-      <div className="flex w-full items-center justify-center border-t-2 border-ink pt-3">
+      <QrCardFooter className="text-center text-sm text-text-secondary-gray" />
+      <div className="flex w-full items-center justify-center border-t border-border pt-3">
         <BrandMark
-          markClassName="size-7 rounded-[6px] bg-coral text-lg"
+          markClassName="size-7 rounded-[8px] bg-coral text-lg"
           textClassName="font-display text-lg font-bold text-ink"
         />
       </div>

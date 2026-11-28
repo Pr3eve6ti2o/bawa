@@ -2053,7 +2053,9 @@ describe('receive screen — card style picker (QR-cards programme, Lane E; Lane
         'Minimal',
         'Poster',
       ]);
-      expect(mounted.div.textContent).toContain('Bawa drawing style');
+      // Lane B (2026-11-28): the Paper hint is the clean light card
+      // now, not the drawing style — the card was restyled flat.
+      expect(mounted.div.textContent).toContain('Clean light card');
       const card = () => mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card()?.getAttribute('data-template')).toBe('b');
       expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true');

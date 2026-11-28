@@ -38,6 +38,7 @@ import {
   readPendingSendLink,
   readPendingSendLinkSearch,
   savePendingSendLink,
+  splitAddressLines,
   wrapCardText,
   QR_CARD_TEMPLATE_QR,
   STARKNET_RECEIVE_ONLY_WARNING,
@@ -952,9 +953,12 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
     expect(fakes.canvas.height).toBe(1270);
     // Paper painted first, over the whole card.
     expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1270);
-    // Lane H (Oishi hard offset shadow): an ink rect offset 4 design
-    // px down-right behind the tile (113.5 + 7, 344 + 7, 414, 414).
-    expect(fakes.fillRect).toHaveBeenCalledWith(120.5, 351, 414, 414);
+    // Lane B (2026-11-28): no hard offset shadow any more — the
+    // tile is a flat white round rect, 20 px radius, 1 px hairline.
+    // Its top-right corner arc sits at the tile position (113.5,
+    // 344, size 414, radius 33): arcTo(527.5, 344, 527.5, 377, 33).
+    expect(fakes.fillRect).not.toHaveBeenCalledWith(120.5, 351, 414, 414);
+    expect(fakes.arcTo).toHaveBeenCalledWith(527.5, 344, 527.5, 377, 33);
     // The QR is drawn 216 design px wide (354 canvas px), centred,
     // inside its tile at the top. It is the third draw — the header
     // token and chain badge are drawn first — so it is found by its
@@ -1036,14 +1040,16 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       },
       fakes.deps,
     );
-    // A at 640: card at 394, band 535 + footer 187 = 722, link 22,
-    // brand bar 84 — 1362 tall. The address wraps to the 414px
-    // footer width: 41 + 1 characters at 10px a character.
+    // A at 640: card at 394, band 535 + footer 187 = 722, footer
+    // tagline 30 (Lane B), link 22, brand bar 84 — 1411 tall (the
+    // regrouped px() sums round 1 px shorter than the old 1412;
+    // the design-px total is unchanged). The address splits
+    // balanced 21 + 21 (Lane B), not the greedy 41 + 1.
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1362);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1362);
+    expect(fakes.canvas.height).toBe(1411);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1411);
     // The brand bar is full-bleed at the bottom.
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 1224, 640, 138);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 1273, 640, 138);
     const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 358)!;
     expect(qrDraw.slice(1)).toEqual([141, 453, 358, 358]);
     // QR, header token, chain badge, white-silhouette centre mark.
@@ -1072,8 +1078,9 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       'here.',
       '0.5 ETH',
       'Receiving address',
-      ADDRESS.slice(0, 41),
-      ADDRESS.slice(41),
+      ADDRESS.slice(0, 21),
+      ADDRESS.slice(21),
+      'Share the card, keep the keys.',
       'Open the Bawa link ›',
       'B',
       'Bawa Wallet',
@@ -1098,7 +1105,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fakes.deps,
     );
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1066);
+    expect(fakes.canvas.height).toBe(1135);
     const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 368)!;
     expect(qrDraw.slice(1)).toEqual([136, 308, 368, 368]);
     // QR, top logo, centre mark — no tile badges, no brand bar.
@@ -1118,6 +1125,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       '0.5 ETH',
       ADDRESS,
       'Copy',
+      'Share the card, keep the keys.',
       'Bawa',
     ]);
   });
@@ -1140,7 +1148,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fakes.deps,
     );
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1101);
+    expect(fakes.canvas.height).toBe(1170);
     const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 364)!;
     expect(qrDraw.slice(1)).toEqual([139, 329, 364, 364]);
     // QR, header disc logo, centre mark.
@@ -1158,6 +1166,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       'here.',
       '0.5 ETH',
       ADDRESS,
+      'Share the card, keep the keys.',
       'B',
       'Bawa Wallet',
     ]);
@@ -1165,8 +1174,8 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
 
   it('wraps a long address onto two lines and grows the card', async () => {
     const fakes = cardDeps();
-    // 62 characters at 10px = 620px: 49 on the first line, 13 on the
-    // second (the B address width is 499px).
+    // 62 characters at 10px = 620px: balanced 31 + 31 (Lane B —
+    // the greedy wrap's 49 + 13 left a 13-char orphan line).
     const longAddress = `bc1q${'a'.repeat(58)}`;
     await qrCardToPngBlob(
       SVG,
@@ -1194,8 +1203,8 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       '0.5 BTC',
       'Receiving address',
       'Copy',
-      longAddress.slice(0, 49),
-      longAddress.slice(49),
+      longAddress.slice(0, 31),
+      longAddress.slice(31),
       'Share the card, keep the keys.',
       'B',
       'Bawa Wallet',
@@ -1261,23 +1270,27 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
     );
     // px(v) = round(v * 640/390): logo 53, title 243, subtitle 318,
     // tile 437 wide at (102, 393), QR 358 at (141, 432), amount 869,
-    // strip (0, 977, 640, 85), brand 1101, canvas 1199 tall. One
-    // subtitle line (460 px fits the 558 px width); one address line
-    // (420 px fits the 489 px strip width). Tile +14 canvas px vs
-    // before (code 218 — UX-major Lane 1).
+    // strip (39, 977, 561, 85) inset, brand 1170, canvas 1268 tall.
+    // One subtitle line (460 px fits the 558 px width); one address
+    // line (420 px fits the 430 px strip width). Lane B: the tile
+    // has no offset shadow any more, the strip is an inset rounded
+    // panel (not full-bleed), and the footer tagline sits between
+    // the strip and the brand row (+69 canvas px).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1199);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1199);
-    // The tile shadow is a ROUNDED rect with the tile's 24 px radius
-    // (UX-major Lane 1): the old square shadow rect poked past the
-    // tile's rounded top-right corner as a black tab. The square
-    // shadow is gone, and the rounded shadow's top-right corner arc
-    // sits at the offset position (tile 102/393 + px(4) = 109/400,
-    // size 437, radius 39): arcTo(546, 400, 546, 439, 39).
+    expect(fakes.canvas.height).toBe(1268);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1268);
+    // The tile is flat now: its own top-right corner arc at the
+    // tile position (102, 393, size 437, radius 39) — and no shadow
+    // arc at the old offset position.
     expect(fakes.fillRect).not.toHaveBeenCalledWith(116, 400, 423, 423);
-    expect(fakes.arcTo).toHaveBeenCalledWith(546, 400, 546, 439, 39);
+    expect(fakes.arcTo).toHaveBeenCalledWith(539, 393, 539, 432, 39);
+    expect(fakes.arcTo).not.toHaveBeenCalledWith(546, 400, 546, 439, 39);
     expect(fakes.fillRect).toHaveBeenCalledWith(281, 931, 79, 7);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 977, 640, 85);
+    // The strip is an inset rounded panel now, not a full-bleed
+    // rect: its top-right corner arc sits at (39, 977, 561 wide,
+    // radius 26): arcTo(600, 977, 600, 1003, 26).
+    expect(fakes.fillRect).not.toHaveBeenCalledWith(0, 977, 640, 85);
+    expect(fakes.arcTo).toHaveBeenCalledWith(600, 977, 600, 1003, 26);
     const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 358)!;
     expect(qrDraw.slice(1)).toEqual([141, 432, 358, 358]);
     const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
@@ -1298,6 +1311,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       'here.',
       '25 USDC',
       ADDRESS,
+      'Share the card, keep the keys.',
       'B',
       'Bawa Wallet',
     ]);
@@ -1311,13 +1325,14 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       fakes.deps,
     );
     // px(v) = round(v * 640/390): tile 433 wide at (104, 393), QR 354
-    // at (143, 432), amount 865, strip (39, 973, 561, 85), brand 1097,
-    // canvas 1195 tall. One subtitle line; one address line (420 px
+    // at (143, 432), amount 865, strip (39, 973, 561, 85), brand 1166,
+    // canvas 1264 tall. One subtitle line; one address line (420 px
     // fits the 430 px strip width). Tile +13 canvas px vs before
-    // (code 216 — UX-major Lane 1).
+    // (code 216 — UX-major Lane 1). Lane B: the footer tagline sits
+    // between the strip and the brand row (+69 canvas px).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1195);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1195);
+    expect(fakes.canvas.height).toBe(1264);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1264);
     expect(fakes.fillRect).toHaveBeenCalledWith(281, 927, 79, 7);
     const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 354)!;
     expect(qrDraw.slice(1)).toEqual([143, 432, 354, 354]);
@@ -1339,6 +1354,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       'here.',
       '25 USDC',
       ADDRESS,
+      'Share the card, keep the keys.',
       'B',
       'Bawa Wallet',
     ]);
@@ -1351,16 +1367,21 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       { ...DETAILS, template: 'g' },
       fakes.deps,
     );
-    // px(v) = round(v * 640/390): card (25, 39, 591, 1058), tile 414
+    // px(v) = round(v * 640/390): card (25, 39, 591, 1114), tile 414
     // at (114, 345), QR 354 at (144, 375), tear 798, amount 831,
-    // copy 953, brand 1025, canvas 1136 tall. One subtitle line (460 px
+    // copy 953, brand 1081, canvas 1192 tall. One subtitle line (460 px
     // fits the 525 px width); one address line (420 px fits 525 px).
     // Tile +53 canvas px vs before (code 216 + 16 px padding a side
-    // — UX-major Lane 1).
+    // — UX-major Lane 1). Lane B: the tile has no offset shadow any
+    // more, and the footer tagline sits under the Copy pill (+56).
     expect(fakes.canvas.width).toBe(640);
-    expect(fakes.canvas.height).toBe(1136);
-    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1136);
-    expect(fakes.fillRect).toHaveBeenCalledWith(121, 352, 414, 414);
+    expect(fakes.canvas.height).toBe(1192);
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 1192);
+    // The tile is a flat white round rect now: its top-right corner
+    // arc at (114, 345, size 414, radius 33): arcTo(528, 345, 528,
+    // 378, 33) — and no shadow rect at the old offset position.
+    expect(fakes.fillRect).not.toHaveBeenCalledWith(121, 352, 414, 414);
+    expect(fakes.arcTo).toHaveBeenCalledWith(528, 345, 528, 378, 33);
     const qrDraw = fakes.drawImage.mock.calls.find((call) => call[3] === 354)!;
     expect(qrDraw.slice(1)).toEqual([144, 375, 354, 354]);
     const logoDraws = fakes.drawImage.mock.calls.filter((call) => call !== qrDraw);
@@ -1382,6 +1403,7 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       '25 USDC',
       ADDRESS,
       'Copy',
+      'Share the card, keep the keys.',
       'B',
       'Bawa Wallet',
     ]);
@@ -1448,5 +1470,36 @@ describe('wrapCardText — the card address wrap', () => {
 
   it('returns no lines for an empty string', () => {
     expect(wrapCardText('', 568, measure)).toEqual([]);
+  });
+});
+
+describe('splitAddressLines — the balanced card address split (Lane B)', () => {
+  const measure = (text: string): number => text.length * 10;
+
+  it('splits a 42-char address into two balanced 21-char lines', () => {
+    expect(
+      splitAddressLines(
+        '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+        414,
+        measure,
+      ),
+    ).toEqual(['0x742d35Cc6634C053292', '5a3b844Bc454e4438f44e']);
+  });
+
+  it('keeps a short address on one line when it fits', () => {
+    expect(splitAddressLines('0xabc', 568, measure)).toEqual(['0xabc']);
+  });
+
+  it('balances lines instead of filling the first to the brim', () => {
+    // Greedy would give 5 + 5 + 2; the balanced split gives 4 + 4 + 4.
+    expect(splitAddressLines('abcdefghijkl', 50, measure)).toEqual([
+      'abcd',
+      'efgh',
+      'ijkl',
+    ]);
+  });
+
+  it('returns no lines for an empty string', () => {
+    expect(splitAddressLines('', 568, measure)).toEqual([]);
   });
 });

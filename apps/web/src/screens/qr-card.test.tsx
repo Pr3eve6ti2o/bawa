@@ -10,6 +10,7 @@ import {
   qrCardTitle,
   qrCardTokenLabel,
   qrCardTokenSubline,
+  splitAddressLines,
 } from './qr-card';
 import { chainConfig } from '../wallet/chains';
 import {
@@ -135,6 +136,29 @@ describe('qr card title and subtitle (Lane 5 full-card redesign)', () => {
   });
 });
 
+describe('splitAddressLines — the card address split (Lane B)', () => {
+  it('splits a 42-char address into two balanced 21-char lines', () => {
+    expect(
+      splitAddressLines('0x742d35Cc6634C0532925a3b844Bc454e4438f44e'),
+    ).toEqual(['0x742d35Cc6634C053292', '5a3b844Bc454e4438f44e']);
+  });
+
+  it('splits a 66-char Starknet address into three 22-char lines, never an orphan', () => {
+    const address = `0x${'ab'.repeat(32)}`;
+    expect(splitAddressLines(address)).toEqual([
+      address.slice(0, 22),
+      address.slice(22, 44),
+      address.slice(44),
+    ]);
+    expect(splitAddressLines(address)[2]).toHaveLength(22);
+  });
+
+  it('leaves a short address on one line, and an empty address empty', () => {
+    expect(splitAddressLines('0xabc')).toEqual(['0xabc']);
+    expect(splitAddressLines('')).toEqual([]);
+  });
+});
+
 describe('QrCard', () => {
   async function mountCard(props: {
     qrValue: string;
@@ -229,7 +253,7 @@ describe('QrCard', () => {
     }
   });
 
-  it('frames the QR in a bordered tile with the header logos above it', async () => {
+  it('frames the QR in a clean flat tile with the header logos above it', async () => {
     const mounted = await mountCard({
       qrValue: 'ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&uint256=25000000',
       amountText: '25 USDC',
@@ -238,18 +262,19 @@ describe('QrCard', () => {
       chain: 'base',
     });
     try {
-      // Lane H: the QR sits in its own bordered tile — the card's
-      // one memorable element is the QR, framed.
+      // Lane B (2026-11-28): the QR sits in its own clean tile —
+      // a paper panel with a 1 px hairline and a 20 px radius, no
+      // ink frame and no hard offset shadow. The wobbly radius and
+      // the --bawa-shadow are gone from the card.
       const tile = mounted.div.querySelector('[data-testid="qr-card-tile"]');
       expect(tile).not.toBeNull();
       expect(tile?.querySelector('#qr-card-qr svg')).not.toBeNull();
-      // Lane H (Oishi hard offset shadow): the tile carries the
-      // shadow token, so the card reads as a physical card, not a
-      // flat printout.
-      expect(tile?.className).toContain('shadow-[var(--bawa-shadow)]');
+      expect(tile?.className).toContain('rounded-[20px]');
+      expect(tile?.className).not.toContain('shadow-[var(--bawa-shadow)]');
+      expect(tile?.className).not.toContain('border-2');
       // The header — not a badge riding the tile's edge any more —
-      // carries both marks, and the address reads in its own framed
-      // strip, full and untruncated.
+      // carries both marks, and the address reads in its own soft
+      // panel, full and untruncated, as two clean 21-char lines.
       const header = mounted.div.querySelector('[data-testid="qr-card-header"]');
       expect(header).not.toBeNull();
       expect(header?.querySelector('img[alt="USDC logo"]')).not.toBeNull();
@@ -257,6 +282,13 @@ describe('QrCard', () => {
       const strip = mounted.div.querySelector('[data-testid="qr-card-address"]');
       expect(strip).not.toBeNull();
       expect(strip?.textContent).toContain('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
+      expect(strip?.querySelectorAll('span')).toHaveLength(2);
+      expect(strip?.querySelectorAll('span')[0]?.textContent).toBe(
+        '0x742d35Cc6634C053292',
+      );
+      expect(strip?.querySelectorAll('span')[1]?.textContent).toBe(
+        '5a3b844Bc454e4438f44e',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -424,8 +456,11 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       );
       expect(card?.textContent).toContain('Open the Bawa link');
       expect(card?.textContent).toContain('Bawa Wallet');
-      // A has no footer line — the link line takes its place.
-      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+      // Lane B: A carries the footer tagline too now, above the link
+      // line — the link line no longer takes its place.
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -442,7 +477,10 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
         card?.querySelector('[data-testid="qr-card-instruction"]')?.textContent,
       ).toBe('Scan or share this QR code to receive crypto.');
       expect(card?.textContent).toContain('Bawa');
-      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+      // Lane B: C carries the footer tagline too now, above the wordmark.
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -458,6 +496,10 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       expect(card?.querySelector('.bg-sun')).not.toBeNull();
       expect(card?.querySelector('.bg-ink')).not.toBeNull();
       expect(card?.textContent).toContain('Bawa Wallet');
+      // Lane B: D carries the footer tagline too now, under the strip.
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -474,7 +516,10 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       expect(card?.className).toContain('bg-sun');
       expect(card?.querySelector('.bg-ink')).not.toBeNull();
       expect(card?.textContent).toContain('Bawa Wallet');
-      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+      // Lane B: E carries the footer tagline too now, under the strip.
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -491,7 +536,10 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       expect(card?.className).toContain('bg-ink');
       expect(card?.querySelector('.bg-white')).not.toBeNull();
       expect(card?.textContent).toContain('Bawa Wallet');
-      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+      // Lane B: F carries the footer tagline too now, under the strip.
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -507,7 +555,10 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
       expect(card?.querySelector('.border-dashed')).not.toBeNull();
       expect(card?.querySelector('.bg-sun')).not.toBeNull();
       expect(card?.textContent).toContain('Bawa Wallet');
-      expect(card?.querySelector('[data-testid="qr-card-footer"]')).toBeNull();
+      // Lane B: G carries the footer tagline too now, in the sun stub.
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
     } finally {
       await mounted.cleanup();
     }
