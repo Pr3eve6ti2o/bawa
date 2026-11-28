@@ -13,12 +13,14 @@ paths and recorded findings; do not invent support or extrapolate between networ
 | Path | Contents |
 | --- | --- |
 | `registry/profiles.json` | 8 wallet profiles, each with a v2 `operations` map (10 wallet-build operations) |
-| `registry/capabilities.json` | Version 2: 8 chain/network entries, each recording 10 operations, plus a top-level `chainSupport` roll-up per chain |
-| `registry/engines.json` | 5 engine entries |
+| `registry/capabilities.json` | Version 4: 87-chain `chainSupport` roll-up (v4, 2026-11-26, commit `2a0fa75`), each entry recording 10 operations; `coins` table holds 57 entries |
+| `registry/engines.json` | 6 engine entries |
 | `registry/ui.json` | 11 UI entries, including 3 research-only `OPEN` entries |
 
-The schemas are `registry/schemas/profile.schema.json` and
-`registry/schemas/registry.schema.json`. Follow their existing structure when editing.
+The schemas are `registry/schemas/profile.schema.json`,
+`registry/schemas/registry.schema.json`,
+`registry/schemas/chains.schema.json` and
+`registry/schemas/tokens.schema.json`. Follow their existing structure when editing.
 The 33-entry total counts registry entries, not individual operation records.
 
 Validation lives in `scripts/validate-registry.mjs`; registry tests live in
@@ -115,7 +117,7 @@ Only these four statuses may appear in an `operations` map:
 | `IMPLEMENTED_AND_VERIFIED` | Demonstrated behaviour for the exact claim, backed by a test run, build or recorded inspection (same evidence rule as the entry-level status). |
 | `STARTER_IMPLEMENTED_AND_VERIFIED` | The starter demonstrates the operation within its documented scope; it is not a complete wallet. (Android `receive` only: receive-QR display in the starter UI, with no on-device derivation behind it.) |
 | `DOCUMENTED_NOT_TESTED` | Documented or described but not demonstrated — including documented as blocked or unavailable (TON fee-quote; TON post-sign-verify, which is partial only). |
-| `NOT_SUPPORTED` | The profile/chain does not provide the operation: no implementation in scope (all CLI send/sign/broadcast-adjacent operations; Android on-device derivation, which has no AAR). |
+| `NOT_SUPPORTED` | The profile/chain does not provide the operation: no implementation in scope (all CLI send/sign/broadcast-adjacent operations; Android on-device derivation — the AAR now exists, Step 4 `f9f312b`, but on-device execution is still unverified, so the operation stays `NOT_SUPPORTED` until that verification lands). |
 
 Do not use `PROPOSED`, `OPEN`, `UNVERIFIED` or `EXTERNALLY_DEPENDENT`
 inside an `operations` map; the validator rejects them there.
@@ -152,6 +154,31 @@ the next edit:
   a later code change.
 - No live non-zero balance was ever checked; all fixture addresses are
   exact-zero. Non-zero rendering is covered by stubbed unit tests only.
+
+**Correction (2026-11-28, Lane A docs audit):** the two caveats above
+no longer hold. Balances and history have been verified inside a real
+browser since 2026-11-23 (CDP runs in the fix programme and the
+dashboard-count lane — `docs/DECISIONS.md` §46/§47, live rows with real
+balances, 43/43 linked rows), and live non-zero balances have been
+checked (funded and watch-only addresses, e.g. the Vitalik watch-only
+fan-out across 16 EVM chains). The 2026-11-19 text above stays as the
+dated v2 record.
+
+## Registry v4 (2026-11-26, commit `2a0fa75`)
+
+Version 4 upgrades the validator and the vocabulary to the 87-chain
+tree: version check 4 (from v3), the 87-chain `chainSupport`
+vocabulary taken from the schema enum (from 84, +cardano, kaspa,
+starknet), and the v4 profiles rule for the 74 expansion chains.
+`chainSupport.history` I&V went from 10 to 17 chains in the same
+change; the validator exits 0 with 0 errors. The v2 record above
+stays as the dated record of the 2026-11-19 model.
+
+**Lag (2026-11-28, Lane A docs audit):** `chainSupport.history` I&V
+is still 17 in the registry while `chains.ts` history covers 18 —
+Gnosis joined via keyless gnosisscan.io (`d06a224`, 2026-11-28) and
+the registry entry has not caught up. That is a registry lag, not a
+docs fix.
 
 ## Licences and pins
 
@@ -211,3 +238,7 @@ Registry v2 (2026-11-19, PR2 Lane A): `capabilities.json` is version 2 with
 map. The rebuilt web wallet verifies offline send (`plan-transfer` +
 `local-sign`, all four chains; post-sign verification for BTC/ETH/TRX) and
 read-only balances/history; broadcast remains not implemented anywhere.
+(Superseded in part — see Registry v4 above: `capabilities.json` is now
+version 4 with 87-chain `chainSupport`, and offline local-sign now covers
+BTC/ETH/TRX/TON/SOL plus the generalised EVM signer for all 61 EVM
+chains.)

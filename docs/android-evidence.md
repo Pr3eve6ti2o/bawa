@@ -86,16 +86,21 @@ minimum, TRX 19 of 27, TON 1).
 - The M-39 desktop GUI watch-only test is a separate item and is NOT
   this emulator run.
 
-## Update 2026-11-28 (docs-currency Lane B)
+## Update 2026-11-28 (docs-currency Lane B, corrected 2026-11-28 by Lane A docs audit)
 
 - Android Step 3 is done (`e20cee6`, 2026-11-28): data layer from the
   versioned JSON export — 87 chains, 169 RPCs, 4 testnets, 21 tokens,
   77 unit tests, APK 53,712,159 bytes. The 'no data layer / no chain
   registry' lines above are the Phase 7 record, superseded for the data
   layer.
-- Step 4 (Trust Wallet Core AAR build from the cloned source) is
-  running, owner-authorized 2026-11-28. Until the AAR lands, on-device
-  derivation stays OPEN and `ENGINE_BINDING_AVAILABLE` stays `false`
-  (`apps/android/core/src/main/java/com/bawa/wallet/core/DerivationPolicy.kt:208`).
+- Step 4 is DONE (`f9f312b`, 2026-11-28): the Trust Wallet Core 4.8.4
+  AAR is built from source and in-tree
+  (`apps/android/core/libs/wallet-core-4.8.4.aar`; see
+  `apps/android/TWC-AAR.md`), `ENGINE_BINDING_AVAILABLE` is `true`
+  (`apps/android/core/src/main/java/com/bawa/wallet/core/DerivationPolicy.kt:199`)
+  — on-device derivation is bound, not stubbed. Execution on-device is
+  still unverified. The 'no AAR for any version' lines above are the
+  Phase 7 record, superseded for the AAR's existence; the open item is
+  now the on-device execution proof.
 - The Phase 7 evidence above (17/17 unit tests, 52,456,212-byte APK,
   TCG emulator run, Add NOT VERIFIED) is unchanged as a dated record.
