@@ -17,6 +17,8 @@ Bawa is a practical open-source reference for HD-wallet workflows and an AI Wall
 | Evidence | Recorded in §11, §18, docs/android-evidence.md and docs/archive/handoff-2026-11-10.md |
 | Sources fetched on | 2026-11-08 |
 
+> **Currency note (2026-11-29, token-gaps `bcf180e`, docs-currency Lane B):** current state at `bcf180e`: web gates pass on Node v22.23.4 — build PASS, tsc 0, eslint 0, vitest 3,479 passed + 5 skipped (130 files), JS bundle 4,536,948 / 6,000,000 budget (headroom 1,463,052), entry `index-G8M1DjxZ.js`; engine smoke 440 re-run at `bcf180e` (412 + 28, 0 fail). The 2026-11-28 note below is the dated record.
+>
 > **Currency note (2026-11-28, token-gaps `ceade79`, Lane A docs audit):** the table above is the 2026-11-10 verification snapshot, retained as written. Current state at `ceade79`: token-gaps HEAD `ceade79`; main `af828a9`; the live site `https://pr3eve6ti2o.github.io/bawa/` serves `index-Brm7r34g.js` (gh-pages `c0cf697`, published from `ceade79`); web gates pass on Node v22.23.4 — build PASS, tsc 0, eslint 0, vitest 3,429 passed + 5 skipped (129 files, gates at `1253bf6`), JS bundle 4,509,662 / 6,000,000 budget; Android Step 3 is done (87 chains, 169 RPCs, 77 unit tests, debug APK 53,712,159 bytes) and Step 4 is DONE (`f9f312b` — Trust Wallet Core 4.8.4 AAR in-tree, `ENGINE_BINDING_AVAILABLE` true, on-device derivation bound, execution still unverified). Registry: 87 chains, 169 RPCs, 4 testnets, 21 tokens.
 
 ## 1. Scope and non-goals

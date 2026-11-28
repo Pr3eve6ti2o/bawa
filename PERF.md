@@ -21,6 +21,7 @@ is not an attempt.
 
 | 2026-11-28 | Measurement only (docs-currency pass, Lane A): wobbly-cards (`67c7610`) → Starknet QR warning (`77e4473`) → web follow-ups (`734cfef`), fresh `npm run build` in `apps/web` (Node 22.23.4) | Total JS **4,482,622**, largest chunk **2,906,616**, `dist/` total **16,431,920**, `index-BxW-qfX0.js` **439,478** — passes the 6,000,000 budget by **1,517,378 bytes**. (At `67c7610`: 4,480,322; at `77e4473`: 4,482,627.) | Landed (measurement record): no perf work attempted, no trim needed. Headroom is 1,517,378 bytes. |
 | 2026-11-28 | Measurement only (fix programme + lanes A–C, then honest remains): `4adbd30` → `7f24ef1` → `1253bf6`, fresh `npm run build` in `apps/web` (Node 22, first-hand on loud-stone) | Total JS **4,508,592** at `4adbd30`, **4,509,097** at `7f24ef1`, **4,509,662** at `1253bf6` — passes the 6,000,000 budget by **1,490,338 bytes** at `1253bf6`. Largest chunk 2,906,616 last measured at `7f24ef1` (not re-measured at `1253bf6`). | Landed (measurement record): no perf work attempted, no trim needed. Headroom is 1,490,338 bytes. |
+| 2026-11-29 | Measurement only (docs-currency pass, Lane B): bug fixes from the last 3 messages (`bcf180e`), fresh `npm run build` in `apps/web` (Node v22.23.4) | Total JS **4,536,948**, largest chunk **2,906,616** (unchanged), `dist/` total **16,487,561**, entry `index-G8M1DjxZ.js` — passes the 6,000,000 budget by **1,463,052 bytes**. | Landed (measurement record): no perf work attempted, no trim needed. Headroom is 1,463,052 bytes. |
 
 ## Bundle-size ratchet
 
@@ -36,10 +37,10 @@ The +5% rule is unchanged.
 
 | Metric | Measured | Budget (enforced in CI) |
 | --- | --- | --- |
-| Total JS in `dist/assets` | 4,509,662 bytes (2026-11-28, merged tree on token-gaps `1253bf6`; fresh build, Node 22; largest chunk 2,906,616, measured 2026-11-28 at `7f24ef1` — not re-measured at `1253bf6`; was 4,509,097 at `7f24ef1`, 4,508,592 at `4adbd30`, 4,482,622 at `734cfef`) | ≤ 6,000,000 bytes — PASSES by 1,490,338 bytes (owner-ordered re-baseline `f5a5f19`, 2026-11-26) |
-| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,906,616 bytes (2026-11-28, merged tree on token-gaps `734cfef`; unchanged from `2205f15`; was 2,906,489 on `f1f0e6c` 2026-11-27, 2,906,541 on `7a170f4`, 2,905,067 on the Lane C tree, 2,905,015 on base `7fea3e4`) | ≤ 3,050,000 bytes (today + ~5%) |
+| Total JS in `dist/assets` | 4,536,948 bytes (2026-11-29, merged tree on token-gaps `bcf180e`; fresh build, Node v22.23.4; largest chunk 2,906,616, re-measured 2026-11-29 at `bcf180e` — unchanged; was 4,509,960 at `1a85258`, 4,509,662 at `1253bf6`, 4,509,097 at `7f24ef1`, 4,508,592 at `4adbd30`, 4,482,622 at `734cfef`) | ≤ 6,000,000 bytes — PASSES by 1,463,052 bytes (owner-ordered re-baseline `f5a5f19`, 2026-11-26) |
+| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,906,616 bytes (2026-11-29, merged tree on token-gaps `bcf180e`; re-measured, unchanged from `734cfef`; was 2,906,489 on `f1f0e6c` 2026-11-27, 2,906,541 on `7a170f4`, 2,905,067 on the Lane C tree, 2,905,015 on base `7fea3e4`) | ≤ 3,050,000 bytes (today + ~5%) |
 | Total CSS in `dist/assets` | 63,673 bytes (2026-11-24, Lane PERF: Noto Sans SC latin-only subsets; was 368,397 on base 8806e4a and 432,288 on d47d282) | recorded, not yet enforced |
-| Total `dist/` | 16,431,920 bytes (2026-11-28, token-gaps `734cfef` — not re-measured since; was 15,939,512 on 2026-11-24, Lane PERF; was 33,222,901 on base 8806e4a — the drop is the ~17 MB of unneeded Noto Sans SC subset font files no longer bundled, plus the WASM binary) | recorded, not yet enforced |
+| Total `dist/` | 16,487,561 bytes (2026-11-29, token-gaps `bcf180e`; was 16,431,920 on 2026-11-28, token-gaps `734cfef`; was 15,939,512 on 2026-11-24, Lane PERF; was 33,222,901 on base 8806e4a — the drop is the ~17 MB of unneeded Noto Sans SC subset font files no longer bundled, plus the WASM binary) | recorded, not yet enforced |
 
 Rules:
 

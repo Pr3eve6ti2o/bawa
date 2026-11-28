@@ -101,7 +101,7 @@ guards the pin.
 ```sh
 npm run typecheck   # tsc --noEmit, 0 errors
 npm run build       # copy-wasm + tsc + vite build, 0 errors
-npm run test        # vitest run — 129 files; the 3,437-passed + 5-skipped figure is the loud-stone run at token-gaps `1a85258` (2026-11-28, three-findings gates), exit 0 — see docs/index.md
+npm run test        # vitest run — 130 files; the 3,479-passed + 5-skipped figure is the loud-stone run at token-gaps `bcf180e` (2026-11-29, docs-currency Lane B), exit 0 — see docs/index.md
 ```
 
 **Upstream sources.** The engine is Apache-2.0, upstream

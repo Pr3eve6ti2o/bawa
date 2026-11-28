@@ -2,7 +2,7 @@
 
 This index is the single entry point for Bawa documentation; the root [README.md](../README.md), [WALLET_BUILDER.md](../WALLET_BUILDER.md), and [docs/README.md](README.md) each point here.
 
-This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 28 November 2026 named below (engine smoke 440, web vitest 129 files — PASSES on loud-stone (3,437 passed + 5 skipped, 0 failed, Node 22, gates at token-gaps `1a85258`, 2026-11-28, three findings; the 3,429-passed figure was the gates at `1253bf6`, the earlier 3,416-passed figure was the gates at `7f24ef1`, the 3,351-passed figure the publish gates at `734cfef`); FAILS in this sandbox, timeout-dominated); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 29 November 2026 named below (engine smoke 440, re-run 2026-11-29 at `bcf180e`; web vitest 130 files — PASSES on loud-stone (3,479 passed + 5 skipped, 0 failed, Node v22.23.4, gates at token-gaps `bcf180e`, 2026-11-29; the 3,437-passed figure was the gates at `1a85258`, the 3,429-passed figure was the gates at `1253bf6`, the earlier 3,416-passed figure was the gates at `7f24ef1`, the 3,351-passed figure the publish gates at `734cfef`); FAILS in this sandbox, timeout-dominated); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -44,7 +44,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [FAQ](FAQ.md) — `DOCUMENTED_NOT_TESTED`: common questions, via the reference catalogue.
 - [FURTHER-READING](FURTHER-READING.md) — `DOCUMENTED_NOT_TESTED`: supporting reading, via the reference catalogue.
 - [References](REFERENCES.md) — `DOCUMENTED_NOT_TESTED`: supporting sources.
-- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 440 checks pass (README proof strip, verified 2026-11-24); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
+- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 440 checks pass (README proof strip, verified 2026-11-24; re-run 2026-11-29 at `bcf180e`, 412 smoke + 28 register-links, 0 fail, Node v22.23.4); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
 - [External tools](EXTERNAL-TOOLS.md) — `DOCUMENTED_NOT_TESTED`: evaluated external repositories and packages for building with Bawa.
 - [Tools](TOOLS.md) — persistent installs on the development VM (mmdc / Mermaid CLI path, install and verify commands); never install tools under `/tmp`.
 - [UI/UX catalogue](UI-UX-CATALOGUE.md) — `DOCUMENTED_NOT_TESTED`: design reference and the route into `docs/ui-ux-assets/`.
@@ -87,7 +87,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [UI candidates](../research/ui-candidates.md) — `PROPOSED`: candidate research, not implementation evidence.
 - [Web template upstream](../templates/web/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
 - [Android template upstream](../templates/android/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
-- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/` — build passes and engine smoke is 440/440, and web vitest PASSES on loud-stone (129 files, 3,437 passed + 5 skipped, 0 failed, Node 22, gates at token-gaps `1a85258`, 2026-11-28, three findings). It does NOT pass in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped on the guide-update tip, and 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4` (110 files, 2,950 tests) — failures dominated by 5 s timeouts (76 and 59), varying run to run. The sandbox failures are environment artefacts, not code defects; the passing-test state rests on the loud-stone run.
+- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/` — build passes and engine smoke is 440/440, and web vitest PASSES on loud-stone (130 files, 3,479 passed + 5 skipped, 0 failed, Node v22.23.4, gates at token-gaps `bcf180e`, 2026-11-29). It does NOT pass in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped on the guide-update tip, and 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4` (110 files, 2,950 tests) — failures dominated by 5 s timeouts (76 and 59), varying run to run. The sandbox failures are environment artefacts, not code defects; the passing-test state rests on the loud-stone run.
 - [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 77 `@Test` annotations counted across the Android tree (Step 3 data layer, `e20cee6`, 2026-11-28 — was 57 across 5 test files, re-counted 2026-11-20); Step 4 is done (`f9f312b`, 2026-11-28): Trust Wallet Core 4.8.4 AAR built from source + `:core` wired in, `ENGINE_BINDING_AVAILABLE` is `true`. The executed passing count was NOT re-established here — Android SDK installed 2026-11-27 (JDK 17, platforms 34+35) and `./gradlew assembleDebug` builds successfully; the executed passing unit-test count is still `NOT-RUN` (77 are `@Test` annotations, not executed passes). The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`; on-device derivation execution remains unverified (bound in `:core`, not run on device).
 - [Contracts](../packages/contracts/src/index.ts) — `IMPLEMENTED_AND_VERIFIED` for compilation: imported by `apps/web` and checked by the web typecheck and build. One consumer today (`apps/web`); see `ARCHITECTURE.md`.
 - Scripts — `IMPLEMENTED_AND_VERIFIED` for the exercised workflow: [setup](../scripts/setup.mjs), [build](../scripts/build-platforms.mjs), [test](../scripts/run-test-suites.mjs) and [wallet build](../scripts/build-wallet.mjs) (web 3/3, multi-chain 6/6 steps VERIFIED).
@@ -127,8 +127,8 @@ The registry covers 87 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, bas
 
 ## Project structure
 
-Verified against the `panel-rebuild/token-gaps` tree at `1a85258`
-(2026-11-28). Counts are tracked files (`git ls-files`).
+Verified against the `panel-rebuild/token-gaps` tree at `bcf180e`
+(2026-11-29). Counts are tracked files (`git ls-files`).
 
 ```text
 bawa/
@@ -143,23 +143,23 @@ bawa/
     devnet issues log, performance and security-findings records, and
     the dated 2026-11-18 research reports.
   apps/
-    web/            (499 files) The wallet web app: React 19 + TypeScript
+    web/            (502 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
-                    (routing, shell), `src/screens` (67 files, one
+                    (routing, shell), `src/screens` (69 files, one
                     screen per route), `src/state` (wallet context; the refresh lives
                     in wallet-context), `src/wallet` (136 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
                     (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),
-                    `src/assets` (chain/token icons), `e2e/` (19
-                    files: 16 Playwright specs, plus helpers and manifest),
+                    `src/assets` (chain/token icons), `e2e/` (20
+                    files: 17 Playwright specs, plus helpers and manifest),
                     `scripts/` (wasm copy,
                     palette audit, chains generation).
-    android/        (157 files) The Android starter (Kotlin): app, core
+    android/        (174 files) The Android starter (Kotlin): app, core
                     (derivation/confirmation policy, key validation, the
                     Trust Wallet Core 4.8.4 AAR binding), data layer
                     over the Step 1 JSON export, ui screens and ViewModel.
-  docs/             (259 files) The guide and programme records, in
+  docs/             (260 files) The guide and programme records, in
                     Diátaxis order (see the sections above): numbered
                     docs 01-16, platform guides, reference, evidence,
                     archive. The single entry point is this index.
@@ -169,7 +169,7 @@ bawa/
                     `registry`, `tokens`).
   packages/
     contracts/      The `@bawa/contracts` package (package + index).
-  scripts/          (22 files) Builder and gate scripts (`.mjs`):
+  scripts/          (23 files) Builder and gate scripts (`.mjs`):
                     `build-wallet`, `generate-project`, `plan-build`,
                     `classify-request`, `quality-gates`, `gate-verdict`,
                     `secret-scan`, `check-wallet-cycles`,

@@ -1,6 +1,6 @@
 # Architecture
 
-This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `1a85258`, 2026-11-28 — the token-gaps tip after the three findings (vite-dev WASM, TRON USDT fallback, mmdc persistent path); the live site serves the latest published build of this branch). Read it alongside `README.md` and `CONTRIBUTING.md`.
+This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `bcf180e`, 2026-11-29 — the token-gaps tip after the bug fixes from the last 3 messages (README live-claim unpinning, import DNS fix, OKX/WalletConnect branch deletions); the live site serves the latest published build of this branch). Read it alongside `README.md` and `CONTRIBUTING.md`.
 
 Branch state described here: `panel-rebuild/token-gaps`. The web wallet wires **87 chains** — 22 curated chains plus 65 expansion chains, all in `apps/web/src/wallet/chains.ts` in production; the 65-chain dataset is kept canonically in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAIN_COUNT = 65`; 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference: Cardano, Starknet, Kaspa). The registry lives in-tree at `registry/` (`capabilities.json` v4, 87 `chainSupport` keys) — see the chain diagram in `docs/12-chain-registry-and-assets/README.md` and the full 87-chain specification in `docs/CREATE-THIS-SPEC.md` §2.
 

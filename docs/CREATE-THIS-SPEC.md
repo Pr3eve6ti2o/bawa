@@ -28,7 +28,7 @@ branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
-the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 129 files / 3,416 passed + 5 skipped (gates at `7f24ef1`, 2026-11-28 — Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit; the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef`, 2026-11-28 — wobbly-cards + Starknet QR warning + web follow-ups, verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15`, P2/P3 merge + bughunt-v2-fixes; the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
+the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node v22.23.4): typecheck 0, build 0, vitest 130 files / 3,479 passed + 5 skipped (gates at `bcf180e`, 2026-11-29 — bug fixes from the last 3 messages, run first-hand on loud-stone by the docs-currency Lane B; the earlier 129-file / 3,437-passed figure was the gates at token-gaps `1a85258`, 2026-11-28; the 129-file / 3,429-passed figure was the gates at `1253bf6`; the 129-file / 3,416-passed figure was the gates at `7f24ef1`; the 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef`, 2026-11-28 — wobbly-cards + Starknet QR warning + web follow-ups, verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15`, P2/P3 merge + bughunt-v2-fixes; the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -49,7 +49,7 @@ calls): removed WalletConnect (§11), added the Buy provider picker
 table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
-**Bundle note:** the merged tree passes the budget — total JS 4,509,097 vs the 6,000,000 budget (§0.2), passing by 1,490,903 bytes; largest chunk 2,906,616 at `7f24ef1` (under the 3,050,000 cap). Measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates, verified first-hand on loud-stone). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
+**Bundle note:** the merged tree passes the budget — total JS 4,536,948 vs the 6,000,000 budget (§0.2), passing by 1,463,052 bytes; largest chunk 2,906,616 at `bcf180e` (under the 3,050,000 cap). Measured at `bcf180e` (2026-11-29, docs-currency Lane B, verified first-hand on loud-stone). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
@@ -84,7 +84,7 @@ above — Part A is the six lanes only.
    (route chunk 10,085 B) — none of it on the cold-load path (home cold
    load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
    The WalletConnect lazy chunk (348,194 B) was removed with the feature
-   in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Re-measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates): 4,509,097 bytes total JS, passing by 1,490,903 bytes; largest chunk 2,906,616 bytes. Whether the gate should exclude lazy
+   in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Re-measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates): 4,509,097 bytes total JS, passing by 1,490,903 bytes; largest chunk 2,906,616 bytes. Re-measured at `bcf180e` (2026-11-29, docs-currency Lane B): 4,536,948 bytes total JS, passing by 1,463,052 bytes; largest chunk 2,906,616 bytes (unchanged). Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
 3. **Visual direction: style B (owner pick, 2026-11-27).** Polished financial style everywhere — flat, hairline, tabular, real semantic colour — with illustration kept only for brand moments, plus a tiny bounded fraction of the paper/comic theme (the Welcome illustration, at most one small brand touch per screen — the QR card templates were paper/comic until Lane B flattened them to style B on 2026-11-28, §8). This supersedes the 2026-11-20 drawing-illustration order and its four-colour cap: the cap no longer governs new work. Transition state, stated honestly: the current tree still carries the four `--bawa-*` tokens in `apps/web/src/ui/styles/globals.css:60-63` (`--bawa-paper #FFFDF7`, `--bawa-ink #2B2B2B`, `--bawa-coral #FF6B4A`, `--bawa-sun #FFD93B`) while the P1 style lane migrates screens — do not cite the cap as the current rule, and do not re-impose it on migrated screens. The single confined exception that STANDS is the QR card: exactly ten named `--qr-*` tokens
    (`--qr-teal`, `--qr-teal-deep`, `--qr-teal-band`, `--qr-teal-copy`,
@@ -151,7 +151,7 @@ The 65 break down as 45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other) + 3
 OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) — whose full
 fact records live in the same file (cardano `:1832`, kaspa `:1859`,
 starknet `:1886`), not in a separate file. `SUPPORTED_CHAINS`
-(`chains.ts:1687`) holds all 87.**
+(`chains.ts:1737`) holds all 87.**
 The expansion programme wired 84 into the app (adapters, prices,
 icons, explorers; `docs/EXPANSION-PROGRAMME.md`); Lane B added the
 three, so the app now wires 87. The 22-row capability
@@ -346,7 +346,7 @@ keyless history indexer and its history stays blocked, never faked.
 - **Gnosis — wired 2026-11-28 (`d06a224`), keyless.**
   `https://gnosisscan.io/api` (Etherscan v1 API) with
   `historyExplorerBase` `https://gnosisscan.io`
-  (`apps/web/src/wallet/chains.ts:812-815`).
+  (`apps/web/src/wallet/chains.ts:826`, `historyExplorerBase` at `:839`).
   `GET /api?module=account&action=txlist&address=<addr>&page=1&offset=5&sort=desc`
   returns status 1 with real transactions and message "OK". The
   adapter branches on the host (`apps/web/src/wallet/adapters/evm.ts:172-181`,
@@ -402,7 +402,7 @@ keyless history indexer and its history stays blocked, never faked.
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
-  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 129 files; the 3,416-passed + 5-skipped figure is the gates at `7f24ef1` (2026-11-28, Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit); the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef` (2026-11-28, wobbly-cards + Starknet QR warning + web follow-ups), verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15` (P2/P3 merge + bughunt-v2-fixes); the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
+  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 130 files; the 3,479-passed + 5-skipped figure is the gates at `bcf180e` (2026-11-29, docs-currency Lane B, run first-hand on loud-stone); the earlier 129-file / 3,437-passed figure was the gates at token-gaps `1a85258` (2026-11-28); the 129-file / 3,416-passed figure was the gates at `7f24ef1` (2026-11-28, Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit); the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef` (2026-11-28, wobbly-cards + Starknet QR warning + web follow-ups), verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15` (P2/P3 merge + bughunt-v2-fixes); the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -474,7 +474,7 @@ implemented (owner order 2026-11-20). Implement and describe it as follows.
 
 - Offline signing and unsigned-transaction construction exist in the web
   starter (`apps/web/src/wallet/send.ts`); broadcast is disabled (§0.1).
-  `send.ts:987` — "Nothing here broadcasts."
+  The "Nothing here broadcasts" guard is per signer, not one line: EVM `send.ts:1165`, TRX `send.ts:1715`, TRC-20 `send.ts:2487`, TON `send.ts:2629`.
 - **Sign (local-sign verified): BTC, ETH, TRX.** TON local-sign is
   verified with two blocks: fee-quote is blocked (a TON fee depends on
   the unsigned message, which is Phase 4 work — no fee number is ever
@@ -1186,7 +1186,7 @@ The survey's verified facts, which Lane D implemented from:
   aimed at self-custody wallets as the destination.
 - **Lazy-load only.** Measured via Bundlephobia: **7,473 B minified /
   2,841 B gzip** — 7,473 B alone exceeds the ~5,304 B headroom at survey
-  time (1.4× over; headroom is now 1,517,378 B under the 6,000,000 budget — see §0.2, 2026-11-28). It is loaded by dynamic import on the Buy screen
+  time (1.4× over; headroom is now 1,463,052 B under the 6,000,000 budget — see §0.2, 2026-11-29). It is loaded by dynamic import on the Buy screen
   only, by design. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
 - **The SDK is NOT bundled.** `@coinbase/cbpay-js` 2.4.0 (MIT) is not
@@ -2001,6 +2001,8 @@ changed; nothing pushed.
 **Docs audit, Lane A (2026-11-28, hands-on, 0 Sol calls).** The guide was re-read in full (1,831 lines) against token-gaps `ceade79` and each section re-traced to the code it cites. Current-state figures corrected in place: vitest 3,416 → 3,429 passed (gates at `1253bf6`) and total JS 4,509,097 → 4,509,662 (Part A status, Bundle note, §0.2, §3); Buy headroom 1,517,378 → 1,490,338 (§12); `SUPPORTED_CHAINS` line `chains.ts:1687` → `:1731` (§2); Gnosis history record `chains.ts:812-815` → `:832-833` (§2.7); `send.ts:987` "Nothing here broadcasts" → the per-signer occurrences (EVM `:1165`, TRX `:1715`, TRC-20 `:2487`) (§5). Android state corrected in place: Step 4 DONE (`f9f312b`, 2026-11-28 — AAR in-tree, `ENGINE_BINDING_AVAILABLE = true` at `DerivationPolicy.kt:199`, on-device derivation bound, execution still unverified); Step 3 added the `INTERNET` permission and the data layer (§2.6, §15, §17 trace row). Two registry lags found, not fixed here (data, not docs): `registry/capabilities.json` `chainSupport.history` I&V is 17 while `chains.ts` history covers 18 (Gnosis, `d06a224`, never reached the registry); `registry/chains.json` is stale at `ceade79` — last regenerated at `b65e8c3` from `7efba14`, it has no DeFiBit BSC RPC (`ff63077`), so regeneration is owed (`ci.yml:221` runs the generator's `--check`). The 3 open findings (vite-dev WASM 404, TRON USDT PublicNode fallback, mmdc persistent reinstall) are still open and are not claimed fixed anywhere in this guide.
 
 **Docs-audit merge (2026-11-28, hands-on, 0 Sol calls).** The 3 open findings above are now FIXED at token-gaps `1a85258` (vite-dev WASM `ae07a45`, TRON USDT PublicNode fallback `8a7943d`, mmdc persistent path `aece05d`; DECISIONS.md §49; live site republished, gh-pages `e0bc252`, serving `index-B9gxTjOm.js`). Current-state figures in this guide were updated to the `1a85258` gates: vitest 3,429 → 3,437 passed (Part A status, §0.2, §3), total JS 4,509,662 → 4,509,960 (Bundle note, §0.2), Buy headroom 1,490,338 → 1,490,040 (§12). The vite-dev WASM warnings (CREATE-EXAMPLE-WALLET.md, HOW-IT-WORKS.md) are fixed by `ae07a45`. The Lane A §19 record above is the dated record of the `ceade79` audit and is left unchanged.
+
+**Docs currency, Lane B (2026-11-29, hands-on, 0 Sol calls, token-gaps `bcf180e`).** The 2026-11-28 merge record above claims the `1a85258` figures were updated in place (vitest 3,437; bundle 4,509,960; headroom 1,490,040) — verified first-hand 2026-11-29, those updates had NOT landed in the body: the header gates still said 3,416 at `7f24ef1`, the Bundle note and §0.2 still said 4,509,097, §3 still said 3,416, and §12 still said headroom 1,517,378. Corrected in place now at `bcf180e` (vitest 130 files / 3,479 passed + 5 skipped; bundle 4,536,948 / 6,000,000, headroom 1,463,052; entry `index-G8M1DjxZ.js`; engine smoke 440 re-run at `bcf180e`). Citations re-traced: `SUPPORTED_CHAINS` `chains.ts:1687` → `:1737` (§2); Gnosis history record `chains.ts:812-815` → `:826` / `:839` (§2.7); `send.ts:987` "Nothing here broadcasts" → the per-signer occurrences (EVM `:1165`, TRX `:1715`, TRC-20 `:2487`, TON `:2629`) (§5). Still open, re-verified first-hand 2026-11-29 (data/code, not docs — not fixed here): registry regeneration owed (`registry/chains.json` sourceCommit `7efba14`, no DeFiBit BSC RPC; `registry/capabilities.json` `chainSupport.history` I&V is 17 while `chains.ts` history covers 18 — Gnosis still `NOT_SUPPORTED` in the registry); `registry/profiles.json` android-wallet engine still status OPEN with 'No Android AAR exists' (pre-Step-4 wording, despite Step 4 `f9f312b`); the CLI still refuses every swap request (`scripts/classify-request.mjs:368-369`, `findRefusal` before classification, exit 2 in `scripts/build-wallet.mjs:102-103`) and still routes on the stale `profiles.json` (web-wallet profile lists only btc/eth/trx/ton, so 'Build a web wallet for Solana' is unclassifiable while the app wires 87 chains); `apps/web/src/app/security-headers.test.ts` prose counts are stale (test name 'two hundred and two pinned + six devnet' vs 208 https + 1 wss in connect-src; 'two hundred and twelve https: origins in the whole policy' vs 213 actual; 'one hundred and seventy-nine mainnet origins' on devnet removal vs 207) — the exact-match assertions still pass, only the word counts drifted.
 
 ## §20. Owner-configured API keys and the Relay proxy — "I have a key, what do I do?" (2026-11-28, docs-audit Lane A)
 
