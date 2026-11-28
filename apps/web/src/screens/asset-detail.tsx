@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
@@ -157,9 +157,15 @@ export function AssetDetailScreen() {
     customTokens,
     tokenBalances,
     refreshTokenBalances,
+    removeCustomToken,
     devnetEnabled,
   } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
+  const navigate = useNavigate();
+  // Two-tap Remove (address-book pattern): the first tap arms the
+  // button, the second tap removes the token and leaves for /assets.
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removeStatus, setRemoveStatus] = useState('');
 
   // The registry is the source of truth for "known chain": chainConfig
   // throws on an unknown chain (the screen tests mock it to return
@@ -184,6 +190,10 @@ export function AssetDetailScreen() {
     );
   }, [tokenParam, config, customTokens, chain]);
   const isToken = tokenRecord !== undefined;
+  // Only a user-added token can be removed: the 21 default tokens
+  // are curated into the wallet and never sit in the custom list.
+  const isCustomToken =
+    tokenRecord !== undefined && !isDefaultToken(tokenRecord);
 
   // Per-unit price from the same live price feed as the dashboard
   // strip and the asset list. No price is ever invented: a
@@ -422,6 +432,21 @@ export function AssetDetailScreen() {
     if (isToken) {
       void refreshTokenBalances();
     }
+  }
+
+  function handleRemoveToken() {
+    if (tokenRecord === undefined) return;
+    if (!confirmRemove) {
+      setConfirmRemove(true);
+      return;
+    }
+    const result = removeCustomToken(tokenRecord.chain, tokenRecord.contract);
+    if (!result.ok) {
+      setRemoveStatus('Could not remove this token. Please try again.');
+      setConfirmRemove(false);
+      return;
+    }
+    navigate('/assets');
   }
 
   return (
@@ -916,6 +941,34 @@ export function AssetDetailScreen() {
       </details>
         </div>
       </div>
+
+      {/* Lane C §6b fix: a user-added token can be removed from here —
+          verified or unverified alike. Two taps (address-book
+          pattern) so a stray tap never deletes. After removal the
+          screen navigates to /assets: the token no longer exists, so
+          staying here would show "Unknown token". */}
+      {isCustomToken && tokenRecord !== undefined ? (
+        <section aria-labelledby="remove-token-heading" className="space-y-3">
+          <h2 id="remove-token-heading" className="font-semibold">
+            Remove token
+          </h2>
+          <div className="space-y-3 rounded-flat-lg border border-ink bg-paper p-4">
+            <p className="text-sm text-muted-foreground">
+              {`Remove ${tokenRecord.symbol} from your wallet. You can add it again later from Add token.`}
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleRemoveToken}
+            >
+              {confirmRemove ? 'Tap again to remove' : 'Remove token'}
+            </Button>
+            {removeStatus !== '' ? (
+              <p role="status" className="text-sm text-muted-foreground">{removeStatus}</p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

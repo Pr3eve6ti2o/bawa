@@ -5,6 +5,7 @@ import {
   DEFAULT_TOKENS,
   ENABLED_CHAINS_KEY,
   addCustomTokenToList,
+  removeCustomTokenFromList,
   isDuplicateToken,
   isVerifiedToken,
   orderAssetsByBalance,
@@ -727,6 +728,43 @@ describe('duplicate detection', () => {
     };
     const result = addCustomTokenToList([USDC], other);
     expect(result).toEqual({ list: [USDC, other] });
+  });
+});
+
+describe('removeCustomTokenFromList (Lane C §6b fix)', () => {
+  it('removes the matching token and keeps the rest', () => {
+    const other: TokenRecord = {
+      ...USDC,
+      contract: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      symbol: 'USDT',
+      name: 'Tether USD',
+      addedAtMs: 1,
+    };
+    expect(removeCustomTokenFromList([USDC, other], 'eth', USDC.contract)).toEqual({
+      list: [other],
+    });
+  });
+
+  it('matches the contract case-insensitively, like duplicate detection', () => {
+    expect(
+      removeCustomTokenFromList(
+        [USDC],
+        'eth',
+        '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      ),
+    ).toEqual({ list: [] });
+  });
+
+  it('does not remove a token on another chain with the same contract', () => {
+    expect(removeCustomTokenFromList([USDC], 'trx', USDC.contract)).toEqual({
+      error: 'Not found',
+    });
+  });
+
+  it('reports Not found when the token is not in the list', () => {
+    expect(removeCustomTokenFromList([], 'eth', USDC.contract)).toEqual({
+      error: 'Not found',
+    });
   });
 });
 

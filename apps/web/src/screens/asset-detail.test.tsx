@@ -652,6 +652,148 @@ describe('asset detail screen', () => {
     }
   });
 
+  it('shows a Remove control for a user-added token, not for a default token', async () => {
+    // Lane C §6b fix: the Remove control exists only on a custom
+    // token's detail — the curated defaults can never be removed.
+    const customToken = {
+      chain: 'eth',
+      contract: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+      name: 'Aave Token',
+      symbol: 'AAVE',
+      decimals: 18,
+      coingeckoId: 'aave',
+      addedAtMs: 1,
+    };
+    const baseWallet = {
+      xpubs: { eth: { xpub: 'xpub6TestWallet1234567890abcdef' } },
+      addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
+      vaultAddresses: perChain([] as string[]),
+      hydrating: false,
+      uiState: perChain('loaded'),
+      errors: perChain(null),
+      balances: perChain({ status: 'unavailable', reason: 'no-adapter' }),
+      history: perChain(emptyHistory),
+      vaultState: 'unlocked',
+      tokenBalances: {
+        'eth:0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': {
+          status: 'zero',
+          value: '0',
+        },
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+      refreshTokenBalances: vi.fn(async () => {}),
+      refreshChain: vi.fn(async () => {}),
+      refreshBalances: vi.fn(async () => {}),
+      refreshHistory: vi.fn(async () => {}),
+      setSelectedChain: vi.fn(),
+    };
+    vi.mocked(useWallet).mockReturnValue({
+      ...baseWallet,
+      customTokens: [customToken],
+      removeCustomToken: vi.fn(() => ({ ok: true as const })),
+    } as unknown as ReturnType<typeof useWallet>);
+    const customMounted = await mountScreen(
+      '/assets/eth/0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9',
+    );
+    try {
+      const removeButton = [...customMounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Remove token',
+      );
+      expect(removeButton).not.toBeUndefined();
+    } finally {
+      await customMounted.cleanup();
+    }
+    vi.mocked(useWallet).mockReturnValue({
+      ...baseWallet,
+      customTokens: [],
+      removeCustomToken: vi.fn(() => ({ ok: true as const })),
+    } as unknown as ReturnType<typeof useWallet>);
+    const defaultMounted = await mountScreen('/assets/eth/usdc');
+    try {
+      const removeButton = [...defaultMounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Remove token',
+      );
+      expect(removeButton).toBeUndefined();
+    } finally {
+      await defaultMounted.cleanup();
+    }
+  });
+
+  it('removes a user-added token on the second tap and leaves the detail', async () => {
+    // Lane C §6b fix: first tap arms ("Tap again to remove"), second
+    // tap removes via the wallet context and navigates to /assets.
+    const mockRemoveCustomToken = vi.fn(() => ({ ok: true as const }));
+    const customToken = {
+      chain: 'eth',
+      contract: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+      name: 'Aave Token',
+      symbol: 'AAVE',
+      decimals: 18,
+      coingeckoId: 'aave',
+      addedAtMs: 1,
+    };
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: { eth: { xpub: 'xpub6TestWallet1234567890abcdef' } },
+      addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
+      vaultAddresses: perChain([] as string[]),
+      hydrating: false,
+      uiState: perChain('loaded'),
+      errors: perChain(null),
+      balances: perChain({ status: 'unavailable', reason: 'no-adapter' }),
+      history: perChain(emptyHistory),
+      vaultState: 'unlocked',
+      customTokens: [customToken],
+      tokenBalances: {
+        'eth:0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+      refreshTokenBalances: vi.fn(async () => {}),
+      refreshChain: vi.fn(async () => {}),
+      refreshBalances: vi.fn(async () => {}),
+      refreshHistory: vi.fn(async () => {}),
+      setSelectedChain: vi.fn(),
+      removeCustomToken: mockRemoveCustomToken,
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen(
+      '/assets/eth/0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9',
+    );
+    try {
+      const findRemove = () =>
+        [...mounted.div.querySelectorAll('button')].find(
+          (candidate) =>
+            candidate.textContent === 'Remove token' ||
+            candidate.textContent === 'Tap again to remove',
+        ) as HTMLButtonElement;
+      const first = findRemove();
+      expect(first).not.toBeUndefined();
+      expect(first.textContent).toBe('Remove token');
+      await act(async () => {
+        first.click();
+      });
+      expect(mockRemoveCustomToken).not.toHaveBeenCalled();
+      const armed = findRemove();
+      expect(armed.textContent).toBe('Tap again to remove');
+      await act(async () => {
+        armed.click();
+      });
+      expect(mockRemoveCustomToken).toHaveBeenCalledTimes(1);
+      expect(mockRemoveCustomToken).toHaveBeenCalledWith(
+        'eth',
+        '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+      );
+      // Navigated to /assets, which has no route in this harness —
+      // the detail screen is gone.
+      expect(mounted.div.querySelector('h1')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows Unverified on an unlisted token detail header', async () => {
     // Lane 1: a user-added token with no CoinGecko listing says
     // Unverified on its detail header.

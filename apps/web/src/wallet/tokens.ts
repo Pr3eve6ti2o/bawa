@@ -750,6 +750,27 @@ export function addCustomTokenToList(
   return { list: [...list, record] };
 }
 
+/**
+ * Remove a user-added token from the custom list (Lane C §6b fix):
+ * a token added by contract — verified or fake/unverified alike —
+ * must be removable without wiping the wallet. Matches by the same
+ * chain + case-normalised contract key as duplicate detection, so a
+ * pasted address removes the record regardless of its casing.
+ * Default tokens are never in this list, so they can never be removed
+ * this way.
+ */
+export function removeCustomTokenFromList(
+  list: readonly TokenRecord[],
+  chain: ChainId,
+  contract: string,
+): { list: TokenRecord[] } | { error: 'Not found' } {
+  const key = tokenKey(chain, contract);
+  if (!list.some((record) => tokenKeyOf(record) === key)) {
+    return { error: 'Not found' };
+  }
+  return { list: list.filter((record) => tokenKeyOf(record) !== key) };
+}
+
 // --- Persistence (localStorage, versioned keys, public data only) ---
 // Follows the existing precedent (bawa-watch-only-xpubs,
 // bawa-vault-addresses:v1): versioned JSON, best-effort writes, never

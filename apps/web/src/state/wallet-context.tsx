@@ -11,6 +11,7 @@ import { messageOf } from '../wallet/adapters/types';
 import {
   DEFAULT_TOKENS,
   addCustomTokenToList,
+  removeCustomTokenFromList,
   isDuplicateToken,
   readCustomTokens,
   readEnabledChains,
@@ -249,6 +250,14 @@ export interface WalletContextValue extends WalletState {
   refreshTokenBalances(): Promise<void>;
   setChainEnabled(chain: ChainId, enabled: boolean): void;
   addCustomToken(record: TokenRecord): { ok: true } | { ok: false; error: string };
+  /**
+   * Remove a user-added token (Lane C §6b fix): drops the record from
+   * the custom list and persists the removal, then refreshes token
+   * balances so the row disappears from the dashboard and /assets.
+   * Default tokens are never in the custom list, so this can only
+   * remove a token the user added — verified or unverified alike.
+   */
+  removeCustomToken(chain: ChainId, contract: string): { ok: true } | { ok: false; error: string };
 }
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
@@ -1349,6 +1358,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return { ok: true as const };
   }, [update, refreshTokenBalances]);
 
+  // Remove a user-added token (Lane C §6b fix): the mirror of
+  // addCustomToken — same persistence, same state update, same
+  // balance refresh, so the row disappears everywhere at once.
+  const removeCustomToken = useCallback((chain: ChainId, contract: string) => {
+    const result = removeCustomTokenFromList(current.current.customTokens, chain, contract);
+    if ('error' in result) {
+      return { ok: false as const, error: result.error };
+    }
+    writeCustomTokens(result.list);
+    update(previous => ({ ...previous, customTokens: result.list }));
+    void refreshTokenBalances();
+    return { ok: true as const };
+  }, [update, refreshTokenBalances]);
+
   // Vault-backed accounts. An xpub can never be upgraded into signing keys:
   // spending requires vault creation or mnemonic restoration. Watch-only xpubs
   // stay a separate, explicitly labelled account type (see xpubs above).
@@ -1924,10 +1947,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation,
     exportAccountExtendedPublicKey,
     refreshVaultAccounts, refreshBalances, refreshHistory,
-    refreshTokenBalances, setChainEnabled, addCustomToken,
+    refreshTokenBalances, setChainEnabled, addCustomToken, removeCustomToken,
     lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
     devnetEnabled, setDevnetEnabled,
-  }), [state, selectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, exportAccountExtendedPublicKey, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
+  }), [state, selectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, exportAccountExtendedPublicKey, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, removeCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
