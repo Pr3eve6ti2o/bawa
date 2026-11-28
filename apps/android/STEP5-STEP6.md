@@ -256,7 +256,8 @@ derivation; no signing/broadcast call sites exist.
   `LiveDataFormattingTest`, 5 `NativePricesTest`). One compile fix
   during the run: smart-cast on delegated properties in
   `TransactionDetailScreen` (local vals instead).
-- Step 6 commit: `262334a` (local on `android-step6-ui`, never pushed).
+- Step 6 commit: local on `android-step6-ui`, never pushed (see
+  `git log` for the hash).
 
 ## Honest gaps (still open)
 
