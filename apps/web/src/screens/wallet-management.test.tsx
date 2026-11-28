@@ -28,9 +28,17 @@ function setWallet(
   vaultAccount = { account: 0, index: 0 },
   options: {
     vaultAccounts?: number[];
+    vaultAccountNames?: Record<number, string>;
     vaultPassphraseNeeded?: boolean;
     createVaultAccounts?: (count: number) => Promise<number[]>;
     selectVaultAccount?: (account: number) => Promise<void>;
+    renameVaultAccount?: (account: number, name: string) => void;
+    deleteVaultAccount?: (
+      account: number,
+    ) => Promise<
+      | { ok: true; current: number }
+      | { ok: false; reason: 'last-account' }
+    >;
   } = {},
 ): void {
   vi.mocked(useWallet).mockReturnValue({
@@ -40,9 +48,14 @@ function setWallet(
     setVaultAccount,
     vaultAddresses: TEST_ADDRESSES,
     vaultAccounts: options.vaultAccounts ?? [0],
+    vaultAccountNames: options.vaultAccountNames ?? {},
     vaultPassphraseNeeded: options.vaultPassphraseNeeded ?? false,
     createVaultAccounts: options.createVaultAccounts ?? vi.fn(async () => []),
     selectVaultAccount: options.selectVaultAccount ?? vi.fn(async () => {}),
+    renameVaultAccount: options.renameVaultAccount ?? vi.fn(),
+    deleteVaultAccount:
+      options.deleteVaultAccount ??
+      vi.fn(async () => ({ ok: true as const, current: 0 })),
   } as unknown as ReturnType<typeof useWallet>);
 }
 
@@ -829,6 +842,221 @@ describe('wallet management — address identicons (Lane P2-C, M6)', () => {
       expect(
         disclosure?.querySelectorAll('svg[data-testid="address-identicon"]'),
       ).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('wallet management — rename and per-account delete', () => {
+  // Lane E, item 4a: an account can be renamed (the name shows in the
+  // list and in the Switch button, with its default beside it) and
+  // deleted with a two-tap confirm, like Delete vault and the address
+  // book's Remove. Deleting the Current account moves Current; the
+  // only account has no Delete button at all.
+  function rowFor(div: HTMLElement, text: string): HTMLLIElement {
+    const row = [...div.querySelectorAll('li')].find((candidate) =>
+      candidate.textContent?.includes(text),
+    );
+    if (!row) throw new Error(`no account row containing ${text}`);
+    return row as HTMLLIElement;
+  }
+
+  function buttonIn(row: HTMLElement, text: string): HTMLButtonElement {
+    const found = [...row.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent === text,
+    );
+    if (!found) throw new Error(`no button with text ${text}`);
+    return found as HTMLButtonElement;
+  }
+
+  it('shows a custom name in the list and the Switch button', async () => {
+    setWallet(vi.fn(async () => {}), { account: 0, index: 0 }, {
+      vaultAccounts: [0, 1],
+      vaultAccountNames: { 1: 'Trading' },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Trading');
+      // The default stays visible beside the custom name.
+      expect(rowFor(mounted.div, 'Trading').textContent).toContain(
+        'Account 2',
+      );
+      expect(
+        [...mounted.div.querySelectorAll('button')].some(
+          (candidate) => candidate.textContent === 'Switch to Trading',
+        ),
+      ).toBe(true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('renames an account from the inline editor', async () => {
+    const renameVaultAccount = vi.fn();
+    setWallet(vi.fn(async () => {}), { account: 0, index: 0 }, {
+      vaultAccounts: [0, 1],
+      renameVaultAccount,
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        buttonIn(rowFor(mounted.div, 'Account 2'), 'Rename').click();
+      });
+      const input = mounted.div.querySelector(
+        '#rename-account-1',
+      ) as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.value).toBe('Account 2');
+      await act(async () => {
+        setInputValue(input, 'Savings');
+      });
+      await act(async () => {
+        buttonIn(rowFor(mounted.div, 'Account 2'), 'Save name').click();
+      });
+      expect(renameVaultAccount).toHaveBeenCalledWith(1, 'Savings');
+      expect(
+        mounted.div.querySelector('#rename-account-1'),
+      ).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('cancelling a rename leaves the name unchanged', async () => {
+    const renameVaultAccount = vi.fn();
+    setWallet(vi.fn(async () => {}), { account: 0, index: 0 }, {
+      vaultAccounts: [0, 1],
+      renameVaultAccount,
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        buttonIn(rowFor(mounted.div, 'Account 2'), 'Rename').click();
+      });
+      await act(async () => {
+        buttonIn(rowFor(mounted.div, 'Account 2'), 'Cancel').click();
+      });
+      expect(renameVaultAccount).not.toHaveBeenCalled();
+      expect(
+        mounted.div.querySelector('#rename-account-1'),
+      ).toBeNull();
+      expect(mounted.div.textContent).toContain('Account 2');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('a blank rename clears the custom name', async () => {
+    const renameVaultAccount = vi.fn();
+    setWallet(vi.fn(async () => {}), { account: 0, index: 0 }, {
+      vaultAccounts: [0, 1],
+      vaultAccountNames: { 1: 'Trading' },
+      renameVaultAccount,
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        buttonIn(rowFor(mounted.div, 'Trading'), 'Rename').click();
+      });
+      const input = mounted.div.querySelector(
+        '#rename-account-1',
+      ) as HTMLInputElement;
+      expect(input.value).toBe('Trading');
+      await act(async () => {
+        setInputValue(input, '   ');
+      });
+      await act(async () => {
+        // The editor row no longer contains 'Trading' in its text, so
+        // scope from the input instead of re-finding the row by name.
+        buttonIn(
+          input.closest('li') as HTMLLIElement,
+          'Save name',
+        ).click();
+      });
+      expect(renameVaultAccount).toHaveBeenCalledWith(1, '');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('deleting a non-current account takes two taps', async () => {
+    const deleteVaultAccount = vi.fn(async () => ({
+      ok: true as const,
+      current: 0,
+    }));
+    setWallet(vi.fn(async () => {}), { account: 0, index: 0 }, {
+      vaultAccounts: [0, 1],
+      deleteVaultAccount,
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        buttonIn(rowFor(mounted.div, 'Account 2'), 'Delete').click();
+      });
+      expect(deleteVaultAccount).not.toHaveBeenCalled();
+      expect(
+        buttonIn(rowFor(mounted.div, 'Account 2'), 'Tap again to delete'),
+      ).not.toBeNull();
+      await act(async () => {
+        buttonIn(
+          rowFor(mounted.div, 'Account 2'),
+          'Tap again to delete',
+        ).click();
+      });
+      expect(deleteVaultAccount).toHaveBeenCalledWith(1);
+      expect(mounted.div.textContent).toContain('Account 2 deleted.');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('deleting the current account says where Current moves', async () => {
+    const deleteVaultAccount = vi.fn(async () => ({
+      ok: true as const,
+      current: 0,
+    }));
+    setWallet(vi.fn(async () => {}), { account: 1, index: 0 }, {
+      vaultAccounts: [0, 1],
+      deleteVaultAccount,
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        buttonIn(rowFor(mounted.div, 'Account 2'), 'Delete').click();
+      });
+      await act(async () => {
+        buttonIn(
+          rowFor(mounted.div, 'Account 2'),
+          'Tap again to delete',
+        ).click();
+      });
+      expect(deleteVaultAccount).toHaveBeenCalledWith(1);
+      expect(mounted.div.textContent).toContain(
+        'Account 2 deleted. Current account is now Account 1.',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('offers no Delete button for the only account, and points at Delete vault', async () => {
+    setWallet(vi.fn(async () => {}), { account: 0, index: 0 }, {
+      vaultAccounts: [0],
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(
+        [...mounted.div.querySelectorAll('button')].some(
+          (candidate) => candidate.textContent === 'Delete',
+        ),
+      ).toBe(false);
+      expect(mounted.div.textContent).toContain(
+        'This is your only account.',
+      );
+      expect(
+        mounted.div.querySelector('a[href="/security"]'),
+      ).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

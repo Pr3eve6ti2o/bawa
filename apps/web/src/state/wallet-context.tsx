@@ -160,6 +160,11 @@ interface WalletState {
   // Lane C, items 6/7/17: the accounts created from this vault's phrase
   // (indices; 0 is "Account 1"). One phrase holds many accounts.
   vaultAccounts: number[];
+  // Lane E, item 4a: custom display names for those accounts, keyed by
+  // index. Absent means the default ("Account 1", …). Public labels
+  // only — a rename never touches the phrase, the keys, or any other
+  // account.
+  vaultAccountNames: Record<number, string>;
   // Lane C, item 6: true when the vault uses a recovery passphrase the
   // session does not know — account switches cannot re-derive then.
   vaultPassphraseNeeded: boolean;
@@ -219,6 +224,31 @@ export interface WalletContextValue extends WalletState {
   selectVaultAccount(account: number): Promise<void>;
   /** Create `count` new accounts from the vault phrase; returns their indices. */
   createVaultAccounts(count: number): Promise<number[]>;
+  /**
+   * Lane E, item 4a: give one account a custom display name. An empty
+   * name, or the default name, clears the custom name (the account
+   * shows its default again). Throws when the account is not on record
+   * or the name is over the length limit. A rename never touches the
+   * phrase, the keys, or any other account.
+   */
+  renameVaultAccount(account: number, name: string): void;
+  /**
+   * Lane E, item 4a: remove one account from this wallet (its index
+   * leaves the accounts list and its custom name goes with it). The
+   * other accounts and the vault are untouched — the phrase could
+   * re-derive the removed account, but this wallet no longer lists it.
+   * When the deleted account was Current, Current moves to the first
+   * remaining account. Refuses the last account: `{ ok: false, reason:
+   * 'last-account' }` — a vault always keeps at least one account, and
+   * removing the only one is what Delete vault (Security settings) is
+   * for. Returns the account that is Current afterwards.
+   */
+  deleteVaultAccount(
+    account: number,
+  ): Promise<
+    | { ok: true; current: number }
+    | { ok: false; reason: 'last-account' }
+  >;
   /** (Re-)derive the HD receive addresses for the current account. */
   refreshReceiveAddresses(): Promise<void>;
   /** Advance one chain's receive index and derive its fresh address. */
@@ -305,6 +335,22 @@ function syncedVaultAccounts(): number[] {
   if (stored.length > 0) return stored;
   vault.writeVaultAccounts([0]);
   return [0];
+}
+
+// Lane E, item 4a: the custom display names on record for this vault's
+// phrase. No vault means no names; a vault with none stored uses the
+// defaults. Names for accounts no longer on record are dropped here so
+// a deleted account's name never resurfaces.
+function syncedVaultAccountNames(): Record<number, string> {
+  if (!vault.hasVault()) return {};
+  const stored = vault.readVaultAccountNames();
+  const accounts = vault.readVaultAccounts();
+  const names: Record<number, string> = {};
+  for (const account of accounts) {
+    const name = stored[account];
+    if (name !== undefined) names[account] = name;
+  }
+  return names;
 }
 
 // --- Lane G: central reason → human sentence map (Safe's cgw-errors.ts
@@ -727,6 +773,7 @@ function initialWalletState(): WalletState {
       ? { account: 0, index: 0 }
       : { account: persisted.account, index: persisted.index },
     vaultAccounts: syncedVaultAccounts(),
+    vaultAccountNames: syncedVaultAccountNames(),
     vaultPassphraseNeeded: computePassphraseNeeded(bootVaultState),
     receiveIndices: readReceiveIndices(),
     receiveAddresses: perChain<string | null>(() => null),
@@ -1432,6 +1479,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         vaultProfileIds: profileIds,
         vaultAddresses: restored,
         vaultAccounts: storedAccounts,
+        vaultAccountNames: syncedVaultAccountNames(),
         vaultPassphraseNeeded: passphraseNeeded,
       }));
       return;
@@ -1468,6 +1516,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         vaultProfileIds: profileIds,
         vaultAddresses: perChain<string[]>(() => []),
         vaultAccounts: storedAccounts,
+        vaultAccountNames: syncedVaultAccountNames(),
         vaultPassphraseNeeded: passphraseNeeded,
       }));
       throw error;
@@ -1482,6 +1531,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultProfileIds: profileIds,
       vaultAddresses: addresses,
       vaultAccounts: storedAccounts,
+      vaultAccountNames: syncedVaultAccountNames(),
       vaultPassphraseNeeded: false,
     }));
     // Persist the PUBLIC addresses only (never keys or the mnemonic), so a
@@ -1550,6 +1600,63 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     update(previous => ({ ...previous, vaultAccounts: merged }));
     return added;
   }, [update]);
+
+  // Lane E, item 4a: rename one account. Only its label changes — the
+  // phrase, the keys and every other account are untouched. Throws
+  // when the account is not on record (the screen only offers rename
+  // for listed accounts) or the name is over the length limit.
+  const renameVaultAccount = useCallback((account: number, name: string) => {
+    if (!current.current.vaultAccounts.includes(account)) {
+      throw new Error('Account not found.');
+    }
+    const names = vault.renameAccountName(
+      current.current.vaultAccountNames,
+      account,
+      name,
+    );
+    vault.writeVaultAccountNames(names);
+    update(previous => ({ ...previous, vaultAccountNames: names }));
+  }, [update]);
+
+  // Lane E, item 4a: delete one account from this wallet. Storage is
+  // written BEFORE any switch, because setVaultAccount re-reads the
+  // stored list through refreshVaultAccounts. Deleting the Current
+  // account moves Current to the first remaining account (the lowest
+  // index — Account 1 when it survives); deleting any other account
+  // leaves Current where it is. The last account is refused: a vault
+  // always keeps at least one account, and removing the only one is
+  // what Delete vault (Security settings) is for. The vault itself is
+  // never touched — only the accounts list and the names map change.
+  const deleteVaultAccount = useCallback(async (account: number) => {
+    if (!current.current.vaultAccounts.includes(account)) {
+      throw new Error('Account not found.');
+    }
+    const remaining = current.current.vaultAccounts.filter(
+      (entry) => entry !== account,
+    );
+    if (remaining.length === 0) {
+      return { ok: false as const, reason: 'last-account' as const };
+    }
+    const names = vault.removeAccountName(
+      current.current.vaultAccountNames,
+      account,
+    );
+    vault.writeVaultAccounts(remaining);
+    vault.writeVaultAccountNames(names);
+    update(previous => ({
+      ...previous,
+      vaultAccounts: remaining,
+      vaultAccountNames: names,
+    }));
+    const wasCurrent = current.current.vaultAccount.account === account;
+    const nextCurrent = wasCurrent
+      ? (remaining[0] as number)
+      : current.current.vaultAccount.account;
+    if (wasCurrent) {
+      await setVaultAccount(nextCurrent, current.current.vaultAccount.index);
+    }
+    return { ok: true as const, current: nextCurrent };
+  }, [update, setVaultAccount]);
 
   // Lane C, item 8: (re-)derive the HD receive addresses for the current
   // account. Chains sharing one receive index are derived in a single
@@ -1850,6 +1957,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         vaultState: computeVaultState(),
         vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
         vaultAccounts: syncedVaultAccounts(),
+        vaultAccountNames: syncedVaultAccountNames(),
         vaultPassphraseNeeded: computePassphraseNeeded(computeVaultState()),
       }));
     });
@@ -1944,13 +2052,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain,
     setVaultAccount, selectVaultAccount, createVaultAccounts,
+    renameVaultAccount, deleteVaultAccount,
     refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation,
     exportAccountExtendedPublicKey,
     refreshVaultAccounts, refreshBalances, refreshHistory,
     refreshTokenBalances, setChainEnabled, addCustomToken, removeCustomToken,
     lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
     devnetEnabled, setDevnetEnabled,
-  }), [state, selectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, exportAccountExtendedPublicKey, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, removeCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
+  }), [state, selectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, renameVaultAccount, deleteVaultAccount, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, exportAccountExtendedPublicKey, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, removeCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

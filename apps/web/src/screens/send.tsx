@@ -107,7 +107,7 @@ import {
   beginTxLifecycleToast,
   type TxLifecycleHandle,
 } from '../wallet/tx-lifecycle-toast';
-import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
+import { displayAccountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
@@ -208,13 +208,14 @@ function signedTxResult(
 }
 
 export function SendScreen() {
-  const { vaultState, vaultAddresses, vaultAccount, vaultAccounts: vaultAccountsRaw, selectVaultAccount, balances, selectedChain, customTokens, tokenBalances, devnetEnabled, refreshBalances, refreshTokenBalances } = useWallet();
+  const { vaultState, vaultAddresses, vaultAccount, vaultAccounts: vaultAccountsRaw, vaultAccountNames: vaultAccountNamesRaw, selectVaultAccount, balances, selectedChain, customTokens, tokenBalances, devnetEnabled, refreshBalances, refreshTokenBalances } = useWallet();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   // Older mocked contexts may not provide the account fields; default
   // them so the screen still renders (wallet-management.tsx does the
   // same). In production the provider always supplies them.
   const vaultAccounts = vaultAccountsRaw ?? [];
+  const vaultAccountNames = vaultAccountNamesRaw ?? {};
   // Pending deep link (UI/UX round 2, deep-link fix): the payment the
   // link that opened this screen asked for. Starts from the URL; the
   // sync effect below resumes a stored one when the URL has none (the
@@ -1965,7 +1966,7 @@ export function SendScreen() {
                   className="flex w-full flex-col gap-1 rounded-flat-sm border border-ink bg-paper p-3 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-60"
                 >
                   <span className="text-base font-semibold">
-                    {accountName(account)}
+                    {displayAccountName(account, vaultAccountNames)}
                     {isCurrent ? ' · Current wallet' : ''}
                   </span>
                   {address !== undefined && (

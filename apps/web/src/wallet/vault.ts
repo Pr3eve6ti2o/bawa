@@ -846,6 +846,7 @@ export function deleteVault(): void {
   deleteStoredKey();
   deleteVaultBackup();
   clearVaultAccounts();
+  clearVaultAccountNames();
   // S3-A: a deleted vault voids its backup-completion record, so a
   // fresh vault never inherits a previous wallet's "Backed up".
   clearBackupDone();
@@ -955,6 +956,147 @@ export function nextVaultAccounts(
 
 export function clearVaultAccounts(): void {
   localStorage.removeItem(VAULT_ACCOUNTS_KEY);
+}
+
+// --- Lane E, item 4a: custom account names --------------------------------
+// A user can rename an account ("Savings", "Trading") instead of living
+// with "Account 1 / Account 2". Names are public labels only — the
+// account is still identified by its index, and a rename never touches
+// the phrase, the keys, or any other account. Names live beside the
+// accounts list (same versioning shape) and die with the vault, so a
+// fresh phrase never inherits the old wallet's names.
+export const VAULT_ACCOUNT_NAMES_KEY = 'bawa-vault-account-names:v1';
+export const MAX_ACCOUNT_NAME_LENGTH = 40;
+
+function cleanAccountName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed === '' || trimmed.length > MAX_ACCOUNT_NAME_LENGTH) {
+    return null;
+  }
+  return trimmed;
+}
+
+function cleanAccountNames(value: unknown): Record<number, string> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  const out: Record<number, string> = {};
+  for (const [key, entry] of Object.entries(
+    value as Record<string, unknown>,
+  )) {
+    const account = Number(key);
+    if (!Number.isSafeInteger(account) || account < 0) continue;
+    const cleaned = cleanAccountName(entry);
+    if (cleaned === null) continue;
+    out[account] = cleaned;
+  }
+  return out;
+}
+
+export function readVaultAccountNames(): Record<number, string> {
+  try {
+    const raw = localStorage.getItem(VAULT_ACCOUNT_NAMES_KEY);
+    if (raw === null) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      parsed === null ||
+      typeof parsed !== 'object' ||
+      (parsed as { version?: unknown }).version !== 1 ||
+      (parsed as { names?: unknown }).names === null ||
+      typeof (parsed as { names?: unknown }).names !== 'object'
+    ) {
+      return {};
+    }
+    return cleanAccountNames((parsed as { names: unknown }).names);
+  } catch {
+    return {};
+  }
+}
+
+export function writeVaultAccountNames(
+  names: Record<number, string>,
+): void {
+  for (const [key, entry] of Object.entries(names)) {
+    const account = Number(key);
+    if (!Number.isSafeInteger(account) || account < 0) {
+      throw new RangeError('account names must use non-negative safe integers');
+    }
+    if (typeof entry !== 'string') {
+      throw new RangeError('account names must be strings');
+    }
+    const trimmed = entry.trim();
+    if (trimmed !== '' && trimmed.length > MAX_ACCOUNT_NAME_LENGTH) {
+      throw new RangeError(
+        `account names must be at most ${MAX_ACCOUNT_NAME_LENGTH} characters`,
+      );
+    }
+  }
+  localStorage.setItem(
+    VAULT_ACCOUNT_NAMES_KEY,
+    JSON.stringify({ version: 1, names: cleanAccountNames(names) }),
+  );
+}
+
+export function clearVaultAccountNames(): void {
+  localStorage.removeItem(VAULT_ACCOUNT_NAMES_KEY);
+}
+
+/**
+ * The name an account shows in the UI: its custom name when one is
+ * set, otherwise its default ("Account 1", "Account 2", …). Pure.
+ */
+export function displayAccountName(
+  account: number,
+  names: Readonly<Record<number, string>>,
+): string {
+  const custom = names[account];
+  return custom !== undefined && custom.trim() !== ''
+    ? custom
+    : accountName(account);
+}
+
+/**
+ * The names map after renaming one account. An empty name, or a name
+ * identical to the default, clears the custom name (the account shows
+ * its default again) instead of storing a redundant label. Pure: it
+ * does not write anything. Throws for an invalid account or a name
+ * over the length limit.
+ */
+export function renameAccountName(
+  names: Readonly<Record<number, string>>,
+  account: number,
+  name: string,
+): Record<number, string> {
+  if (!Number.isSafeInteger(account) || account < 0) {
+    throw new RangeError('account must be a non-negative safe integer');
+  }
+  const trimmed = name.trim();
+  if (trimmed.length > MAX_ACCOUNT_NAME_LENGTH) {
+    throw new RangeError(
+      `account name must be at most ${MAX_ACCOUNT_NAME_LENGTH} characters`,
+    );
+  }
+  const next = { ...names };
+  if (trimmed === '' || trimmed === accountName(account)) {
+    delete next[account];
+  } else {
+    next[account] = trimmed;
+  }
+  return next;
+}
+
+/**
+ * The names map after removing one account's custom name (used when
+ * the account itself is deleted). Pure: it does not write anything.
+ */
+export function removeAccountName(
+  names: Readonly<Record<number, string>>,
+  account: number,
+): Record<number, string> {
+  const next = { ...names };
+  delete next[account];
+  return next;
 }
 
 /**

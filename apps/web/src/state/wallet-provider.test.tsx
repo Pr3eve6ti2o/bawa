@@ -8,6 +8,7 @@ import { deriveAddresses, deriveDevnetAddressesAt } from '../wallet/core';
 import {
   createVault,
   deleteVault,
+  readVaultAccountNames,
 } from '../wallet/vault';
 import { SUPPORTED_CHAINS } from '../wallet/chains';
 import { writeDevnetEnabled } from '../wallet/devnet';
@@ -147,6 +148,108 @@ describe('wallet context — vault-backed accounts', () => {
   // Receive settled on 'No receiving address available for this chain'
   // (E2E-02). No explicit refresh call is made after the remount: the
   // boot effect itself must do the derivation.
+  // Lane E, item 4a: rename and per-account delete, through the real
+  // provider. A rename is only a label; a delete removes the account
+  // from the list (and its name with it) without touching the other
+  // accounts or the vault. Deleting Current moves Current to the first
+  // remaining account; the last account is refused.
+  it('renames an account and the name survives a remount', async () => {
+    const mounted = await mountProvider();
+    await act(async () => {
+      await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+      await latest?.refreshVaultAccounts();
+      await latest?.createVaultAccounts(1);
+    });
+    expect(latest?.vaultAccounts).toEqual([0, 1]);
+    await act(async () => {
+      latest?.renameVaultAccount(1, 'Trading');
+    });
+    expect(latest?.vaultAccountNames).toEqual({ 1: 'Trading' });
+    expect(readVaultAccountNames()).toEqual({ 1: 'Trading' });
+    expect(() => latest?.renameVaultAccount(5, 'Nope')).toThrow(
+      /Account not found/,
+    );
+    await mounted.cleanup();
+    const remounted = await mountProvider();
+    try {
+      expect(latest?.vaultAccounts).toEqual([0, 1]);
+      expect(latest?.vaultAccountNames).toEqual({ 1: 'Trading' });
+    } finally {
+      await remounted.cleanup();
+    }
+  });
+
+  it('deletes a non-current account without touching the others or the vault', async () => {
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+        await latest?.refreshVaultAccounts();
+        await latest?.createVaultAccounts(1);
+        latest?.renameVaultAccount(1, 'Trading');
+      });
+      let result;
+      await act(async () => {
+        result = await latest?.deleteVaultAccount(1);
+      });
+      expect(result).toEqual({ ok: true, current: 0 });
+      expect(latest?.vaultAccounts).toEqual([0]);
+      expect(latest?.vaultAccountNames).toEqual({});
+      expect(readVaultAccountNames()).toEqual({});
+      expect(latest?.vaultAccount.account).toBe(0);
+      expect(latest?.vaultState).toBe('unlocked');
+      const expected = await deriveAddresses(TEST_MNEMONIC);
+      expect(latest?.vaultAddresses.eth).toEqual([expected.eth]);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('deleting the current account moves Current to the first remaining account', async () => {
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+        await latest?.refreshVaultAccounts();
+        await latest?.createVaultAccounts(1);
+        await latest?.selectVaultAccount(1);
+      });
+      expect(latest?.vaultAccount.account).toBe(1);
+      let result;
+      await act(async () => {
+        result = await latest?.deleteVaultAccount(1);
+      });
+      expect(result).toEqual({ ok: true, current: 0 });
+      expect(latest?.vaultAccounts).toEqual([0]);
+      expect(latest?.vaultAccount.account).toBe(0);
+      // Current's addresses are re-derived for the surviving account.
+      const expected = await deriveAddresses(TEST_MNEMONIC);
+      expect(latest?.vaultAddresses.eth).toEqual([expected.eth]);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('refuses to delete the last account', async () => {
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+        await latest?.refreshVaultAccounts();
+      });
+      expect(latest?.vaultAccounts).toEqual([0]);
+      let result;
+      await act(async () => {
+        result = await latest?.deleteVaultAccount(0);
+      });
+      expect(result).toEqual({ ok: false, reason: 'last-account' });
+      expect(latest?.vaultAccounts).toEqual([0]);
+      expect(latest?.vaultState).toBe('unlocked');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('re-derives devnet vault addresses on boot when the record is missing', async () => {
     const mounted = await mountProvider();
     await act(async () => {

@@ -5,11 +5,13 @@ import {
   accountName,
   autoUnlock,
   changePassword,
+  clearVaultAccountNames,
   clearVaultAccounts,
   createVault,
   deleteStoredKey,
   deleteVault,
   deleteVaultBackup,
+  displayAccountName,
   getSessionPassphrase,
   hasStoredKey,
   hasVault,
@@ -20,11 +22,15 @@ import {
   migrateEnvelope,
   nextVaultAccounts,
   PBKDF2_ITERATIONS,
+  readVaultAccountNames,
   readVaultAccounts,
+  removeAccountName,
+  renameAccountName,
   restoreVaultFromBackup,
   storeCurrentKey,
   TEST_PROVENANCE,
   unlock,
+  VAULT_ACCOUNT_NAMES_KEY,
   VAULT_ACCOUNTS_KEY,
   VAULT_BACKUP_STORAGE_KEY,
   VAULT_CORRUPTED,
@@ -36,6 +42,7 @@ import {
   verifyVaultPassword,
   withMnemonic,
   withMnemonicAsync,
+  writeVaultAccountNames,
   writeVaultAccounts,
   writeVaultBackup,
 } from './vault';
@@ -913,5 +920,92 @@ describe('vault accounts', () => {
     clearVaultAccounts();
     expect(readVaultAccounts()).toEqual([]);
     expect(localStorage.getItem(VAULT_ACCOUNTS_KEY)).toBeNull();
+  });
+});
+
+describe('vault account names', () => {
+  // Lane E, item 4a: a custom display name per account ("Savings").
+  // Names are public labels only — they never touch the phrase, the
+  // keys, or any other account — and they die with the vault.
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('reads no names when nothing is stored', () => {
+    expect(readVaultAccountNames()).toEqual({});
+  });
+
+  it('writes and reads the stored names, trimmed', () => {
+    writeVaultAccountNames({ 0: '  Savings  ', 1: 'Trading' });
+    expect(readVaultAccountNames()).toEqual({ 0: 'Savings', 1: 'Trading' });
+  });
+
+  it('drops blank names on write and rejects over-long ones', () => {
+    writeVaultAccountNames({ 0: '   ', 1: 'Trading' });
+    expect(readVaultAccountNames()).toEqual({ 1: 'Trading' });
+    expect(() =>
+      writeVaultAccountNames({ 0: 'x'.repeat(41) }),
+    ).toThrow(/at most 40/);
+  });
+
+  it('treats corrupt storage as empty instead of throwing', () => {
+    localStorage.setItem(VAULT_ACCOUNT_NAMES_KEY, 'not-json{');
+    expect(readVaultAccountNames()).toEqual({});
+    localStorage.setItem(
+      VAULT_ACCOUNT_NAMES_KEY,
+      JSON.stringify({ version: 1, names: { 0: 42, 1: 'Trading', x: 'Nope' } }),
+    );
+    expect(readVaultAccountNames()).toEqual({ 1: 'Trading' });
+  });
+
+  it('shows the custom name, falling back to the default', () => {
+    expect(displayAccountName(0, {})).toBe('Account 1');
+    expect(displayAccountName(1, { 1: 'Trading' })).toBe('Trading');
+    expect(displayAccountName(1, { 0: 'Savings' })).toBe('Account 2');
+  });
+
+  it('renames one account and leaves the others alone', () => {
+    expect(renameAccountName({ 0: 'Savings' }, 1, '  Trading ')).toEqual({
+      0: 'Savings',
+      1: 'Trading',
+    });
+  });
+
+  it('clearing a name — blank or equal to the default — removes it', () => {
+    expect(renameAccountName({ 1: 'Trading' }, 1, '   ')).toEqual({});
+    expect(renameAccountName({ 1: 'Trading' }, 1, 'Account 2')).toEqual({});
+  });
+
+  it('rejects an over-long rename and an invalid account', () => {
+    expect(() => renameAccountName({}, 0, 'x'.repeat(41))).toThrow(
+      /at most 40/,
+    );
+    expect(() => renameAccountName({}, -1, 'Savings')).toThrow(
+      /non-negative/,
+    );
+  });
+
+  it('removing an account drops only its name', () => {
+    expect(removeAccountName({ 0: 'Savings', 1: 'Trading' }, 1)).toEqual({
+      0: 'Savings',
+    });
+  });
+
+  it('clears the stored names', () => {
+    writeVaultAccountNames({ 0: 'Savings' });
+    clearVaultAccountNames();
+    expect(readVaultAccountNames()).toEqual({});
+    expect(localStorage.getItem(VAULT_ACCOUNT_NAMES_KEY)).toBeNull();
+  });
+
+  it('deleting the vault clears the names with it', () => {
+    writeVaultAccountNames({ 0: 'Savings' });
+    deleteVault();
+    expect(readVaultAccountNames()).toEqual({});
+    expect(localStorage.getItem(VAULT_ACCOUNT_NAMES_KEY)).toBeNull();
   });
 });

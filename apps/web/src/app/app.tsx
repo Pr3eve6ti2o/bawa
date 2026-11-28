@@ -113,7 +113,7 @@ function preloadRoute(to: string): void {
 import { WalletProvider, useWallet } from '../state/wallet-context';
 import { useDevnetToggle } from '../state/use-devnet-toggle';
 import { appBasePath } from '../wallet/payment-links';
-import { accountName } from '../wallet/vault';
+import { displayAccountName } from '../wallet/vault';
 import { ErrorBoundary } from './error-boundary';
 import { Toaster } from '../ui/components/sonner';
 import { SidebarNav } from './sidebar-nav';
@@ -236,7 +236,7 @@ export function NetworkModePill() {
 
 function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { vaultState, vaultAccount } = useWallet();
+  const { vaultState, vaultAccount, vaultAccountNames } = useWallet();
   const location = useLocation();
   const pathname = location.pathname;
   const navigate = useNavigate();
@@ -345,7 +345,7 @@ function AppLayout() {
               onFocus={() => preloadRoute('/wallets')}
               className="truncate text-sm font-semibold text-ink hover:underline hover:underline-offset-4"
             >
-              {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
+              {vaultState === 'no-vault' ? 'No wallet' : displayAccountName(vaultAccount.account, vaultAccountNames ?? {})} &#8250;
             </Link>
             <NetworkModePill />
           </header>
@@ -370,7 +370,7 @@ function AppLayout() {
                   onFocus={() => preloadRoute('/wallets')}
                   className="block truncate text-xs leading-4 text-ink hover:underline hover:underline-offset-4"
                 >
-                  {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
+                  {vaultState === 'no-vault' ? 'No wallet' : displayAccountName(vaultAccount.account, vaultAccountNames ?? {})} &#8250;
                 </Link>
               </div>
             </div>

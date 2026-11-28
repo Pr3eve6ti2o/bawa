@@ -7,7 +7,12 @@ import {
   CHAIN_DECIMALS,
   formatNativeWithSymbol,
 } from "../wallet/chain-amount-format";
-import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
+import {
+  accountName,
+  displayAccountName,
+  MAX_ACCOUNT_NAME_LENGTH,
+  MAX_CREATE_AT_ONCE,
+} from "../wallet/vault";
 import { readBackupDone } from "../wallet/backup-state";
 import { watchOnlyValueKind } from "../wallet/watch-only-families";
 import { AddressIdenticon } from "../ui/components/address-identicon";
@@ -133,9 +138,12 @@ export function WalletManagementScreen() {
     setVaultAccount,
     vaultAddresses,
     vaultAccounts: vaultAccountsRaw,
+    vaultAccountNames: vaultAccountNamesRaw,
     vaultPassphraseNeeded: vaultPassphraseNeededRaw,
     createVaultAccounts,
     selectVaultAccount,
+    renameVaultAccount,
+    deleteVaultAccount,
     exportAccountExtendedPublicKey,
   } = useWallet();
   // Older mocked contexts may not provide the new fields; default them
@@ -145,6 +153,7 @@ export function WalletManagementScreen() {
   // Older mocked contexts may not provide the new fields; default them
   // so the screen still renders.
   const vaultAccounts = vaultAccountsRaw ?? [];
+  const vaultAccountNames = vaultAccountNamesRaw ?? {};
   const vaultPassphraseNeeded = vaultPassphraseNeededRaw ?? false;
   const hasVault = vaultAccounts.length > 0;
   // S3-A (P1 item 8, F28): the backup-completion state — set when the
@@ -297,6 +306,83 @@ export function WalletManagementScreen() {
       setSwitchError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setSwitchingAccount(null);
+    }
+  }
+
+  // Lane E, item 4a: rename and per-account delete. Rename is an inline
+  // edit on the account row; a blank save clears the custom name back
+  // to the default. Delete takes two taps like Delete vault and the
+  // address book's Remove (DESIGN-SYSTEM §6): the first tap arms it,
+  // the second deletes. Deleting the Current account moves Current to
+  // the first remaining account; the only account has no Delete button
+  // at all (removing it is what Delete vault is for).
+  const [renamingAccount, setRenamingAccount] = useState<number | null>(null);
+  const [renameInput, setRenameInput] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [armedDeleteAccount, setArmedDeleteAccount] = useState<number | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState<number | null>(null);
+  const [deleteStatus, setDeleteStatus] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  function startRename(account: number) {
+    setRenameError(null);
+    setRenameInput(displayAccountName(account, vaultAccountNames));
+    setRenamingAccount(account);
+  }
+
+  function saveRename() {
+    if (renamingAccount === null || !renameVaultAccount) return;
+    const account = renamingAccount;
+    const trimmed = renameInput.trim();
+    if (trimmed.length > MAX_ACCOUNT_NAME_LENGTH) {
+      setRenameError(
+        `Keep the name to ${MAX_ACCOUNT_NAME_LENGTH} characters or fewer.`,
+      );
+      return;
+    }
+    try {
+      renameVaultAccount(account, trimmed);
+    } catch (cause) {
+      setRenameError(cause instanceof Error ? cause.message : String(cause));
+      return;
+    }
+    setRenamingAccount(null);
+    setRenameError(null);
+  }
+
+  async function deleteAccount(account: number) {
+    if (deletingAccount !== null || !deleteVaultAccount) return;
+    if (armedDeleteAccount !== account) {
+      setDeleteStatus(null);
+      setDeleteError(null);
+      setArmedDeleteAccount(account);
+      return;
+    }
+    const wasCurrent = vaultAccount.account === account;
+    const removedName = displayAccountName(account, vaultAccountNames);
+    setArmedDeleteAccount(null);
+    setDeleteError(null);
+    setDeleteStatus(null);
+    setDeletingAccount(account);
+    try {
+      const result = await deleteVaultAccount(account);
+      if (!result.ok) {
+        // Unreachable from this screen (the only account has no Delete
+        // button), but the store refuses it — say so plainly.
+        setDeleteError(
+          "This is your only account. To remove it, delete the vault in Security settings.",
+        );
+        return;
+      }
+      setDeleteStatus(
+        wasCurrent
+          ? `${removedName} deleted. Current account is now ${displayAccountName(result.current, vaultAccountNames)}.`
+          : `${removedName} deleted.`,
+      );
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setDeletingAccount(null);
     }
   }
 
@@ -490,36 +576,147 @@ export function WalletManagementScreen() {
                 <ul className="space-y-2">
                   {vaultAccounts.map((account) => {
                     const isCurrent = vaultAccount.account === account;
+                    const displayName = displayAccountName(
+                      account,
+                      vaultAccountNames,
+                    );
+                    const defaultName = accountName(account);
+                    const isRenamed = displayName !== defaultName;
+                    const isRenaming = renamingAccount === account;
+                    const isDeleteArmed = armedDeleteAccount === account;
                     return (
                       <li
                         key={account}
                         className="flex flex-wrap items-center justify-between gap-3 rounded-flat border px-3 py-2"
                       >
-                        <span className="flex items-center gap-2 text-base font-medium">
-                          {accountName(account)}
-                          {isCurrent && <Badge>Current</Badge>}
-                        </span>
-                        {!isCurrent && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => void switchToAccount(account)}
-                            disabled={
-                              switchingAccount !== null || !selectVaultAccount
-                            }
-                          >
-                            {switchingAccount === account
-                              ? "Switching…"
-                              : `Switch to ${accountName(account)}`}
-                          </Button>
+                        {isRenaming ? (
+                          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                            <Label htmlFor={`rename-account-${account}`} className="sr-only">
+                              {`Rename ${defaultName}`}
+                            </Label>
+                            <Input
+                              id={`rename-account-${account}`}
+                              value={renameInput}
+                              maxLength={MAX_ACCOUNT_NAME_LENGTH}
+                              onChange={(event) =>
+                                setRenameInput(event.target.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") saveRename();
+                                if (event.key === "Escape") {
+                                  setRenamingAccount(null);
+                                  setRenameError(null);
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button type="button" onClick={saveRename}>
+                              Save name
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setRenamingAccount(null);
+                                setRenameError(null);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </span>
+                        ) : (
+                          <>
+                            <span className="flex items-center gap-2 text-base font-medium">
+                              {displayName}
+                              {isRenamed && (
+                                <span className="text-sm font-normal text-muted-foreground">
+                                  {defaultName}
+                                </span>
+                              )}
+                              {isCurrent && <Badge>Current</Badge>}
+                            </span>
+                            <span className="flex flex-wrap items-center gap-2">
+                              {!isCurrent && (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() => void switchToAccount(account)}
+                                  disabled={
+                                    switchingAccount !== null ||
+                                    !selectVaultAccount
+                                  }
+                                >
+                                  {switchingAccount === account
+                                    ? "Switching…"
+                                    : `Switch to ${displayName}`}
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => startRename(account)}
+                                disabled={
+                                  renamingAccount !== null ||
+                                  !renameVaultAccount
+                                }
+                              >
+                                Rename
+                              </Button>
+                              {vaultAccounts.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() => void deleteAccount(account)}
+                                  disabled={
+                                    deletingAccount !== null ||
+                                    !deleteVaultAccount
+                                  }
+                                >
+                                  {deletingAccount === account
+                                    ? "Deleting…"
+                                    : isDeleteArmed
+                                      ? "Tap again to delete"
+                                      : "Delete"}
+                                </Button>
+                              )}
+                            </span>
+                          </>
                         )}
                       </li>
                     );
                   })}
                 </ul>
+                {vaultAccounts.length === 1 && (
+                  <p className="text-sm text-muted-foreground">
+                    This is your only account. To remove it, delete the
+                    vault in{" "}
+                    <Link
+                      to="/security"
+                      className="font-medium text-primary underline underline-offset-4"
+                    >
+                      Security settings
+                    </Link>
+                    .
+                  </p>
+                )}
                 {switchError && (
                   <p role="alert" className="text-base text-destructive">
                     {switchError}
+                  </p>
+                )}
+                {renameError && (
+                  <p role="alert" className="text-base text-destructive">
+                    {renameError}
+                  </p>
+                )}
+                {deleteStatus && (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    {deleteStatus}
+                  </p>
+                )}
+                {deleteError && (
+                  <p role="alert" className="text-base text-destructive">
+                    {deleteError}
                   </p>
                 )}
               </div>
