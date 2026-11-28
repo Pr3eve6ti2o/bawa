@@ -96,7 +96,7 @@ import {
   STARKNET_RECEIVE_ONLY_WARNING,
   type QrCardTemplate,
 } from '../wallet/payment-links';
-import { chainLogoFor, FallbackMark, tokenLogoFor } from './token-logo';
+import { chainLogoFor, FallbackMark, qrCardHeaderLogoFor, tokenLogoFor } from './token-logo';
 import { AddressIdenticon } from '../ui/components/address-identicon';
 
 export { QR_CARD_FOOTER };
@@ -605,8 +605,12 @@ export function QrCard({
   const config = chainConfig(chain);
   const subline = qrCardTokenSubline(token, chain);
   const tokenSymbol = token === null ? config.symbol : token.symbol;
-  const tokenLogo =
-    token === null ? tokenLogoFor(config.symbol) : tokenLogoFor(token.symbol);
+  // Lane 4 (honest remains, 2026-11-28): a native coin's header mark
+  // is its chain's mark (chain id first, symbol second) - the old
+  // symbol-only lookup showed the link mark for BNB and every other
+  // native whose symbol is not in the token map. A token's own
+  // resolved icon wins; see qrCardHeaderLogoFor in token-logo.
+  const tokenLogo = qrCardHeaderLogoFor(token, chain);
   const chainLogo = chainLogoFor(chain) ?? tokenLogoFor(chain);
   // The mark in the centre of the QR: the asset's logo where the
   // repo has one, else the network's mark, else no mark at all.

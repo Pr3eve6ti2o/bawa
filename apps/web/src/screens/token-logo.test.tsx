@@ -3,7 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
-import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
+import {
+  ChainLogo,
+  TokenLogo,
+  chainLogoFor,
+  qrCardHeaderLogoFor,
+  tokenLogoFor,
+} from './token-logo';
+import { DEFAULT_ENABLED_CHAINS, DEFAULT_TOKENS, type TokenRecord } from '../wallet/tokens';
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -377,5 +384,69 @@ describe('ChainLogo (Lane B, token-verify)', () => {
     const img = div.querySelector('img');
     expect(img).not.toBeNull();
     expect(img?.alt).toContain('Arbitrum');
+  });
+});
+
+describe('qrCardHeaderLogoFor (Lane 4, honest remains, 2026-11-28)', () => {
+  it('resolves native BNB to the BNB Smart Chain mark, not the link fallback', () => {
+    const logo = qrCardHeaderLogoFor(null, 'bsc');
+    expect(logo).toBe(chainLogoFor('bsc'));
+    expect(logo).toContain('smartchain');
+  });
+
+  it('resolves native BNB on opBNB to the opBNB mark, not the BSC one', () => {
+    const logo = qrCardHeaderLogoFor(null, 'opbnb');
+    expect(logo).toBe(chainLogoFor('opbnb'));
+    expect(logo).toContain('opbnb');
+  });
+
+  it('resolves every curated native to a real logo', () => {
+    for (const chain of DEFAULT_ENABLED_CHAINS) {
+      expect(qrCardHeaderLogoFor(null, chain)).toBeDefined();
+    }
+  });
+
+  it('keeps the symbol logo for the four chains with no chain-keyed entry', () => {
+    expect(qrCardHeaderLogoFor(null, 'btc')).toBe(tokenLogoFor('BTC'));
+    expect(qrCardHeaderLogoFor(null, 'eth')).toBe(tokenLogoFor('ETH'));
+    expect(qrCardHeaderLogoFor(null, 'trx')).toBe(tokenLogoFor('TRX'));
+    expect(qrCardHeaderLogoFor(null, 'ton')).toBe(tokenLogoFor('TON'));
+  });
+
+  it('prefers a token recorded icon over the bundled symbol logo', () => {
+    const cake: TokenRecord = {
+      chain: 'bsc',
+      contract: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82',
+      name: 'PancakeSwap Token',
+      symbol: 'CAKE',
+      decimals: 18,
+      coingeckoId: 'pancakeswap-token',
+      addedAtMs: 1,
+      iconUrl: 'https://example.invalid/cake.png',
+    };
+    expect(qrCardHeaderLogoFor(cake, 'bsc')).toBe('https://example.invalid/cake.png');
+  });
+
+  it('shows a curated default token its bundled logo when no icon was recorded', () => {
+    const usdc = DEFAULT_TOKENS.find(
+      (candidate) => candidate.chain === 'eth' && candidate.symbol === 'USDC',
+    );
+    if (usdc === undefined) throw new Error('default USDC missing from DEFAULT_TOKENS');
+    expect(qrCardHeaderLogoFor({ ...usdc, iconUrl: undefined }, 'eth')).toBe(
+      tokenLogoFor('USDC'),
+    );
+  });
+
+  it('never lends a bundled logo to a user-added token sharing a symbol', () => {
+    const copycat: TokenRecord = {
+      chain: 'bsc',
+      contract: '0x1111111111111111111111111111111111111111',
+      name: 'USD Coin copy',
+      symbol: 'USDC',
+      decimals: 6,
+      coingeckoId: null,
+      addedAtMs: 1,
+    };
+    expect(qrCardHeaderLogoFor(copycat, 'bsc')).toBeUndefined();
   });
 });

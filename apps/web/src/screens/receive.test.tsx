@@ -2147,3 +2147,41 @@ describe('receive screen — card style picker (QR-cards programme, Lane E; Lane
     }
   });
 });
+
+describe('receive screen - native BNB header logo (Lane 4, honest remains, 2026-11-28)', () => {
+  it('shows the real BNB icon in the header circle for native BNB', async () => {
+    // The file's beforeEach mocks availableFor to four chains; this
+    // test needs BSC in the offered set, like the other full-list tests.
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet({
+      addresses: {
+        btc: [],
+        eth: [{ index: 0, address: '0xWatchOnlyEthAddress0000000000000000000' }],
+        trx: [],
+        ton: [],
+        bsc: [{ index: 0, address: VAULT_ETH }],
+      },
+      vaultAddresses: {
+        btc: [],
+        eth: [VAULT_ETH],
+        trx: [],
+        ton: [],
+        bsc: [VAULT_ETH],
+      },
+      selectedChain: 'bsc',
+    });
+    const mounted = await mountScreen('/receive');
+    try {
+      await pickChain(mounted.div, 'bsc');
+      await clickButton(mounted.div, 'BNB Smart Chain \u00b7 BNB');
+      const header = mounted.div.querySelector('[data-testid="qr-card-header"]');
+      expect(header).not.toBeNull();
+      const tokenImg = header?.querySelector('img[alt="BNB logo"]');
+      expect(tokenImg).not.toBeNull();
+      expect(tokenImg?.getAttribute('src')).toContain('smartchain');
+      expect(header?.querySelector('[aria-label="BNB logo unavailable"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});

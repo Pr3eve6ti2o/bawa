@@ -663,4 +663,58 @@ describe('QrCard Starknet warning (receive-only Argent account)', () => {
     }
   });
 });
+
+  // Lane 4 (honest remains, 2026-11-28): the header circle shows
+  // the real icon for native BNB (and a token's own recorded icon).
+  it('shows the real BNB icon in the header circle for native BNB', async () => {
+    const mounted = await mountCard({
+      qrValue: 'bnb:0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      amountText: null,
+      address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      token: null,
+      chain: 'bsc',
+    });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card).not.toBeNull();
+      const header = card?.querySelector('[data-testid="qr-card-header"]');
+      expect(header).not.toBeNull();
+      const tokenImg = header?.querySelector('img[alt="BNB logo"]');
+      expect(tokenImg).not.toBeNull();
+      expect(tokenImg?.getAttribute('src')).toContain('smartchain');
+      expect(header?.querySelector('img[alt="BNB Smart Chain logo"]')).not.toBeNull();
+      expect(header?.querySelector('[aria-label="BNB logo unavailable"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a token recorded icon in the header circle', async () => {
+    const mounted = await mountCard({
+      qrValue: 'bnb:0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      amountText: null,
+      address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      token: token({
+        chain: 'bsc',
+        contract: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82',
+        name: 'PancakeSwap Token',
+        symbol: 'CAKE',
+        decimals: 18,
+        coingeckoId: 'pancakeswap-token',
+        iconUrl: 'https://example.invalid/cake.png',
+      }),
+      chain: 'bsc',
+    });
+    try {
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card).not.toBeNull();
+      const header = card?.querySelector('[data-testid="qr-card-header"]');
+      expect(header).not.toBeNull();
+      const tokenImg = header?.querySelector('img[alt="CAKE logo"]');
+      expect(tokenImg).not.toBeNull();
+      expect(tokenImg?.getAttribute('src')).toBe('https://example.invalid/cake.png');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

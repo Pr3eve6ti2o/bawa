@@ -96,6 +96,7 @@ import wbtcLogo from '../assets/tokens/wbtc.webp';
 import wethLogo from '../assets/tokens/weth.webp';
 import usdt0Logo from '../assets/tokens/usdt0.webp';
 import { chainConfig } from '../wallet/chains';
+import { isDefaultToken, type TokenRecord } from '../wallet/tokens';
 import type { ChainId } from '../engine/boundary';
 
 // Token logos: Trust Wallet asset registry (trustwallet/assets, MIT,
@@ -278,6 +279,28 @@ export function chainLogoFor(chain: string): string | undefined {
 export function tokenLogoFor(symbol: string): string | undefined {
   const key = symbol.trim().toUpperCase();
   return TOKEN_LOGOS[TOKEN_SYMBOL_ALIASES[key] ?? key];
+}
+
+/**
+ * Header-circle logo for the QR card (Lane 4, honest remains,
+ * 2026-11-28): a native coin's mark IS its chain's mark - resolve by
+ * chain id first, symbol second. The old QrCard lookup asked the
+ * symbol map only (tokenLogoFor of the native symbol), which covers
+ * just four native symbols (BTC, ETH, TRX, TON); every other native
+ * - BNB included - fell through to the link mark even though its real
+ * chain logo is bundled (bsc is blockchains/smartchain, the BNB Smart
+ * Chain mark). The symbol arm survives for the four chains with no
+ * chain-keyed entry, whose symbol IS their mark. For a token, the
+ * resolved icon recorded at add time wins (the same rule TokenLogo
+ * uses); the bundled symbol logo is allowed only for curated
+ * defaults, so a user-added token that merely shares a symbol never
+ * borrows the real token's mark.
+ */
+export function qrCardHeaderLogoFor(token: TokenRecord | null, chain: ChainId): string | undefined {
+  if (token === null) {
+    return chainLogoFor(chain) ?? tokenLogoFor(chainConfig(chain).symbol);
+  }
+  return token.iconUrl ?? (isDefaultToken(token) ? tokenLogoFor(token.symbol) : undefined);
 }
 
 /**

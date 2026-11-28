@@ -51,7 +51,7 @@ import {
   RECEIVE_RECENT_CHAINS_KEY,
 } from './chain-search-select';
 import { QrCard, qrCardSubtitle, qrCardTitle, qrCardTokenLabel, qrCardTokenSubline } from './qr-card';
-import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
+import { ChainLogo, TokenLogo, chainLogoFor, qrCardHeaderLogoFor, tokenLogoFor } from './token-logo';
 import { TokenPickerRow } from './token-picker-row';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Badge } from '../ui/components/badge';
@@ -984,9 +984,11 @@ export function ReceiveScreen() {
               : undefined,
           template: cardTemplate,
           width: 1080,
-          tokenLogoSrc: tokenLogoFor(
-            effectiveToken === null ? config.symbol : effectiveToken.symbol,
-          ),
+          // Lane 4 (honest remains, 2026-11-28): the exported PNG
+          // shares the on-screen header logo - a native coin's chain
+          // mark, a token's own resolved icon - so the file never
+          // shows the link mark where the screen shows the real logo.
+          tokenLogoSrc: qrCardHeaderLogoFor(effectiveToken, chain),
           chainLogoSrc: chainLogoFor(chain) ?? tokenLogoFor(chain),
         },
         qrFileName(),
