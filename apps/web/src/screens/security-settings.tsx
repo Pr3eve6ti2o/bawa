@@ -17,8 +17,9 @@ import { AutoLockSetting } from "./auto-lock-setting";
 // a bump that forgets this line fails loudly instead of going stale.
 const APP_VERSION = "0.1.0";
 
-// Same minimum as the create and import flows: a rotated password must
-// meet the same bar as the one it replaces.
+// Same minimum as the create and import flows: a password that is set
+// must meet the same bar everywhere. An empty password means "no
+// password" — see the set/remove flows below.
 const MIN_PASSWORD_LENGTH = 8;
 
 // P1 (S3-B, item 9 — F34): Security is a flat settings list, not nine
@@ -36,6 +37,9 @@ const MIN_PASSWORD_LENGTH = 8;
 export function SecuritySettingsScreen() {
   const {
     vaultState,
+    // Screens mocked in tests may omit this; only an explicit false
+    // means "no password" — a password vault is the safe default.
+    vaultHasPassword = true,
     refreshVaultAccounts,
     resetReceiveRotation = () => {},
     unlockVault,
@@ -47,6 +51,12 @@ export function SecuritySettingsScreen() {
   const [changeError, setChangeError] = useState<string | null>(null);
   const [changeSuccess, setChangeSuccess] = useState<string | null>(null);
   const [isChanging, setIsChanging] = useState(false);
+  const [removePassword, setRemovePassword] = useState("");
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [removeSuccess, setRemoveSuccess] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  const hasVault = vaultState !== "no-vault";
 
   useEffect(() => {
     setDeleteArmed(false);
@@ -56,7 +66,11 @@ export function SecuritySettingsScreen() {
     setChangeError(null);
     setChangeSuccess(null);
     setIsChanging(false);
-  }, [vaultState]);
+    setRemovePassword("");
+    setRemoveError(null);
+    setRemoveSuccess(null);
+    setIsRemoving(false);
+  }, [vaultState, vaultHasPassword]);
 
   // Lane E item 1e (broken): there was no change-password control
   // anywhere in the app — rotating the vault password meant deleting
@@ -64,10 +78,14 @@ export function SecuritySettingsScreen() {
   // trial decrypt (no state change) before anything is re-encrypted,
   // so a wrong current password fails honestly and leaves the vault
   // untouched. A locked vault is unlocked through the context first,
-  // because changePassword needs the mnemonic in the closure; the
-  // stored-key rule lives in changePassword itself (replaced when
-  // auto-lock is off so auto-unlock keeps working, deleted when on),
-  // so this screen never touches the stored key directly.
+  // because changePassword needs the mnemonic in the closure.
+  //
+  // The password is optional (owner order 2026-11-28): the same form
+  // sets a first password on a passwordless vault (no current password
+  // to check — there is none) and changes it on a password vault.
+  // Setting, changing, or removing the password re-encrypts under a new
+  // key, so every existing Shamir backup-share set is cancelled —
+  // create fresh shares afterwards.
   async function handleChangePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isChanging) return;
@@ -85,24 +103,68 @@ export function SecuritySettingsScreen() {
     }
     setIsChanging(true);
     try {
-      if (!(await verifyVaultPassword(currentPassword))) {
-        setChangeError("Incorrect password.");
-        setCurrentPassword("");
-        return;
-      }
-      if (vaultState === "locked") {
-        await unlockVault(currentPassword);
+      if (vaultHasPassword) {
+        if (!(await verifyVaultPassword(currentPassword))) {
+          setChangeError("Incorrect password.");
+          setCurrentPassword("");
+          return;
+        }
+        if (vaultState === "locked") {
+          await unlockVault(currentPassword);
+        }
+      } else if (vaultState === "locked") {
+        // A passwordless vault never locks; this is defence in depth.
+        await unlockVault("");
       }
       await changePassword(newPassword);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setChangeSuccess("Password changed.");
+      setChangeSuccess(
+        vaultHasPassword
+          ? "Password changed."
+          : "Password set. Your wallet now locks — you will need this password after a reload.",
+      );
+      await refreshVaultAccounts();
     } catch (cause) {
       setChangeError(cause instanceof Error ? cause.message : String(cause));
       setCurrentPassword("");
     } finally {
       setIsChanging(false);
+    }
+  }
+
+  // Removing the password is explicit: the user must type the current
+  // password (proving they own the vault) and the copy states the
+  // consequence — the wallet becomes unprotected, anyone with the device
+  // can open it, and the existing backup shares are cancelled because
+  // the vault is re-encrypted under a new key.
+  async function handleRemovePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isRemoving) return;
+    setRemoveError(null);
+    setRemoveSuccess(null);
+    setIsRemoving(true);
+    try {
+      if (!(await verifyVaultPassword(removePassword))) {
+        setRemoveError("Incorrect password.");
+        setRemovePassword("");
+        return;
+      }
+      if (vaultState === "locked") {
+        await unlockVault(removePassword);
+      }
+      await changePassword("");
+      setRemovePassword("");
+      setRemoveSuccess(
+        "Password removed. Your wallet is now unprotected — anyone with this device can open it.",
+      );
+      await refreshVaultAccounts();
+    } catch (cause) {
+      setRemoveError(cause instanceof Error ? cause.message : String(cause));
+      setRemovePassword("");
+    } finally {
+      setIsRemoving(false);
     }
   }
 
@@ -158,39 +220,44 @@ export function SecuritySettingsScreen() {
           <span>Not set up</span>
         </li>
 
-        {vaultState !== "no-vault" && (
+        {hasVault && (
           <li className="px-4 py-3">
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
                 <p className="text-base font-medium text-ink">
-                  Change password
+                  {vaultHasPassword ? "Change password" : "Set a password"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Re-encrypts the vault with a new password. The old
-                  password stops working.
+                  {vaultHasPassword
+                    ? "Re-encrypts the vault with a new password. The old password stops working. Changing the password cancels your backup shares — create fresh shares afterwards."
+                    : "No password is set: anyone with this device can open the wallet. Setting one locks the vault — you will need it after a reload. Setting a password cancels your backup shares — create fresh shares afterwards."}
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="change-current-password">
-                  Current password
-                </Label>
-                <Input
-                  id="change-current-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                  disabled={isChanging}
-                  aria-invalid={changeError !== null}
-                  aria-describedby={
-                    changeError ? "change-password-error" : undefined
-                  }
-                />
-              </div>
+              {vaultHasPassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="change-current-password">
+                    Current password
+                  </Label>
+                  <Input
+                    id="change-current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    disabled={isChanging}
+                    aria-invalid={changeError !== null}
+                    aria-describedby={
+                      changeError ? "change-password-error" : undefined
+                    }
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
-                <Label htmlFor="change-new-password">New password</Label>
+                <Label htmlFor="change-new-password">
+                  {vaultHasPassword ? "New password" : "Password"}
+                </Label>
                 <Input
                   id="change-new-password"
                   type="password"
@@ -232,13 +299,73 @@ export function SecuritySettingsScreen() {
               )}
 
               <Button type="submit" disabled={isChanging} flat>
-                {isChanging ? "Changing…" : "Change password"}
+                {isChanging
+                  ? "Changing…"
+                  : vaultHasPassword
+                    ? "Change password"
+                    : "Set password"}
               </Button>
             </form>
           </li>
         )}
 
-        {vaultState !== 'no-vault' && (
+        {hasVault && vaultHasPassword && (
+          <li className="px-4 py-3">
+            <form onSubmit={handleRemovePassword} className="space-y-4">
+              <div>
+                <p className="text-base font-medium text-ink">
+                  Remove password
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Removes the password entirely. Your wallet will be
+                  unprotected — anyone with this device can open it, with
+                  no password prompt. Removing the password cancels your
+                  backup shares — create fresh shares afterwards.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="remove-current-password">
+                  Current password
+                </Label>
+                <Input
+                  id="remove-current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={removePassword}
+                  onChange={(event) => setRemovePassword(event.target.value)}
+                  disabled={isRemoving}
+                  aria-invalid={removeError !== null}
+                  aria-describedby={
+                    removeError ? "remove-password-error" : undefined
+                  }
+                />
+              </div>
+
+              {removeError && (
+                <p
+                  id="remove-password-error"
+                  role="alert"
+                  className="text-base text-destructive"
+                >
+                  {removeError}
+                </p>
+              )}
+
+              {removeSuccess && (
+                <p role="status" className="text-base leading-6">
+                  {removeSuccess}
+                </p>
+              )}
+
+              <Button type="submit" disabled={isRemoving} flat>
+                {isRemoving ? "Removing…" : "Remove password"}
+              </Button>
+            </form>
+          </li>
+        )}
+
+        {hasVault && (
           <li className="flex min-h-11 flex-wrap items-center justify-between gap-4 px-4 py-3">
             <span className="text-base font-medium text-ink">Delete vault</span>
             <Button
@@ -266,8 +393,9 @@ export function SecuritySettingsScreen() {
         Bawa Web Wallet · Version {APP_VERSION}
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        Your phrase stays encrypted on this device. Keys never leave it.
-        Sending is off until approved. Offline signing only.
+        {hasVault && !vaultHasPassword
+          ? "No password is set: anyone with this device can open the wallet. Sending is off until approved. Offline signing only."
+          : "Your phrase stays encrypted on this device. Keys never leave it. Sending is off until approved. Offline signing only."}
       </p>
     </section>
   );

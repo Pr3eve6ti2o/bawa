@@ -162,7 +162,13 @@ function PadlockDoodle() {
 }
 
 export function LockScreen() {
-  const { unlockVault, vaultState } = useWallet();
+  const {
+    unlockVault,
+    vaultState,
+    // Screens mocked in tests may omit this; only an explicit false
+    // means "no password" — a password vault is the safe default.
+    vaultHasPassword = true,
+  } = useWallet();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -172,6 +178,10 @@ export function LockScreen() {
   const [isUnlocking, setIsUnlocking] = useState(false);
 
   const noVault = vaultState === "no-vault";
+  // A vault with no password never locks: there is no password to type
+  // and no lock state. Landing here (e.g. a saved link) offers a plain
+  // "open" step instead of a password form — and says so.
+  const noPassword = !noVault && !vaultHasPassword;
   const usesPassphrase = isPassphraseUsed();
 
   const returnTo = useMemo(() => {
@@ -193,7 +203,13 @@ export function LockScreen() {
     setIsUnlocking(true);
 
     try {
-      const result: unknown = await unlockVault(password, passphrase);
+      // A passwordless vault opens with the empty password; a password
+      // vault with the typed one. The passphrase field, when used, is
+      // passed through unchanged in both cases.
+      const result: unknown = await unlockVault(
+        noPassword ? "" : password,
+        passphrase,
+      );
 
       if (
         result === false ||
@@ -245,12 +261,18 @@ export function LockScreen() {
             className="font-display"
             style={{ fontSize: "2.25rem", lineHeight: 1.15 }}
           >
-            {noVault ? "Set up your wallet" : "Unlock your wallet"}
+            {noVault
+              ? "Set up your wallet"
+              : noPassword
+                ? "Open your wallet"
+                : "Unlock your wallet"}
           </CardTitle>
           <p style={{ lineHeight: 1.5 }}>
             {noVault
               ? 'No vault exists yet.'
-              : 'Locked means derived addresses are hidden and signing is unavailable. Watch-only remains usable.'}
+              : noPassword
+                ? 'This wallet has no password, so there is nothing to unlock. Anyone with this device can open it — set a password in Security settings to lock it.'
+                : 'Locked means derived addresses are hidden and signing is unavailable. Watch-only remains usable.'}
           </p>
         </CardHeader>
 
@@ -264,6 +286,74 @@ export function LockScreen() {
                 <Link to="/import-wallet">Import a wallet</Link>
               </Button>
             </div>
+          ) : noPassword ? (
+            <>
+              <form
+                onSubmit={handleSubmit}
+                aria-busy={isUnlocking}
+                style={{ display: "grid", gap: "1.25rem" }}
+              >
+                {usesPassphrase && (
+                  <div style={{ display: "grid", gap: "0.5rem" }}>
+                    <Label htmlFor="lock-passphrase">
+                      Recovery passphrase
+                    </Label>
+                    <Input
+                      id="lock-passphrase"
+                      name="passphrase"
+                      type="password"
+                      autoComplete="off"
+                      value={passphrase}
+                      onChange={(event) =>
+                        setPassphrase(event.currentTarget.value)
+                      }
+                      aria-invalid={error !== null}
+                      aria-describedby="lock-error"
+                      disabled={isUnlocking}
+                    />
+                  </div>
+                )}
+
+                {error !== null && (
+                  <p
+                    id="lock-error"
+                    role="alert"
+                    className="bg-coral text-ink border-ink rounded-flat-lg"
+                    style={{
+                      margin: 0,
+                      padding: "0.75rem",
+                      borderWidth: 1,
+                      borderStyle: "solid",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {error}
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  disabled={isUnlocking}
+                >
+                  {isUnlocking ? "Opening…" : "Open wallet"}
+                </Button>
+              </form>
+
+              <p style={{ margin: 0, textAlign: "center", lineHeight: 1.5 }}>
+                <Link
+                  to="/security"
+                  className="text-ink"
+                  style={{
+                    textDecoration: "underline",
+                    textUnderlineOffset: "0.2em",
+                  }}
+                >
+                  Set a password in Security settings
+                </Link>
+              </p>
+            </>
           ) : (
             <>
               <form
@@ -355,8 +445,10 @@ export function LockScreen() {
 
           {/* Lane 5: the auto-lock note only applies with a vault. With
               no vault it told a user with no wallet to "configure it in
-              Security settings" — dead guidance on the setup screen. */}
-          {!noVault && (
+              Security settings" — dead guidance on the setup screen.
+              It also only applies with a password: a passwordless vault
+              has nothing to lock. */}
+          {!noVault && vaultHasPassword && (
           <p
             style={{
               margin: 0,

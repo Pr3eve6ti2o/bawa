@@ -3,17 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeAutoLockEnabled } from './auto-lock';
 import {
   accountName,
-  autoUnlock,
   changePassword,
   clearVaultAccountNames,
   clearVaultAccounts,
   createVault,
-  deleteStoredKey,
   deleteVault,
   deleteVaultBackup,
   displayAccountName,
   getSessionPassphrase,
-  hasStoredKey,
   hasVault,
   hasVaultBackup,
   isLocked,
@@ -21,22 +18,23 @@ import {
   lock,
   migrateEnvelope,
   nextVaultAccounts,
+  openVaultIfPasswordless,
   PBKDF2_ITERATIONS,
   readVaultAccountNames,
   readVaultAccounts,
   removeAccountName,
+  removeLegacyStoredKey,
   renameAccountName,
   restoreVaultFromBackup,
-  storeCurrentKey,
   TEST_PROVENANCE,
   unlock,
   VAULT_ACCOUNT_NAMES_KEY,
   VAULT_ACCOUNTS_KEY,
   VAULT_BACKUP_STORAGE_KEY,
   VAULT_CORRUPTED,
-  VAULT_KEY_STORAGE_KEY,
   VAULT_STORAGE_KEY,
   VAULT_WRONG_PASSWORD,
+  vaultHasPassword,
   vaultProfiles,
   vaultProvenance,
   verifyVaultPassword,
@@ -55,10 +53,11 @@ import { BawaError, ERROR_MESSAGES, WalletErrorCodes } from './errors';
 // verifyVaultPassword). BOTH suites are kept:
 // - HEAD (Merge 1): 'vault backup', 'vault migration', 'vault errors',
 //   'vault provenance', 'verifyVaultPassword' - plus the shared
-//   'vault', 'autoUnlock', 'withMnemonicAsync' and 'session passphrase'
-//   describes, whose HEAD versions are the superset (backup assertions
-//   in the delete test; migration-aware autoUnlock cases).
-// - layout-rebuild: 'vault locking' and 'auto-lock stored-key invariant'.
+//   'vault', 'openVaultIfPasswordless', 'withMnemonicAsync' and 'session
+//   passphrase' describes, whose HEAD versions are the superset (backup
+//   assertions in the delete test; migration-aware open cases).
+// - layout-rebuild: 'vault locking' and 'password-only: no key is ever
+//   stored' (which replaces the deleted 'auto-lock stored-key invariant').
 // Dropped, with reason: layout's two version-2 autoUnlock tests
 // ('fails closed on a structurally invalid envelope' and 'throws
 // VAULT_CORRUPTED only when the envelope is read directly') asserted a
@@ -70,6 +69,16 @@ import { BawaError, ERROR_MESSAGES, WalletErrorCodes } from './errors';
 // VAULT_CORRUPTED only when the envelope is read directly' with a
 // missing KDF block). No coverage is lost.
 // The auto-lock timer tests live in state/wallet-context.test.tsx.
+// Password-only vault (owner order 2026-11-28, reversing the 14:05 IST
+// autoUnlock KEEP): the whole 'autoUnlock' describe and the 'auto-lock
+// stored-key invariant' describe are deleted — the mechanism is gone, no
+// derived key is ever stored, and the password is optional. They are
+// replaced by 'openVaultIfPasswordless', 'vaultHasPassword',
+// 'removeLegacyStoredKey' and 'password-only: no key is ever stored'
+// below, which pin the new behaviour instead. The 'stores the derived
+// key at creation' test becomes 'stores no key at creation'; the
+// change-password tests become 'changes the password and stays locked
+// after reload' and 'removes the password with an empty new password'.
 
 function decodeB64(value: string): Uint8Array {
   const binary = atob(value);
@@ -103,7 +112,7 @@ function readRawEnvelope(): Record<string, unknown> {
 /**
  * A fresh vault module, as if the page had reloaded: the closure (and its
  * mnemonic) starts empty while localStorage keeps whatever the test put
- * there. This is how autoUnlock is exercised honestly — the statically
+ * there. This is how reload behaviour is exercised honestly — the statically
  * imported module keeps the mnemonic from createVault in its closure.
  */
 async function freshVaultModule(): Promise<typeof import('./vault')> {
@@ -150,18 +159,13 @@ describe('vault', () => {
     expect(typeof envelope.ciphertextB64).toBe('string');
   });
 
-  it('stores the derived key at creation (auto-unlock)', async () => {
+  it('stores no key at creation (password-only)', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    const storedKey = localStorage.getItem(VAULT_KEY_STORAGE_KEY);
-    expect(storedKey).not.toBeNull();
-    // The stored key is the raw 32-byte AES-GCM key, base64.
-    expect(decodeB64(storedKey as string).length).toBe(32);
-    expect(storedKey).not.toBe(
-      readRawEnvelope().ciphertextB64 as string,
-    );
-    // The key entry holds key bytes only — never the mnemonic or password.
-    expect(storedKey).not.toContain('abandon');
-    expect(storedKey).not.toContain(TEST_PASSWORD);
+    // No derived key is ever written to storage: the removed auto-unlock
+    // mechanism was the only writer. localStorage holds the envelope
+    // only — no 'bawa-vault-key' entry exists after creation.
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+    expect(localStorage.length).toBe(3);
   });
 
   it('refuses to create a second vault', async () => {
@@ -171,35 +175,58 @@ describe('vault', () => {
     ).rejects.toThrow('A vault already exists.');
   });
 
-  it('refuses empty mnemonic and password', async () => {
+  it('refuses an empty mnemonic', async () => {
     await expect(createVault('', TEST_PASSWORD, TEST_PROFILES)).rejects.toThrow(
       'Mnemonic must not be empty.',
     );
-    await expect(createVault(TEST_MNEMONIC, '', TEST_PROFILES)).rejects.toThrow(
-      'Password must not be empty.',
-    );
   });
 
-  it('changes the password, keeps the stored profiles, and stays auto-unlockable', async () => {
+  it('accepts an empty password: a passwordless vault', async () => {
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES);
+    expect(hasVault()).toBe(true);
+    expect(vaultHasPassword()).toBe(false);
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+    // The envelope still never holds plaintext.
+    const raw = localStorage.getItem(VAULT_STORAGE_KEY) as string;
+    expect(raw).not.toContain('abandon');
+    expect(readRawEnvelope().hasPassword).toBe(false);
+    // And it opens after a reload with no password prompt.
+    const fresh = await freshVaultModule();
+    expect(await fresh.openVaultIfPasswordless()).toBe(true);
+    expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+    expect(await fresh.verifyVaultPassword('')).toBe(true);
+  });
+
+  it('changes the password, keeps the stored profiles, and stays locked after reload', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    const keyBefore = localStorage.getItem(VAULT_KEY_STORAGE_KEY);
     const envelopeBefore = localStorage.getItem(VAULT_STORAGE_KEY);
     await changePassword('new password here');
     expect(vaultProfiles()).toEqual(TEST_PROFILES);
     expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
     // A new salt means a new derived key and a new envelope.
-    expect(localStorage.getItem(VAULT_KEY_STORAGE_KEY)).not.toBe(keyBefore);
     expect(localStorage.getItem(VAULT_STORAGE_KEY)).not.toBe(envelopeBefore);
-    // The new stored key decrypts the new envelope after a reload.
+    // No key is stored by the change, so a reload leaves the vault
+    // locked; the new password is the only way back in.
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(true);
+    expect(fresh.isLocked()).toBe(true);
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
+    await fresh.unlock('new password here');
     expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
   });
 
-  it('changePassword refuses an empty new password and a missing vault', async () => {
-    await expect(changePassword('')).rejects.toThrow(
-      'Password must not be empty.',
-    );
+  it('removes the password with an empty new password, and refuses a missing vault', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(vaultHasPassword()).toBe(true);
+    await changePassword('');
+    expect(vaultHasPassword()).toBe(false);
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+    // A reload opens it with no password prompt.
+    const fresh = await freshVaultModule();
+    expect(await fresh.openVaultIfPasswordless()).toBe(true);
+    expect(await fresh.verifyVaultPassword('')).toBe(true);
+    expect(await fresh.verifyVaultPassword(TEST_PASSWORD)).toBe(false);
+    deleteVault();
     await expect(changePassword('new password here')).rejects.toThrow(
       'No vault exists.',
     );
@@ -208,77 +235,74 @@ describe('vault', () => {
   it('changePassword throws when the mnemonic is not available', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     const fresh = await freshVaultModule();
-    // The fresh module never auto-unlocked, so no mnemonic is in its closure.
+    // The fresh module never unlocked, so no mnemonic is in its closure.
     await expect(fresh.changePassword('new password here')).rejects.toThrow(
       'Vault is not unlocked.',
     );
   });
 
-  it('deletes the vault, its stored key and its backup', async () => {
+  it('deletes the vault and its backup', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     expect(hasVaultBackup()).toBe(true);
     deleteVault();
     expect(hasVault()).toBe(false);
     expect(vaultProfiles()).toBeNull();
     expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(VAULT_KEY_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
     expect(hasVaultBackup()).toBe(false);
     expect(localStorage.getItem(VAULT_BACKUP_STORAGE_KEY)).toBeNull();
     expect(() => withMnemonic((m) => m)).toThrow('Vault is not unlocked.');
   });
 });
 
-describe('autoUnlock', () => {
-  it('restores the mnemonic from the stored key after a reload', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+describe('openVaultIfPasswordless', () => {
+  it('opens a passwordless vault after a reload', async () => {
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES);
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(true);
+    expect(await fresh.openVaultIfPasswordless()).toBe(true);
     expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
 
-  it('restores the mnemonic but not the session passphrase', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+  it('opens a passwordless vault but not the session passphrase', async () => {
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES, 'TREZOR');
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(true);
+    expect(await fresh.openVaultIfPasswordless()).toBe(true);
     expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
     // The passphrase was never persisted, so a reload loses it.
     expect(fresh.getSessionPassphrase()).toBe('');
   });
 
+  it('returns true at once when already open and keeps the session passphrase', async () => {
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES, 'TREZOR');
+    expect(await openVaultIfPasswordless()).toBe(true);
+    expect(getSessionPassphrase()).toBe('TREZOR');
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+  });
+
   it('returns false and does not throw when there is no vault', async () => {
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(false);
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
     expect(() => fresh.withMnemonic((m) => m)).toThrow(
       'Vault is not unlocked.',
     );
   });
 
-  it('returns false when the stored key is missing (legacy vault)', async () => {
+  it('returns false for a password vault, which stays locked', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    localStorage.removeItem(VAULT_KEY_STORAGE_KEY);
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(false);
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
+    expect(fresh.isLocked()).toBe(true);
     expect(() => fresh.withMnemonic((m) => m)).toThrow(
       'Vault is not unlocked.',
     );
-    // The vault still exists — it just cannot auto-unlock.
+    // The vault still exists — it just needs its password.
     expect(fresh.hasVault()).toBe(true);
-  });
-
-  it('returns false when the stored key does not match the envelope', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    const wrongKey = new Uint8Array(32);
-    globalThis.crypto.getRandomValues(wrongKey);
-    localStorage.setItem(VAULT_KEY_STORAGE_KEY, encodeB64(wrongKey));
-    const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(false);
-    expect(() => fresh.withMnemonic((m) => m)).toThrow(
-      'Vault is not unlocked.',
-    );
+    await fresh.unlock(TEST_PASSWORD);
+    expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
 
   it('fails closed on a tampered ciphertext', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES);
     const envelope = readRawEnvelope();
     const ciphertext = envelope.ciphertextB64 as string;
     const flipped =
@@ -288,45 +312,108 @@ describe('autoUnlock', () => {
       JSON.stringify({ ...envelope, ciphertextB64: flipped }),
     );
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(false);
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
     expect(() => fresh.withMnemonic((m) => m)).toThrow(
       'Vault is not unlocked.',
     );
   });
 
   it('fails closed on a structurally invalid envelope', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES);
     const envelope = readRawEnvelope();
     localStorage.setItem(
       VAULT_STORAGE_KEY,
       JSON.stringify({ ...envelope, version: 'not-a-number' }),
     );
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(false);
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
     expect(fresh.hasVault()).toBe(true);
     expect(() => fresh.vaultProfiles()).toThrow(VAULT_CORRUPTED);
   });
 
   it('fails closed on an unknown-version envelope', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES);
     const envelope = readRawEnvelope();
     localStorage.setItem(
       VAULT_STORAGE_KEY,
       JSON.stringify({ ...envelope, version: 2 }),
     );
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(false);
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
     expect(fresh.hasVault()).toBe(true);
   });
 
   it('throws VAULT_CORRUPTED only when the envelope is read directly', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, '', TEST_PROFILES);
     const envelope = readRawEnvelope();
     // A structurally malformed envelope (no KDF block) is corruption —
     // unlike an unknown version number, which fails UNKNOWN_VERSION.
     delete (envelope as Record<string, unknown>).kdf;
     localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(envelope));
     expect(() => vaultProfiles()).toThrow(VAULT_CORRUPTED);
+  });
+});
+
+describe('vaultHasPassword', () => {
+  it('is true for a password vault and false for a passwordless one', async () => {
+    expect(vaultHasPassword()).toBe(false);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(vaultHasPassword()).toBe(true);
+    expect(readRawEnvelope().hasPassword).toBe(true);
+  });
+
+  it('reads a legacy envelope without the flag as having a password', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const envelope = readRawEnvelope();
+    delete (envelope as Record<string, unknown>).hasPassword;
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(envelope));
+    expect(vaultHasPassword()).toBe(true);
+    // And it still opens with the password, not without one.
+    const fresh = await freshVaultModule();
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
+    await fresh.unlock(TEST_PASSWORD);
+    expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+  });
+
+  it('rejects a malformed hasPassword flag as corruption', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const envelope = readRawEnvelope();
+    localStorage.setItem(
+      VAULT_STORAGE_KEY,
+      JSON.stringify({ ...envelope, hasPassword: 'yes' }),
+    );
+    expect(() => vaultProfiles()).toThrow(VAULT_CORRUPTED);
+    // A corrupt envelope reads as having a password: nothing ever
+    // opens it without one.
+    expect(vaultHasPassword()).toBe(true);
+  });
+
+  it('is false with no vault', () => {
+    expect(vaultHasPassword()).toBe(false);
+  });
+});
+
+describe('removeLegacyStoredKey', () => {
+  it('deletes a leftover bawa-vault-key entry and is a no-op without one', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    // A pre-change install left the raw key behind; the upgrade
+    // cleanup deletes it and nothing else.
+    localStorage.setItem('bawa-vault-key', encodeB64(new Uint8Array(32)));
+    const envelopeBefore = localStorage.getItem(VAULT_STORAGE_KEY);
+    removeLegacyStoredKey();
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+    expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBe(envelopeBefore);
+    expect(hasVault()).toBe(true);
+    removeLegacyStoredKey();
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+  });
+
+  it('never reads the leftover key: the vault still needs its password', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.setItem('bawa-vault-key', encodeB64(new Uint8Array(32)));
+    const fresh = await freshVaultModule();
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
+    expect(fresh.isLocked()).toBe(true);
   });
 });
 
@@ -381,10 +468,12 @@ describe('vault backup', () => {
     expect(hasVault()).toBe(true);
     expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
     expect(vaultProfiles()).toEqual(TEST_PROFILES);
-    // The restore stores the derived key, so the restored vault
-    // auto-unlocks after a reload too.
+    // The restored vault is open in memory, but no key is stored — a
+    // reload leaves it locked, and the password opens it again.
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(true);
+    expect(fresh.isLocked()).toBe(true);
+    expect(await fresh.openVaultIfPasswordless()).toBe(false);
+    await fresh.unlock(TEST_PASSWORD);
     expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
 
@@ -397,7 +486,9 @@ describe('vault backup', () => {
     await restoreVaultFromBackup(TEST_PASSWORD);
     expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
     const fresh = await freshVaultModule();
-    expect(await fresh.autoUnlock()).toBe(true);
+    expect(fresh.isLocked()).toBe(true);
+    await fresh.unlock(TEST_PASSWORD);
+    expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
 
   it('refuses a restore with the wrong password and leaves the primary untouched', async () => {
@@ -713,122 +804,72 @@ describe('verifyVaultPassword', () => {
   });
 });
 
-describe('auto-lock stored-key invariant', () => {
-  beforeEach(() => {
+describe('password-only: no key is ever stored', () => {
+  it('creates no stored key with auto-lock ON or OFF', async () => {
     writeAutoLockEnabled(true);
-  });
-
-  it('creates no stored key with auto-lock ON and cannot auto-unlock after reload', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-
-    expect(hasStoredKey()).toBe(false);
-
-    lock();
-    await autoUnlock();
-    expect(isLocked()).toBe(true);
-
-    const fresh = await freshVaultModule();
-    await fresh.autoUnlock();
-
-    expect(fresh.hasStoredKey()).toBe(false);
-    expect(fresh.isLocked()).toBe(true);
-    expect(() => fresh.withMnemonic((mnemonic) => mnemonic)).toThrow(
-      'Vault is not unlocked.',
-    );
-  });
-
-  it('stores the key with auto-lock OFF and auto-unlocks after reload', async () => {
-    writeAutoLockEnabled(false);
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-
-    expect(hasStoredKey()).toBe(true);
-
-    const fresh = await freshVaultModule();
-    await fresh.autoUnlock();
-
-    expect(fresh.hasStoredKey()).toBe(true);
-    expect(fresh.isLocked()).toBe(false);
-    expect(fresh.withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
-  });
-
-  it('stores no key when unlocking with auto-lock ON', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    lock();
-    expect(hasStoredKey()).toBe(false);
-
-    await unlock(TEST_PASSWORD);
-
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
     expect(isLocked()).toBe(false);
-    expect(hasStoredKey()).toBe(false);
+    deleteVault();
+
+    writeAutoLockEnabled(false);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+    expect(isLocked()).toBe(false);
   });
 
-  it('stores the key when unlocking with auto-lock OFF', async () => {
+  it('stores no key when unlocking, with auto-lock ON or OFF', async () => {
+    writeAutoLockEnabled(true);
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     lock();
-    expect(hasStoredKey()).toBe(false);
+    await unlock(TEST_PASSWORD);
+    expect(isLocked()).toBe(false);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
 
     writeAutoLockEnabled(false);
+    lock();
     await unlock(TEST_PASSWORD);
-
     expect(isLocked()).toBe(false);
-    expect(hasStoredKey()).toBe(true);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
   });
 
-  it('leaves no stored key when changing the password with auto-lock ON', async () => {
+  it('stores no key when changing the password, with auto-lock ON or OFF', async () => {
     writeAutoLockEnabled(false);
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    expect(hasStoredKey()).toBe(true);
+    await changePassword(`${TEST_PASSWORD}-changed`);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
 
     writeAutoLockEnabled(true);
-    const newPassword = `${TEST_PASSWORD}-changed`;
-    await changePassword(newPassword);
+    await changePassword(`${TEST_PASSWORD}-changed-again`);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
 
-    expect(hasStoredKey()).toBe(false);
-
+    // The new password still opens the vault after a reload.
     const fresh = await freshVaultModule();
-    await fresh.autoUnlock();
     expect(fresh.isLocked()).toBe(true);
-
-    await fresh.unlock(newPassword);
-
-    expect(fresh.withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
-    expect(fresh.hasStoredKey()).toBe(false);
+    await fresh.unlock(`${TEST_PASSWORD}-changed-again`);
+    expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
 
-  it('returns false from storeCurrentKey() while locked and true while unlocked', async () => {
-    await expect(storeCurrentKey()).resolves.toBe(false);
-
+  it('leaves a planted legacy key untouched until the upgrade cleanup runs', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.setItem('bawa-vault-key', encodeB64(new Uint8Array(32)));
     lock();
-
-    await expect(storeCurrentKey()).resolves.toBe(false);
-    expect(hasStoredKey()).toBe(false);
-
     await unlock(TEST_PASSWORD);
-    writeAutoLockEnabled(false);
-
-    await expect(storeCurrentKey()).resolves.toBe(true);
-    expect(hasStoredKey()).toBe(true);
-  });
-
-  it('deletes the stored key without deleting the vault', async () => {
-    writeAutoLockEnabled(false);
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    expect(hasStoredKey()).toBe(true);
-
-    deleteStoredKey();
-
-    expect(hasStoredKey()).toBe(false);
+    await changePassword(`${TEST_PASSWORD}-changed`);
+    // Vault operations never read or delete the leftover entry — only
+    // the boot-time removeLegacyStoredKey() removes it.
+    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+    removeLegacyStoredKey();
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
     expect(hasVault()).toBe(true);
+  });
 
-    const fresh = await freshVaultModule();
-    expect(fresh.hasVault()).toBe(true);
-
-    await fresh.autoUnlock();
-    expect(fresh.isLocked()).toBe(true);
-
-    await fresh.unlock(TEST_PASSWORD);
-    expect(fresh.withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
+  it('deletes a planted legacy key with the vault', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.setItem('bawa-vault-key', encodeB64(new Uint8Array(32)));
+    deleteVault();
+    expect(hasVault()).toBe(false);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
   });
 });
 

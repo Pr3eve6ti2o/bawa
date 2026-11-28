@@ -66,12 +66,55 @@ async function submitChangePassword(div: HTMLDivElement): Promise<void> {
   });
 }
 
+async function fillSetPasswordForm(
+  div: HTMLDivElement,
+  next: string,
+  confirm: string,
+): Promise<void> {
+  const newInput = div.querySelector(
+    '#change-new-password',
+  ) as HTMLInputElement;
+  const confirmInput = div.querySelector(
+    '#change-confirm-password',
+  ) as HTMLInputElement;
+  expect(newInput).not.toBeNull();
+  expect(confirmInput).not.toBeNull();
+  await act(async () => {
+    setInputValue(newInput, next);
+    setInputValue(confirmInput, confirm);
+  });
+}
+
+async function fillRemovePasswordForm(
+  div: HTMLDivElement,
+  current: string,
+): Promise<void> {
+  const currentInput = div.querySelector(
+    '#remove-current-password',
+  ) as HTMLInputElement;
+  expect(currentInput).not.toBeNull();
+  await act(async () => {
+    setInputValue(currentInput, current);
+  });
+}
+
+async function submitRemovePassword(div: HTMLDivElement): Promise<void> {
+  const button = Array.from(div.querySelectorAll('button')).find(
+    (candidate) => candidate.textContent === 'Remove password',
+  );
+  expect(button).not.toBeUndefined();
+  await act(async () => {
+    button!.click();
+  });
+}
+
 function setWallet(
   vaultState: string,
   extra: Partial<ReturnType<typeof useWallet>> = {},
 ): void {
   vi.mocked(useWallet).mockReturnValue({
     vaultState,
+    vaultHasPassword: true,
     autoLockEnabled: false,
     autoLockMinutes: 5,
     setAutoLockMinutes: vi.fn(),
@@ -142,9 +185,13 @@ describe('security settings screen', () => {
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      // Lane X (Lane D #129): the embedded AutoLockSetting now reads
-      // "Off — anyone with this device can open it."
-      expect(text).toContain('Off — anyone with this device can open it.');
+      // Password-only: off means unlocked until reload, not "anyone
+      // with this device can open it" — the password still guards a
+      // reload.
+      expect(text).toContain(
+        'Off — your wallet stays unlocked until you lock it or reload this page.',
+      );
+      expect(text).not.toContain('Off — anyone with this device can open it.');
       expect(text).not.toContain('Vault stays unlocked');
       expect(mounted.div.querySelector('select#auto-lock')).toBeNull();
     } finally {
@@ -463,6 +510,99 @@ describe('security settings screen', () => {
       expect(div.textContent ?? '').toContain('Password changed.');
     } finally {
       await cleanup();
+    }
+  });
+
+  it('shows the Set a password form when the vault has no password', async () => {
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(changePassword).mockReset();
+    vi.mocked(changePassword).mockResolvedValue(undefined);
+    setWallet('unlocked', { vaultHasPassword: false });
+    const { div, cleanup } = await mountScreen();
+    try {
+      expect(div.textContent ?? '').toContain('Set a password');
+      expect(div.textContent ?? '').toContain(
+        'No password is set: anyone with this device can open the wallet.',
+      );
+      // No current-password field and no remove form without a password.
+      expect(div.querySelector('#change-current-password')).toBeNull();
+      expect(div.querySelector('#remove-current-password')).toBeNull();
+      expect(div.textContent ?? '').not.toContain('Remove password');
+      // Setting needs no current-password check.
+      await fillSetPasswordForm(div, 'new password here', 'new password here');
+      const button = Array.from(div.querySelectorAll('button')).find(
+        (candidate) => candidate.textContent === 'Set password',
+      );
+      expect(button).not.toBeUndefined();
+      await act(async () => {
+        button!.click();
+      });
+      expect(verifyVaultPassword).not.toHaveBeenCalled();
+      expect(changePassword).toHaveBeenCalledWith('new password here');
+      expect(div.textContent ?? '').toContain('Password set.');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('removes the password after verifying the current password', async () => {
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(verifyVaultPassword).mockResolvedValue(true);
+    vi.mocked(changePassword).mockReset();
+    vi.mocked(changePassword).mockResolvedValue(undefined);
+    setWallet('unlocked');
+    const { div, cleanup } = await mountScreen();
+    try {
+      expect(div.textContent ?? '').toContain('Remove password');
+      expect(div.textContent ?? '').toContain(
+        'Your wallet will be unprotected',
+      );
+      await fillRemovePasswordForm(div, 'old password');
+      await submitRemovePassword(div);
+      expect(verifyVaultPassword).toHaveBeenCalledWith('old password');
+      expect(changePassword).toHaveBeenCalledWith('');
+      expect(div.textContent ?? '').toContain('Password removed.');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('rejects a wrong current password when removing, and never calls changePassword', async () => {
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(verifyVaultPassword).mockResolvedValue(false);
+    vi.mocked(changePassword).mockClear();
+    setWallet('unlocked');
+    const { div, cleanup } = await mountScreen();
+    try {
+      await fillRemovePasswordForm(div, 'wrong password');
+      await submitRemovePassword(div);
+      expect(div.textContent ?? '').toContain('Incorrect password.');
+      expect(changePassword).not.toHaveBeenCalled();
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('warns in the footer that no password means anyone can open the wallet', async () => {
+    setWallet('unlocked', { vaultHasPassword: false });
+    const mounted = await mountScreen();
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain(
+        'No password is set: anyone with this device can open the wallet.',
+      );
+      expect(text).not.toContain('Your phrase stays encrypted on this device');
+    } finally {
+      await mounted.cleanup();
     }
   });
 });

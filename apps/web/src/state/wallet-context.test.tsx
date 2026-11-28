@@ -504,11 +504,13 @@ describe('wallet context — optional auto-lock', () => {
 
     expect(exposed!.vaultState).toBe('unlocked');
     expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
-    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+    // Password-only: no derived key is ever stored, with auto-lock off
+    // or on — the vault stays open in memory only.
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
   });
 
-  it('deletes the stored key when enabled without locking the vault in memory', async () => {
-    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+  it('enabling auto-lock leaves the vault open in memory and stores no key', async () => {
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
 
     await act(async () => {
       await exposed!.setAutoLockEnabled(true);
@@ -571,7 +573,7 @@ describe('wallet context — optional auto-lock', () => {
     expect(exposed!.vaultState).toBe('locked');
   });
 
-  it('stores the key and cancels the timer when disabled while unlocked', async () => {
+  it('stores no key and cancels the timer when disabled while unlocked', async () => {
     await act(async () => {
       exposed!.setAutoLockMinutes(1);
       await exposed!.setAutoLockEnabled(true);
@@ -590,7 +592,7 @@ describe('wallet context — optional auto-lock', () => {
     });
 
     expect(exposed!.autoLockEnabled).toBe(false);
-    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
 
     await act(async () => {
       vi.advanceTimersByTime(10 * 60_000);
@@ -598,10 +600,10 @@ describe('wallet context — optional auto-lock', () => {
 
     expect(exposed!.vaultState).toBe('unlocked');
     expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
-    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
   });
 
-  it('stores no key when disabled while locked, then stores it upon unlocking', async () => {
+  it('disabling while locked just flips the preference; unlocking stores no key', async () => {
     await act(async () => {
       exposed!.setAutoLockMinutes(1);
       await exposed!.setAutoLockEnabled(true);
@@ -614,6 +616,8 @@ describe('wallet context — optional auto-lock', () => {
     expect(exposed!.vaultState).toBe('locked');
     expect(localStorage.getItem('bawa-vault-key')).toBeNull();
 
+    // Disabling auto-lock while locked needs no password step any more:
+    // toggling is a preference flip only, and the vault stays locked.
     await act(async () => {
       await exposed!.setAutoLockEnabled(false);
     });
@@ -628,7 +632,7 @@ describe('wallet context — optional auto-lock', () => {
 
     expect(exposed!.vaultState).toBe('unlocked');
     expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
-    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
   });
 
   it('locks on pagehide when Immediately (0 minutes) is enabled', async () => {
@@ -648,6 +652,43 @@ describe('wallet context — optional auto-lock', () => {
     expect(Object.values(exposed!.vaultAddresses).every((addresses) => addresses.length === 0)).toBe(true);
     expect(exposed!.balances.eth.status).toBe('unavailable');
     expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+  });
+
+  it('locks and unlocks a password vault through the context', async () => {
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultHasPassword).toBe(true);
+
+    await act(async () => {
+      exposed!.lockVault();
+    });
+    expect(exposed!.vaultState).toBe('locked');
+    expect(
+      Object.values(exposed!.vaultAddresses).every(
+        (addresses) => addresses.length === 0,
+      ),
+    ).toBe(true);
+
+    await act(async () => {
+      await exposed!.unlockVault(TEST_PASSWORD);
+    });
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+  });
+
+  it('removes a leftover stored key on mount (upgrade migration)', async () => {
+    // A pre-change install left the raw key behind. The mount effect
+    // deletes it; nothing ever reads it.
+    localStorage.setItem('bawa-vault-key', 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+
+    await cleanup!();
+    cleanup = undefined;
+    const remounted = await mountProvider();
+    cleanup = remounted.cleanup;
+
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+    expect(exposed!.vaultState).toBe('unlocked');
   });
 
   it('reads the stored minutes preference after remounting', async () => {
@@ -671,7 +712,7 @@ describe('wallet context — optional auto-lock', () => {
 });
 describe('wallet context — auto-lock real-time timer', () => {
   it(
-    'locks after about one real minute of inactivity and leaves no stored key',
+    'locks after about one real minute of inactivity and stores no key',
     async () => {
       vi.useRealTimers();
 
@@ -707,6 +748,68 @@ describe('wallet context — auto-lock real-time timer', () => {
     },
     120_000,
   );
+});
+
+describe('wallet context — passwordless vault', () => {
+  let cleanup: Awaited<ReturnType<typeof mountProvider>>['cleanup'] | undefined;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+
+    await createVault(VECTOR_MNEMONIC, '', TEST_PROFILES);
+
+    const mounted = await mountProvider();
+    cleanup = mounted.cleanup;
+    await act(async () => {
+      await exposed!.refreshVaultAccounts();
+    });
+  });
+
+  afterEach(async () => {
+    await cleanup?.();
+    cleanup = undefined;
+    vi.useRealTimers();
+  });
+
+  it('reports no password and stays unlocked', async () => {
+    expect(exposed!.vaultHasPassword).toBe(false);
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+  });
+
+  it('never locks: the auto-lock timer stays inert with no password', async () => {
+    await act(async () => {
+      exposed!.setAutoLockMinutes(1);
+      await exposed!.setAutoLockEnabled(true);
+    });
+    expect(exposed!.autoLockEnabled).toBe(true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    expect(exposed!.vaultState).toBe('unlocked');
+  });
+
+  it('opens with the empty password through unlockVault', async () => {
+    await act(async () => {
+      exposed!.lockVault();
+    });
+    // A manual lock still drops the in-memory key; with no password the
+    // vault reopens with no prompt.
+    expect(exposed!.vaultState).toBe('locked');
+    await act(async () => {
+      await exposed!.unlockVault('');
+    });
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+  });
 });
 
 describe('wallet context — temporary devnet mode', () => {

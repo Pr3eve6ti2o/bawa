@@ -337,7 +337,7 @@ describe('text spacing', () => {
     const mounted = await mountScreen(<CreateWalletScreen />, '/create-wallet');
     try {
       expect(mounted.div.textContent).toContain(
-        'Step 1 of 4: Set a vault password',
+        'Step 1 of 4: Choose a vault password (optional)',
       );
       expect(mounted.div.textContent).not.toContain('Step1of 4');
 

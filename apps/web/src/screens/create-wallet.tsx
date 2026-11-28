@@ -130,7 +130,11 @@ export function CreateWalletScreen() {
       setVaultExists(true);
       return;
     }
-    if (password.length < MIN_PASSWORD_LENGTH) {
+    // The password is optional (owner order 2026-11-28): both fields
+    // empty means no password — the wallet is then unprotected and
+    // anyone with this device can open it. A password that IS set must
+    // be at least 8 characters and match its repeat.
+    if (password.length > 0 && password.length < MIN_PASSWORD_LENGTH) {
       setError(`Vault password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
@@ -303,7 +307,7 @@ export function CreateWalletScreen() {
           <p className="mb-5 text-base font-medium text-foreground">
             {`Step ${step} of 4: ${
               {
-                1: 'Set a vault password',
+                1: 'Choose a vault password (optional)',
                 2: 'Write down 24 words',
                 3: 'Confirm 3 words',
                 4: 'Wallet ready',
@@ -329,8 +333,8 @@ export function CreateWalletScreen() {
             <li>
               <StepCard
                 icon={<span>1</span>}
-                label="Set a vault password"
-                detail="At least 8 characters. It encrypts the vault on this device."
+                label="Choose a vault password (optional)"
+                detail="Optional — at least 8 characters when set. Without one, anyone with this device can open the wallet."
                 state={step === 1 ? 'active' : step > 1 ? 'completed' : 'pending'}
               />
             </li>
@@ -372,9 +376,10 @@ export function CreateWalletScreen() {
       {step === 1 && (
         <Card radius="flat">
           <CardHeader>
-            <CardTitle>Vault password</CardTitle>
+            <CardTitle>Vault password (optional)</CardTitle>
             <CardDescription>
-              Forgot it? Only your phrase brings it back.
+              Forgot it? Only your phrase brings it back. Without a
+              password, anyone with this device can open the wallet.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -389,6 +394,10 @@ export function CreateWalletScreen() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                   />
+                  <p className="text-base text-ink">
+                    Optional — leave both fields empty for no password. A
+                    password must be at least 8 characters.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vault-password-confirm">Repeat vault password</Label>

@@ -1,7 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
-import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { Switch } from '../ui/components/switch';
 import { AUTO_LOCK_OPTIONS, AUTO_LOCK_LABELS } from '../wallet/auto-lock';
@@ -10,70 +9,42 @@ import { useWallet } from '../state/wallet-context';
 export function AutoLockSetting() {
   const {
     vaultState,
+    // Screens mocked in tests may omit this; only an explicit false
+    // means "no password" — a password vault is the safe default.
+    vaultHasPassword = true,
     autoLockEnabled,
     autoLockMinutes,
     setAutoLockMinutes,
     setAutoLockEnabled,
     lockVault,
-    unlockVault,
   } = useWallet();
 
   const [isToggling, setIsToggling] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [password, setPassword] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isLocked = vaultState === 'locked';
   const hasVault = vaultState !== 'no-vault';
-  const controlsDisabled = !hasVault || isToggling;
-  const errorMessage = actionError;
-
-  useEffect(() => {
-    if (vaultState !== 'locked') {
-      setShowPasswordForm(false);
-      setPassword('');
-      setActionError(null);
-    }
-  }, [vaultState]);
+  // With no password there is nothing to lock: the setting is inert and
+  // the switch is disabled until the user sets a password (Security
+  // settings). The vault opens at boot with no prompt either way.
+  const hasPassword = hasVault && vaultHasPassword;
+  const controlsDisabled = !hasVault || !hasPassword || isToggling;
 
   async function handleToggle(enabled: boolean) {
     if (controlsDisabled) return;
 
     setActionError(null);
-
-    if (!enabled && isLocked) {
-      setShowPasswordForm(true);
-      return;
-    }
-
-    setShowPasswordForm(false);
-    setPassword('');
     setIsToggling(true);
 
+    // Toggling is a preference flip only. No key is stored or deleted
+    // anywhere: the removed auto-unlock mechanism used to persist the
+    // derived key while auto-lock was off, and that is gone (owner order
+    // 2026-11-28). Disabling while locked needs no password step.
     try {
       await setAutoLockEnabled(enabled);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : String(error));
     } finally {
-      setIsToggling(false);
-    }
-  }
-
-  async function handleDisableSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (controlsDisabled || !showPasswordForm || !isLocked) return;
-
-    setActionError(null);
-    setIsToggling(true);
-
-    try {
-      await setAutoLockEnabled(false);
-      await unlockVault(password);
-      // Keep the form open while locked so vault errors remain visible.
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setPassword('');
       setIsToggling(false);
     }
   }
@@ -104,13 +75,23 @@ export function AutoLockSetting() {
           </p>
         )}
 
-        {hasVault && !autoLockEnabled && (
+        {hasVault && !vaultHasPassword && (
           <p className="text-base text-ink">
-            Off — anyone with this device can open it.
+            No password is set, so there is nothing to lock — anyone with
+            this device can open the wallet. Set a password below to lock
+            it.
           </p>
         )}
 
-        {autoLockEnabled && (
+        {hasPassword && !autoLockEnabled && (
+          <p className="text-base text-ink">
+            Off — your wallet stays unlocked until you lock it or reload
+            this page. After a reload you will need your vault password
+            to unlock it.
+          </p>
+        )}
+
+        {hasPassword && autoLockEnabled && (
           <div className="space-y-2">
             <Label htmlFor="auto-lock">Lock after inactivity</Label>
             <select
@@ -140,7 +121,7 @@ export function AutoLockSetting() {
           </div>
         )}
 
-        {vaultState === 'unlocked' && (
+        {vaultState === 'unlocked' && hasPassword && (
           <div className="space-y-2">
             <p className="text-base text-ink">
               Lock now.
@@ -168,39 +149,9 @@ export function AutoLockSetting() {
           </p>
         )}
 
-        {showPasswordForm && isLocked && (
-          <form
-            className="space-y-3"
-            aria-busy={isToggling}
-            onSubmit={(event) => {
-              void handleDisableSubmit(event);
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="auto-lock-password">Password</Label>
-              <Input
-                id="auto-lock-password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                disabled={controlsDisabled}
-                required
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={controlsDisabled || password.length === 0}
-            >
-              Disable auto-lock
-            </Button>
-          </form>
-        )}
-
-        {errorMessage && (
+        {actionError && (
           <p role="alert" className="text-base text-ink">
-            {errorMessage}
+            {actionError}
           </p>
         )}
       </div>

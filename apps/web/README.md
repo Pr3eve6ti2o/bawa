@@ -77,7 +77,7 @@ Derivation policy, where `i` is the address index:
 - [`src/state/wallet-context.tsx`](src/state/wallet-context.tsx) stores xpubs in `localStorage`:
   public data only. Xpubs can still link addresses, so treat them as privacy-sensitive.
   Derived addresses remain in memory.
-- The vault is a password-protected encrypted local vault (BIP-39 24 words, AES-256-GCM, PBKDF2 600k), and the lock is real when auto-lock is enabled. Auto-lock is optional and OFF by default — a toggle plus a duration on `/security`; when enabled the vault locks after the chosen period, unlocking needs the password, and the raw derived key is not stored while it is on. When auto-lock is off (the default) the vault auto-unlocks from the stored key (`autoUnlock()` in `src/wallet/vault.ts`), so the lock is not a security boundary in that state.
+- The vault is a password-only encrypted local vault (BIP-39 24 words, AES-256-GCM, PBKDF2 600k), and the lock is real when auto-lock is enabled. Auto-lock is optional and OFF by default — a toggle plus a duration on `/security`; when enabled the vault locks after the chosen period and unlocking needs the password. The password itself is optional: a vault created without one opens at boot with no prompt and never locks, and anyone with the device can open it. No derived key is ever stored — the old auto-unlock mechanism that persisted the raw key in `localStorage` was removed (owner order 2026-11-28).
 - No secrets reach telemetry or any provider: there is no telemetry and no provider.
 - Mainnet-first in direction (ADR-0003), with read-only mainnet data via adapters.
   Broadcast remains disabled; mainnet use requires separate approval and real-funds gates.
