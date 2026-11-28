@@ -2,7 +2,7 @@
 
 This index is the single entry point for Bawa documentation; the root [README.md](../README.md), [WALLET_BUILDER.md](../WALLET_BUILDER.md), and [docs/README.md](README.md) each point here.
 
-This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 28 November 2026 named below (engine smoke 440, web vitest 129 files — PASSES on loud-stone (3,347 passed + 5 skipped, 0 failed, Node 22, publish gates at token-gaps `2205f15`, 2026-11-28); FAILS in this sandbox, timeout-dominated); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with re-verifications through 28 November 2026 named below (engine smoke 440, web vitest 129 files — PASSES on loud-stone (3,351 passed + 5 skipped, 0 failed, Node 22, publish gates at token-gaps `734cfef`, 2026-11-28); FAILS in this sandbox, timeout-dominated); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -86,11 +86,11 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [UI candidates](../research/ui-candidates.md) — `PROPOSED`: candidate research, not implementation evidence.
 - [Web template upstream](../templates/web/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
 - [Android template upstream](../templates/android/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
-- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/` — build passes and engine smoke is 440/440, and web vitest PASSES on loud-stone (129 files, 3,347 passed + 5 skipped, 0 failed, Node 22, publish gates at token-gaps `2205f15`, 2026-11-28). It does NOT pass in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped on the guide-update tip, and 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4` (110 files, 2,950 tests) — failures dominated by 5 s timeouts (76 and 59), varying run to run. The sandbox failures are environment artefacts, not code defects; the passing-test state rests on the loud-stone run.
-- [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 57 `@Test` annotations counted across 5 test files (re-counted 2026-11-20); the executed passing count was NOT re-established here — Android SDK installed 2026-11-27 (JDK 17, platforms 34+35) and `./gradlew assembleDebug` builds successfully; the executed passing unit-test count is still `NOT-RUN` (57 are `@Test` annotations, not executed passes). The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`.
+- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/` — build passes and engine smoke is 440/440, and web vitest PASSES on loud-stone (129 files, 3,351 passed + 5 skipped, 0 failed, Node 22, publish gates at token-gaps `734cfef`, 2026-11-28). It does NOT pass in this sandbox on Node 22 (2026-11-26): 104 failed / 2,841 passed + 5 skipped on the guide-update tip, and 79 failed / 2,866 passed + 5 skipped on pristine token-gaps `7a170f4` (110 files, 2,950 tests) — failures dominated by 5 s timeouts (76 and 59), varying run to run. The sandbox failures are environment artefacts, not code defects; the passing-test state rests on the loud-stone run.
+- [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 77 `@Test` annotations counted across the Android tree (Step 3 data layer, `e20cee6`, 2026-11-28 — was 57 across 5 test files, re-counted 2026-11-20); the executed passing count was NOT re-established here — Android SDK installed 2026-11-27 (JDK 17, platforms 34+35) and `./gradlew assembleDebug` builds successfully; the executed passing unit-test count is still `NOT-RUN` (77 are `@Test` annotations, not executed passes). The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`.
 - [Contracts](../packages/contracts/src/index.ts) — `IMPLEMENTED_AND_VERIFIED` for compilation: imported by `apps/web` and checked by the web typecheck and build. One consumer today (`apps/web`); see `ARCHITECTURE.md`.
 - Scripts — `IMPLEMENTED_AND_VERIFIED` for the exercised workflow: [setup](../scripts/setup.mjs), [build](../scripts/build-platforms.mjs), [test](../scripts/run-test-suites.mjs) and [wallet build](../scripts/build-wallet.mjs) (web 3/3, multi-chain 6/6 steps VERIFIED).
-- [Registry tests](../tests/registry.test.mjs) — `IMPLEMENTED_AND_VERIFIED` (the 10/10 claim was withdrawn 2026-11-26 and re-earned 2026-11-27): 29/29 pass on loud-stone (Node 22, 2026-11-27). The two stale v2 tests were corrected to the v4 rule (version 4, the 87-chain `chainSupport` vocabulary, the v4 profiles rule).
+- [Registry tests](../tests/registry.test.mjs) — `IMPLEMENTED_AND_VERIFIED` (the 10/10 claim was withdrawn 2026-11-26 and re-earned 2026-11-27): 29/29 pass on loud-stone (Node 22, 2026-11-27; re-run 29/29 by docs-currency Lane B, 2026-11-28). The two stale v2 tests were corrected to the v4 rule (version 4, the 87-chain `chainSupport` vocabulary, the v4 profiles rule).
 - [Negative-input tests](../tests/negative-inputs.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 36/36.
 - [Chain-fixture tests](../tests/chain-fixtures.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 8 tests, run first-hand (part of the 17 pass / 0 fail / 1 skipped Phase 9 run).
 - [Failure-mode tests](../tests/failure-modes.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 10 test declarations; the suite passed in the 2026-11-20 phase9 run (157/158 pass overall; the single failure was in stale-data, not here).
@@ -101,7 +101,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 
 - [Testing guide](TESTING.md) — `DOCUMENTED_NOT_TESTED`: test commands and scope; use the named results rather than assuming blanket coverage.
 - [Sample requests](sample-requests.md) — `IMPLEMENTED_AND_VERIFIED` for sample request 1 (Create a Web wallet: 3/3 steps VERIFIED) and sample request 3 (Create a multi-chain wallet: 6/6 steps VERIFIED). Sample request 2 (Create an Android wallet) reports setup as SKIPPED without toolchains. Exercise dates are not stated in this index.
-- [Android evidence](android-evidence.md) — `IMPLEMENTED_AND_VERIFIED` for install/launch only: 57 `@Test` annotations counted (re-counted 2026-11-20); executed passing count NOT re-established here; APK and emulator install/launch only; the Add path is `UNVERIFIED`.
+- [Android evidence](android-evidence.md) — `IMPLEMENTED_AND_VERIFIED` for install/launch only: 77 `@Test` annotations counted (Step 3, `e20cee6`, 2026-11-28 — was 57, re-counted 2026-11-20); executed passing count NOT re-established here; APK and emulator install/launch only; the Add path is `UNVERIFIED`.
 - [Accessibility review](accessibility-review.md) — `DOCUMENTED_NOT_TESTED`: review material; GUI verification remains outstanding.
 - [Security release gates](SECURITY-RELEASE-GATES.md) — `DOCUMENTED_NOT_TESTED`: independent review and release gates are not cleared by local test results.
 - [Registry maintenance](registry-maintenance.md) — `DOCUMENTED_NOT_TESTED`: registry update guidance.
@@ -118,7 +118,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [M-35 execution](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md) — `CLOSED`: owner declined funding on 2026-11-13. The four rehearsal addresses are retired and must never be funded; the isolated credentials were destroyed. The execution path is closed.
 - [M-39 GUI test](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md) — `UNVERIFIED`: GUI verification remains outstanding.
 - [Mainnet activation](mainnet/MAINNET-GUIDE.md) — `EXTERNALLY_DEPENDENT`: activation remains gated.
-- [On-device Android derivation](android-evidence.md) — `EXTERNALLY_DEPENDENT`: no AAR; on-device derivation remains unverified.
+- [On-device Android derivation](android-evidence.md) — `EXTERNALLY_DEPENDENT`: Step 3 done (`e20cee6`), Step 4 (AAR build) running, owner-authorized 2026-11-28; on-device derivation remains unverified until the AAR lands.
 - [R-01 invalid-point validation](archive/handoff-2026-11-10.md) — `RESOLVED`: implemented in the shared validator (`tools/hdwallet-gen/extended-key.js`, bad-point rejection) and mirrored in `apps/web/src/engine/boundary.ts` (R-01). The earlier OPEN note in this index was stale.
 - [Android Add path](android-evidence.md) — `UNVERIFIED`: APK installation and launch do not verify Add.
 
@@ -126,8 +126,8 @@ The registry covers 87 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, bas
 
 ## Project structure
 
-Verified against the `panel-rebuild/token-gaps` tree at `8a1d681`
-(2026-11-27). Counts are tracked files (`git ls-files`).
+Verified against the `panel-rebuild/token-gaps` tree at `04a17b2`
+(2026-11-28). Counts are tracked files (`git ls-files`).
 
 ```text
 bawa/
@@ -142,11 +142,11 @@ bawa/
     devnet issues log, performance and security-findings records, and
     the dated 2026-11-18 research reports.
   apps/
-    web/            (486 files) The wallet web app: React 19 + TypeScript
+    web/            (498 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
-                    (routing, shell), `src/screens` (68 files, one
+                    (routing, shell), `src/screens` (67 files, one
                     screen per route), `src/state` (wallet context; the refresh lives
-                    in wallet-context), `src/wallet` (126 files: chains, vault,
+                    in wallet-context), `src/wallet` (136 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
                     (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),
@@ -157,7 +157,7 @@ bawa/
     android/        (30 files) The Android starter (Kotlin): app, core
                     (derivation/confirmation policy, key validation),
                     ui screens and ViewModel.
-  docs/             (227 files) The guide and programme records, in
+  docs/             (230 files) The guide and programme records, in
                     Diátaxis order (see the sections above): numbered
                     docs 01-16, platform guides, reference, evidence,
                     archive. The single entry point is this index.
@@ -180,7 +180,7 @@ bawa/
                     `hdwallet-gen/` (Trust Wallet Core derivation),
                     `mainnet-fees/`, `mainnet-guards/`,
                     `mainnet-signing/`, `mainnet-tx/`, `verify-sign/`.
-  tests/            (31 files) Node `.mjs` suites run by
+  tests/            (32 files) Node `.mjs` suites run by
                     `scripts/quality-gates.mjs`: registry, derivation
                     vectors, mainnet guards/fees/signing, failure modes,
                     lockfiles, secret scan, gate verdicts.

@@ -1,7 +1,7 @@
 ---
 title: Wallet App Architecture
 description: Separate key management, watch-only derivation, signing and the user interface into layers with explicit boundaries; keep private material out of the watch-only runtime and review every spend on the signer.
-last-updated: 2026-11-08
+last-updated: 2026-11-28
 ---
 
 # Wallet App Architecture
@@ -343,7 +343,7 @@ Use the worker’s recognised request fields, `chain`, `xpub` and `index`. Do no
 
 ### Signing boundary
 
-Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tooling and both platform drafts pin version `4.9.3`). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
+Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tooling and the web app pin version `4.9.3`; the Android Step 4 AAR build pins `4.8.4` per its build doc — see the 2026-11-28 status block in the Android guide — and the app's recorded `ENGINE_VERSION` of `4.9.3` is flagged to be corrected to `4.8.4` when the AAR lands). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
 
 Give the signer an immutable unsigned transaction, an explicit chain/network context and the minimum evidence needed to validate the proposed spend. For Bitcoin, include previous-output information sufficient to check input values and scripts. Identify signing keys through a locally authorised key reference, not by passing private keys through application messages.
 
@@ -573,7 +573,7 @@ Do not let dismissing the warning change backup status. Retain a clear **Resume 
 
 In Receive, show the full address and chain/testnet as text, and display a QR code for the receive address. Follow docs/14 section 5.3 for the shared clipboard rule. Use the Receive QR payloads table in docs/07. Construct the payload for the selected chain and network using only its approved forms. Do not encode a bare address except for TRX Nile. Keep request information not carried by the payload outside the QR. Use `P.renderAndVerifyQr` for generated receive QRs. Decoded generated or scanned requests must pass through `E.parsePaymentRequest` and `E.verifyPaymentRequest`, using the shared and per-chain checks in docs/07.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. Scanning exists nowhere yet in either draft. The Web guide's scanning specification is in its Section F; the Android verification half remains to be built. Add the web encoder and the Android verification half before treating either half as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Web implementation exists: `receive.tsx` renders the derived address as a QR card in one of seven templates A–G, with a Starknet receive-only warning on every template and in the exported PNG (77e4473); QR payment-request scanning is implemented at the decode level through `apps/web/src/wallet/qr-scanner.tsx` (jsQR, camera + image upload, lazy-loaded), wired into Send — URI parsing is not implemented (the scanned value is used as a bare address) and the live camera on a real phone is unverified. The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web guide's scanning specification is in its Section F; the Android verification half remains to be built. Add the Android verification half before treating it as implemented.
 
 ### Send and Review
 

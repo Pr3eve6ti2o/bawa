@@ -13,17 +13,17 @@
 
 - in-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses for the nine extended chains
 - derivation and receive-address display for SOL, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Litecoin and Dogecoin via wallet-core 4.9.3 WASM (verified by the 2026-11-20 derivation probe)
+- live balances for all nine chains and live transaction history for eight (all but BNB Smart Chain) via per-chain adapters (registry/capabilities.json v4, 2026-11-26)
+- live prices for the 21 default tokens via the CoinGecko feed with DexScreener/TonAPI fallback (registry/tokens.json: all 21 with a CoinGecko ID and a price fallback)
 
 ## Missing
 
-- balance
-- history
+- history for BNB Smart Chain (balance-only)
 - fee-quote
 - plan-transfer
 - local-sign
 - verify-signature
 - broadcast
-- prices
 
 ## Security boundaries
 
@@ -33,7 +33,7 @@
 
 ## Security notes
 
-- Extended chains are derivation/receive only: SOL, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Litecoin and Dogecoin derive and receive through wallet-core 4.9.3 WASM (verified by the 2026-11-20 derivation probe on the BIP-39 test-vector mnemonic); no adapter, no balance/history read, no send builder and no broadcast for any of them.
+- Extended chains are derivation/receive plus balance/history: SOL, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Litecoin and Dogecoin derive and receive through wallet-core 4.9.3 WASM (verified by the 2026-11-20 derivation probe on the BIP-39 test-vector mnemonic); balance adapters exist for all nine and history adapters for eight (not BNB Smart Chain); no fee-quote, no send builder and no broadcast for any of them.
 - SOL has no xpub and no watch-only route: one address per wallet at m/44'/501'/0', like TON at m/44'/607'/0'.
 - Mainnet only: testnet addresses are rejected as wrong-network and no testnet adapter exists.
 

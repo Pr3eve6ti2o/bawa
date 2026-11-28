@@ -6,6 +6,8 @@ Part A records the Web candidates and local Web draft for the Bawa AI Wallet Bui
 
 **Evidence date: 2026-11-10.** Inspections below are marked **verified first-hand 2026-11-10**. Review pins are the inspected SHAs.
 
+**Status (2026-11-28 docs pass, HEAD `734cfef`):** this is a dated Phase 5 research record. Phases 6–7 are done: the Web starter exists in `apps/web` (19 screens at HEAD `734cfef`, up from the 14-screen contract) and the Android starter builds (`./gradlew assembleDebug`, Step 3 APK 53,712,159 bytes, e20cee6). The visual direction recorded below (Bawa Balanced — STYLE-04) is superseded: the owner picked style B (polished financial) on 2026-11-27 (docs/DECISIONS.md §34). The Android AAR is still open — Step 4 (Trust Wallet Core 4.8.4 AAR from the cloned source) is running, owner-authorized 2026-11-28, not done. The inspection evidence below (pins, licences, trees) stands as the 2026-11-10 record.
+
 The review covered upstream commit metadata, pinned trees and licence files; token-ui source, demo structure and exclusion checks; and the local Web draft's source and test-file counts. The shadcn/ui inspection did not extend beyond tree and licence, apart from the commit metadata recorded below. Uninspected wallet-screen coverage and build compatibility remain **OPEN**. The draft's claimed screen count was not re-counted.
 
 ## 2. WEB-01 — token-ui
@@ -331,8 +333,8 @@ No additional Web-draft disposition is inferred from the foundation choice.
 
 ### What stays OPEN
 
-- **Android build verification:** not established by this research. The local draft has produced no AAR or APK.
-- **Engine packaging and missing Android AAR:** remain unresolved. UI replacement or a UI build must not be treated as automatic closure.
+- **Android build verification:** not established by this research. The local draft has produced no AAR or APK. (2026-11-28: superseded — APKs are produced; Step 3 APK 53,712,159 bytes, e20cee6. The AAR is still open; Step 4 build running, owner-authorized 2026-11-28.)
+- **Engine packaging and missing Android AAR:** remain unresolved. UI replacement or a UI build must not be treated as automatic closure. (2026-11-28: still open; Step 4 AAR build running, owner-authorized 2026-11-28, not done.)
 - **Phase 4 binding:** remains **OPEN**, despite Phase 4 being done.
 - **Draft test runtime count:** the claimed `55/55` has not been re-verified here.
 - **Web-draft treatment:** no draft-specific disposition is established in this record.

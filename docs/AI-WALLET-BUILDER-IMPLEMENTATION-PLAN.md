@@ -6,6 +6,8 @@ plain-language request and an AI coding agent uses this repository to produce a
 real, buildable wallet project with engine, chain profile, UI foundation,
 implementation instructions and verification.
 
+> **Status addendum (2026-11-28, token-gaps `734cfef`):** this plan is the Phase 0/1 record from 2026-11-10, retained as written below. Phases 2–10 have since been implemented on owner orders — the builder (`scripts/build-wallet.mjs`, `AGENTS.md`, `WALLET_BUILDER.md`), the registries (8 profiles, 87 chains, 169 RPCs), and the web + Android starters all exist in the tree. The phase table below still says PROPOSED because that was the plan's status when written; read it as the proposal, not as today's state. Two gate statuses in this plan are superseded: M-31/M-15 is CLOSED (see the M-31/M-15 note below), and the "Phase 2 blocked pending maintainer approval" line is spent — the work proceeded on owner orders.
+
 Baseline: inspected first-hand at HEAD aab79dab (H6), clean tree, 50 files.
 During this phase main advanced to b438d3a7 (H7); the H6-to-H7 diff is two files
 only (derive_daemon.js and test/smoke.test.js — the daemon fix), and the suite
@@ -422,7 +424,7 @@ The requested feature branch is **PROPOSED**. Branch creation and any push are *
 - **No capability inflation.** Profile names, screen counts and test totals do not certify products. ETH derivation does not establish generic EVM-wallet operation; TON remains generation-only. Signing, broadcast and transaction construction must not be reported as implemented.
 ## 3. Phased implementation sequence
 
-Phase 0 (reconnaissance) and Phase 1 (this plan) remain in progress. **IMPLEMENTED_AND_VERIFIED — baseline only:** inspection at HEAD `aab79dab`, H6, 2026-11-10 found a clean tree and 50 files. `npm ci` installed 14 packages; `npm run check` exited 0; `npm test` reported 80 ok; the differential test reported PASS, exit 0. Environment: Node v24.22.2, Python 3.12.3, cryptography 50.0.2 and bip-utils 2.12.2.
+Phase 0 (reconnaissance) and Phase 1 (this plan) are complete — this plan was written and executed (see the status addendum at the top of this file). **IMPLEMENTED_AND_VERIFIED — baseline only:** inspection at HEAD `aab79dab`, H6, 2026-11-10 found a clean tree and 50 files. `npm ci` installed 14 packages; `npm run check` exited 0; `npm test` reported 80 ok; the differential test reported PASS, exit 0. Environment: Node v24.22.2, Python 3.12.3, cryptography 50.0.2 and bip-utils 2.12.2.
 
 The repository contains 27 documentation files, `tools/` with wallet-core 4.9.3, smoke/differential tests and one CI workflow using Node 22/Python 3.13. CI has no registry validation or Android job. `AGENTS.md`, `WALLET_BUILDER.md`, `ai/`, `registry/`, `templates/`, `apps/`, `packages/`, `chains/`, `research/`, general `scripts/` and a root lockfile are absent.
 
@@ -780,7 +782,7 @@ The approved direction comprises real, committed Web and Android starters; regis
 - **M-39: ACCEPTED, remains OPEN.** GUI withdrawal is **UNVERIFIED**. Next is a desktop GUI watch-only test; `@ton/ton` is the documented expert-assisted route.
 - **M-35:** BTC 0.0002, ETH 0.001, TRX 1, TON 0.05 receive-only are **approved for review only**. Execution is not authorised.
 - **Daemon fix:** approved as a separate lane, not permission to implement the builder.
-- **M-31/M-15 reviewer: DESIGNATED** (owner, 2026-11-10 ~14:30 IST) — Astra, max reasoning. It runs AFTER the acceptance coordinator finishes, so it reviews the final state. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST; the Opus audit lane had already ended BLOCKED (8 consecutive HTTP 503 "no available channel under current group probation", 2026-11-10). Astra authored the implementation, so the review is a second-pass review by the same model — its report must state that plainly, not present itself as a fully independent audit. The review itself is still pending; designation alone does not clear the M-31/M-15 gate.
+- **M-31/M-15 reviewer: DESIGNATED** (owner, 2026-11-10 ~14:30 IST) — Astra, max reasoning. It runs AFTER the acceptance coordinator finishes, so it reviews the final state. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST; the Opus audit lane had already ended BLOCKED (8 consecutive HTTP 503 "no available channel under current group probation", 2026-11-10). Astra authored the implementation, so the review is a second-pass review by the same model — its report must state that plainly, not present itself as a fully independent audit. Update 2026-11-13 (commit `18ce692`): CLOSED — the owner accepted Sol's (`gpt-6.1-sol`, API 2) fresh-context re-audit (R02) as the closure evidence, in place of the separate-context Astra audit named here. This closure covers the review gate only; it does not authorise funding, rehearsal, or any real-funds use.
 
 **Stale-plan correction:** master plan §8 incorrectly carries M-13, M-24 and M-33 as unresolved. All three were resolved on 10 November 2026 and pushed at `45d75a2a`; M-34 was pushed at `464399e`. Do not carry those three forward.
 

@@ -136,7 +136,7 @@ every chain" (it supports 87 — name the curated 22).
 | MIT licence | `LICENSE` |
 | Add a chain or a token by contract address | `apps/web/src/screens/add-token.tsx` |
 | Track any transaction by hash | `/track` route, `apps/web/src/app/app.tsx` |
-| QR templates on Receive (Address / Payment request / Share link) | `apps/web/src/screens/receive.tsx` (Lane 7) |
+| 7 QR templates on Receive (A–G, default B) | `apps/web/src/screens/receive.tsx`; `apps/web/src/wallet/payment-links.ts` (`QR_CARD_TEMPLATES`) |
 
 ## What changed in the app for this (Lane 3, 2026-11-23)
 
@@ -184,3 +184,9 @@ wording above is the 87-chain wording.
   — except that the `/create` hub they describe was deleted in P0
   (2026-11-27, `33f1ff1`): there is one "Create wallet" button, going
   straight to `/create-wallet`, and no `/create` route.
+
+## Note — 2026-11-28 (docs-currency Lane B)
+
+- The QR proof point now names all seven templates (A–G, default B);
+  the Starknet QR cards carry the receive-only warning in every
+  template and in the PNG (`77e4473`).

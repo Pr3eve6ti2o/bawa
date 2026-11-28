@@ -15,7 +15,7 @@ node scripts/build-wallet.mjs "Create a Web wallet" --out reports/web-report.jso
 - Expected profile: `web-wallet`.
 - Expected platforms: `[web]`.
 - Expected outcome: generate, setup, build and test are each `VERIFIED`.
-- Capability boundary: Web derives in-browser via wallet-core WASM, as documented. Balances and history are now implemented via read-only mainnet adapters, and send is now implemented as offline signing with a local-sign builder for 65 chains: the generalised EVM signer covers all 61 EVM chains (`signEvmOffline`, `send.ts:995`, generalised via `evmChainId` at `:1019-1027`), plus BTC, TRX, TON and SOL (native SOL and SPL tokens) — `signBtcOffline` `:1286`, `signTrxOffline` `:1492`, `signTonOffline` `:1711`, `signSolOffline` `:2726`, `signSplOffline` `:2927` — with ERC-20, TRC-20 and Jetton token transfers. The capability record verifies local-sign for the four adapter chains only (BTC, ETH, TRX, TON); the other builders are implemented but not verified to the record's bar, so do not claim the record verifies them. Broadcast remains disabled and unauthorised, and prices are implemented via a CoinGecko feed covering all 87 chains, with per-chain fresh/expired/unavailable/error states and portfolio totals that include only fresh-quoted balances. Verification does not remove these limitations.
+- Capability boundary: Web derives in-browser via wallet-core WASM, as documented. Balances and history are now implemented via read-only mainnet adapters, and send is now implemented as offline signing with a local-sign builder for 65 chains: the generalised EVM signer covers all 61 EVM chains (`signEvmOffline`, `send.ts:1170`, generalised via `evmChainId` at `:1194-1202`), plus BTC, TRX, TON and SOL (native SOL and SPL tokens) — `signBtcOffline` `:1493`, `signTrxOffline` `:1717`, `signTonOffline` `:1936`, `signSolOffline` `:2975`, `signSplOffline` `:3197` — with ERC-20, TRC-20 and Jetton token transfers. The capability record verifies local-sign for the four adapter chains only (BTC, ETH, TRX, TON); the other builders are implemented but not verified to the record's bar, so do not claim the record verifies them. Broadcast remains disabled and unauthorised, and prices are implemented via a CoinGecko feed covering all 87 chains, with per-chain fresh/expired/unavailable/error states and portfolio totals that include only fresh-quoted balances. Verification does not remove these limitations.
 
 ## 2. Create an Android wallet
 
@@ -29,7 +29,7 @@ node scripts/build-wallet.mjs "Create an Android wallet" --out reports/android-r
   the required toolchain is present. If either `JAVA_HOME` or `ANDROID_HOME`
   is missing, Android setup is `SKIPPED`, not `FAILED` or `VERIFIED`; this
   must not be presented as a verified Android build or test.
-- Capability boundary: on-device derivation is not implemented (no AAR).
+- Capability boundary: on-device derivation still awaits the AAR (Step 4 running, owner-authorized 2026-11-28); the data layer is done (Step 3, `e20cee6`: 87 chains, 169 RPCs, 4 testnets, 21 tokens, 77 unit tests).
   Balances (no provider) and send are not implemented.
 
 ## 3. Create a multi-chain wallet

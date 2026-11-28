@@ -100,3 +100,7 @@ CDP screenshots first-hand, ran tsc 0 + the 3 send test files (98 passed /
 - `cdp-visual-verification` (full, on the VM) — exact-tree build,
   hash-verify, static serve (not vite preview), 4 viewports, wallet-ready
   state, screenshots viewed by eye.
+
+## Currency note (2026-11-28, token-gaps `734cfef`)
+
+This fix record is from 2026-11-24, retained as written above. Since then, native sending has been extended beyond the five chains listed in "Enabled / not enabled": `SIGNING_CHAINS` in `apps/web/src/screens/send.tsx` now covers all EVM-transaction chains plus BTC, TRX, TON and SOL, and token sends are built (one offline signer per token standard in `apps/web/src/wallet/send.ts`; broadcast stays disabled). The "other 15 EVM chains" and "token sending stays unbuilt" lines above describe the state on 2026-11-24, not today.

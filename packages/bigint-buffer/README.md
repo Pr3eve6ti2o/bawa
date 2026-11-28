@@ -1,4 +1,6 @@
 # 💪🔢 bigint-buffer: Buffer Utilities for TC39 BigInt Proposal 
+
+> **Bawa fork notice (see PATCH-NOTES.md):** this copy is the vendored 1.1.6 security fork of upstream 1.1.5. The native N-API binding is removed — the pure-JS implementation runs unconditionally — so the N-API performance claims below do not apply to this copy, and `npm run benchmark` is not available (build/test scripts were removed with the binding). The API and the pure-JS behaviour are unchanged.
 [![NPM Package](https://img.shields.io/npm/v/bigint-buffer.svg?style=flat-square)](https://www.npmjs.org/package/bigint-buffer)
 [![Coverage Status](https://img.shields.io/coveralls/no2chem/bigint-buffer.svg?style=flat-square)](https://coveralls.io/r/no2chem/bigint-buffer)
 ![node](https://img.shields.io/node/v/bigint-buffer.svg?style=flat-square)

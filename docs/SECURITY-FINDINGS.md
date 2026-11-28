@@ -7,6 +7,10 @@ e493720). Every claim below was verified first-hand on gray-pinee on
 branch, the branch and commit are named and the item is **not** presented
 as true of this branch.
 
+## Currency note (2026-11-28, token-gaps `734cfef`)
+
+This register is the 2026-11-20 lane record; the item statuses below are as recorded that day except where noted here. Verified since: **§3** (1,000-digit input cap) is now fixed in the tree — `MAX_INTEGER_STRING_LENGTH = 1_000` is enforced in `apps/web/src/wallet/money.ts`; **§4** (deleted components) has landed — `apps/web/src/ui/components/` holds 28 files, the 36 deleted components and ThemeToggle are gone, the 20 dead dependencies are gone (5 Radix packages remain: checkbox, label, slot, switch, tabs); **§7** (`mnemonic-words`) has landed — it is in `devDependencies`, not `dependencies`; **§10** (Android pass count) is superseded — the tree now has 77 `@Test` annotations across 10 test files, executed in the Android Step 3 data-layer lane (e20cee6), with a debug APK (`app-debug.apk`, 53,712,159 bytes); **§1** (ecdsa) stands as accepted residual risk with re-review by 2027-05-20; `npm audit` for the web app is 0 vulnerabilities at token-gaps `2205f15`, re-verified 2026-11-28. Items not listed here remain as recorded on 2026-11-20.
+
 ## Status vocabulary
 
 - **Fixed (this branch)** — the fix is in this branch and was verified here.

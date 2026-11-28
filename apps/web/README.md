@@ -19,7 +19,7 @@ repository root:
     npm run build
     npm test
 
-`build` runs `tsc --noEmit && vite build`; `test` runs `vitest run`. Also available:
+`build` runs `copy-wasm` (serves `wallet-core.wasm` from `public/`), `tsc --noEmit`, `vite build` and the palette audit; `test` runs `vitest run`. Also available:
 `npm run preview`, `npm run typecheck` and `npm run clean`.
 
 The stack is React 19, react-router 7, Vite 8, Tailwind 4, TypeScript 5.9 and Vitest 4.
@@ -36,11 +36,14 @@ Keep the repository checkout intact: `@bawa/contracts` is a local `file:` depend
   Derivation uses `HDWallet.getPublicKeyFromExtended` and
   `CoinTypeExt.deriveAddressFromPublicKey`.
 - Display a derived address on the Receive screen with a QR code using `qrcode.react`.
-- Navigate all 15 screens, with mock data and unavailable actions labelled as such.
+- Navigate all 19 screens, with mock data and unavailable actions labelled as such.
 
-The screens are `welcome`, `create-wallet`, `import-wallet`, `mnemonic-backup`, `dashboard`,
-`asset-list`, `asset-detail`, `receive`, `send`, `transaction-history`, `transaction-detail`,
-`network-selection`, `wallet-management` and `security-settings`. A screen's presence does
+The screens are `dashboard`, `welcome`, `create-wallet`, `import-wallet`, `mnemonic-backup`,
+`backup-shares`, `asset-list`, `asset-detail`, `receive`, `send`, `swap`, `transaction-history`,
+`transaction-detail`, `track-transaction`, `network-selection`, `wallet-management`,
+`address-book`, `security-settings` and `lock` (routes counted first-hand in
+`src/app/app.tsx` at HEAD `734cfef`; the 14-screen contract in `docs/14` §5.1 is the
+starting point, and the app has since grown past it). A screen's presence does
 not mean its underlying wallet operation is implemented.
 
 Derivation policy, where `i` is the address index:
@@ -53,16 +56,17 @@ Derivation policy, where `i` is the address index:
 
 ## What works, what is mock, and what is unavailable
 
-- **Balances and transaction history:** live data from the pinned providers, not mock values; they surface as unavailable or error when a provider cannot be reached, never as invented figures. **Prices:** no price feed is connected, so there is no portfolio fiat total.
+- **Balances and transaction history:** live data from the pinned providers, not mock values; they surface as unavailable or error when a provider cannot be reached, never as invented figures. **Prices:** live from CoinGecko, with DexScreener and TonAPI as fallback for tokens CoinGecko does not list, so there is a portfolio fiat total.
 - **Sending:** offline signing is implemented for BTC, ETH, TRX and TON using the vault key via Trust Wallet Core `AnySigner.sign`.
   Broadcast is not implemented and remains disabled until separately authorised; no secrets leave the browser.
+- **Swaps:** the `/swap` screen shows live quotes — LI.FI as the broadest aggregator, STON.fi as the TON corridor and Relay quotes-first behind a configurable proxy, plus gas.zip for refuel (never labelled a swap). Swap execution is approved but not implemented, and broadcast stays disabled, so no swap can be executed from the app yet.
 - **Wallet creation in the browser:** available. The create-wallet screen generates a mnemonic, and the mnemonic-backup screen shows it for write-down.
   The repository tools [`tools/make_wallet.py`](../../tools/make_wallet.py) or [`tools/hdwallet-gen/generate.js`](../../tools/hdwallet-gen/generate.js) remain alternatives outside the browser; import only their extended public keys, never secret output.
   No secrets leave the browser; broadcast remains disabled.
 - **TON:** derived at `m/44'/607'/0'` (V4 R2), with balance/history adapters and offline signing; watch-only public-address import remains an option.
   Broadcast remains disabled until separately authorised; no secrets leave the browser.
 - **WalletConnect:** removed in the providers programme (2026-11-26). Connecting Bawa to dApps needs a free Reown Cloud project ID, which has not been set up — without one the relay never connects, so the screen, its client modules and the `@walletconnect/*` dependencies were removed rather than shipped dead. No keys or funds are affected. To bring it back later: create a free account at https://cloud.reown.com, create a project, copy the project ID into `VITE_WALLETCONNECT_PROJECT_ID`, and restore the WalletConnect files from git history. The Security screen carries the same note in the app.
-- **Buying with fiat (Coinbase Onramp, Lane D 2026-11-25):** the dashboard Buy tile and the Receive Buy panel (`/receive?buy=1`, the `/send?scan=1` precedent) wire Coinbase Onramp: the widget opens as a pop-up for the wallet's addresses on the ten Coinbase destination networks (Bitcoin, Ethereum, Solana, Base, Optimism, Arbitrum, Polygon, Avalanche, BNB Chain, TRON); Coinbase sets the price, fees, payment methods and regional availability. The panel shows the first deliverable address the purchase lands on by default — the widget itself is the network picker. There is deliberately no in-app success/exit feedback: a message listener plus its outcome states cost ~1 KB against 1,542,717 B of headroom (2026-11-27), and the purchase is completed and confirmed inside the Coinbase pop-up, with the delivery showing up as a normal incoming transaction. The widget URL is built in [`src/wallet/onramp.ts`](src/wallet/onramp.ts) as a faithful port of the SDK's `generateOnRampURL` (`@coinbase/cbpay-js` 2.4.0, MIT) — the SDK itself is NOT bundled, because its whole 7.3 KB survives the build (no `sideEffects: false`, and Vite's per-module override defeats both a treeshake rule and a `resolveId` plugin; three builds proved it) against 1,542,717 B of headroom, and a separate `/buy` route is not built — the Buy UI lives in the Receive screen reusing its components. A second entry point on the Receive details step was cut — the dashboard tile is the one entry point. Parity tests mirror the SDK's own URL vectors. **Not live yet:** buying needs Coinbase Onramp onboarding and the public project ID as `VITE_COINBASE_ONRAMP_APP_ID` at build time — without it the Buy panel says so plainly and offers no purchase. A live purchase has not been verified (no onboarding/keys exist yet). The Buy panel now also offers a provider picker (Ramp, MoonPay, Onramper, Banxa Referral, Transak, Mercuryo), each row stating which keys it needs and where they live; providers whose keys the owner has not provided show as not set up yet.
+- **Buying with fiat (Coinbase Onramp, Lane D 2026-11-25):** the dashboard Buy tile and the Receive Buy panel (`/receive?buy=1`, the `/send?scan=1` precedent) wire Coinbase Onramp: the widget opens as a pop-up for the wallet's addresses on the ten Coinbase destination networks (Bitcoin, Ethereum, Solana, Base, Optimism, Arbitrum, Polygon, Avalanche, BNB Chain, TRON); Coinbase sets the price, fees, payment methods and regional availability. The panel shows the first deliverable address the purchase lands on by default — the widget itself is the network picker. There is deliberately no in-app success/exit feedback: a message listener plus its outcome states cost ~1 KB against 1,517,378 B of headroom (2026-11-28), and the purchase is completed and confirmed inside the Coinbase pop-up, with the delivery showing up as a normal incoming transaction. The widget URL is built in [`src/wallet/onramp.ts`](src/wallet/onramp.ts) as a faithful port of the SDK's `generateOnRampURL` (`@coinbase/cbpay-js` 2.4.0, MIT) — the SDK itself is NOT bundled, because its whole 7.3 KB survives the build (no `sideEffects: false`, and Vite's per-module override defeats both a treeshake rule and a `resolveId` plugin; three builds proved it) against 1,517,378 B of headroom (2026-11-28), and a separate `/buy` route is not built — the Buy UI lives in the Receive screen reusing its components. A second entry point on the Receive details step was cut — the dashboard tile is the one entry point. Parity tests mirror the SDK's own URL vectors. **Not live yet:** buying needs Coinbase Onramp onboarding and the public project ID as `VITE_COINBASE_ONRAMP_APP_ID` at build time — without it the Buy panel says so plainly and offers no purchase. A live purchase has not been verified (no onboarding/keys exist yet). The Buy panel now also offers a provider picker (Ramp, MoonPay, Onramper, Banxa Referral, Transak, Mercuryo), each row stating which keys it needs and where they live; providers whose keys the owner has not provided show as not set up yet.
 
 ## Security notes
 
@@ -73,7 +77,7 @@ Derivation policy, where `i` is the address index:
 - [`src/state/wallet-context.tsx`](src/state/wallet-context.tsx) stores xpubs in `localStorage`:
   public data only. Xpubs can still link addresses, so treat them as privacy-sensitive.
   Derived addresses remain in memory.
-- The lock is UI state only, not a security boundary. Do not rely on it to protect stored xpubs.
+- The vault is a password-protected encrypted local vault (BIP-39 24 words, AES-256-GCM, PBKDF2 600k), and the lock is real when auto-lock is enabled. Auto-lock is optional and OFF by default — a toggle plus a duration on `/security`; when enabled the vault locks after the chosen period, unlocking needs the password, and the raw derived key is not stored while it is on. When auto-lock is off (the default) the vault auto-unlocks from the stored key (`autoUnlock()` in `src/wallet/vault.ts`), so the lock is not a security boundary in that state.
 - No secrets reach telemetry or any provider: there is no telemetry and no provider.
 - Mainnet-first in direction (ADR-0003), with read-only mainnet data via adapters.
   Broadcast remains disabled; mainnet use requires separate approval and real-funds gates.
@@ -187,13 +191,16 @@ upstream name Tether USD, symbol USDT — the USDT0 contract on Arbitrum),
 plus a symbol-alias map for the on-chain spellings the registry reports
 (`USD₮` → USDT, `USD₮0` → USDT0; `USDt` already uppercases to USDT).
 Trust Wallet resolves logos by contract address, not by symbol; the
-symbol map plus aliases is this wallet's simplification of that. The seven default tokens
-(USDC, USDT, DAI, LINK, UNI, WBTC on Ethereum; USDT on TRON) are
+symbol map plus aliases is this wallet's simplification of that. The 21 default tokens (across 10 chains: Ethereum, TRON, Base, Solana,
+TON, Polygon, Arbitrum, Optimism, Avalanche and BNB Smart Chain —
+`DEFAULT_TOKENS` in `src/wallet/tokens.ts`, `registry/tokens.json`) are
 displayed in the asset rows with real balances from
 `src/wallet/adapters/token-balances.ts` (ERC-20 `balanceOf` via viem,
 TRC-20 `balanceOf` via TronGrid) and real prices from the CoinGecko
 token feed (`src/wallet/token-prices.ts`); they must never be shown with
-a fabricated balance. A token with no registered logo renders an
+a fabricated balance. The original seven (USDC, USDT, DAI, LINK, UNI,
+WBTC on Ethereum; USDT on TRON) are the first entries; the other
+fourteen arrived with the token-discovery work (2026-11-24). A token with no registered logo renders an
 honest empty state (a plain ring, no fill, no ticker text), never a
 broken image and never a yellow text square (Lane B, 2026-11-24 —
 the yellow ticker badge read as a broken logo).
@@ -233,8 +240,9 @@ pure-PDA math as the ATA derivation, `deriveMetaplexMetadataAddress`
 in `src/wallet/adapters/token-balances.ts`, verified against the
 live chain for BONK). The CoinGecko platform map
 (`COINGECKO_PLATFORM_FOR_CHAIN` in `src/wallet/tokens.ts`) covers
-all 87 chains — 60 EVM platforms + Solana + TRON + TON; Bob has no
-CoinGecko platform — and corrects the old Metis slug
+63 of the 87 chains — 60 EVM platforms + Solana + TRON + TON; the
+other 24 chains have no platform entry in this map (Bob among them) —
+and corrects the old Metis slug
 (`metis-andromeda`, not `metis`).
 
 ### Design tokens and UI patterns (Lane G research, 2026-11-23)
@@ -283,5 +291,9 @@ The boundary tests derive the published fixture addresses exactly for BTC, ETH a
 indices 0 and 1. They also reject private extended keys and keys with bad checksums, wrong
 versions or invalid secp256k1 points. Run `npm test` to see them pass.
 
-Verified on this tree on 2026-11-20: Vitest passed all 40 test files and all 457 tests
-(exit 0).
+Verified on this tree on 2026-11-28 (HEAD `734cfef`): Vitest 129 files,
+3,351 passed + 5 skipped (3,356 total, exit 0); `tsc --noEmit` 0 errors;
+`eslint` 0 errors; `vite build` passes; JS bundle 4,482,622 / 6,000,000
+budget; `npm ci` 0 vulnerabilities. The live site
+(https://pr3eve6ti2o.github.io/bawa/) serves `index-BxW-qfX0.js`, root 200,
+asset 200.

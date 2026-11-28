@@ -61,18 +61,22 @@ Both are confirmation policies, not finality guarantees. BTC (6) and ETH
 
 ## Explicitly NOT in this patch
 
-- No chain-data adapter exists yet (no `reconcileTx`, no
+- No transaction-reconciliation adapter exists yet (no `reconcileTx`, no
   `NetworkConfig.kt`, no testnet adapters; TON
-  `txid` is `null` per MAINNET-GUIDE §12). This module evaluates
+  `txid` is `null` per MAINNET-GUIDE §12). Balance/history chain-data
+  adapters do exist (`apps/web/src/wallet/adapters/`). This module evaluates
   observations only; fetching them and wiring the evaluator into a live
-  send/receive flow is a separate follow-up (blocker B1).
+  send/receive flow is a separate follow-up.
 - No live-chain finality test: exercising real solidification /
-  anchoring needs a broadcast transaction; broadcasting is out of scope
-  and M-35 execution remains a separate gate (blocker B2).
-- The Android constants in `DerivationPolicy.kt` are untouched; a
-  Kotlin mirror of this evaluator is not included — one enforcement
-  surface (Web) was chosen so the coordinator can verify one patch.
-- `ai/profiles/*.md` still state the policies are "not enforced in
-  code": that statement is now stale for TRX/TON in the Web starter
-  only, and is left for the coordinator to update alongside the
-  adapter lane, rather than editing profile prose in this patch.
+  anchoring needs a broadcast transaction; broadcasting is out of scope.
+  M-35 (funded rehearsal) is not a pending gate: funding was declined
+  on 2026-11-13, the rehearsal addresses are retired, and execution is
+  not authorised.
+- A Kotlin mirror of this evaluator now exists
+  (`apps/android/app/src/main/java/com/bawa/wallet/core/ConfirmationPolicy.kt`,
+  with `ConfirmationPolicyTest.kt`); the Android constants in
+  `DerivationPolicy.kt` are untouched.
+- `ai/profiles/web-wallet.md` now states the policies as implemented-but-unwired
+  (updated 2026-11-28, docs-currency pass, HEAD 734cfef); the CLI profiles
+  retain the "not enforced in code" statement in their own scope, where it
+  still holds.

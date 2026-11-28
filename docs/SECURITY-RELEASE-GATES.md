@@ -58,7 +58,7 @@ Do not put secret-bearing dumps, screenshots, exception objects or generated art
 
 ## Transaction gates
 
-There is **no transaction-construction, signing or broadcast code anywhere in this repository**. Send/sign/broadcast has **never been exercised**. None of the procedure below is implemented or exercised; it is a requirement for future transaction capability, not a description of today's starters.
+There is **no broadcast code anywhere in this repository**, and broadcast has **never been exercised**. Transaction construction and offline signing exist in the web starter only (`apps/web/src/wallet/send.ts`: native + token signers, offline, broadcast disabled); they have been exercised in tests and in the browser (SOL native + SPL signing verified in the browser; BTC exact-spend signing re-probed with the real WASM core), never on mainnet with real funds. The procedure below is a requirement for a complete send path, not a description of today's starters.
 
 The required procedure is:
 
@@ -82,17 +82,15 @@ Address derivation, watch-only checks and receive-only rehearsals do not establi
 
 ## Real-value blockers
 
-Every item below remains **OPEN**. Release checks, review notes and proposed rehearsal amounts are not authorisation to use real funds.
+Every item below remains **OPEN** except where marked CLOSED. Release checks, review notes and proposed rehearsal amounts are not authorisation to use real funds.
 
-### OPEN — Independent external review (M-31/M-15)
+### CLOSED (review gate only) — Independent external review (M-31/M-15)
 
-Reviewer designated (owner, 2026-11-10 ~14:30 IST): Astra, max reasoning. The review runs after the acceptance programme finishes, so it reviews the final state. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST (the Opus audit lane had already ended BLOCKED: 8 consecutive HTTP 503 "no available channel under current group probation"). Astra authored the implementation, so the review is a second-pass review by the same model; its report must state that plainly, not present itself as a fully independent audit. The Phase 9 review is likewise an **Astra second-pass review**, not an independent review; never present it as independent.
+CLOSED 2026-11-13 (commit `18ce692`): the owner accepted Sol's (`gpt-6.1-sol`, API 2) fresh-context re-audit (R02) as the closure evidence for M-31/M-15, in place of the separate-context Astra audit originally named. This closure covers the review gate only; it does not authorise funding, rehearsal, or any real-funds use. The re-audit was a second-pass review, not a fully independent audit — never present it as independent. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST (the Opus audit lane had already ended BLOCKED: 8 consecutive HTTP 503 "no available channel under current group probation").
 
-**Unblocks when:** the designated review is completed, blocking findings are resolved and verified, and the outcome is recorded. Designating a reviewer alone does not close this gate.
+### CLOSED — M-35 rehearsal authorisation (funding declined)
 
-### OPEN — M-35 rehearsal authorisation
-
-Rehearsal execution needs **separate explicit approval**. The proposed amounts are **for review only**, all **receive-only**:
+**Funding DECLINED by the owner (2026-11-13; re-checked 2026-11-28).** The four rehearsal addresses in `docs/mainnet/M35-REHEARSAL-PROCEDURE.md` §2 are retired and must never be funded; the isolated test credentials were destroyed. The proposed amounts below are retained as the reviewed-draft record only — they are **not** an instruction to transfer funds, and M-35 stays closed unless the owner separately re-authorises it. Rehearsal execution needs **separate explicit approval**. The proposed amounts are **for review only**, all **receive-only**:
 
 | Chain | Proposed amount |
 | --- | --- |
@@ -113,13 +111,11 @@ The next step is a **GUI watch-only test on a desktop machine**, or the **`@ton/
 
 Mainnet activation requires a **separate explicit approval**, plus all applicable release and real-value gates.
 
-**Unblocks when:** those gates are satisfied for the named commit, network and scope, and activation approval is recorded. Any sending scope additionally requires the transaction procedure to be implemented, reviewed and exercised; that capability is absent today. A release tag or M-35 approval cannot authorise it by implication.
+**Unblocks when:** those gates are satisfied for the named commit, network and scope, and activation approval is recorded. Any sending scope additionally requires the transaction procedure to be implemented, reviewed and exercised; offline signing exists in the web starter, broadcast does not. A release tag or M-35 approval cannot authorise it by implication.
 
-### OPEN — `SECURITY.md` disclosure procedure
+### CLOSED — `SECURITY.md` disclosure procedure
 
-`SECURITY.md` currently has **no disclosure procedure or contact**. This is an open maintainer action.
-
-**Unblocks when:** maintainers publish and verify a working private reporting contact and a disclosure procedure covering report handling, ownership and acknowledgement expectations. Placeholder text or a public issue tracker alone is not a private disclosure route.
+`docs/SECURITY.md` now documents a vulnerability-disclosure procedure, with private reporting through GitHub's private vulnerability reporting for this repository (verified 2026-11-28, token-gaps `734cfef`). No private email contact is published. Do not post exploit details publicly.
 
 ### OPEN — D06 F8 environment-name collision
 

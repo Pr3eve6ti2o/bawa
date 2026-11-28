@@ -22,7 +22,7 @@ owner decision and keep building to this file until the owner rules.
 
 **Hands-on, 0 Sol calls.** No Bawa code was changed in Lane 0, nothing
 committed, nothing pushed. P3-B (2026-11-28) was also hands-on, 0 Sol
-calls; its code changes are on branch `p3-money` (local only).
+calls; its code changes merged into `panel-rebuild/token-gaps` at `9585647` (P3-B merge) and live at `2205f15`.
 
 ---
 
@@ -184,7 +184,7 @@ do NOT silently add it.
   The old hand-drawn wobble radii (`--bawa-radius`,
   `--bawa-radius-sm`) survive ONLY as explicit opt-ins for the QR
   card and the Welcome illustration, which own them — `radius="bawa"`
-  / `radius="xl"` on a Card is an opt-in, not a default. `Button
+  on a Card is an opt-in, not a default (the `radius="xl"` branch was removed as dead code at `734cfef`, 2026-11-28 — it had 0 call sites). `Button
   size="pill"` (22 px, existing) is unchanged.
 - **Shadow:** none on money screens — flat + hairline only.
   `--bawa-shadow: 4px 4px 0 ink` stays defined for the QR card only
@@ -231,9 +231,9 @@ do NOT silently add it.
 | Component | File | Current contract — keep it |
 |---|---|---|
 | Button | `ui/components/button.tsx` | `cva` variants: `default` (coral), `secondary` / `outline` / `ghost` (paper, hover sun), `destructive` (coral), `foreground` (ink fill, paper text), `link` (plain underline), `sun`. **Flat by default (P3-B):** `flat` defaults true — 1 px hairline border, `rounded-flat`. Ghost is borderless by contract so it never gets `.btn-flat` (which would add a border) — it gets `.btn-flat-ghost` (radius only) instead, so the size variant's `rounded-bawa` does not show on the `:focus-visible` outline. Press = `active:scale-[0.98]`, no wavy underline. Disabled = 40% opacity + `not-allowed` cursor. Sizes per §2.5. |
-| Card | `ui/components/card.tsx` | Props `radius` (`flat` \| `bawa` \| `xl`), `tone` (`paper` \| `card`), `borderWidth` (`hairline` \| `thick`), `padding` (`md` py-6 px-6 \| `sm` p-3). **Defaults are flat + hairline (P3-B)** — `radius="bawa"` / `radius="xl"` / `borderWidth="thick"` are explicit opt-ins for the QR card and Welcome only. One class per property. |
+| Card | `ui/components/card.tsx` | Props `radius` (`flat` \| `bawa`), `tone` (`paper` \| `card`), `borderWidth` (`hairline` \| `thick`), `padding` (`md` py-6 px-6 \| `sm` p-3). **Defaults are flat + hairline (P3-B)** — `radius="bawa"` / `borderWidth="thick"` are explicit opt-ins for the QR card and Welcome only (`radius="xl"` removed as dead code at `734cfef`, 2026-11-28). One class per property. |
 | Input / Label / Switch / Checkbox / Tabs / Dialog / Alert / Badge / Skeleton / Loading / Toast (Sonner) / CopyButton / StepCard / SquiggleDivider | `ui/components/*` | All paper/ink + semantic colour (§2.1). Inputs: paper bg, 1 px hairline border, `rounded-flat`, 16 px on touch; invalid = red border + red error text, never a squiggle. Alert: flat by default. Badge: `success`/`positive` = light-green surface, ink text. Skeleton: flat 12 px radius + 1 px ink border (the dashed wobbly outline is gone). CopyButton is the address-copy pattern — reuse it, don't build a second one. |
-| Icons | `ui/components/icons.tsx` (`BawaIcon`) | SVG only, one stroke width per layer (1.5–2 px), one style per hierarchy level. **No emoji as icons, ever** (ui-ux-pro-max pro-rules). Token/chain logos are real image assets via `screens/token-logo.tsx`, never emoji. Icons are NOT redrawn under style B (Lane F REFINE, still open) — the geometric set stays. |
+| Icons | `ui/components/icons.tsx` (`BawaIcon`) | SVG only, one stroke width per layer (1.5–2 px), one style per hierarchy level. **No emoji as icons, ever** (ui-ux-pro-max pro-rules). Token/chain logos are real image assets via `screens/token-logo.tsx`, never emoji. Icons were redrawn geometric under the wobbly-cards lane (`67c7610`, 2026-11-28 — 26 of 27 `BawaIcon` glyphs redrawn, link kept); Lane F REFINE is closed by that work. |
 | Marker | `.bawa-marker` | Sun marker highlight — Welcome title ONLY (a brand moment). Gone from the balance figure and every money/security surface. The wavy coral underline (`.bawa-squiggle-underline`) is DELETED (P3-B): errors are red text, links underline plainly, nav selection is a tinted fill, focus is the solid 2 px outline. |
 
 **New-component rule:** if a section needs a component that does not
@@ -291,9 +291,7 @@ decision.
   `transition-[width] 200ms`), sticky full-height, `border-r ink`
   (1 px, P3-B), paper. Logo tile (40 px, flat + hairline) top; nav list
   `space-y-1 px-3`; active item = sun fill + semibold + flat coral
-  square marker; hover = sun; collapse button in the footer. All 13
-  routes listed (Home, Assets, Receive, Send, divider, then the More
-  links). Collapsed = icons only, labels `sr-only`, `title` tooltips.
+  square marker; hover = sun; collapse button in the footer. 11 nav links in three groups (Money: Home, Assets, Receive, Send, Swap, Activity; Wallets: Wallets, Address book; Settings: Security, Networks, Mnemonic backup), plus the account link in the header. Collapsed = icons only, labels `sr-only`, `title` tooltips.
 - **Desktop header:** 72 px, `border-b ink` (1 px, P3-B), `px-6` (`xl:px-8`):
   account name link left ("No wallet" or account ›), NetworkModePill
   right.
@@ -424,7 +422,7 @@ the current placement is already right — restyle it, don't move it.
 ### Receive / QR (`screens/receive.tsx`, `qr-card.tsx`, `/receive`)
 - Narrow 480 px screen. Order (Bitget pattern, §4.4): chain picker
   first (sleek search picker — Popular chains first, search replaces
-  sections with a flat filtered list; NOT an 84-button grid), then
+  sections with a flat filtered list; NOT a grid of every chain), then
   token picker, then the QR card. All chrome around the card is flat
   + hairline (P3-B): the Buy select, token row, template picker,
   QR-type picker and details card. Errors are red text, never a
@@ -610,14 +608,7 @@ the current placement is already right — restyle it, don't move it.
    is replaced by the solid outline everywhere; amount-input groups
    use a coral `focus-within` ring. The `.bawa-squiggle-underline`
    utility is deleted.
-6. **Known remaining wobble (P3-B, 2026-11-28 — not in this lane's
-   scope):** 19 explicit `radius="xl"` Cards on Create / Import /
-   Network-selection / Wallet-management / Address-book / Backup
-   panels, and `radius="bawa"` on the Lock screen, still render the
-   old radii — while their Buttons / Inputs / Alerts already went
-   flat via the shared-component default flip. A follow-up lane
-   should flip those 19 props; nothing else on those screens was
-   touched.
+6. **Remaining wobble — CLOSED (wobbly-cards lane, `67c7610`, + web follow-ups `734cfef`, 2026-11-28):** the 19 explicit `radius="xl"` Cards and the Lock screen's `radius="bawa"` are flipped flat; transaction-history and track-transaction are flat too; the dead `radius="xl"` branch was removed from `card.tsx` (0 call sites). Wobble radii now survive only where they belong: the QR card templates and the Welcome illustration, which own them.
 
 ---
 

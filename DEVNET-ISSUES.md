@@ -7,6 +7,8 @@
 > audit 0. Full record: `docs/UI-UX-FIXES-PROGRAMME.md`. The rest of
 > this file is Lane D's record as written and is left unchanged.
 
+> Update 2026-11-28 (docs-currency pass, Lane A): this file remains Lane D's 2026-11-22/23 record and is left unchanged below. Current state for context: the web wallet now wires 87 chains (22 curated + 65 expansion); devnet mode is temporary under exception E1 (`CONSTRAINTS.md`, owner order 2026-11-22, expires 2027-02-20) with mainnet broadcast still disabled; the token-discovery programme has landed on `panel-rebuild/token-gaps`.
+
 # Devnet issues — temporary devnet programme (Lane D, 2026-11-22)
 
 Hands-on Muse testing on `panel-rebuild/devnet-temp`, worktree

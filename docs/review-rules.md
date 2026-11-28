@@ -14,7 +14,7 @@ the rules of its path first; general quality judgement comes second.
 | `apps/web/src/engine/` | No caller bypasses the boundary for engine access. WASM exceptions and null/empty engine returns are handled, never assumed away. No new native layer: the boundary is a narrow TypeScript facade. |
 | `apps/web/src/state/` | No mnemonic, seed, private key or vault key in state. Refresh failures are explicit states, never swallowed. Last-good values are retained on failure, never replaced with zero. |
 | `apps/web/src/screens/` | UI is presentation only: no derivation, storage, or signing policy in a screen. No secret echoed back in an error message. Send stages (review → sign → broadcast) stay distinct. |
-| `apps/web/src/app/` | Security headers and the error boundary stay wired. No route added without its screen in the 14-screen contract. |
+| `apps/web/src/app/` | Security headers and the error boundary stay wired. No route added without its screen in the 14-screen contract (Doc 14 §5.1) — note the app now also ships Swap, Track, Address book and Lock as screens beyond the 14; Doc 14 §5.1 needs updating to record them (flagged 2026-11-28, docs-currency Lane B). |
 | `tools/`, `scripts/` | No secrets in source. Deterministic public fixtures only. A changed derivation path updates the docs and fixtures in the same change. |
 | `docs/` | One home per fact (see `docs/inventory.md`). A code change lists its affected docs. No claim without evidence; no rewritten change log (append, dated). |
 | `.github/` | No gate weakened to make a change pass. A removed check names its replacement or its owner decision. |

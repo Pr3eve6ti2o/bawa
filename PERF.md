@@ -19,6 +19,8 @@ is not an attempt.
 | 2026-11-25 | Lane C (WalletConnect, "install all usable" programme): `@walletconnect/sign-client` + `@walletconnect/utils` 2.21.0 (Apache-2.0), lazy-loaded via dynamic import; `/walletconnect` screen + session approve/reject + message signing only | `npm run build` in `apps/web` after `npm ci`. Base token-gaps `7fea3e4`: total JS 4,180,185, largest chunk 2,905,015. This lane: total JS 4,577,447 (+397,262); lazy `walletconnect-client` chunk 348,194; route chunk 17,372; `hashTypedData` 15,929; `secp256k1` 30,367 (imported only by the lazy chunk). Dist total excluding the lazy chunk 4,229,253; excluding all four WalletConnect-only chunks 4,165,585. Browser-measured (Playwright network log, `vite preview`): home cold load fetches 21 JS files, 564,002 bytes, none WalletConnect; the lazy chunk loads only on the WalletConnect screen with a projectId configured. | Measurement only, no trim attempted: the lazy chunk is the cost and it is not on the cold-load path. The CI bundle gate (sums all of `dist/assets/*.js`) fails as written at 4,577,447 vs the 4,185,000 budget; `ci.yml` was NOT edited — the gate scope is the coordinator/owner's call. See DECISIONS.md §26. |
 | 2026-11-26 | Guide-update pass: merged tree on token-gaps `7a170f4` (owner-ordered re-baseline to 4,650,000) | Fresh `npm run build` in `apps/web` (Node 22.23.4): total JS **4,648,952**, largest chunk **2,906,541** — passes the 4,650,000 budget by **1,048 bytes**. Lazy chunks in the total: `walletconnect-client` 348,194, `jsQR` 129,986, `backup-shares` route chunk 10,085. Home cold load fetches 564,002 B, no WalletConnect. | Landed (measurement + re-baseline record): the gate passes as written at 4,650,000. Headroom is 1,048 bytes (0.02%) — any addition over ~1 KB is a budget decision. Whether the gate should exclude lazy chunks is an open owner question (`docs/CREATE-THIS-SPEC.md` §0.2). |
 
+| 2026-11-28 | Measurement only (docs-currency pass, Lane A): wobbly-cards (`67c7610`) → Starknet QR warning (`77e4473`) → web follow-ups (`734cfef`), fresh `npm run build` in `apps/web` (Node 22.23.4) | Total JS **4,482,622**, largest chunk **2,906,616**, `dist/` total **16,431,920**, `index-BxW-qfX0.js` **439,478** — passes the 6,000,000 budget by **1,517,378 bytes**. (At `67c7610`: 4,480,322; at `77e4473`: 4,482,627.) | Landed (measurement record): no perf work attempted, no trim needed. Headroom is 1,517,378 bytes. |
+
 ## Bundle-size ratchet
 
 Measured 2026-11-20 on `panel-rebuild/repo-study` at `0fd3a2e`
@@ -33,10 +35,10 @@ The +5% rule is unchanged.
 
 | Metric | Measured | Budget (enforced in CI) |
 | --- | --- | --- |
-| Total JS in `dist/assets` | 4,482,619 bytes (2026-11-28, merged tree on token-gaps `2205f15`; fresh build, Node 22; largest chunk 2,906,616, measured 2026-11-28 at `2205f15`) | ≤ 6,000,000 bytes — PASSES by 1,517,381 bytes (owner-ordered re-baseline `f5a5f19`, 2026-11-26) |
-| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,906,616 bytes (2026-11-28, merged tree on token-gaps `2205f15`; was 2,906,489 on `f1f0e6c` 2026-11-27, 2,906,541 on `7a170f4`, 2,905,067 on the Lane C tree, 2,905,015 on base `7fea3e4`) | ≤ 3,050,000 bytes (today + ~5%) |
+| Total JS in `dist/assets` | 4,482,622 bytes (2026-11-28, merged tree on token-gaps `734cfef`; fresh build, Node 22; largest chunk 2,906,616, measured 2026-11-28 at `734cfef`) | ≤ 6,000,000 bytes — PASSES by 1,517,378 bytes (owner-ordered re-baseline `f5a5f19`, 2026-11-26) |
+| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,906,616 bytes (2026-11-28, merged tree on token-gaps `734cfef`; unchanged from `2205f15`; was 2,906,489 on `f1f0e6c` 2026-11-27, 2,906,541 on `7a170f4`, 2,905,067 on the Lane C tree, 2,905,015 on base `7fea3e4`) | ≤ 3,050,000 bytes (today + ~5%) |
 | Total CSS in `dist/assets` | 63,673 bytes (2026-11-24, Lane PERF: Noto Sans SC latin-only subsets; was 368,397 on base 8806e4a and 432,288 on d47d282) | recorded, not yet enforced |
-| Total `dist/` | 15,939,512 bytes (2026-11-24, Lane PERF; was 33,222,901 on base 8806e4a — the drop is the ~17 MB of unneeded Noto Sans SC subset font files no longer bundled, plus the WASM binary) | recorded, not yet enforced |
+| Total `dist/` | 16,431,920 bytes (2026-11-28, token-gaps `734cfef`; was 15,939,512 on 2026-11-24, Lane PERF; was 33,222,901 on base 8806e4a — the drop is the ~17 MB of unneeded Noto Sans SC subset font files no longer bundled, plus the WASM binary) | recorded, not yet enforced |
 
 Rules:
 

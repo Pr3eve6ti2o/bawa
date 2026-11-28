@@ -1,6 +1,6 @@
 # Architecture
 
-This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `4fb0fe3`, 2026-11-27 — the token-gaps tip at the time of the docs-currency pass; P1 UI/UX work in progress on the same branch). Read it alongside `README.md` and `CONTRIBUTING.md`.
+This is the code map for Bawa on the `panel-rebuild/token-gaps` line (base commit `734cfef`, 2026-11-28 — the token-gaps tip at the time of the docs-currency pass; wobbly-cards, the Starknet QR warning and the web follow-ups have landed on this branch). Read it alongside `README.md` and `CONTRIBUTING.md`.
 
 Branch state described here: `panel-rebuild/token-gaps`. The web wallet wires **87 chains** — 22 curated chains plus 65 expansion chains, all in `apps/web/src/wallet/chains.ts` in production; the 65-chain dataset is kept canonically in `apps/web/src/wallet/chains-expanded.ts` (`EXPANDED_CHAIN_COUNT = 65`; 45 EVM + 10 non-EVM + 7 Cosmos-ecosystem + 3 OKX-reference: Cardano, Starknet, Kaspa). The registry lives in-tree at `registry/` (`capabilities.json` v4, 87 `chainSupport` keys) — see the chain diagram in `docs/12-chain-registry-and-assets/README.md` and the full 87-chain specification in `docs/CREATE-THIS-SPEC.md` §2.
 
@@ -61,7 +61,7 @@ The web starter is a deployable built with React 19, Vite and Tailwind. It is MI
 
 ### `apps/android`
 
-The Android starter is a watch-only UI starter built with Kotlin, Compose and Material 3. It is Apache-2.0-licensed. It has no chain registry, no RPCs, no tokens, no prices, no icons, no network permission, no data layer and no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`) — see `docs/CREATE-THIS-SPEC.md` §2.6 for the data gap. The JSON export that unblocks the data layer exists (`registry/chains.json` + `registry/tokens.json`, Step 1, 2026-11-27, commit `58d85c5`), and the Android toolchain is installed and proven on loud-stone (JDK 17.0.21.1, SDK with platforms android-34 + android-35; `./gradlew assembleDebug` BUILD SUCCESSFUL, clean build re-run 2026-11-27 in 32 s). Steps 3–6 of the Android programme are BLOCKED — the Step 3 lane's report was removed by safety classifiers — not the toolchain or the export.
+The Android starter is a watch-only UI starter built with Kotlin, Compose and Material 3. It is Apache-2.0-licensed. Step 3 of the Android programme is done (commit `e20cee6`, 2026-11-28): the data layer exists over the Step 1 JSON export (`registry/chains.json` + `registry/tokens.json`, 2026-11-27, commit `58d85c5`) — chain registry, 169 RPCs, 21 tokens, Balance/History repositories and icon resolvers, 77 unit tests. It still has no live prices, no network permission and no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`) — see `docs/CREATE-THIS-SPEC.md` §2.6. Step 4 (Trust Wallet Core AAR build) is running, authorized by the owner — not done; steps 5–6 not started. The Android toolchain is installed and proven on loud-stone (JDK 17.0.21.1, SDK with platforms android-34 + android-35; `./gradlew assembleDebug` BUILD SUCCESSFUL, clean build re-run 2026-11-27 in 32 s).
 
 It does not consume `packages/contracts` and does not perform offline wallet generation or recovery.
 
@@ -149,6 +149,7 @@ Update this map when components, boundaries or invariants change—not for every
 
 ## Change notes
 
+- 2026-11-28 (docs-currency Lane A): base commit moved to the token-gaps tip `734cfef`; Android Step 3 done (data layer, `e20cee6`), Step 4 running (owner-authorized, not done); web gates re-verified (vitest 3,351 passed + 5 skipped, bundle 4,482,622 / 6,000,000).
 - 2026-11-27 (docs-currency Lane 2): base commit moved to the token-gaps tip; registry validator now passes (exit 0, fixed at `2a0fa75`); Android JSON export exists and the toolchain builds the app — steps 3–6 blocked, not the toolchain; `broadcastSigned` returns `{ status: 'disabled' }` (this file already said so — the spec's "throws" wording was the wrong one).
 - 2026-11-26 (guide-update pass, `panel-rebuild/guide-update`): rewritten to the 87-chain token-gaps tree (`7a170f4`); 8 profiles; registry in-tree with its validator failure honestly stated; Android starter described as a watch-only UI starter with the §2.6 data gap; web box lists the 87-chain wiring, balances/history coverage and the price fallbacks.
 - 2026-11-20 (Lane D, repo-organisation programme; merged into

@@ -15,6 +15,8 @@
   enough to build from: layout, spacing, type, colour tokens, behaviour,
   states, and a REMOVE list.
 
+**Status (2026-11-28 docs pass, HEAD `734cfef`):** this spec is a dated 2026-11-19 research record. Its visual direction (Bawa Balanced / STYLE-04, dark-navy tokens in §1) is superseded: the owner picked style B (polished financial — flat, hairline, tabular, real semantic colour) on 2026-11-27 (docs/DECISIONS.md §34), and the money screens were rebuilt flat under it. The per-screen layout, behaviour and states research below remains reference; do not build new screens from the §1 colour tokens. The spec covers eight screens; the app now has 19.
+
 ## How to read this spec
 
 - **VERIFIED FIRST-HAND** — read from the live source (GitHub API / raw

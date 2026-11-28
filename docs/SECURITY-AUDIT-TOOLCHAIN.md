@@ -19,9 +19,9 @@ Repo facts the toolchain is sized for (snapshot `981d0ba`):
 - JS: Node `>=22 <23` (VM: Node v22.23.4), plain JS in
   `tools/hdwallet-gen` (one dependency, `@trustwallet/wallet-core`
   4.9.3, WASM), React 19 + Vite 8 + TypeScript 5.9 + Vitest 4.1.3 in
-  `apps/web`. Lockfiles in both projects. No lint or SAST config.
+  `apps/web`. Lockfiles in both projects. Lint configs exist now (flat `eslint.config.mjs` at the root and in `apps/web`; eslint 0 errors at token-gaps `734cfef`, 2026-11-28); no SAST config in the repo.
 - Python: `>=3.11` (VM: 3.12.3), `requirements.txt` pins
-  `cryptography==50.0.2`, `bip-utils==2.12.2`. No pyproject.
+  `cryptography==50.0.2`, `bip-utils==2.12.3`. No pyproject.
   `requirements.lock` (R02, 2026-11-12) freezes the full transitive
   graph with hashes (pip-compile --generate-hashes, 23 packages);
   install it with `pip install --require-hashes -r requirements.lock`.
@@ -29,9 +29,7 @@ Repo facts the toolchain is sized for (snapshot `981d0ba`):
 - Android: AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00,
   compileSdk 35, minSdk 33, JDK 17, ZXing core 3.5.3. Watch-only
   testnet app: no signing, no broadcast, no Trust Wallet Core AAR.
-- CI today (`.github/workflows/ci.yml`) runs only `node --check`,
-  smoke tests, the `bip_utils` differential test and `py_compile`.
-  No dependency scan, no SAST, no fuzzer.
+- CI today (`.github/workflows/ci.yml`, 2026-11-28, token-gaps `734cfef`) runs five jobs — `node-tests`, `python-tests`, `docs-checks`, `web` (typecheck, lint, vitest, build, bundle-size gate, `npm audit`) and `floor-guard` — and the manual `.github/workflows/security-audit.yml` runs `npm audit`, `pip-audit`, Bandit, Ruff, Semgrep and OSV-Scanner. No fuzzer in CI; no secret-scan step in CI (pre-commit `secret-scan.mjs` only).
 
 ## 1. Dependency-vulnerability scanning (run first — minutes, no new deps)
 

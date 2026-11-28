@@ -15,6 +15,7 @@
 - extended-public-key import (validator 10/10, policy 7/7 in unit tests)
 - R-01 point validation mirrored in pure Kotlin
 - receive-QR display
+- Step 3 data layer (e20cee6, 2026-11-28): 87 chains, 169 RPCs, 4 testnets, 21 tokens in apps/android; 77 unit tests; debug APK 53,712,159 bytes
 
 ## Missing
 
@@ -37,8 +38,8 @@
 ## Security notes
 
 - Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen and the required engine version for this profile. 4.9.2 is the guides' reference engine only, never the tool pin.
-- No Android AAR exists for any version and no Android engine binding is verified. The Android engine binding remains OPEN. CLI generation and derivation evidence does not establish Android engine operation.
-- AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is complete (2026-11-10). Tether WDK Starter UI layer only (pin a4fa2172, Apache-2.0), vendored components with SeedWordCell/SeedInputCell removed; 14 screens; ./gradlew assembleDebug exits 0 (APK 52,456,212 bytes); 17/17 unit tests passed in the historical 2026-11-10 record (ExtendedKeyValidatorTest 10/10 + DerivationPolicyTest 7/7); the current apps/android tree has 57 @Test annotations across 5 test files (counted first-hand), with no verified run of all 57 recorded (NOT-RUN); emulator (AVD bawa-pixel, API 35) install succeeds, app launches, welcome + import screens verified visually. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.
+- No Android AAR exists for any version and no Android engine binding is verified. The Android engine binding remains OPEN. (Step 4 — building the Trust Wallet Core 4.8.4 AAR from the cloned source — is running, owner-authorized 2026-11-28, not done.) CLI generation and derivation evidence does not establish Android engine operation.
+- AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is complete (2026-11-10). Tether WDK Starter UI layer only (pin a4fa2172, Apache-2.0), vendored components with SeedWordCell/SeedInputCell removed; 14 screens; ./gradlew assembleDebug exits 0 (APK 53,712,159 bytes, Step 3 e20cee6, 2026-11-28; the 52,456,212-byte figure was the 2026-11-10 record); 77 @Test annotations across 10 test files (counted first-hand 2026-11-28); the historical 2026-11-10 record was 17/17 unit tests (ExtendedKeyValidatorTest 10/10 + DerivationPolicyTest 7/7); emulator (AVD bawa-pixel, API 35) install succeeds, app launches, welcome + import screens verified visually. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.
 - The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.
 - Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; on-device derivation is not implemented (no AAR); verification is through CLI tools and the web boundary tests, not Android derivation.
 - TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.

@@ -15,7 +15,7 @@ The profiles are validated and carry individual statuses: `hd-wallet-cli`, `bitc
 - `multichain-wallet` — Combined BTC, ETH, TRX and TON requests; TON remains generation-only and single-address.
 - `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only. The web wallet now wires 87 chains (22 curated + 65 expansion, including the 3 OKX-reference chains — see `docs/CREATE-THIS-SPEC.md` §2); this profile's registry entry was re-validated for the 87-chain set in the registry v4 update (commit `2a0fa75`, 2026-11-26; validator exits 0, 0 errors), so the wider set is no longer OPEN on this count.
 - `web-wallet` — Browser-wallet requests; token-ui foundation inspected in Phase 5 and adopted in Phase 6 (vendored in `apps/web/src/ui/`).
-- `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7). It is a watch-only UI starter, not a wallet: 4 derivation-path templates + a confirmation-policy evaluator for BTC/ETH only, no chain registry/RPCs/tokens/prices/icons, no network permission, no data layer, no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP 8.2.2 + compileSdk 35. The JSON export exists (`registry/chains.json` + `registry/tokens.json` — Step 1, 2026-11-27, commit `58d85c5`; see `docs/CREATE-THIS-SPEC.md` §2.6) and the toolchain is installed and proven on loud-stone (JDK 17.0.21.1, SDK with platforms android-34 + android-35; `./gradlew assembleDebug` BUILD SUCCESSFUL). Android steps 3–6 are BLOCKED (the Step 3 lane's report was removed by safety classifiers) — the block is the lane, not the toolchain or the export. The owner still has to resolve the mainnet-only vs testnet-only tension (watch-only is mainnet-only by owner order 2026-11-23; the Android starter states testnet-only).
+- `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7). It is a watch-only UI starter, not a wallet: 4 derivation-path templates + a confirmation-policy evaluator for BTC/ETH only, chain registry/RPCs/tokens now loaded from the Step 1 JSON export via the Step 3 data layer (below), no live prices, no network permission, no on-device derivation (`ENGINE_BINDING_AVAILABLE = false`), AGP 8.2.2 + compileSdk 35. The JSON export exists (`registry/chains.json` + `registry/tokens.json` — Step 1, 2026-11-27, commit `58d85c5`; see `docs/CREATE-THIS-SPEC.md` §2.6) and the toolchain is installed and proven on loud-stone (JDK 17.0.21.1, SDK with platforms android-34 + android-35; `./gradlew assembleDebug` BUILD SUCCESSFUL). Android Step 3 is DONE (commit `e20cee6`, 2026-11-28): the data layer over the export (ChainRegistry, TokenRepository, Balance/History repositories, icon resolvers; 87 chains, 169 RPCs, 4 testnets, 21 tokens; 77 unit tests). Step 4 (Trust Wallet Core AAR build) is running, authorized by the owner — not done. Steps 5–6 not started. The owner still has to resolve the mainnet-only vs testnet-only tension (watch-only is mainnet-only by owner order 2026-11-23; the Android starter states testnet-only).
 - `watch-only-wallet` — Public-data-only observation requests, without secret intake or signing; monitoring support still requires evidence.
 
 Profile selection is routing, not a capability claim. There are eight validated profiles. Do not invent a ninth profile or assume profiles can be combined without plan support.
@@ -101,7 +101,7 @@ guards the pin.
 ```sh
 npm run typecheck   # tsc --noEmit, 0 errors
 npm run build       # copy-wasm + tsc + vite build, 0 errors
-npm run test        # vitest run — 129 files; the 3,347-passed + 5-skipped figure is the loud-stone run at token-gaps `2205f15` (2026-11-28, P2/P3 + 122-defect publish verification), exit 0 — see docs/index.md
+npm run test        # vitest run — 129 files; the 3,351-passed + 5-skipped figure is the loud-stone run at token-gaps `734cfef` (2026-11-28, web follow-ups verification), exit 0 — see docs/index.md
 ```
 
 **Upstream sources.** The engine is Apache-2.0, upstream
@@ -130,7 +130,7 @@ TON testnet, app sends 1–3 with transaction hashes;
 
 <!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
      Regenerate when chains.ts changes; the CI drift check fails otherwise.
-     Generated 2026-11-26 from chains.ts at 2a6cd801d24c67de73e29efe1f061343fd13a750. -->
+     Generated 2026-11-26 from chains.ts at 2a6cd801d24c67de73e29efe1f061343fd13a750; re-checked 2026-11-28 against chains.ts at 7d03a47 (docs-currency Lane A): the two intervening changes (d156657, 7d03a47) touched only type exports and EVM-count comments — no capability status changed, so the 22 rows stand. -->
 
 | Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify | simulate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -211,7 +211,7 @@ For each scoped claim/check, populate an evidence table with these columns:
 | --- | --- | --- | --- | --- | --- |
 
 Report changed files, demonstrated behaviour, mocked behaviour and unresolved work separately. Redact secrets; missing evidence is OPEN.
-The current verified baseline is 440 engine smoke checks, 0 fail (verified 2026-11-24 on this tree; docs/engine-reproducibility.md); the H9 130-check and 217-check figures are superseded.
+The current verified baseline is 440 engine smoke checks, 0 fail (412 smoke + 28 register-links, re-verified 2026-11-28 at token-gaps `734cfef` on loud-stone; docs/engine-reproducibility.md); the H9 130-check and 217-check figures are superseded.
 A successful build proves only its build scope; a tested mock proves only mock behaviour. Neither demonstrates real transaction handling or mainnet readiness.
 
 ## Stop rules

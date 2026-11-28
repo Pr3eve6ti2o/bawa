@@ -2,11 +2,11 @@
 
 One home per fact. This file is the inventory of `docs/`: 66 Markdown
 files before Lane P5, 78 with Lane P5's 10 new files (ADR-0009 and
-the 9 process docs below) plus Lane P2's 2 new files (vault-design, custody), 106 after the repo-study merge into adopt-proper (2026-11-22) adds 36 adopt-proper-side docs: ADRs 0007–0008, DECISIONS.md, RENAME-MAP.md, SECURITY-RELEASE-GATES.md and 31 archive files — and drops 8 rows whose files moved into `docs/archive/` (7) or were renamed (lowercase `security-release-gates.md` → uppercase), 107 after the layout-rebuild merge (2026-11-22) adds ADR-0010 (renumbered from 0009), 110 after the reverify-pro Lane 3 pass (2026-11-23) adds the 3 programme/how-to docs below (CREATE-EXAMPLE-WALLET, UI-UX-FIXES-PROGRAMME, UI-UX-ROUND2-PROGRAMME), 112 after the reverify-pro merge-lane pass (2026-11-23) adds the 2 reverify docs below (REVERIFY-PROGRAMME, REVERIFY-CHECKLIST). 129 after the guide-update pass (2026-11-26) adds the 17 rows below (the 16 files the drift check was failing on, plus the new docs/DESIGN-SYSTEM.md). Who owns each doc and how fresh it is. A doc
+the 9 process docs below) plus Lane P2's 2 new files (vault-design, custody), 106 after the repo-study merge into adopt-proper (2026-11-22) adds 36 adopt-proper-side docs: ADRs 0007–0008, DECISIONS.md, RENAME-MAP.md, SECURITY-RELEASE-GATES.md and 31 archive files — and drops 8 rows whose files moved into `docs/archive/` (7) or were renamed (lowercase `security-release-gates.md` → uppercase), 107 after the layout-rebuild merge (2026-11-22) adds ADR-0010 (renumbered from 0009), 110 after the reverify-pro Lane 3 pass (2026-11-23) adds the 3 programme/how-to docs below (CREATE-EXAMPLE-WALLET, UI-UX-FIXES-PROGRAMME, UI-UX-ROUND2-PROGRAMME), 112 after the reverify-pro merge-lane pass (2026-11-23) adds the 2 reverify docs below (REVERIFY-PROGRAMME, REVERIFY-CHECKLIST). 129 after the guide-update pass (2026-11-26) adds the 17 rows below (the 16 files the drift check was failing on, plus the new docs/DESIGN-SYSTEM.md). 130 after the M9 note (2026-11-28) adds docs/M9-NOT-BUILT.md below. Who owns each doc and how fresh it is. A doc
 without an owner here defaults to the repository owner
 (**Pr3eve6ti2o**); a doc that needs a different owner must name one in
 the table. "Last changed" is the last commit touching the file on this
-branch (`git log -1 --format=%cs`), measured 2026-11-26. A recent date
+branch (`git log -1 --format=%cs`), measured 2026-11-28. A recent date
 is not proof the doc is accurate — it is proof the doc was touched.
 Staleness is decided by the drift check (below), not by this table.
 
@@ -83,36 +83,36 @@ Staleness is decided by the drift check (below), not by this table.
 | `docs/mainnet/MAINNET-UNSIGNED-TX.md` | Pr3eve6ti2o | 2026-11-12 | |
 | `docs/mainnet/MAINNET-VECTORS.md` | Pr3eve6ti2o | 2026-11-13 | |
 | `docs/mainnet/M35-REHEARSAL-PROCEDURE.md` | Pr3eve6ti2o | 2026-11-13 | |
-| `docs/android-evidence.md` | Pr3eve6ti2o | 2026-11-10 | |
+| `docs/android-evidence.md` | Pr3eve6ti2o | 2026-11-28 | |
 
 ### Reference and index
 
 | Doc | Owner | Last changed | Notes |
 | --- | --- | --- | --- |
-| `docs/index.md` | Pr3eve6ti2o | 2026-11-20 | The docs sidebar/index. No second docs root. |
-| `docs/README.md` | Pr3eve6ti2o | 2026-11-09 | Documentation map. |
+| `docs/index.md` | Pr3eve6ti2o | 2026-11-28 | The docs sidebar/index. No second docs root. |
+| `docs/README.md` | Pr3eve6ti2o | 2026-11-21 | Documentation map. |
 | `docs/README-FULL.md` | Pr3eve6ti2o | 2026-11-14 | Preserved 1,308-line README, verbatim. |
-| `docs/CAPABILITY-MAP.md` | Pr3eve6ti2o | 2026-11-20 | |
-| `docs/GLOSSARY.md` | Pr3eve6ti2o | 2026-11-19 | |
-| `docs/FAQ.md` | Pr3eve6ti2o | 2026-11-13 | |
+| `docs/CAPABILITY-MAP.md` | Pr3eve6ti2o | 2026-11-28 | |
+| `docs/GLOSSARY.md` | Pr3eve6ti2o | 2026-11-27 | |
+| `docs/FAQ.md` | Pr3eve6ti2o | 2026-11-27 | |
 | `docs/FURTHER-READING.md` | Pr3eve6ti2o | 2026-11-09 | |
 | `docs/REFERENCES.md` | Pr3eve6ti2o | 2026-11-13 | |
 | `docs/RECOVERY.md` | Pr3eve6ti2o | 2026-11-12 | |
-| `docs/TESTING.md` | Pr3eve6ti2o | 2026-11-19 | |
-| `docs/IMPLEMENTATION.md` | Pr3eve6ti2o | 2026-11-19 | |
-| `docs/registry-maintenance.md` | Pr3eve6ti2o | 2026-11-19 | |
-| `docs/sample-requests.md` | Pr3eve6ti2o | 2026-11-19 | |
-| `docs/wallet-reference-map.md` | Pr3eve6ti2o | 2026-11-18 | |
-| `docs/engine-reproducibility.md` | Pr3eve6ti2o | 2026-11-13 | Engine smoke suite 217 checks pass (2026-11-20). |
+| `docs/TESTING.md` | Pr3eve6ti2o | 2026-11-28 | |
+| `docs/IMPLEMENTATION.md` | Pr3eve6ti2o | 2026-11-28 | |
+| `docs/registry-maintenance.md` | Pr3eve6ti2o | 2026-11-28 | |
+| `docs/sample-requests.md` | Pr3eve6ti2o | 2026-11-28 | |
+| `docs/wallet-reference-map.md` | Pr3eve6ti2o | 2026-11-28 | |
+| `docs/engine-reproducibility.md` | Pr3eve6ti2o | 2026-11-28 | Engine smoke suite 440 checks pass (2026-11-26). |
 | `docs/accessibility-review.md` | Pr3eve6ti2o | 2026-11-10 | |
 | `docs/UI-UX-CATALOGUE.md` | Pr3eve6ti2o | 2026-11-13 | |
 | `docs/UI-UX-REFERENCE-RESEARCH.md` | Pr3eve6ti2o | 2026-11-19 | |
 | `docs/EXTERNAL-TOOLS.md` | Pr3eve6ti2o | 2026-11-14 | |
 | `docs/EXTERNAL-TOOLS-RESEARCH-NOTES.md` | Pr3eve6ti2o | 2026-11-14 | |
 | `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md` | Pr3eve6ti2o | 2026-11-19 | Governs architecture, phases, templates, gates, decisions. |
-| `docs/vault-design.md` | Lane P2 | 2026-11-20 | Vault envelope, backup/migration, error table, KDF evaluation. |
-| `docs/custody.md` | Lane P2 | 2026-11-20 | Custody guarantees/non-guarantees, unlock behaviour, test identities. |
-| `docs/DECISIONS.md` | Pr3eve6ti2o | 2026-11-20 | Owner-delegated decisions register (ECDSA, confirmation policy, merges). |
+| `docs/vault-design.md` | Lane P2 | 2026-11-23 | Vault envelope, backup/migration, error table, KDF evaluation. |
+| `docs/custody.md` | Lane P2 | 2026-11-28 | Custody guarantees/non-guarantees, unlock behaviour, test identities. |
+| `docs/DECISIONS.md` | Pr3eve6ti2o | 2026-11-28 | Owner-delegated decisions register (ECDSA, confirmation policy, merges). |
 | `docs/RENAME-MAP.md` | Pr3eve6ti2o | 2026-11-20 | Rename map (env/file renames). |
 | `docs/SECURITY-RELEASE-GATES.md` | Pr3eve6ti2o | 2026-11-20 | Security release gates (renamed from lowercase `security-release-gates.md`). |
 
@@ -120,7 +120,7 @@ Staleness is decided by the drift check (below), not by this table.
 
 | Doc | Owner | Last changed | Notes |
 | --- | --- | --- | --- |
-| `docs/CREATE-EXAMPLE-WALLET.md` | Pr3eve6ti2o | 2026-11-23 | Create the pre-built example web wallet from a clean checkout. |
+| `docs/CREATE-EXAMPLE-WALLET.md` | Pr3eve6ti2o | 2026-11-28 | Create the pre-built example web wallet from a clean checkout. |
 | `docs/UI-UX-FIXES-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | UI/UX Fixes programme record (21 items, merged into token-gaps). |
 | `docs/UI-UX-ROUND2-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | UI/UX Round 2 programme record (10 items, merged into token-gaps). |
 | `docs/REVERIFY-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | Reverify + Professional Polish programme record (5 lanes, merged into token-gaps). |
@@ -130,7 +130,7 @@ Staleness is decided by the drift check (below), not by this table.
 
 | Doc | Owner | Last changed | Notes |
 | --- | --- | --- | --- |
-| `docs/SECURITY.md` | Pr3eve6ti2o | 2026-11-20 | Canonical security summary. |
+| `docs/SECURITY.md` | Pr3eve6ti2o | 2026-11-28 | Canonical security summary. |
 | `docs/SECURITY-FINDINGS.md` | Pr3eve6ti2o | 2026-11-20 | Canonical findings register (14 items). Deferral decisions live in the root `SECURITY-FINDINGS.md`. |
 | `docs/SECURITY-AUDIT-TOOLCHAIN.md` | Pr3eve6ti2o | 2026-11-20 | Audit toolchain (§6: ecdsa adjudication). |
 
@@ -154,11 +154,11 @@ Staleness is decided by the drift check (below), not by this table.
 
 | Doc | Owner | Last changed | Notes |
 | --- | --- | --- | --- |
-| `docs/inventory.md` | Lane P5 | 2026-11-20 | This file. |
-| `docs/wallet-lifecycle.md` | Lane P5 | 2026-11-20 | Unlock → sign → broadcast → refresh. |
-| `docs/review-rules.md` | Lane P5 | 2026-11-20 | Per-path rules, severity taxonomy, review workflow. |
+| `docs/inventory.md` | Lane P5 | 2026-11-28 | This file. |
+| `docs/wallet-lifecycle.md` | Lane P5 | 2026-11-28 | Unlock → sign → broadcast → refresh. |
+| `docs/review-rules.md` | Lane P5 | 2026-11-28 | Per-path rules, severity taxonomy, review workflow. |
 | `docs/release-procedure.md` | Lane P5 | 2026-11-20 | Tagged baseline + rollback (full ceremony deferred). |
-| `docs/launch-checklist.md` | Lane P5 | 2026-11-20 | Pre-B-1 checklist. |
+| `docs/launch-checklist.md` | Lane P5 | 2026-11-23 | Pre-B-1 checklist. |
 | `docs/runbooks/refresh-failure.md` | Lane P5 | 2026-11-20 | Refresh failure states and triage. |
 | `docs/runbooks/ton-refresh.md` | Lane P5 | 2026-11-20 | TON flakiness. |
 | `docs/runbooks/price-feed.md` | Lane P5 | 2026-11-20 | Price feed by reference only (multichain-create). |
@@ -200,21 +200,22 @@ Staleness is decided by the drift check (below), not by this table.
 | `docs/archive/programme-reports-2026-11-20/LANE-C-REPORT.md` | Pr3eve6ti2o | 2026-11-20 | Archived programme report: lane C. |
 | `docs/archive/programme-reports-2026-11-20/DIAGNOSTICS.md` | Pr3eve6ti2o | 2026-11-20 | Archived programme diagnostics. |
 | `docs/BSC-SEND-FIX.md` | Pr3eve6ti2o | 2026-11-24 | Dated fix record: EVM signer generalised to chainId 56. |
-| `docs/CREATE-THIS-SPEC.md` | Pr3eve6ti2o | 2026-11-26 | The canonical guide (§0–§18); updated by the guide-update pass. |
+| `docs/CREATE-THIS-SPEC.md` | Pr3eve6ti2o | 2026-11-28 | The canonical guide (§0–§18); updated by the guide-update pass. |
 | `docs/DEEP-AUDIT-DEVNET-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | Dated programme record. |
-| `docs/DESIGN-SYSTEM.md` | Pr3eve6ti2o | 2026-11-26 | Design system (tokens, contrast, 44 px rule, breakpoints, per-section placement); moved into the repo by the guide-update pass. |
+| `docs/DESIGN-SYSTEM.md` | Pr3eve6ti2o | 2026-11-28 | Design system (tokens, contrast, 44 px rule, breakpoints, per-section placement); moved into the repo by the guide-update pass. |
 | `docs/DEVNET-SEND-CRASH-FIX.md` | Pr3eve6ti2o | 2026-11-24 | Dated fix record. |
 | `docs/EXPANSION-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-24 | Dated programme record: 22 → 84 chains. |
 | `docs/FINISH-PRODUCT-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | Dated programme record. |
 | `docs/FIX-ALL-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-24 | Dated programme record. |
 | `docs/GAP-ANALYSIS.md` | Pr3eve6ti2o | 2026-11-26 | Gap register; reframed for the 87-chain tree by the guide-update pass. |
-| `docs/HOW-IT-WORKS.md` | Pr3eve6ti2o | 2026-11-26 | How-it-works with the accuracy trace; updated by the guide-update pass. |
+| `docs/HOW-IT-WORKS.md` | Pr3eve6ti2o | 2026-11-28 | How-it-works with the accuracy trace; updated by the guide-update pass. |
+| `docs/M9-NOT-BUILT.md` | Pr3eve6ti2o | 2026-11-27 | Dated M9 record: okx-dex-market NOT-BUILT (live probes 402/401). |
 | `docs/MARKETING-FIX-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | Dated programme record. |
 | `docs/README-MARKETING-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-24 | Dated programme record; 440-check provenance (412 smoke + 28 register-links). |
 | `docs/SCAN-QR-FIX.md` | Pr3eve6ti2o | 2026-11-24 | Dated fix record. |
 | `docs/TOKEN-EVERYWHERE-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-24 | Dated programme record. |
 | `docs/TOKEN-VERIFY-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-24 | Dated programme record. |
-| `docs/VALUE-PROPOSITION.md` | Pr3eve6ti2o | 2026-11-26 | Value proposition; chain count corrected to 87 by the guide-update pass. |
+| `docs/VALUE-PROPOSITION.md` | Pr3eve6ti2o | 2026-11-28 | Value proposition; chain count corrected to 87 by the guide-update pass. |
 | `docs/adr/0011-e2e-root-base-build.md` | Pr3eve6ti2o | 2026-11-23 | ADR: E2E root-base build. |
 
 ### Out of this lane's scope (named so nobody re-invents them)

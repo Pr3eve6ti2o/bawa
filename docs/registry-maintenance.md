@@ -12,14 +12,14 @@ paths and recorded findings; do not invent support or extrapolate between networ
 
 | Path | Contents |
 | --- | --- |
-| `registry/profiles.json` | 7 wallet profiles, each with a v2 `operations` map (10 wallet-build operations) |
+| `registry/profiles.json` | 8 wallet profiles, each with a v2 `operations` map (10 wallet-build operations) |
 | `registry/capabilities.json` | Version 2: 8 chain/network entries, each recording 10 operations, plus a top-level `chainSupport` roll-up per chain |
 | `registry/engines.json` | 5 engine entries |
 | `registry/ui.json` | 11 UI entries, including 3 research-only `OPEN` entries |
 
 The schemas are `registry/schemas/profile.schema.json` and
 `registry/schemas/registry.schema.json`. Follow their existing structure when editing.
-The 32-entry total counts registry entries, not individual operation records.
+The 33-entry total counts registry entries, not individual operation records.
 
 Validation lives in `scripts/validate-registry.mjs`; registry tests live in
 `tests/registry.test.mjs`. The capability detector is `ai/detect-capabilities.mjs`.
@@ -179,7 +179,7 @@ and fixtures. Registry checks are not a substitute for those runs.
    licence rules above, and record any inspection, test or build findings.
 
 2. From the repository root, run `node scripts/validate-registry.mjs`.
-   The current baseline prints `OK: 4 files, 32 entries validated` and exits `0`.
+   The current baseline prints `OK: 4 files, 33 entries validated` and exits `0`.
    An intentional addition may change the totals; investigate unexplained changes.
 
 3. Run `node --test tests/registry.test.mjs`. The current suite contains 29 tests;
@@ -201,7 +201,7 @@ and fixtures. Registry checks are not a substitute for those runs.
 
 ## Current state
 
-The recorded baseline is 32 validated entries. `web-wallet` and `android-wallet`
+The recorded baseline is 33 validated entries. `web-wallet` and `android-wallet`
 are `STARTER_IMPLEMENTED_AND_VERIFIED` since the acceptance programme (2026-11-10);
 they carried `IMPLEMENTED_AND_VERIFIED` in Phases 6–7 under the old label. Three UI entries remain
 research-only `OPEN`, and the XChain pin is verified in `XChain-Platform/xchain-wallet`; XChain remains never selectable, and no XChain code has been copied. The XChain pin verification is fresh evidence (2026-11-12); the rest of this summary records the existing state.

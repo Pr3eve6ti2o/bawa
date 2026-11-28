@@ -85,3 +85,17 @@ minimum, TRX 19 of 27, TON 1).
   needs a host where nested KVM is known-good, or a real device.
 - The M-39 desktop GUI watch-only test is a separate item and is NOT
   this emulator run.
+
+## Update 2026-11-28 (docs-currency Lane B)
+
+- Android Step 3 is done (`e20cee6`, 2026-11-28): data layer from the
+  versioned JSON export — 87 chains, 169 RPCs, 4 testnets, 21 tokens,
+  77 unit tests, APK 53,712,159 bytes. The 'no data layer / no chain
+  registry' lines above are the Phase 7 record, superseded for the data
+  layer.
+- Step 4 (Trust Wallet Core AAR build from the cloned source) is
+  running, owner-authorized 2026-11-28. Until the AAR lands, on-device
+  derivation stays OPEN and `ENGINE_BINDING_AVAILABLE` stays `false`
+  (`apps/android/core/src/main/java/com/bawa/wallet/core/DerivationPolicy.kt:208`).
+- The Phase 7 evidence above (17/17 unit tests, 52,456,212-byte APK,
+  TCG emulator run, Add NOT VERIFIED) is unchanged as a dated record.

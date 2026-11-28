@@ -70,7 +70,7 @@ All links checked: **2026-11-08**.
 ### Open items
 
 - **Live browser work — Section D:** live wallet creation and live restore in a real browser were performed on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser). Live spend was not exercised (no testnet funds). See Doc 3, Consolidated open-items register, `OI-039`.
-- **Core 4.9.2 EIP-1559 — Section F:** the demonstration was completed on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. See Doc 3, Consolidated open-items register, `OI-004`.
+- **Core 4.9.2 EIP-1559 — Section F:** the demonstration was completed on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised. See Doc 3, Consolidated open-items register, `OI-004`.
 - **Repo documentation:** docs **03** and **12** of the repo guide received a deep pass (D01–D16, 2026-11-08). The docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089). See Doc 3, Consolidated open-items register, `OI-017`.
 
 ## B. Prerequisites and toolchain
@@ -110,7 +110,7 @@ All links checked: **2026-11-08**.
 
 3. **Create the app lockfile without overstating the repository’s state.**
 
-   The Bawa repository ships no root `package-lock.json`, and its guide calls that missing lockfile a release blocker. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); the tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. `npm ci` requires an existing lockfile and fails without one, so it is not runnable against the repository root today.
+   The Bawa repository now ships a root `package-lock.json` (committed in the 2026-11-26 lockfile repair; present at token-gaps `734cfef`, 2026-11-28), so `npm ci` runs against the repository root and the former "missing root lockfile" release blocker is closed. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); the tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. `npm ci` requires an existing lockfile and fails without one.
 
    For the Web app itself, generate `package-lock.json` from a clean install using the pins above. Install `http-server` as a development dependency, inspect its installed version, and record that exact value in `package.json` without `^` or `~`. This makes the version a recorded fact rather than a floating install. Pin Core and esbuild exactly as shown in the table, and keep the app’s lockfile consistent with its manifest.
 
@@ -158,8 +158,8 @@ All sources checked on 2026-11-08.
 
 ### Open items
 
-- The Bawa repository still lacks a root `package-lock.json`; its guide treats this as a release blocker. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact). See Doc 3, Consolidated open-items register, `OI-042`.
-- The Core `4.9.2` EIP-1559 signing-proof demonstration is complete for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open (Section F). See Doc 3, Consolidated open-items register, `OI-004`.
+- CLOSED 2026-11-26 (re-checked 2026-11-28, token-gaps `734cfef`): the repository now ships a root `package-lock.json`; the "missing root lockfile" release blocker (OI-042) is closed. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact).
+- The Core `4.9.2` EIP-1559 signing-proof demonstration is complete for the construction/signing demonstration scope (D21, 2026-11-08); in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised (Section F). See Doc 3, Consolidated open-items register, `OI-004`.
 - The integrated browser flow has had an end-to-end run (Section D): V2, 2026-11-08, 14 PASS / 0 FAIL / 3 INFO across 17 steps in a real headless browser. Live spend was not exercised. See Doc 3, Consolidated open-items register, `OI-039`.
 
 ## C. Engine integration
@@ -326,7 +326,7 @@ Treat this guide as vector-verified and refusal-verified for creation and restor
 
 ### Signing boundary
 
-Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Bawa contains no transaction construction or signing implementation in the repository tools; signing exists only in the built apps, via Trust Wallet Core 4.9.3 (the web pin).
 
 ### Sources
 
@@ -338,7 +338,7 @@ Bawa contains no transaction construction or signing implementation; signing exi
 
 - **Integrated browser flow:** run on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps). Live spend was not exercised. See Doc 3, Consolidated open-items register, `OI-039`.
 - **Vault unlock passphrase:** minimum length unset; define and document the required policy. See Doc 3, Consolidated open-items register, `OI-046`.
-- **Core 4.9.2 EIP-1559:** demonstration complete for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open — Section F. See Doc 3, Consolidated open-items register, `OI-004`.
+- **Core 4.9.2 EIP-1559:** demonstration complete for the construction/signing demonstration scope (D21, 2026-11-08); in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised — Section F. See Doc 3, Consolidated open-items register, `OI-004`.
 - **Live creation/restore:** performed in the V2 browser run (2026-11-08). See Doc 3, Consolidated open-items register, `OI-039`.
 - **Backup-screen cleanup:** state explicitly what clears the displayed phrase and confirmation text, and when. See Doc 3, Consolidated open-items register, `OI-047`.
 - **FAQ link:** resolved — the per-asset recovery checklist lives in the repo guide's Short FAQ (Doc 1, README section 14).
@@ -409,7 +409,7 @@ Repository docs 06, 07 and 13 confirm all of these requirements.
 2. Verify decimals through chain-appropriate token data or an independently reviewed, network-scoped registry. If decimals are missing or conflicting, leave the asset unresolved: do not guess, format a decimal balance or enable decimal amount entry. Familiar defaults such as 18, 6 or 9 are not verification.
 3. Separate token discovery from balance reading. Treat an indexer’s token list as discovery data, not authority. If a token is omitted, do not infer that its balance is zero: the omission is not a balance result.
 
-Token-balance reading is specified here. Token management and token sends are unimplemented; see Section J.
+Token-balance reading is specified here. Token management (Add Token by contract address) and token sends (one offline signer per token standard in `apps/web/src/wallet/send.ts`; broadcast disabled) are implemented — see Section J.
 
 ### Operating rules
 
@@ -442,12 +442,12 @@ Restrict discovery to receiving-branch addresses in the validation draft. Change
 
 ## F. Send and signing
 
-Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2. The repo’s engine derives public keys and addresses; the app builds unsigned transaction inputs, Core signs them, and the app broadcasts signed bytes. Use this flow for testnet only.
+Bawa’s repository tools contain no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.3 (the web pin; the 4.9.2 testnet source-build pin belongs to the Android guide). The repo’s engine derives public keys and addresses; the app builds unsigned transaction inputs, Core signs them offline, and broadcast stays disabled — the app never broadcasts signed bytes. This guide’s flow is specified for testnet; the live web app is mainnet-only (ADR-0003).
 
 ### QR payment-request scanning — testnet only
 
 Scanning is in scope (user decision, 2026-11-08). This section specifies the
-testnet scanning behaviour; the implementation is not yet built.
+testnet scanning behaviour. Update 2026-11-28 (token-gaps `734cfef`): the scanner is implemented at the decode level — `apps/web/src/wallet/qr-scanner.tsx` (jsQR, lazy-loaded; camera loop plus image-file upload, wired into the Send screen) — but payment-request URI parsing is not implemented (the scanned value is used as a bare address), and the live camera on a real phone is unverified. The `qr-scanner@1.4.2` decoder named in step 2 below was not the one built; the built scanner uses jsQR.
 
 **Purpose.** Let a sender pay a payment request shown as a QR code, by scanning
 it with the device camera, without typing the address. Scanning runs on testnet
@@ -753,7 +753,7 @@ Follow Section D for the vault construction. Use the exact verified bound: “GC
 
 ### Separate signing from tracking
 
-Follow the signing boundary in Section F. Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.2. Do not attribute transaction construction, signing or broadcast to the Bawa repo.
+Follow the signing boundary in Section F. Bawa contains no transaction construction or signing implementation in the repository tools; signing exists only in the built apps, via Trust Wallet Core 4.9.3 (the web pin). Do not attribute transaction construction, signing or broadcast to the Bawa repo.
 
 Apply the Section F validation gates:
 
@@ -888,8 +888,8 @@ Do not read the validation-draft row as a list of components available in the re
 
 | Status | Scope |
 | --- | --- |
-| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock (draft evidence only; the current target is optional auto-lock, OFF by default); fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; the in-browser proof, send, sign and broadcast remain open); token-balance reading; 31 offline unit tests passing. |
-| Unimplemented | token management and token sends; the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live spend was not exercised (broadcast disabled). Implemented since the validation draft: QR receive (receive.tsx renders the derived address as a QR code; BIP-21 amount URI for BTC, ETH value in wei, plain address for TRX/TON); QR payment-request scanning (Section F) at the decode level — qr-scanner.tsx is a camera scanner wired into the send screen, but payment-request URI parsing is not implemented (the scanned value is used as a bare address); live wallet creation and live restore in the browser (core.ts createWallet()/restoreWallet), not only in the V2 browser run (2026-11-08). |
+| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock (draft evidence only; the current target is optional auto-lock, OFF by default); fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised); token-balance reading; 31 offline unit tests passing. |
+| Unimplemented | the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live spend was not exercised (broadcast disabled). Implemented since the validation draft: token management (Add Token adds a whole chain or a single token by contract address) and token sends (offline signers per token standard in `apps/web/src/wallet/send.ts`; broadcast disabled); QR receive (receive.tsx renders the derived address as a QR code; BIP-21 amount URI for BTC, ETH value in wei, plain address for TRX/TON); QR payment-request scanning (Section F) at the decode level — qr-scanner.tsx is a camera scanner wired into the send screen, but payment-request URI parsing is not implemented (the scanned value is used as a bare address); live wallet creation and live restore in the browser (core.ts createWallet()/restoreWallet), not only in the V2 browser run (2026-11-08). |
 
 A successful build or testnet send does not replace the release gates below.
 
@@ -933,8 +933,8 @@ Use this as a reader checklist, not as evidence of performed live operations.
 ### Open items
 
 - No release gate has passed. See Doc 3, Consolidated open-items register, `OI-058`.
-- Scanner names pending maintainer validation. See Doc 3, Consolidated open-items register, `OI-059`.
-- Core 4.9.2 EIP-1559 demonstration complete for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. See Doc 3, Consolidated open-items register, `OI-004`.
+- Scanner names established 2026-11-28 (token-gaps `734cfef`): the manual `.github/workflows/security-audit.yml` workflow runs `npm audit`, `pip-audit` 2.10.1, Bandit 1.9.4, Ruff 0.17.4, Semgrep 1.185.0 and OSV-Scanner 2.7.1; the `web` CI job runs `npm audit` (0 vulnerabilities at token-gaps `2205f15`). A secret-scan step in CI is still absent (pre-commit `node scripts/secret-scan.mjs` only). See Doc 3, Consolidated open-items register, `OI-059`.
+- Core 4.9.2 EIP-1559 demonstration complete for the construction/signing demonstration scope (D21, 2026-11-08); in-browser offline signing has since been verified (SOL native + SPL in the browser; BTC exact-spend signing re-probed with the real WASM core); broadcast remains disabled and never exercised. See Doc 3, Consolidated open-items register, `OI-004`.
 - QR receive: RESOLVED — in scope, user decision 2026-11-08. See Doc 3, Consolidated open-items register, `OI-037`.
 - Live creation/restore performed in the V2 browser run (2026-11-08); live spend was not exercised. See Doc 3, Consolidated open-items register, `OI-039`.
 

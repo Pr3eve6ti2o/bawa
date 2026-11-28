@@ -35,7 +35,7 @@ create / restore vault → unlock → derive addresses → refresh balances/hist
    (`apps/web/src/wallet/adapters/`). They run in the background after
    unlock, so the wallet shows immediately. A failed background refresh
    leaves the per-chain error/unavailable state (or the previous state);
-   the dashboard and transaction-history Retry buttons re-run it. Refresh
+   the gated Retry buttons re-run it (dashboard hero only when every balance failed; history only when the wallet/chain has activity). Refresh
    is explicit: there is no automatic recovery, no silent retry in the
    transport (ADR-0009), and a failed fetch is never reported as zero.
    See `docs/runbooks/refresh-failure.md` for the failure states.
@@ -64,8 +64,8 @@ create / restore vault → unlock → derive addresses → refresh balances/hist
   and is cleared afterwards. Deletion from JavaScript memory is not
   guaranteed erasure; the wallet documents that limit where it matters
   instead of claiming otherwise.
-- Auto-lock (default 5 minutes, configurable 0–1440) clears in-memory
-  vault access and vault-derived addresses. Locking is not a security
+- Auto-lock (OFF by default; a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day) clears in-memory
+  vault access and vault-derived addresses when enabled. Locking is not a security
   boundary for public xpubs, which remain in state and storage.
 
 ## What does not exist yet
@@ -73,8 +73,7 @@ create / restore vault → unlock → derive addresses → refresh balances/hist
 - No automatic recovery: there is no backup store for the vault envelope
   beyond what the vault module provides, and no whole-profile recovery.
   Recovery rehearsal has never been executed.
-- No price feed on this checkout. Balances are native amounts only; no
-  fiat value is ever invented.
+- Prices are live (CoinGecko first, with CoinLore, Coinbase, DexScreener and TonAPI fallbacks; a chain no source prices shows unavailable, never a guessed price). Balances are native amounts; no fiat value is ever invented.
 - No background transaction monitor. History is read when the user (or
   the unlock flow) asks for it.
 

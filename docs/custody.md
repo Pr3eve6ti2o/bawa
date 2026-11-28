@@ -33,8 +33,7 @@ offer, and anyone who learns the words can spend from the wallet.
   handles, not authorisation tokens, and deletion is not guaranteed
   memory erasure.
 - **Gated reveal.** The recovery phrase is shown only on the mnemonic
-  backup screen, and only after two gates: a password re-prompt and a
-  short safety quiz (three questions, all answered correctly). The
+  backup screen, and only after a password re-prompt (password-only reveal — the safety quiz was removed, S3-A; `apps/web/src/screens/backup.tsx`). The
   password is verified first without changing lock state; only a
   correct password unlocks the vault, which the reveal needs — so
   revealing does leave the vault unlocked, and the screen offers

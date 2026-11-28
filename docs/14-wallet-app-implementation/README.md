@@ -1,7 +1,7 @@
 ---
 title: Wallet App Implementation
 description: Implement the wallet app module by module, key, derivation, storage, network, signing and UI, with a fixture gate, typed errors and a build-from-scratch checklist; mainnet-only web starter, with published vectors.
-last-updated: 2026-11-08
+last-updated: 2026-11-28
 ---
 
 # Wallet app implementation
@@ -19,7 +19,7 @@ How-to guide.
 
 ## Project structure and key module
 
-Keep `@bawa/hdwallet-gen` private, pin `@trustwallet/wallet-core` to `4.9.3`, matching the repository tools and both platform drafts, and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.2 is superseded: the pin moved to 4.9.3 (E02, 2026-11-13), which is newer than 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06); do not present 4.9.2 as the installed pin. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
+Keep `@bawa/hdwallet-gen` private, pin `@trustwallet/wallet-core` to `4.9.3`, matching the repository tools and the web app (the Android Step 4 AAR build pins `4.8.4` per its build doc; see the 2026-11-28 status block in the Android guide), and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.2 is superseded: the pin moved to 4.9.3 (E02, 2026-11-13), which is newer than 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06); do not present 4.9.2 as the installed pin. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
 
 Treat the paths below as a conceptual layout. Use mainnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 
@@ -45,7 +45,7 @@ Keep gate status specific to the platform:
 
 **Web:** Fixture gate enforced in-engine and covered by offline engine tests; no live-network gate run exists.
 
-**Android:** Fixture gate defined (section I.4); the on-device gate has never run. For the fixture gate’s Android side, see `docs/index.md` for the overall Android test inventory and execution status: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Gradle test run; the Android toolchain was installed and the debug build proven on 2026-11-27). This annotation count is not a passing test-run result.
+**Android:** Fixture gate defined (section I.4); the on-device gate has never run. For the fixture gate’s Android side, see `docs/index.md` for the overall Android test inventory and execution status: 77 `@Test` annotations across 10 test files, executed in the Android Step 3 data-layer lane (e20cee6, 2026-11-28); debug APK built (`app-debug.apk`, 53,712,159 bytes). The on-device fixture gate has still never run (no Core AAR yet — Step 4 is running). This annotation count is not a passing device-run result.
 
 The on-device gate has never run: no Core AAR has been built and no device run has happened. The gate's requirements are acceptance criteria, not results.
 
@@ -308,7 +308,7 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 
 Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft implements QR receive: `receive.tsx` renders the derived address as a QR code, as documented in `docs/web-wallet/WEB-GUIDE.md`, section J. `registry/profiles.json` lists receive-QR display as `IMPLEMENTED_AND_VERIFIED`. QR payment-request scanning is implemented at the decode level through `qr-scanner.tsx`, which is wired into send; URI parsing is not implemented. `qr-scanner.test.tsx` exists. Add the Android verification half before treating it as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft implements QR receive: `receive.tsx` renders the derived address as a QR card in one of seven templates A–G, with a Starknet receive-only warning on every template and in the exported PNG (77e4473), as documented in `docs/web-wallet/WEB-GUIDE.md`, section J. `registry/profiles.json` lists receive-QR display as `IMPLEMENTED_AND_VERIFIED`. QR payment-request scanning is implemented at the decode level through `apps/web/src/wallet/qr-scanner.tsx` (jsQR, camera + image upload), which is wired into send; URI parsing is not implemented. `qr-scanner.test.tsx` exists alongside it. Add the Android verification half before treating it as implemented.
 
 ### 5.2 Confirmation and send flow
 
@@ -391,8 +391,8 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
 Keep the reported test results separate and retain their stated limits:
 
 - 31 offline unit tests pass (mocked transport; no live-network coverage), run by the author against the validation draft, not shipped in any repo.
-- See `docs/index.md` for the Android test count: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Gradle test run; the Android toolchain was installed and the debug build proven on 2026-11-27). This is a source annotation count, not an executed or passing test count.
-- The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0. At token-gaps HEAD 8a1d681 (2026-11-27), test/smoke.test.js contains 115 check() assertions, counted directly. This assertion count is not a current test-run result.
+- See `docs/index.md` for the Android test count: 77 `@Test` annotations across 10 test files, executed in the Android Step 3 data-layer lane (e20cee6, 2026-11-28); debug APK `app-debug.apk`, 53,712,159 bytes. This is a unit-test count, not a device-run result — the on-device fixture gate has still never run.
+- The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0. At token-gaps HEAD 734cfef (2026-11-28), test/smoke.test.js contains 115 check() assertions, counted directly (same count as at 8a1d681, 2026-11-27). This assertion count is not a current test-run result.
 
 Do not combine these counts or use them as evidence of a build, device run or live-network validation.
 

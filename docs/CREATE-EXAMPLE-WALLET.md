@@ -1,6 +1,6 @@
 # Create the example web wallet
 
-_Last verified: 2026-11-27, from a clean worktree of `panel-rebuild/token-gaps` at `33f1ff1` (Node v22.23.4; `npm ci` exit 0; `npm run build` exit 0, total JS 4,473,583; preview root 200, `wallet-core.wasm` 200; the Welcome screen rendered in headless Chromium with Create, Import and Watch-a-wallet options)._
+_Last verified: 2026-11-28, from `panel-rebuild/token-gaps` at `734cfef` (Node v22.23.4; `npm ci` 0 vulnerabilities; `npm run build` exit 0, total JS 4,482,622; live site root 200 serving `index-BxW-qfX0.js`, gh-pages `43fe69f`). The Welcome screen render in headless Chromium (Create, Import and Watch-a-wallet options) and the preview-root / `wallet-core.wasm` 200s were verified 2026-11-27 at `33f1ff1`._
 
 ## What you will have
 

@@ -106,7 +106,7 @@ Treat these as unlocked dependency installs, not as evidence of a reproducible d
 
 ## CI workflow
 
-Use the first-hand reading of `.github/workflows/ci.yml` as the workflow record. The file defines two jobs, `node-tests` and `python-tests`, on `ubuntu-24.04` (CI repair 2026-11-12, OI-075 partial fix; first GitHub run still required).
+Use the first-hand reading of `.github/workflows/ci.yml` as the workflow record. The file defines five jobs on `ubuntu-24.04` — `node-tests`, `python-tests`, `docs-checks`, `web` and `floor-guard` — plus a separate manual-only `.github/workflows/security-audit.yml` (workflow_dispatch; see below). The two original test jobs date from the CI repair 2026-11-12 (OI-075 partial fix); the `web`, `docs-checks` and `floor-guard` jobs were added later. GitHub runs exist: CHANGELOG records 51 runs by 2026-11-13, the latest at branch tip `27ff384` completed successfully 2026-11-13T16:39:49Z.
 
 `node-tests`:
 
@@ -123,22 +123,39 @@ Use the first-hand reading of `.github/workflows/ci.yml` as the workflow record.
 2. Set up Python 3.13.18 with `actions/setup-python` pinned to its full commit SHA; assert `python --version` is `Python 3.13.18`.
 3. Run `python -m pip install -r requirements.txt`.
 4. Run `python test/differential_test.py` (BTC/ETH/TRX index 0–1, BTC change 0, TON address + SLIP-0010 pubkey, BIP-84 abandon anchors, Hardhat account 0, BIP-32 test-vector-1 xpubs — T30 extension, merged 92b2196).
-5. Run `python test/test_decrypt_seed.py` (decrypt round trip) and `python test/test_make_wallet.py`.
+5. Run `python test/test_decrypt_seed.py` (decrypt round trip), `python test/test_make_wallet.py` and `python test/test_ecdsa_guard.py` (ecdsa-backend guard).
 6. Apply `py_compile` to `tools/make_wallet.py` and `tools/decrypt_seed.py`.
-7. Require non-empty output from each Python test run.
+7. Require non-empty output from each Python test run (all four logs).
+
+`docs-checks`:
+
+1. Check out the repository with `actions/checkout` pinned to its full commit SHA.
+2. Set up Python 3.13.18 with `actions/setup-python` pinned to its full commit SHA.
+3. Run `python tools/check-links.py` (internal documentation links).
+4. Run the docs drift check (code-versus-doc last change).
+
+`web`:
+
+1. Check out the repository; set up Node 22.23.4; assert `node --version` is `v22.23.4` and `npm --version` is `10.9.9`.
+2. Run `npm ci --no-audit --no-fund` in `apps/web`.
+3. Run typecheck, lint, vitest unit tests and the production build.
+4. Enforce the bundle-size gate: total JS in `dist/assets` ≤ 6,000,000 bytes, largest single JS chunk ≤ 3,050,000 bytes (owner-ordered re-baseline, 2026-11-26).
+5. Run `npm audit` (web) plus the dependency-version, dependency-cycle, crypto-architecture-boundary, Bitget token-check, chains-generation drift and Android registry drift checks.
+
+`floor-guard`: on push/PR, diffs code files against the base and fails on new suppression comments, skipped/disabled tests, stubs or empty catches, deleted test files, or removed floor rules in `CONSTRAINTS.md`.
 
 Each job records the runner image identity (`ImageOS`/`ImageVersion` and `os-release`) for the evidence record. `permissions` is `contents: read` and nothing else. Dependabot is configured for GitHub Actions, npm (`tools/hdwallet-gen`) and pip (`.github/dependabot.yml`); major bumps of `@trustwallet/wallet-core` are ignored pending a qualification run.
 
-Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps after the 2026-11-12 repair: dependency scanning and secret scanning (scanner names unestablished, maintainer decision pending, OI-059/OI-077); build/reproduce/release-gate jobs (reproducible-build procedure unverified, OI-076); Python 3.13.18 was manifest-resolved but could not run on the lane VM (no 3.13 interpreter; the same tests pass on 3.12.3), so the first GitHub run is the 3.13 evidence. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC) on the previous single-job workflow: syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
+Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Update 2026-11-28 (docs-currency pass, token-gaps `734cfef`): dependency scanning now runs — the `web` CI job runs `npm audit` (0 vulnerabilities at token-gaps `2205f15`, re-verified 2026-11-28), and the manual `.github/workflows/security-audit.yml` workflow runs the named scanners `npm audit`, `pip-audit` 2.10.1, Bandit 1.9.4, Ruff 0.17.4, Semgrep 1.185.0 and OSV-Scanner 2.7.1 (all continue-on-error, logs uploaded as an artifact; it never runs on push/PR, so it cannot fail CI). Secret scanning is pre-commit only (`node scripts/secret-scan.mjs`); there is still no secret-scan step in CI and its CI evidence is recorded as `blocked-unverified` (`docs/SECURITY.md`). The `web` job also covers the build (typecheck, lint, vitest, production build, bundle-size gate at 6,000,000 bytes total JS). Still missing as CI jobs: `reproduce` and `release-gate` (reproducible-build procedure unverified, OI-076); the three release gates stay blocked (unverified). Python 3.13.18 was manifest-resolved but could not run on the lane VM (no 3.13 interpreter; the same tests pass on 3.12.3), so the first GitHub run is the 3.13 evidence. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC) on the previous single-job workflow: syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
 
-Record the genuine omissions as dependency scanning, secret scanning and reproducible-build evidence.
+Record the genuine omissions as secret scanning and reproducible-build evidence (dependency scanning now runs — see the CI workflow section above).
 
 
 ## Release metadata
 
-Treat the current version metadata as inconsistent. `CHANGELOG.md` heads with `1.2.0`, while both `package.json` files say `1.1.0`. No changelog entry carries a date.
+Update 2026-11-28 (token-gaps `734cfef`): `CHANGELOG.md` now heads with `## [Unreleased]` — the `1.2.0` heading is gone, so the version inconsistency is resolved; both `package.json` files still say `1.1.0` (web `0.1.0`).
 
-Keep both package versions at `1.1.0`. `1.2.0` was never released. The changelog's CI bullet describes the workflow's steps accurately, and a passing run exists (run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12, 8 November 2026, success; D09). The merge was pushed at 754721cd without updating `CHANGELOG.md`. Update the changelog in a follow-up commit: place the outstanding changes under `Unreleased` and record the CI correction in its `Fixed` subsection.
+Keep both package versions at `1.1.0`. `1.2.0` was never released. The changelog's CI bullet describes the workflow's steps accurately, and a passing run exists (run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12, 8 November 2026, success; D09). The changelog has since been updated under `Unreleased` (expansion, token-verify and usable-install programme entries, and the CI history: 51 GitHub Actions runs by 2026-11-13, latest at `27ff384` success).
 
 Semantic Versioning adherence: not established by the available evidence.
 
@@ -713,7 +730,7 @@ Implement the following requirements:
 - Set `permissions.contents` to `read` and all other permissions to `none`. Document and justify any exception.
 - Make `release-gate` require success and retained evidence from every preceding job, including both test jobs, `dependency-scan`, `secret-scan`, `build` and `reproduce`. Keep it blocked whenever a required job or gate lacks evidence.
 
-Status 2026-11-12 (OI-075 partial fix): the two test jobs, SHA pins, fixed runner label, lockfile-based install and Dependabot are implemented. The dependency-scan, secret-scan, build, reproduce and release-gate jobs are NOT implemented: scanner names are unestablished (maintainer decision pending, OI-059/OI-077) and the reproducible-build procedure is unverified (OI-076). The three release gates stay blocked (unverified).
+Status 2026-11-28 (docs-currency pass, token-gaps `734cfef`): the two test jobs, SHA pins, fixed runner label, lockfile-based install and Dependabot are implemented, and the `web`, `docs-checks` and `floor-guard` jobs plus the manual security-audit workflow (named scanners: `npm audit`, `pip-audit`, Bandit, Ruff, Semgrep, OSV-Scanner) have since been added. The `reproduce` and `release-gate` jobs are still NOT implemented (reproducible-build procedure unverified, OI-076), and there is still no secret-scan step in CI. The three release gates stay blocked (unverified). (Supersedes the 2026-11-12 status: dependency scanning is no longer unestablished — see the CI workflow section above.)
 
 ### Record gate-specific evidence
 
@@ -1352,21 +1369,21 @@ Bawa does not document a reproducibility procedure, external-review acceptance c
 
 | Gate | Evidence required | Status |
 | --- | --- | --- |
-| Committed lockfile | Lockfile committed at release revision | PARTIAL: `tools/hdwallet-gen/package-lock.json` committed at e3b65fb832db287fdc8d54794980dd0b3456cc12 (2026-11-08); no root lockfile. |
+| Committed lockfile | Lockfile committed at release revision | MET (2026-11-28, token-gaps `734cfef`): root `package-lock.json` exists (since the 2026-11-26 lockfile repair) and `tools/hdwallet-gen/package-lock.json` is committed at e3b65fb832db287fdc8d54794980dd0b3456cc12 (2026-11-08). |
 | Version ranges | Recorded range review | BLOCKED, review unconfirmed. |
 | Clean-machine CI | Passing logs for release revision | PASS — GitHub Actions run 28 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`: completed/success, 2026-11-08 11:36 UTC (D09). |
 | Official BIP-32/BIP-39 vectors | Full published-vector coverage and passing results | BLOCKED, coverage/results missing. |
 | Independent differential testing | Recorded successful `test/differential_test.py` run | PASS — operator run 2026-11-09, exit 0; D23 replayed all nine CI steps with exit 0. |
 | Chain-specific fixtures | Per-chain fixtures and passing results | BLOCKED, no report. |
 | Secret scanning | Enabled checks, configuration and triaged report | BLOCKED, configuration/results undocumented. |
-| Dependency scanning | Enabled checks, configuration and triaged report | BLOCKED, configuration/results undocumented. |
+| Dependency scanning | Enabled checks, configuration and triaged report | BLOCKED for release (no release-revision triaged report recorded) — but the checks now run: the `web` CI job runs `npm audit` (0 vulnerabilities at token-gaps `2205f15`, re-verified 2026-11-28) and the manual security-audit workflow runs `npm audit`, `pip-audit`, Bandit, Ruff, Semgrep and OSV-Scanner. |
 | Reproducible artefacts | Documented rebuild method and matching tagged-revision outputs | BLOCKED, method/results undocumented. |
-| External security review | Accepted review against agreed criteria | BLOCKED, criteria/report undocumented. |
+| External security review | Accepted review against agreed criteria | CLOSED (review gate only, 2026-11-13): the owner accepted Sol's fresh-context R02 re-audit as the closure evidence for M-31/M-15 (commit `18ce692`). It was a second-pass review, not a fully independent audit — recorded as such, not as independent. It does not authorise funding, rehearsal or any real-funds use. |
 | Negative tests | Failure-case coverage and passing results | BLOCKED, no report. |
 | Integration tests | Recorded integration run | BLOCKED, no report. |
 | Recovery drill | Recorded recovery exercise | BLOCKED, no report. |
 | Artefacts/checksums | Recorded release artefacts and checksum evidence | BLOCKED, checksum files absent. |
-| Security policy | Confirmed publication | BLOCKED, publication unconfirmed. |
+| Security policy | Confirmed publication | MET (2026-11-28): `docs/SECURITY.md` publishes a vulnerability-disclosure procedure (private reporting through GitHub's private vulnerability reporting for this repository); no private email contact is published. |
 
 On success, `test/differential_test.py` prints “bip_utils reference checks: PASS”. This is differential-testing evidence only. Neither it nor a green installation job clears other gates.
 

@@ -97,11 +97,15 @@ Do not proceed on the strength of this record without reassessment if:
   the import rewrite.
 - Package manager: **npm** (consistent with the repo's tooling). Upstream
   pnpm 10.33.0 is recorded, not adopted.
-- Exact pins (apps/web/package.json, per-app lockfile
-  apps/web/package-lock.json, 295 packages): react/react-dom 19.2.5,
+- Exact pins at adoption (apps/web/package.json, per-app lockfile
+  apps/web/package-lock.json, 295 packages at the time): react/react-dom 19.2.5,
   react-router 7.14.0, vite 8.0.7, typescript 5.9.3, tailwindcss 4.2.4,
   vitest 4.1.3, jsdom 31.0.0, qrcode.react 4.2.0, @trustwallet/wallet-core
   4.9.3 (the repo pin, upgraded 2026-11-13; the former pin 4.9.1 is superseded).
+  Current pins at HEAD 734cfef (2026-11-28): react-router 7.18.5, vite 8.3.8,
+  vitest 4.1.12 (react/react-dom 19.2.5, typescript 5.9.3, tailwindcss 4.2.4,
+  jsdom 31.0.0, qrcode.react 4.2.0 and wallet-core 4.9.3 unchanged);
+  the lockfile now holds 411 packages.
 - WASM loading: the wallet-core 4.9.3 Emscripten build rejects both
   `locateFile` and `wasmBinary` (not in INCOMING_MODULE_JS_API —
   verified first-hand: both abort, no-args `initWasm()` works in Node).

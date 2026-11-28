@@ -49,7 +49,7 @@ The table distinguishes declared constraints, checked-in pins and observed runti
 | npm on this VM | `11.19.1` | VM observation; not a separate CI pin | observed |
 | npm in CI | Whatever ships with Node 22; no separate npm pin | CI Node installation | verified — unpinned separately |
 | `cryptography` | `==50.0.2` | `requirements.txt` | verified |
-| `bip-utils` | `==2.12.2` | `requirements.txt` | verified |
+| `bip-utils` | `==2.12.3` | `requirements.txt` | verified |
 | `@ton/ton` cross-check | No numerical version asserted here; derivation cross-check only | M-39 T1 | verified — narrowly scoped |
 | Gradle | `8.9`, in the Android draft only | Android draft’s `gradle-wrapper.properties` | verified — draft evidence |
 | JDK | **17 PROPOSED** | Proposal motivated by the Android Gradle Plugin 8.x requirement; starter compatibility still to be confirmed | PROPOSED |
@@ -96,7 +96,7 @@ The recorded H7 outcomes are **92/92**, **PASS** and **exact fixtures**. For set
 | `npm run check` | The checked-in check script completes successfully. |
 | `npm test` | **92/92 passing**, matching H7. |
 | Create and activate the Python venv | An isolated environment is active under a Python version satisfying `>=3.11`. |
-| `python -m pip install -r requirements.txt` | Installation succeeds with `cryptography==50.0.2` and `bip-utils==2.12.2`. |
+| `python -m pip install -r requirements.txt` | Installation succeeds with `cryptography==50.0.2` and `bip-utils==2.12.3`. |
 | `python test/differential_test.py` | **PASS**, matching H7. |
 | `node scripts/validate-registry.mjs` from the repository root | Registry validation completes successfully, without validation failures. No validator count is asserted here. |
 | Fixture acceptance across the reproduction | Existing fixtures remain an **exact match**, as recorded at H7. |
@@ -122,14 +122,14 @@ BTC, ETH and TRX xpubs share version `0488b21e`. Cross-chain xpub misuse among t
 
 **Plan decision 6: per-app lockfiles.**
 
-- The only lockfile today is `tools/hdwallet-gen/package-lock.json`.
+- Lockfiles today: `tools/hdwallet-gen/package-lock.json`, `apps/web/package-lock.json` and a root `package-lock.json` (since the 2026-11-26 lockfile repair; see `docs/SECURITY.md`). (Corrected 2026-11-28, docs-currency Lane B.)
 - `apps/web` and `apps/android` must each receive their own lockfile during **Phases 6–7**.
-- There is **no root lockfile**, and the strategy does not introduce one.
+- A root lockfile now exists (2026-11-26 repair); the per-app lockfiles above stand, and the root lockfile covers the root workspace. (Corrected 2026-11-28, docs-currency Lane B.)
 - The generator’s lockfile must not be treated as a lockfile for either application.
 
 ### Known CI drift
 
-CI currently runs **`npm install`**, not **`npm ci`**. The reproduction procedure above deliberately uses `npm ci` in the tool directory, but that does not describe the current CI implementation.
+CI runs `npm ci` (verified first-hand in `.github/workflows/ci.yml`, 2026-11-28, docs-currency Lane B) — the `npm install` drift recorded here is closed.
 
 Record this as an unresolved reproducibility gap. **Do not claim CI reproducibility** from the presence of the lockfile or from the passing H7 suite. A CI installation change and its verification are separate implementation work, not completed by this document.
 
@@ -160,13 +160,15 @@ As of the evidence date, **no wallet-core version ships a downloadable Android A
 
 The binding remains **OPEN**, and JDK 17 remains **PROPOSED**, until the corresponding decisions and verification are completed.
 
+**Update 2026-11-28 (docs-currency Lane B):** the toolchain is installed and proven on loud-stone (JDK 17.0.21.1, SDK platforms 34+35, `./gradlew assembleDebug` BUILD SUCCESSFUL); an APK was built and run on an emulator (Phase 7, `docs/android-evidence.md`); Android Step 3 is done (`e20cee6`: data layer from the versioned JSON export, 87 chains, 169 RPCs, 4 testnets, 21 tokens, 77 unit tests, APK 53,712,159 bytes); Step 4 (Trust Wallet Core AAR build from the cloned source) is running, owner-authorized 2026-11-28. The binding is still OPEN until the AAR lands — `ENGINE_BINDING_AVAILABLE` is still `false` — but 'no JDK installed' and 'no Android build yet' above are stale as of 2026-11-27.
+
 ## 6. What this document does NOT establish
 
 - **No signing/broadcast code:** this reproduction procedure supplies or validates no signing or broadcast implementation. D21/D31 are historical reference-engine demos, not evidence of working browser integration. In-browser send, sign and broadcast have never been exercised.
 - **No mainnet use:** derivation paths, xpubs and exact fixtures are not evidence of mainnet operation or production readiness. Mainnet transactions and real funds are outside this procedure.
-- **No Android build yet:** there is no successful Android build evidence here. The binding is OPEN; the draft’s sandbox blockage was not re-tested.
+- **No Android build yet:** there is no successful Android build evidence here. The binding is OPEN; the draft’s sandbox blockage was not re-tested. (Superseded — see the §5 update, 2026-11-28: the toolchain is installed, an APK was built and run, Step 3 is done.)
 - **No expansion of the Node range:** this VM’s Node v24.22.2 is outside `>=22 <23`. Tests passing anyway is a recorded deviation, not a change to the supported range.
-- **No automatic upgrade or CI reproducibility claim:** npm release availability does not validate an upgrade, and the current `npm install` drift remains unresolved.
+- **No automatic upgrade or CI reproducibility claim:** npm release availability does not validate an upgrade, and the `npm install` drift is closed (CI runs `npm ci`, verified 2026-11-28).
 
 ## 7. Engine smoke suite — 440 checks (2026-11-26)
 

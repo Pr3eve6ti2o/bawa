@@ -17,6 +17,8 @@ Bawa is a practical open-source reference for HD-wallet workflows and an AI Wall
 | Evidence | Recorded in §11, §18, docs/android-evidence.md and docs/archive/handoff-2026-11-10.md |
 | Sources fetched on | 2026-11-08 |
 
+> **Currency note (2026-11-28, token-gaps `734cfef`):** the table above is the 2026-11-10 verification snapshot, retained as written. Current state: token-gaps HEAD `734cfef` (remote matches), main `af828a9`; the live site `https://pr3eve6ti2o.github.io/bawa/` serves `index-BxW-qfX0.js` (root 200, asset 200); web gates pass on Node v22.23.4 — build PASS, tsc 0, eslint 0, vitest 3,351 passed + 5 skipped (129 files), JS bundle 4,482,622 / 6,000,000 budget, `npm ci` 0 vulnerabilities; Android Step 3 is done (87 chains, 169 RPCs, 77 unit tests, debug APK 53,712,159 bytes) and Step 4 (Trust Wallet Core 4.8.4 AAR build) is running, owner-authorised — not done. Registry: 87 chains, 169 RPCs, 4 testnets, 21 tokens.
+
 ## 1. Scope and non-goals
 
 Bawa keeps the wallet reference and the project builder together. Sections 2–18 are the reference: generate a wallet, derive watch-only addresses, compare derivations, recover from a backup and track balances — on testnets only. The builder uses the checked-in starters and registries to turn a plain request into a buildable Web, Android or multi-chain project.

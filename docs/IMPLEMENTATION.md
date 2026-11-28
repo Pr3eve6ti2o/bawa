@@ -64,7 +64,7 @@ The exported TON address uses contract Wallet V4 R2 with wallet ID / subwallet `
 
 1. Trust Wallet Core deterministic self-checks.
 2. Official BIP/CIP/TEP vector coverage has not been established; identify applicable fixtures, their provenance and the checks performed before claiming this layer.
-3. Independent `bip_utils` comparisons cover BTC and ETH at index 0 only; TRON and TON are not covered.
+3. Independent `bip_utils` comparisons cover BTC, ETH and TRX at indices 0–1, plus BTC change 0 and the TON address fixture (`test/differential_test.py`, verified first-hand 2026-11-28).
 4. `test/smoke.test.js` includes `derive.js` rejection tests for a bad chain, a negative index and an empty xpub; no repository test feeds a private extended key to any tool.
 5. Integration and reconciliation testing is an external application responsibility; no such test file is present in this repository.
 

@@ -1,17 +1,19 @@
 ---
 title: Chain Registry & Asset Metadata
 description: Interpret Wallet Core's registry.json and Trust Wallet Assets for Bawa's chains; keep coin, network, derivation, address and asset identities separate; prepare chain and asset metadata changes.
-last-updated: 2026-11-23
+last-updated: 2026-11-28
 ---
 
 # Chain Registry & Asset Metadata
 
 Reference.
 
-> **Verified on:** 2026-11-08
+> **Verified on:** 2026-11-08 (2026-11-28 docs-currency re-check, below)
 > **Verification status:** Partially verified
 > **Scope:** repo guide docs/12 against the pinned repo at 754721cd plus live registry checks
 > **Repository commit:** 754721cd
+>
+> **Currency note (2026-11-28, token-gaps `734cfef`):** the 2026-11-08 verification rows below remain dated records. Re-checked at `734cfef`: `registry/capabilities.json` v4 holds 87 chains in `chainSupport` (22 curated + 65 expansion); `registry/chains.json` holds 87 chains and 169 RPC endpoints; history is `IMPLEMENTED_AND_VERIFIED` for 17 chains and `NOT_SUPPORTED` for the rest (among the 22 curated chains, only bsc, gnosis, opbnb, metis and fantom still read `NOT_SUPPORTED`); balance is `IMPLEMENTED_AND_VERIFIED` for 66 chains and `NOT_SUPPORTED` for 21 derive-only chains; chain logos number 87 (see below).
 > **Tool versions:** Node v24.22.2 (VM), outside the repo's declared >=22 <23 range
 > **Actually run:** Pinned-repository review; live `registry.json` checks
 > **Not run:** A complete metadata contribution and validation workflow
@@ -328,9 +330,9 @@ Token tracking in `docs/06` and `docs/07` (ERC-20, TRC-20 and [SPL](https://gith
 
 - Pinned at commit `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e` (verified to exist on GitHub 2026-11-24). Re-pin and re-verify whenever the pin moves; a logo copied from a different commit is a different file until checked.
 - Licence: MIT, Copyright (c) 2019-2023 Trust Wallet. No fee, no paid tier — it is a public registry.
-- Chain logos live at `blockchains/<chain>/info/logo.png` upstream. The 22 vendored chain logos, with the directory corrections the registry itself requires: `bitcoin`, `ethereum`, `tron`, `ton`, `solana`, `smartchain` (BNB Smart Chain — NOT `binance`, which is the BNB Beacon Chain mark), `polygon`, `arbitrum`, `optimism`, `base`, `avalanchec`, `litecoin`, `doge`, `xdai` (Gnosis — `gnosis` does not exist upstream), `celo`, `linea`, `mantle`, `scroll`, `opbnb`, `metis`, `aurora`, `fantom`. Each logo's upstream `info.json` name was verified at fetch time.
+- Chain logos live at `blockchains/<chain>/info/logo.png` upstream. The 87 vendored chain logos (one per chain in the 87-chain registry; the 22 listed below were the original curated set), with the directory corrections the registry itself requires: `bitcoin`, `ethereum`, `tron`, `ton`, `solana`, `smartchain` (BNB Smart Chain — NOT `binance`, which is the BNB Beacon Chain mark), `polygon`, `arbitrum`, `optimism`, `base`, `avalanchec`, `litecoin`, `doge`, `xdai` (Gnosis — `gnosis` does not exist upstream), `celo`, `linea`, `mantle`, `scroll`, `opbnb`, `metis`, `aurora`, `fantom`. Each logo's upstream `info.json` name was verified at fetch time.
 - Token logos live at `blockchains/ethereum/assets/<contract>/logo.png` upstream. The 8 vendored token logos: USDC `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`, USDT `0xdAC17F958D2ee523a2206206994597C13D831ec7`, DAI `0x6B175474E89094C44Da98b954EedeAC495271d0F`, LINK `0x514910771AF9Ca656af840dff83E8264EcF986CA`, UNI `0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984`, WBTC `0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599`, WETH `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2`, and USDT0 on Arbitrum `blockchains/arbitrum/assets/0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9/logo.png` (upstream name Tether USD, symbol USDT — the USDT0 contract on Arbitrum).
-- Served as WebP: the same Trust Wallet images, resized to 96 px and re-encoded at quality 85 — 39,670 bytes total vs 303,787 bytes for the PNGs (-87%). The original PNGs stay in `src/assets/chains` and `src/assets/tokens` as the canonical sources.
+- Served as WebP: the same Trust Wallet images, resized to 96 px and re-encoded at quality 85 — 157,482 bytes total vs 2,044,496 bytes for the 87 PNGs (-92%). The original PNGs stay in `src/assets/chains` and `src/assets/tokens` as the canonical sources. (2026-11-28, token-gaps `734cfef`; the 39,670 / 303,787 figures were the 22-logo totals.)
 - Trust Wallet resolves logos by contract address, not by symbol; the wallet's symbol map (plus aliases for the on-chain spellings the registry reports — `USD₮` → USDT, `USD₮0` → USDT0) is this wallet's simplification of that. A token with no registered logo renders an honest empty state (a plain ring, no fill, no ticker text), never a broken image and never a yellow text square (Lane B removed the yellow ticker badge, 2026-11-24). Full detail, including the per-logo fetch notes, is in `apps/web/README.md` ("Chain logos" and "Token logos").
 
 ### Token logos in the web wallet (canonical source)
@@ -343,7 +345,7 @@ commit `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e`. Nothing is
 fetched from the repo at runtime: the logos are copied into the
 app at `apps/web/src/assets/chains/` (natives) and
 `apps/web/src/assets/tokens/` (ERC-20s), each stored twice — the
-original PNG (canonical source) and a 96 px WebP at quality 85 —
+original PNG (canonical source) and a 96 px WebP at quality 85 (one exception at `734cfef`: WETH ships WebP only, no PNG in the tree) —
 and rendered by `apps/web/src/screens/token-logo.tsx`
 (`CHAIN_LOGOS` chain-keyed, `TOKEN_LOGOS` symbol-keyed with the
 on-chain spelling aliases `USD₮` → USDT, `USD₮0` → USDT0).
@@ -521,7 +523,7 @@ For ERC-20, a watcher can check whether an observed Transfer matches the request
 
 Receive-QR encoding follows the payment-request record in [docs/07](../07-payment-tracking/README.md), where the full payload table and verification contract live. The Web guide contains the Web scanning specification.
 
-Keep the six-field application request separate from the QR payload. Serialise only the fields allowed by the selected profile below, never an application-specific six-field QR object. Retain fields not carried by the payload in the associated request and display them with it. All profiles below are testnet-only.
+Keep the six-field application request separate from the QR payload. Serialise only the fields allowed by the selected profile below, never an application-specific six-field QR object. Retain fields not carried by the payload in the associated request and display them with it. All profiles below are testnet-only. Currency note (2026-11-28): the live web wallet is mainnet-only, and mainnet Receive uses the same payload shapes with mainnet addresses (see docs/07 and `docs/web-wallet/WEB-GUIDE.md` §J); the web Receive card renders seven templates A–G with a Starknet receive-only warning on every template and in the exported PNG (77e4473). The testnet forms below remain the testnet procedure.
 
 | Profile | Approved payload | Constraints |
 | --- | --- | --- |
