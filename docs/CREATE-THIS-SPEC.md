@@ -28,7 +28,7 @@ branch (rebased onto the token-gaps tip `7a170f4`, then merged).
 Each section below was re-checked against the merged code by the
 coordinator's re-check pass (2026-11-26, hands-on, 0 Sol calls);
 where implementation differs from the survey, the section matches
-the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 129 files / 3,416 passed + 5 skipped (gates at `7f24ef1`, 2026-11-28 — Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit; the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef`, 2026-11-28 — wobbly-cards + Starknet QR warning + web follow-ups, verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15`, P2/P3 merge + bughunt-v2-fixes; the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
+the implementation. Lane H's mining record is §18. Merged-tree gates (loud-stone, Node 22): typecheck 0, build 0, vitest 130 files / 3,479 passed + 5 skipped (gates at `bcf180e`, 2026-11-29 — fix-all programme merge, run first-hand on loud-stone by the coordinator; the earlier 129-file / 3,477-passed figure was the gates at token-gaps `658937d`, 2026-11-28 — password-only vault merge; the 129-file / 3,459-passed figure was the gates at `65daa64` — honest partials (Routescan + Blockscout v2 fallback); the 129-file / 3,437-passed figure was the gates at `1a85258`, 2026-11-28 — three findings fixed; the 129-file / 3,429-passed figure was the gates at `1253bf6` — honest remains; the 129-file / 3,416-passed figure was the gates at `7f24ef1`, 2026-11-28 — Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit; the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef`, 2026-11-28 — wobbly-cards + Starknet QR warning + web follow-ups, verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15`, P2/P3 merge + bughunt-v2-fixes; the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see docs/index.md), eslint 0, link check 0,
 `check-wallet-cycles` 0 (the one pre-existing type-only cycle was
 a checker false positive — fixed in the checker, not the source;
 see §17).
@@ -49,7 +49,7 @@ calls): removed WalletConnect (§11), added the Buy provider picker
 table (§17) and in the sections themselves, not in the Part A table
 above — Part A is the six lanes only.
 
-**Bundle note:** the merged tree passes the budget — total JS 4,509,097 vs the 6,000,000 budget (§0.2), passing by 1,490,903 bytes; largest chunk 2,906,616 at `7f24ef1` (under the 3,050,000 cap). Measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates, verified first-hand on loud-stone). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
+**Bundle note:** the merged tree passes the budget — total JS 4,536,948 vs the 6,000,000 budget (§0.2), passing by 1,463,052 bytes; largest chunk 2,906,616 (measured at `65daa64`, under the 3,050,000 cap — not re-measured at `bcf180e`). Measured at `bcf180e` (2026-11-29, fix-all programme merge, coordinator gates, verified first-hand on loud-stone); was 4,536,937 at `658937d`, 4,532,436 at `65daa64`, 4,509,960 at `1a85258`, 4,509,097 at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates). The budget was re-baselined to 6,000,000 by owner order at `f5a5f19` (2026-11-26); see §0.2 for why.
 
 ## §0. Hard constraints — these are not negotiable
 
@@ -84,7 +84,7 @@ above — Part A is the six lanes only.
    (route chunk 10,085 B) — none of it on the cold-load path (home cold
    load fetches 564,002 B, no WalletConnect; measured 2026-11-26, Lane C).
    The WalletConnect lazy chunk (348,194 B) was removed with the feature
-   in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Re-measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates): 4,509,097 bytes total JS, passing by 1,490,903 bytes; largest chunk 2,906,616 bytes. Whether the gate should exclude lazy
+   in the providers programme (2026-11-26, §11). The P0 verification (2026-11-27, token-gaps `33f1ff1`) re-measured the total on the current tree: 4,473,583 bytes total JS, passing by **1,526,417 bytes (25.4% margin)**; largest chunk 2,906,489 bytes (under the 3,050,000 cap). Re-measured at `7f24ef1` (2026-11-28, Lanes A+B merged, Lane D audit gates): 4,509,097 bytes total JS, passing by 1,490,903 bytes; largest chunk 2,906,616 bytes. Re-measured at `bcf180e` (2026-11-29, fix-all programme merge, coordinator gates): 4,536,948 bytes total JS, passing by 1,463,052 bytes; largest chunk 2,906,616 bytes (at `65daa64`, not re-measured at `bcf180e`). Whether the gate should exclude lazy
    chunks is an open owner question, not a lane decision.
 3. **Visual direction: style B (owner pick, 2026-11-27).** Polished financial style everywhere — flat, hairline, tabular, real semantic colour — with illustration kept only for brand moments, plus a tiny bounded fraction of the paper/comic theme (the Welcome illustration, at most one small brand touch per screen — the QR card templates were paper/comic until Lane B flattened them to style B on 2026-11-28, §8). This supersedes the 2026-11-20 drawing-illustration order and its four-colour cap: the cap no longer governs new work. Transition state, stated honestly: the current tree still carries the four `--bawa-*` tokens in `apps/web/src/ui/styles/globals.css:60-63` (`--bawa-paper #FFFDF7`, `--bawa-ink #2B2B2B`, `--bawa-coral #FF6B4A`, `--bawa-sun #FFD93B`) while the P1 style lane migrates screens — do not cite the cap as the current rule, and do not re-impose it on migrated screens. The single confined exception that STANDS is the QR card: exactly ten named `--qr-*` tokens
    (`--qr-teal`, `--qr-teal-deep`, `--qr-teal-band`, `--qr-teal-copy`,
@@ -151,7 +151,7 @@ The 65 break down as 45 EVM + 17 non-EVM (9 Cosmos-ecosystem + 8 other) + 3
 OKX-reference chains — Cardano, Starknet, Kaspa (§2.5) — whose full
 fact records live in the same file (cardano `:1832`, kaspa `:1859`,
 starknet `:1886`), not in a separate file. `SUPPORTED_CHAINS`
-(`chains.ts:1687`) holds all 87.**
+(`chains.ts:1737`) holds all 87.**
 The expansion programme wired 84 into the app (adapters, prices,
 icons, explorers; `docs/EXPANSION-PROGRAMME.md`); Lane B added the
 three, so the app now wires 87. The 22-row capability
@@ -402,7 +402,7 @@ keyless history indexer and its history stays blocked, never faked.
   `bip-utils` **2.12.3**.
 - Verification workflow (from `apps/web`, after `npm ci`):
   `npm run typecheck` (tsc --noEmit, 0 errors), `npm run build`
-  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 129 files; the 3,416-passed + 5-skipped figure is the gates at `7f24ef1` (2026-11-28, Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit); the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef` (2026-11-28, wobbly-cards + Starknet QR warning + web follow-ups), verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15` (P2/P3 merge + bughunt-v2-fixes); the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
+  (copy-wasm + tsc + vite build, 0 errors), `npm run test` (vitest — 130 files; the 3,479-passed + 5-skipped figure is the gates at `bcf180e` (2026-11-29, fix-all programme merge, run first-hand on loud-stone by the coordinator); the earlier 129-file / 3,477-passed figure was the gates at token-gaps `658937d` (2026-11-28, password-only vault merge); the 129-file / 3,459-passed figure was the gates at `65daa64` (honest partials); the 129-file / 3,437-passed figure was the gates at `1a85258` (three findings fixed); the 129-file / 3,429-passed figure was the gates at `1253bf6` (honest remains); the 129-file / 3,416-passed figure was the gates at `7f24ef1` (2026-11-28, Lanes A+B merged, run first-hand on loud-stone by the Lane D guide-gap audit); the earlier 129-file / 3,351-passed figure was the publish gates at token-gaps `734cfef` (2026-11-28, wobbly-cards + Starknet QR warning + web follow-ups), verified first-hand on loud-stone before pushing; the 129-file / 3,347-passed figure was the publish gates at `2205f15` (P2/P3 merge + bughunt-v2-fixes); the 121-file / 3,245-passed figure was the loud-stone run at `f1f0e6c`, 2026-11-27; earlier sandbox runs on Node 22 did not reproduce the loud-stone figure — see `docs/index.md`). Engine smoke suite:
   440 checks pass (`docs/engine-reproducibility.md`).
 - Confirmation policy: BTC 6 confirmations (recommendation, not
   protocol); ETH `finalized`; TRX 19 distinct SRs of 27 via
@@ -836,16 +836,16 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   2026-11-28, `e6a2727`).** A watch-only wallet is no longer invisible
   outside /wallets: the dashboard reads the watched addresses — the
   hero copies a watched address when no vault address exists,
-  labelled Watch-only (`screens/dashboard.tsx:410-421`,
+  labelled Watch-only (`screens/dashboard.tsx:855`,
   `heroAddressIsWatchOnly`), the fresh-zero "Nothing here yet" note
   stays off while watched balances sit below it, and the /assets
   list shows a "Watch-only — showing balances for addresses you
   watch. They can’t send." banner with a link to /wallets
-  (`screens/asset-list.tsx:177`). A watched address is never a send
+  (`screens/asset-list.tsx:195`). A watched address is never a send
   source — the Send screen never offers one. **Home routing for
   watch-only-only (`4adbd30`):** with no vault but watched
   addresses, `/` renders the Dashboard, not Welcome
-  (`app/app.tsx:136`, `HomeScreen`) — and the decision waits for
+  (`app/app.tsx:134`, `HomeScreen`) — and the decision waits for
   hydration to read the stored xpubs, or Welcome flashes briefly
   before the dashboard takes over.
 - **TRON balance fallback — PublicNode (fix programme, 2026-11-28,
@@ -896,28 +896,28 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
 - **Failed rows stay visible, never vanish (fix programme,
   2026-11-28, `e6a2727`).** A chain whose balance check fails keeps
   its row with an honest error — "Balance unavailable" / "Could not
-  load balance" (`screens/asset-rows.tsx:401`, `:536`) — plus the
-  `FailedBalancesRetry` control (`screens/dashboard.tsx:675`); only
+  load balance" (`screens/asset-rows.tsx:421`, `:570`) — plus the
+  `FailedBalancesRetry` control (`screens/dashboard.tsx:1188`); only
   the failed row is ever marked, a failure never blanks the rest of
   the list. The one exception is a balance that can never be
   fetched: a no-address / devnet-no-tokens row renders as zero,
   because a Retry for it could only fail again
-  (`asset-rows.tsx:222`, `noWalletBalance`). The 24h change rides on
-  the same row model (`asset-rows.tsx:58`, `change24hForEntry`) —
+  (`asset-rows.tsx:226`, `noWalletBalance`). The 24h change rides on
+  the same row model (`asset-rows.tsx:73`, `change24hForEntry`) —
   /assets rows now show it, closing Lane B's gap (dashboard and
   /assets both render `AssetRows`).
 - **Activity wallet switcher, counted progress, /track auto-retry
   (fix programme, 2026-11-28, `63fb8c4`).** Activity
   (`/transactions`) has a wallet switcher — a `#history-wallet`
-  select (`screens/transaction-history.tsx:398`) offering the HD
+  select (`screens/transaction-history.tsx:446`) offering the HD
   accounts and the watch-only wallets, so a watched wallet's history
   is viewable at last (Lane B: no path existed). While history
   loads, the wait is counted — "Checked N of M chains…"
-  (`transaction-history.tsx:485`) — so a 15–20 s wait reads as
+  (`transaction-history.tsx:529`) — so a 15–20 s wait reads as
   progress, not a stuck spinner; rows stream in as chains settle on
   the watch-only path. `/track` address-activity auto-retries
   transient failures up to 3 attempts (`ACTIVITY_MAX_ATTEMPTS = 3`,
-  `screens/track-transaction.tsx:44`, `:262`) with 1 s then 2 s
+  `screens/track-transaction.tsx:44`, `:331`) with 1 s then 2 s
   backoff, showing "Retrying, attempt N of 3"; a non-transient
   failure ("Indexer unavailable") is one attempt only, then the
   honest error.
@@ -958,7 +958,7 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   stays visible meanwhile, so a failed balance never silently counts
   as $0 (`use-live-balances.ts:20-58`). "Balances updated HH:MM"
   sits beside "Prices updated HH:MM" (`dashboard.tsx:998-1000`;
-  stamp set in `state/wallet-context.tsx:1133`, `:1414`). A failed
+  stamp set in `state/wallet-context.tsx:1169`, `:1450`). A failed
   or unpriced holding is named in the hero's Missing note
   ("Missing: Dogecoin balance.", `dashboard.tsx:1007`) — never just
   "(Partial)"; a balance that can never be fetched (no address / no
@@ -973,19 +973,19 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   **Add flow:** the address field is first on the Watch-only tab
   ("Paste any address — the chain is detected automatically."), the
   chain picker below for xpubs and multi-chain addresses only
-  (`screens/import-wallet.tsx:899-904`, `:938`). **Asset detail:** a
+  (`screens/import-wallet.tsx:920`, `:957`). **Asset detail:** a
   known imported address never reads "No address is available" —
   the error is "Could not load the balance." with "The address is
   imported — this is a load failure. Try Retry below."
-  (`screens/asset-detail.tsx:640-644`); the addresses block reads
+  (`screens/asset-detail.tsx:635-644`); the addresses block reads
   "Watched address" for a watched wallet
-  (`asset-detail.tsx:1005`); token history loads the token's
+  (`asset-detail.tsx:1017`); token history loads the token's
   transfers (EVM `tokentx`,
-  `wallet/adapters/evm.ts:392-402`) with the adapter registration
+  `wallet/adapters/evm.ts:719-729`) with the adapter registration
   awaited first and one delayed retry on error
   (`asset-detail.tsx:233-247`), a failed load saying "Could not load
   token transactions. {reason}" with Retry
-  (`asset-detail.tsx:934`). **/track:** linked from the nav
+  (`asset-detail.tsx:946`). **/track:** linked from the nav
   (`app/sidebar-nav.tsx:37-50`) and prefilled from `?address=` /
   `?chain=` or the first watched wallet, auto-running its recent
   activity once (`screens/track-transaction.tsx:182-197`,
@@ -1005,6 +1005,19 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   (DECISIONS.md §53). Verified in the browser at 390 px + 1280 px
   with the EF address: all 4 USDC transfers and 10 /track rows
   render with "Source: routescan — Powered by Routescan.io APIs".
+- **Import is purely local (fix-all programme, 2026-11-29,
+  `358675b`; DECISIONS.md §55).** Adding a watch-only address or
+  xpub issues no balance/history refresh: `addXpub` /
+  `addWatchOnlyAddress` (`state/wallet-context.tsx:1474`, `:1505`)
+  do no network refresh, and the phrase save paths pass
+  `skipBackgroundRefresh` (`screens/import-wallet.tsx:412`, `:464`).
+  Balances still show with no reload or manual refresh because
+  `useLiveBalances` fetches once on mount and then polls every 45 s
+  (`screens/use-live-balances.ts:18`). The import screen used to fan
+  one address out to all 59 EVM chains — hundreds of RPC requests
+  per import, on a screen that shows no balances — and on
+  loud-stone that tripped intermittent `ERR_NAME_NOT_RESOLVED`
+  failures (no global IPv6 route; DNS returns AAAA records first).
   **Not changed by this programme:**
   the hero count-up still animates from $0 at first paint; amounts
   still render at full precision; "Hide zero balances" is still a
@@ -1082,6 +1095,17 @@ up. No keys or funds are affected." Restoration, if the owner ever
 wants it: create a free account at https://cloud.reown.com, create a
 project, copy the projectId into `VITE_WALLETCONNECT_PROJECT_ID`,
 and restore the deleted files from git history.
+
+**Branch deleted (2026-11-29, DECISIONS.md §55).** The
+`usable-lane-c-walletconnect` branch (tip `1cf3b3c`) was deleted —
+verified unmerged and hazardous (token-gaps had deliberately removed
+WalletConnect in `7fb1c4a`). The commit object survives via
+`usable-lane-h-mining`, which still contains it, so the restoration
+path above (restore from git history) still works; the branch itself
+is gone. The OKX lane B branch (`usable-lane-b-okx-chains`, tip
+`d50b72d`) was deleted the same day — verified unmerged and
+superseded (its content is already on token-gaps as `95d3e35`); §2.5
+is unaffected, the three chains are implemented on token-gaps.
 
 History kept, because it still binds a future restoration
 (`docs/DECISIONS.md` §26 is the Lane C decision record):
@@ -1186,7 +1210,7 @@ The survey's verified facts, which Lane D implemented from:
   aimed at self-custody wallets as the destination.
 - **Lazy-load only.** Measured via Bundlephobia: **7,473 B minified /
   2,841 B gzip** — 7,473 B alone exceeds the ~5,304 B headroom at survey
-  time (1.4× over; headroom is now 1,517,378 B under the 6,000,000 budget — see §0.2, 2026-11-28). It is loaded by dynamic import on the Buy screen
+  time (1.4× over; headroom is now 1,463,052 B under the 6,000,000 budget — see §0.2, 2026-11-29). It is loaded by dynamic import on the Buy screen
   only, by design. The Bundlephobia figure is not a build inside Bawa's Vite
   bundle — Lane D must measure the real cost in Bawa's build and record it.
 - **The SDK is NOT bundled.** `@coinbase/cbpay-js` 2.4.0 (MIT) is not
@@ -1746,7 +1770,7 @@ were re-measured from that tree (see the rows below).
 | §2.5 Cardano/Starknet/Kaspa | `chains.ts` `SUPPORTED_CHAINS` (ends with the three); `chains-expanded.ts:1832` (cardano), `:1859` (kaspa), `:1886` (starknet); `core.ts:468` (`getPublicKeyEd25519Cardano`); `kaspa-address.ts`, `starknet-derive.ts` (lazy) | `docs/02-chains` §2 called Cardano reference-only with the CIP-1852 path (kept); the three were absent from the app | Implemented (Lane B, derive-only) |
 | §2.6 Android JSON export + toolchain | `registry/chains.json` (87 chains, 169 RPCs, 4 testnets, `sourceCommit 7efba14`), `registry/tokens.json` (21 tokens); `apps/web/scripts/generate-android-registry.mjs`; `./gradlew assembleDebug` BUILD SUCCESSFUL (clean, 32 s, 2026-11-27) | Was "Proposal (not yet implemented)" with no SDK/JDK on loud-stone | Fixed in place (docs-currency Lane 2, 2026-11-27; export Step 1 commit `58d85c5`; steps 3–6 were BLOCKED, Step 3 report removed by safety classifiers; Step 3 DONE (`e20cee6`, 2026-11-28), Step 4 running, owner-authorized 2026-11-28) |
 | §3 engine pins | `WALLET_BUILDER.md` "Verified 4.9.3 workflow"; `apps/web/package.json` pin | Test counts stale (40 files / 460 tests, 2026-11-20); engine smoke 217 stale; `dinero.js` listed as adopted but removed by token-verify Lane C (0 hits in `package-lock.json`) | Fixed in place (110 files — the 2,945 + 5 skipped figure is Lane C's loud-stone run, not reproduced in this sandbox, 2026-11-26; smoke 440; dinero.js dropped) |
-| §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:85`, `:83`; `auto-lock.ts:13-15` | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |
+| §4 vault + auto-lock | `apps/web/src/wallet/vault.ts:97` (`PBKDF2_ITERATIONS`), `:138` (`hasPassword`); `auto-lock.ts:17-19` (`AUTO_LOCK_OPTIONS`, `AUTO_LOCK_LABELS`) | `WALLET_BUILDER.md` + `AGENTS.md` said "no lock exists" (5e7eb1d) | Fixed in place |
 | §5 offline signing | `apps/web/src/wallet/send.ts:2527-2530` (Solana); capability table in `WALLET_BUILDER.md` | Correct; SOL `@solana/web3.js` route added from code | Verified |
 | §6 token verification | `apps/web/src/wallet/token-verification.ts:25-45`, `:101` | Correct in code; `docs/TOKEN-VERIFY-PROGRAMME.md` records the programme | Verified |
 | §6.6 Bitget Agent API | `token-verification.ts` (Lane A browser leg, read first-hand); live answers verified by Lane H (USDC/PEPE VERIFIED, fake UNVERIFIED, 2026-11-26) | Not in the guide before | Implemented (Lane A browser leg + Lane H agent-side) |
@@ -1757,28 +1781,28 @@ were re-measured from that tree (see the rows below).
 | §8 QR cards | `apps/web/src/screens/qr-card.tsx`; `payment-links.ts:728-767` (`QR_CARD_TEMPLATES`, 7 entries; `QR_CARD_TEMPLATE_QR`); `docs/DECISIONS.md` §24 + §25 (redesign E/F/G) | Said four templates (A–D); the redesign added E/F/G on token-gaps | Fixed in place (four → seven) |
 | §9 watch-only mainnet-only | Owner decision 2026-11-23 (standing record); `apps/web/src/wallet/watch-only-families.ts`; `state/wallet-context.tsx` `ALL_CHAIN_IDS` hydration fix | `docs/05-watch-only/README.md` predates the 87-chain hydration fix | Verified; §9 states the fix |
 | §10 devnet / E1 | `apps/web/src/wallet/devnet.ts:30`; `docs/DECISIONS.md:399-410`; `CONSTRAINTS.md` E1 | Correct; E1 expiry 2027-02-20 stated | Verified |
-| §11 WalletConnect | Commit `7fb1c4a` (providers programme): screen + 3 modules + tests deleted; route/nav/CSP/deps removed; `security-settings.tsx` restoration note; `docs/DECISIONS.md` §26 (Lane C record, not updated by that commit — see report) | Was IMPLEMENTED (Lane C) | Removed in place (providers programme, 2026-11-26; Android Kotlin route kept as an unimplemented record) |
+| §11 WalletConnect | Commit `7fb1c4a` (providers programme): screen + 3 modules + tests deleted; route/nav/CSP/deps removed; `security-settings.tsx` restoration note; `docs/DECISIONS.md` §26 (Lane C record, not updated by that commit — see report) | Was IMPLEMENTED (Lane C) | Removed in place (providers programme, 2026-11-26; Android Kotlin route kept as an unimplemented record). Branch `usable-lane-c-walletconnect` deleted 2026-11-29 (DECISIONS.md §55); the commit survives via `usable-lane-h-mining`, so restoration from git history still works |
 | §12 Coinbase Onramp | `apps/web/src/wallet/onramp.ts` (URL builder, no SDK); `receive.tsx` `?buy=1` panel; `package.json` has NO `cbpay-js` | Not in the guide before | Implemented (Lane D; live purchase NOT verified — needs onboarding/keys) |
 | §12.1 Buy provider picker | `apps/web/src/wallet/buy-providers.ts` (`buyProviders()`, rank order, key copy, readiness); `receive.tsx:1097` renders the table | Not in the guide before | Implemented (providers programme, 2026-11-26; TON confirmed live for Ramp/MoonPay/Banxa, Mercuryo TON unconfirmed; no live purchase verified). "Works today" wording qualified by docs-currency Lane 2, 2026-11-27: no provider key is configured, every provider shows "not set up yet" |
 | §12A Swaps providers | `apps/web/src/wallet/swap-providers.ts` (`providersForPair`, `selectBestRoute`); `relay-quotes.ts` (58 chains live, XRP covered, LTC/DOGE not); `gaszip-refuel.ts` (quote deposit address, Solana excluded); `stonfi-quotes.ts` (SDK pin 0.8.13, installed; live RFQ client + TON order signing wired, signed BoC only); `swap-quotes.ts` (LI.FI raw REST, no SDK) | Not in the guide before | Implemented, quotes + TON order signing (providers programme, 2026-11-26; STON.fi Lanes B/C, 2026-11-27; Relay proxy not configured; execution approved by the owner 2026-11-27 but NOT implemented — broadcast stays disabled in code until it lands) |
-| §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup.tsx` (Shares tab under `/mnemonic-backup?tab=shares`; `/backup-shares` redirects there, `app.tsx:496`); `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:431-433` (extractable-key note) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only; screen/route citation corrected by docs-currency Lane B, 2026-11-28 — no separate `backup-shares.tsx` screen or lazy `/backup-shares` route exists at this tip, §13 body already had it right. Correction 2026-11-28 (password-only vault `a606beb`): `autoUnlock()` removed; the open key stays extractable in memory only, never persisted, so share creation is unchanged; the `vault.ts:431-433` extractable-key line citation in the code column no longer applies — see the §13 correction) |
+| §13 Shamir | `apps/web/src/wallet/backup-shares.ts`; `apps/web/src/screens/backup.tsx` (Shares tab under `/mnemonic-backup?tab=shares`; `/backup-shares` redirects there, `app.tsx:514`); `package.json` `shamir-secret-sharing` 0.0.4; `vault.ts:40` (extractable-key note; in-memory note `:479-480`) | Not in the guide before | Implemented (Lane E; restore-from-shares UI not built — check-only; screen/route citation corrected by docs-currency Lane B, 2026-11-28 — no separate `backup-shares.tsx` screen or lazy `/backup-shares` route exists at this tip, §13 body already had it right. Correction 2026-11-28 (password-only vault `a606beb`): `autoUnlock()` removed; the open key stays extractable in memory only, never persisted, so share creation is unchanged; the `vault.ts:431-433` extractable-key line citation in the code column no longer applied (that line is now a wrong-password catch block) — corrected 2026-11-29 (docs-currency Lane A) to `vault.ts:40` (header note) with the in-memory note at `:479-480`; see the §13 correction) |
 | §14 ERC-7730 | `apps/web/src/wallet/clear-signing.ts`; `clear-signing-snapshot.json` (1,523 B); `apps/web/src/wallet/caip.ts`; `send-review.tsx` | Not in the guide before | Implemented (Lane F) |
 | §14 sonar (Lane H) | `sonar/LICENSE` (MIT, OKX labs 2022-2026); README simulate commands | Mentioned only as "dev tool" | Added (concrete use; build NOT verified — no cargo on loud-stone) |
 | §18 Lane H mining | Wallet-repos survey + agent-repos dirs (sandbox, read-only) + FEC skills (MIT) | Not in the guide before | Added |
 | §15 UI contract | `WALLET_BUILDER.md` "UI foundations and contract"; Doc 14 §5.1; owner style-B pick 2026-11-27 | Said "Bawa Balanced" + four-colour cap; /assets showed zero rows with no wallet | Fixed in place (docs-currency Lane 2, 2026-11-27: style B, /assets no-wallet list hidden per P0 `33f1ff1`) |
 | §16 verify/report | `AGENTS.md` §5/§6 | Correct | Verified |
-| §2 history 18/4 + Gnosis | `chains.ts:299-310` (`HISTORY_EVIDENCE_2026_11_28_GNOSIS`), `:812-815`; `adapters/evm.ts:172-181` (gnosisscan branch); `chains.test.ts:416-434` (`availableFor('history')`, 18 entries) | Said 17 verified / 5 blocked incl. Gnosis | Fixed in place (Lane D audit, 2026-11-28; Gnosis wired `d06a224`) |
+| §2 history 18/4 + Gnosis | `chains.ts:299-310` (`HISTORY_EVIDENCE_2026_11_28_GNOSIS`), `:839` (Gnosis `historyBaseUrl`); `adapters/evm.ts:350-359` (gnosisscan branch); `chains.test.ts:416-434` (`availableFor('history')`, 18 entries) | Said 17 verified / 5 blocked incl. Gnosis | Fixed in place (Lane D audit, 2026-11-28; Gnosis wired `d06a224`) |
 | §2.7 history indexers | `chains.ts:231-264` (blocked-set probes), `adapters/index.ts:26-48` (`EVM_HISTORY_SOURCES`) | Not in the guide before | Added (Lane D audit, 2026-11-28) |
-| §4 change password | `vault.ts:771` (`changePassword`), `:592` (`verifyVaultPassword`); `security-settings.tsx:67-96`, `:166` | No change-password path existed before `f77b803` | Implemented (fix programme, 2026-11-28) |
-| §6.8 remove token | `tokens.ts:762` (`removeCustomTokenFromList`); `wallet-context.tsx:1411`; `asset-detail.tsx:950` | No remove control existed before `9fc01e9` | Implemented (fix programme, 2026-11-28) |
+| §4 change password | `vault.ts:748` (`changePassword`), `:620` (`verifyVaultPassword`); `security-settings.tsx:236`, `:313` | No change-password path existed before `f77b803` | Implemented (fix programme, 2026-11-28) |
+| §6.8 remove token | `tokens.ts:762` (`removeCustomTokenFromList`); `wallet-context.tsx:1599`; `asset-detail.tsx:1118` | No remove control existed before `9fc01e9` | Implemented (fix programme, 2026-11-28) |
 | §7.2 chart retry + Coinbase | `prices.ts:963` (`fetchPriceHistory`); `price-fallbacks.ts:749`, `:650` (44 products); `price-chart.tsx:15-16` | Chart was a single CoinGecko call, no retry; ~3/7 loads | Implemented (fix programme, 2026-11-28) |
-| §8 QR sizes + flat style + footer + split | `payment-links.ts:756` (QR sizes), `:770` (`QR_CARD_FOOTER`), `:2439` (canvas twin); `qr-card.tsx:113` (`splitAddressLines`), `:704` (stacked band) | Sizes predated Lane 1 growth; footer location unstated; "untouched by style work" | Fixed in place (Lane D audit, 2026-11-28; Lane B `fec71be`) |
-| §9 watch-only surfacing + TRON + Activity | `dashboard.tsx:410-421`; `asset-list.tsx:177`; `app.tsx:136`; `adapters/trx.ts:55`; `transaction-history.tsx:398`, `:485`; `track-transaction.tsx:44`, `:262` | Watch-only invisible outside /wallets; TRON fallback unrecorded; Activity had no switcher | Implemented (fix programme, 2026-11-28) |
-| §13 shares cancelled by password change | `vault.ts:771`; `backup.tsx:504` | Unstated | Added (Lane D audit, 2026-11-28) |
-| §15.1 /wallets manage | `wallet-management.tsx:312`; `vault.ts:1066`, `:969` (MAX 40) | /wallets screen undescribed; rename/delete absent before `65edc90` | Implemented (fix programme, 2026-11-28) |
-| §15.2 mobile overflow pattern | `dialog.tsx:155-166`; `add-token.tsx:715-717`; `chain-search-select.tsx:292-294` | Overflow pattern undescribed; earlier "no overflow" claim wrong for the fixed dialog | Fixed in place (Lane A `aea4b58`, 2026-11-28) |
+| §8 QR sizes + flat style + footer + split | `payment-links.ts:757` (QR sizes), `:770` (`QR_CARD_FOOTER`), `:2457` (canvas twin); `qr-card.tsx:113` (`splitAddressLines`), `:707` (stacked band) | Sizes predated Lane 1 growth; footer location unstated; "untouched by style work" | Fixed in place (Lane D audit, 2026-11-28; Lane B `fec71be`) |
+| §9 watch-only surfacing + TRON + Activity | `dashboard.tsx:855` (`heroAddressIsWatchOnly`); `asset-list.tsx:195`; `app.tsx:134`; `adapters/trx.ts:55`; `transaction-history.tsx:446`, `:529`; `track-transaction.tsx:44`, `:331` | Watch-only invisible outside /wallets; TRON fallback unrecorded; Activity had no switcher | Implemented (fix programme, 2026-11-28) |
+| §13 shares cancelled by password change | `vault.ts:748`; `backup.tsx:550` | Unstated | Added (Lane D audit, 2026-11-28) |
+| §15.1 /wallets manage | `wallet-management.tsx:339`; `vault.ts:1031` (`renameAccountName`), `:934` (MAX 40) | /wallets screen undescribed; rename/delete absent before `65edc90` | Implemented (fix programme, 2026-11-28) |
+| §15.2 mobile overflow pattern | `ui/components/dialog.tsx:155-166`; `add-token.tsx:715-717`; `chain-search-select.tsx:292-294` | Overflow pattern undescribed; earlier "no overflow" claim wrong for the fixed dialog | Fixed in place (Lane A `aea4b58`, 2026-11-28) |
 | §19 Lane D audit | This lane, hands-on, 0 Sol calls; gates at `7f24ef1` | Not in the guide before | Added |
-| §9 watch-only display programme | `dashboard.tsx:916` (split), `:1000` (Balances updated), `:1007` (Missing note); `asset-rows.tsx:1302-1342` (watched tokens), `:1505-1531` (allocation Top-5); `use-live-balances.ts:18` (45 s poll); `transaction-history.tsx:322-355` (Activity default); `wallet-management.tsx:1080`, `:1132` (/wallets disclosure + Forget); `track-transaction.tsx:182-279` (/track prefill); `sidebar-nav.tsx:50` (Track link) | Watch-only invisible outside /wallets; hero vault-only; no allocation; no balance polling; /track unlinked | Implemented (watch-only display programme, 2026-11-28, `4728ff1`; DECISIONS.md §51) |
+| §9 watch-only display programme | `dashboard.tsx:916` (split), `:1000` (Balances updated), `:1007` (Missing note); `asset-rows.tsx:1302-1342` (watched tokens), `:1505-1531` (allocation Top-5); `use-live-balances.ts:18` (45 s poll); `transaction-history.tsx:322-355` (Activity default); `wallet-management.tsx:481`, `:1132` (/wallets disclosure + Forget); `track-transaction.tsx:182-279` (/track prefill); `sidebar-nav.tsx:50` (Track link) | Watch-only invisible outside /wallets; hero vault-only; no allocation; no balance polling; /track unlinked | Implemented (watch-only display programme, 2026-11-28, `4728ff1`; DECISIONS.md §51) |
 | §20 Owner-configured API keys + Relay proxy | `apps/web/src/wallet/buy-providers.ts` (six `VITE_*` env vars, `readEnv`); `relay-quotes.ts` (`RELAY_PROXY_URL_ENV`, `relayProxyBaseUrl()`, `fetchRelayQuote`, `parseQuote`); `screens/swap.tsx:579`; `app/security-headers.ts:55` (CSP, proxy origin at deploy time); no `apiKey` anywhere in `apps/web/src/wallet/adapters/`; `stonfi-quotes.ts:307` (`flexibleIntegratorFee` only) | Not in the guide before | Added (docs-audit Lane A, 2026-11-28, owner orders 2026-11-28 ~20:40 IST; Relay proxy to AI-usable depth per the 2026-11-28 ~20:46 IST refinement) |
 
 **Not verified first-hand (re-check pass, 2026-11-26; providers
@@ -2087,3 +2111,13 @@ the only fee field in the tree is `flexibleIntegratorFee: true`
 destination-chain integrator addresses and the fee choice
 (`integratorFeePips` / `referralValue` bps) is code work, not an env
 var — do not invent an env var name for them.
+
+## §21. Docs-currency pass — fix-all programme (2026-11-29, Lane A, hands-on, 0 Sol calls)
+
+Base: `panel-rebuild/token-gaps` at `bcf180e` (fix-all merge, DECISIONS.md §55). This pass re-read the guide against the code at that tip and corrected current-state figures and file:line citations in place; dated records (§19, §20, the §17 verdict history) were left as written except where a dated addition was appended below or in §9/§11.
+
+- **Figures updated to the `bcf180e` gates:** vitest 130 files / 3,479 passed + 5 skipped; total JS 4,536,948 / 6,000,000 (passing by 1,463,052); largest chunk 2,906,616 (measured at `65daa64`, not re-measured at `bcf180e`); Buy headroom 1,463,052 (§12). Updated in Part A status, the Bundle note, §0.2, §3 and §12.
+- **Stale-figure discrepancy found, not hidden:** §19 records that the docs-audit merge updated this guide's figures to the `1a85258` gates (vitest 3,437, total JS 4,509,960, headroom 1,490,040) — but the text at `bcf180e` still carried the older `7f24ef1` figures (3,416 / 4,509,097 / 1,517,378) in Part A, §0.2, §3 and §12. That claimed update never landed in the text. The §19 record itself is a dated record and is left as written; the figures are now correct at `bcf180e`, with the intermediate gates (3,429 @ `1253bf6`, 3,437 @ `1a85258`, 3,459 @ `65daa64`, 3,477 @ `658937d`) added to the history chains.
+- **Line citations re-traced and fixed:** §2 `SUPPORTED_CHAINS` (`chains.ts:1687` → `:1737`); §9 (body and §17 rows: dashboard hero `:410-421` → `:855`, asset-list banner `:177` → `:195`, HomeScreen `:136` → `:134`, Activity switcher `:398` → `:446`, counted progress `:485` → `:529`, /track retry `:262` → `:331`, token history `evm.ts:392-402` → `:719-729`, asset-detail errors `:640-644` → `:635-644`, `:934` → `:946`, `:1005` → `:1017`, import-wallet `:899-904` → `:920`, `:938` → `:957`, balance stamps `:1133, :1414` → `:1169, :1450`, `FailedBalancesRetry` `:675` → `:1188`, asset-rows errors `:401, :536` → `:421, :570`, `change24hForEntry` `:58` → `:73`, `noWalletBalance` `:222` → `:226`); §17 vault rows (`verifyVaultPassword` `:592` → `:620`, `changePassword` `:771` → `:748`, extractable-key note `:431-433` → `:40`, `auto-lock.ts:13-15` → `:17-19`); Gnosis history (`chains.ts:812-815` → `:839`, `evm.ts:172-181` → `:350-359`); remove-token (`wallet-context.tsx:1411` → `:1599`, `asset-detail.tsx:950` → `:1118`); shares-cancelled (`vault.ts:771` → `:748`, `backup.tsx:504` → `:550`); /wallets manage (`wallet-management.tsx:312` → `:339`, `vault.ts:1066, :969` → `:1031, :934`); overflow pattern (`dialog.tsx` → `ui/components/dialog.tsx`); QR sizes (`payment-links.ts:756` → `:757`, canvas twin `:2439` → `:2457`, `qr-card.tsx:704` → `:707`); /wallets disclosure (`wallet-management.tsx:1080` → `:481`); backup-shares redirect (`app.tsx:496` → `:514`).
+- **Fix-all content recorded:** §9 notes import is purely local (`358675b`); §11 notes both deleted branches (`usable-lane-b-okx-chains`, `usable-lane-c-walletconnect` — DECISIONS.md §55; the WalletConnect commit survives via `usable-lane-h-mining`). Guide §4 (password-only vault) re-verified against `vault.ts` at `bcf180e` — all cited lines hold (`:97`, `:138`, `:353`, `:620`, `:649`, `:672`, `:748`); no change needed. DECISIONS.md §53–§55 re-verified against the code — accurate, no corrections needed.
+- **Docs gates at this pass:** `python tools/check-links.py` OK (183 files); `node tests/diagram-references.test.mjs` 4 pass / 1 fail — the single failure is pre-existing at the base commit (the validation-draft test flags `apps/android/core/src/main/java/com/bawa/wallet/core/EthSendComposer.kt`, tracked since `f9f312b`, untouched by this lane).
