@@ -74,11 +74,11 @@ const PANCAKESWAP_LIST = {
   tokens: [
     {
       chainId: 56,
-      address: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81c8e82',
+      address: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82',
       name: 'PancakeSwap Token',
       symbol: 'CAKE',
       decimals: 18,
-      logoURI: 'https://tokens.pancakeswap.finance/images/0x0e09fabb73bd3ade0a17ecc321fd13a19e81c8e82.png',
+      logoURI: 'https://tokens.pancakeswap.finance/images/0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82.png',
     },
   ],
 };
@@ -346,7 +346,7 @@ describe('resolveTokenListVerification', () => {
     ]);
     const result = await resolveTokenListVerification({
       chain: 'bsc',
-      contract: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81c8e82',
+      contract: '0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82',
       fetchFn,
     });
     expect(result.verified).toBe(true);
