@@ -16,8 +16,55 @@ const testGlobal = globalThis as typeof globalThis & {
 };
 
 vi.mock('../wallet/vault', () => ({
+  changePassword: vi.fn(),
   deleteVault: vi.fn(),
+  verifyVaultPassword: vi.fn(),
 }));
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value',
+  )?.set;
+  if (!setter) throw new Error('no input value setter');
+  setter.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+async function fillChangePasswordForm(
+  div: HTMLDivElement,
+  current: string,
+  next: string,
+  confirm: string,
+): Promise<void> {
+  const currentInput = div.querySelector(
+    '#change-current-password',
+  ) as HTMLInputElement;
+  const newInput = div.querySelector(
+    '#change-new-password',
+  ) as HTMLInputElement;
+  const confirmInput = div.querySelector(
+    '#change-confirm-password',
+  ) as HTMLInputElement;
+  expect(currentInput).not.toBeNull();
+  expect(newInput).not.toBeNull();
+  expect(confirmInput).not.toBeNull();
+  await act(async () => {
+    setInputValue(currentInput, current);
+    setInputValue(newInput, next);
+    setInputValue(confirmInput, confirm);
+  });
+}
+
+async function submitChangePassword(div: HTMLDivElement): Promise<void> {
+  const button = Array.from(div.querySelectorAll('button')).find(
+    (candidate) => candidate.textContent === 'Change password',
+  );
+  expect(button).not.toBeUndefined();
+  await act(async () => {
+    button!.click();
+  });
+}
 
 function setWallet(
   vaultState: string,
@@ -257,6 +304,165 @@ describe('security settings screen', () => {
       expect(text).toContain(`Version ${packageJson.version}`);
     } finally {
       await mounted.cleanup();
+    }
+  });
+
+  it('shows the Change password form when a vault exists, and hides it with no vault', async () => {
+    // Lane E item 1e (broken): no change-password control existed
+    // anywhere in the app. The form is a row in the same flat list.
+    setWallet('unlocked');
+    const mounted = await mountScreen();
+    try {
+      expect(
+        mounted.div.querySelector('#change-current-password'),
+      ).not.toBeNull();
+      expect(
+        mounted.div.querySelector('#change-new-password'),
+      ).not.toBeNull();
+      expect(
+        mounted.div.querySelector('#change-confirm-password'),
+      ).not.toBeNull();
+      expect(mounted.div.textContent ?? '').toContain('Change password');
+      expect(mounted.div.textContent ?? '').toContain(
+        'The old password stops working.',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+
+    setWallet('no-vault');
+    const noVault = await mountScreen();
+    try {
+      expect(noVault.div.textContent ?? '').not.toContain('Change password');
+    } finally {
+      await noVault.cleanup();
+    }
+  });
+
+  it('rejects a wrong current password and never calls changePassword', async () => {
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(verifyVaultPassword).mockResolvedValue(false);
+    vi.mocked(changePassword).mockClear();
+    setWallet('unlocked');
+    const { div, cleanup } = await mountScreen();
+    try {
+      await fillChangePasswordForm(div, 'wrong password', 'new password here', 'new password here');
+      await submitChangePassword(div);
+      expect(div.textContent ?? '').toContain('Incorrect password.');
+      expect(changePassword).not.toHaveBeenCalled();
+      // The wrong current password is cleared; the new password stays
+      // so the user only retypes the one that was wrong.
+      expect(
+        (div.querySelector('#change-current-password') as HTMLInputElement)
+          .value,
+      ).toBe('');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('rejects a new password shorter than 8 characters', async () => {
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(verifyVaultPassword).mockResolvedValue(true);
+    vi.mocked(changePassword).mockClear();
+    setWallet('unlocked');
+    const { div, cleanup } = await mountScreen();
+    try {
+      await fillChangePasswordForm(div, 'old password', 'short', 'short');
+      await submitChangePassword(div);
+      expect(div.textContent ?? '').toContain(
+        'Vault password must be at least 8 characters.',
+      );
+      expect(changePassword).not.toHaveBeenCalled();
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('rejects mismatched new passwords', async () => {
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(verifyVaultPassword).mockResolvedValue(true);
+    vi.mocked(changePassword).mockClear();
+    setWallet('unlocked');
+    const { div, cleanup } = await mountScreen();
+    try {
+      await fillChangePasswordForm(
+        div,
+        'old password',
+        'new password here',
+        'different password',
+      );
+      await submitChangePassword(div);
+      expect(div.textContent ?? '').toContain('New passwords do not match.');
+      expect(changePassword).not.toHaveBeenCalled();
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('changes the password and reports success', async () => {
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(verifyVaultPassword).mockResolvedValue(true);
+    vi.mocked(changePassword).mockReset();
+    vi.mocked(changePassword).mockResolvedValue(undefined);
+    setWallet('unlocked');
+    const { div, cleanup } = await mountScreen();
+    try {
+      await fillChangePasswordForm(div, 'old password', 'new password here', 'new password here');
+      await submitChangePassword(div);
+      expect(verifyVaultPassword).toHaveBeenCalledWith('old password');
+      expect(changePassword).toHaveBeenCalledWith('new password here');
+      expect(changePassword).toHaveBeenCalledTimes(1);
+      expect(div.textContent ?? '').toContain('Password changed.');
+      expect(
+        (div.querySelector('#change-current-password') as HTMLInputElement)
+          .value,
+      ).toBe('');
+      expect(
+        (div.querySelector('#change-new-password') as HTMLInputElement).value,
+      ).toBe('');
+      expect(
+        (div.querySelector('#change-confirm-password') as HTMLInputElement)
+          .value,
+      ).toBe('');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('unlocks a locked vault with the current password before changing it', async () => {
+    // changePassword needs the mnemonic in the closure, which a locked
+    // vault does not have — so the current password unlocks it first.
+    const { changePassword, verifyVaultPassword } = await import(
+      '../wallet/vault'
+    );
+    vi.mocked(verifyVaultPassword).mockReset();
+    vi.mocked(verifyVaultPassword).mockResolvedValue(true);
+    vi.mocked(changePassword).mockReset();
+    vi.mocked(changePassword).mockResolvedValue(undefined);
+    const unlockVault = vi.fn(async () => {});
+    setWallet('locked', { unlockVault });
+    const { div, cleanup } = await mountScreen();
+    try {
+      await fillChangePasswordForm(div, 'old password', 'new password here', 'new password here');
+      await submitChangePassword(div);
+      expect(unlockVault).toHaveBeenCalledWith('old password');
+      expect(changePassword).toHaveBeenCalledWith('new password here');
+      expect(div.textContent ?? '').toContain('Password changed.');
+    } finally {
+      await cleanup();
     }
   });
 });
