@@ -35,6 +35,17 @@ python3 test/differential_test.py
 
 For the web wallet (`apps/web`), also run `npm ci`, `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build` there. The quality bar for all of this is `CONSTRAINTS.md`; do not weaken it to make a change pass.
 
+## Publishing the live demo
+
+The live demo at https://pr3eve6ti2o.github.io/bawa/ serves the latest published `panel-rebuild/token-gaps` build from the `gh-pages` branch. To publish a new build:
+
+1. Build the web wallet from the `panel-rebuild/token-gaps` tip (`apps/web`: `npm ci`, then the web gates — typecheck, lint, test, build).
+2. Publish the built output to the `gh-pages` branch with a message naming the source commit and the served bundle, for example: `Publish Bawa from token-gaps <commit> (..., index-<hash>.js)`.
+3. Verify first-hand with curl that the live root returns 200 and serves the published bundle (`curl -s https://pr3eve6ti2o.github.io/bawa/` — the page references `assets/index-<hash>.js`).
+4. Run `node scripts/check-live-claim.mjs` — it fails if any README pins a live build hash. Add a dated bullet to the `Project history` section of `README.md` for the publish (source commit, `gh-pages` commit, served bundle, gates).
+
+Never pin the live build in a present-tense claim: the README live-site claim always says "the latest published build of this branch", with no commit or bundle hash, so there is nothing to go stale. Bundle hashes belong only in dated `Project history` bullets, which record what was live, when.
+
 ## Adopting a dependency
 
 Every new dependency is a decision, recorded, not a silent addition.
