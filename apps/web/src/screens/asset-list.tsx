@@ -40,7 +40,7 @@ function isFailedBalance(balance: BalanceState | undefined): boolean {
  * no-wallet branch hides the list entirely.
  */
 export function FailedBalancesRetry(): ReactNode {
-  const { vaultState, refreshBalances, refreshTokenBalances, balances, tokenBalances } =
+  const { vaultState, refreshBalances, refreshTokenBalances, balances, tokenBalances, addresses } =
     useWallet();
   const [refreshing, setRefreshing] = useState(false);
   async function handleRefresh(): Promise<void> {
@@ -53,8 +53,15 @@ export function FailedBalancesRetry(): ReactNode {
       setRefreshing(false);
     }
   }
+  // (3) A watch-only-only wallet (no vault) still fetches balances —
+  // refreshBalances reads the watched addresses — so its failures
+  // get the same retry line as an unlocked vault's.
+  const hasWatchAddresses = Object.values(addresses ?? {}).some(
+    (list) => (list ?? []).length > 0,
+  );
   const failedBalanceCount =
-    vaultState === 'unlocked'
+    vaultState === 'unlocked' ||
+    (vaultState === 'no-vault' && hasWatchAddresses)
       ? Object.values(balances ?? {}).filter(isFailedBalance).length +
         Object.values(tokenBalances ?? {}).filter(isFailedBalance).length
       : 0;
@@ -95,7 +102,17 @@ export function AssetListScreen() {
   // Lane 2: the filter bar's search — 43 rows are not scannable by
   // scrolling alone. Client-side only, matches name, symbol or chain.
   const [query, setQuery] = useState('');
-  const { vaultState, refreshBalances, refreshTokenBalances } = useWallet();
+  const { vaultState, refreshBalances, refreshTokenBalances, addresses } = useWallet();
+  // (3) A watch-only-only wallet has no vault, but it DOES have
+  // balances — refreshBalances reads the watched addresses — so the
+  // no-wallet empty state must not hide the list from it. The list
+  // below renders the watch balances (the rows are the watched
+  // addresses' own), with a banner saying so and pointing at
+  // /wallets.
+  const hasWatchOnly = Object.values(addresses ?? {}).some(
+    (list) => (list ?? []).length > 0,
+  );
+  const showNoWalletState = vaultState === 'no-vault' && !hasWatchOnly;
   // Lane J: the rows carry no per-row Retry (see asset-rows.tsx), so
   // this is the screen's one retry path — the same "Refresh balances"
   // the dashboard hero offers. It re-fetches natives and tokens.
@@ -135,7 +152,7 @@ export function AssetListScreen() {
       {/* P3-B (style B): the no-wallet state is a flat card — no hard
           offset shadow, no wobble. The shadow was the most cartoon
           element on this screen after the radius. */}
-      {vaultState === 'no-vault' ? (
+      {showNoWalletState ? (
         <div className="flex flex-wrap items-center gap-3 rounded-flat-lg border border-ink bg-paper p-4">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink">
             <BawaIcon name="wallet" className="size-6" />
@@ -157,6 +174,23 @@ export function AssetListScreen() {
         </div>
       ) : (
         <>
+      {/* (3) Watch-only-only: no vault, but watched balances to show.
+          The banner says what the list is — read-only watched
+          balances, not the user's own wallet — and points at
+          /wallets, where the watched addresses live. */}
+      {vaultState === 'no-vault' && hasWatchOnly ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-flat-lg border border-ink bg-paper p-4">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-flat-sm border border-ink bg-sun text-ink">
+            <BawaIcon name="eye" className="size-6" />
+          </span>
+          <p className="min-w-40 flex-1 text-base leading-6 font-medium text-ink">
+            Watch-only — showing balances for addresses you watch. They can’t send.
+          </p>
+          <Button type="button" variant="secondary" size="md" asChild>
+            <Link to="/wallets">Manage watched wallets</Link>
+          </Button>
+        </div>
+      ) : null}
       {/*
         Lane 2: the filter bar — the visible Filters panel is a
         feature, kept and restyled, never removed. Search first (the

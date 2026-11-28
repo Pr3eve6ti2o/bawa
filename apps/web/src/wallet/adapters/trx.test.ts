@@ -54,6 +54,13 @@ const TRONSCAN_ACCOUNT = {
   address: ADDRESS,
   trc20token_balances: [],
 };
+// PublicNode fallback fixture (2026-11-28): the live
+// /wallet/getaccount shape probed the same day — a funded account
+// answers { balance: <SUN>, address }, a never-funded one answers {}.
+const PUBLIC_NODE_ACCOUNT = {
+  balance: 987654321,
+  address: ADDRESS,
+};
 const TRONSCAN_TXS = {
   total: 3,
   rangeTotal: 3,
@@ -125,7 +132,12 @@ describe('trx adapter — balance', () => {
   });
 
   it('fails closed when getnowblock returns no block header', async () => {
-    mockFetchOnce({});
+    // Identity fails AND both fallbacks fail: the identity error is
+    // what surfaces. (The fallbacks run after an identity failure, so
+    // a bare mockFetchOnce({}) would let the PublicNode read answer {}
+    // — an exact zero for a never-funded account — and mask the
+    // identity failure.)
+    mockFetchRawSequence([okBody({}), http404(), http404()]);
     const adapter = createTronAdapter();
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
@@ -153,6 +165,7 @@ describe('trx adapter — retry (item 2)', () => {
     const fetchMock = mockFetchRawSequence([
       okBody(NOW_BLOCK),
       http404(),
+      http404(),
       okBody(TRONSCAN_ACCOUNT),
     ]);
     const adapter = createTronAdapter();
@@ -163,8 +176,8 @@ describe('trx adapter — retry (item 2)', () => {
       expect(result.source).toBe('tronscan');
     }
     // 1 identity + 1 balance attempt (the 404 was terminal, never
-    // retried) + 1 TronScan fallback read.
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // retried) + 1 PublicNode fallback read (404) + 1 TronScan fallback read.
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('reports the Trongrid error when TronScan also fails', async () => {
@@ -172,12 +185,13 @@ describe('trx adapter — retry (item 2)', () => {
       okBody(NOW_BLOCK),
       http404(),
       http404(),
+      http404(),
     ]);
     const adapter = createTronAdapter();
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
     if (result.status === 'error') expect(result.reason).toBe('HTTP 404');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -256,6 +270,7 @@ describe('trx adapter — TronScan fallback (Fix-All Lane A)', () => {
       http429(),
       http429(),
       http429(),
+      http404(),
       okBody(TRONSCAN_ACCOUNT),
     ]);
     const adapter = createTronAdapter();
@@ -265,8 +280,9 @@ describe('trx adapter — TronScan fallback (Fix-All Lane A)', () => {
       expect(result.data.valueBaseUnits).toBe('20032755932541');
       expect(result.source).toBe('tronscan');
     }
-    // 3 identity attempts (429 is retried, then gives up) + 1 TronScan read.
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    // 3 identity attempts (429 is retried, then gives up) + 1
+    // PublicNode fallback read (404) + 1 TronScan read.
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it('reads the balance from TronScan when the Trongrid balance 429s', async () => {
@@ -275,6 +291,7 @@ describe('trx adapter — TronScan fallback (Fix-All Lane A)', () => {
       http429(),
       http429(),
       http429(),
+      http404(),
       okBody(TRONSCAN_ACCOUNT),
     ]);
     const adapter = createTronAdapter();
@@ -284,7 +301,7 @@ describe('trx adapter — TronScan fallback (Fix-All Lane A)', () => {
       expect(result.data.valueBaseUnits).toBe('20032755932541');
       expect(result.source).toBe('tronscan');
     }
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it('reads history from TronScan when the Trongrid history 429s', async () => {
@@ -325,12 +342,13 @@ describe('trx adapter — TronScan fallback (Fix-All Lane A)', () => {
       okBody(NOW_BLOCK),
       http404(),
       okBody({ balance: 1, address: OTHER }),
+      okBody({ balance: 1, address: OTHER }),
     ]);
     const adapter = createTronAdapter();
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
     if (result.status === 'error') expect(result.reason).toBe('HTTP 404');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('never touches TronScan on the devnet adapter', async () => {
@@ -349,6 +367,94 @@ describe('trx adapter — TronScan fallback (Fix-All Lane A)', () => {
     expect(urls).toHaveLength(3);
     expect(urls.every((url) => url.includes('nile.trongrid.io'))).toBe(true);
     expect(urls.some((url) => url.includes('tronscanapi'))).toBe(false);
+    expect(urls.some((url) => url.includes('publicnode'))).toBe(false);
+  });
+});
+
+describe('trx adapter — PublicNode fallback (2026-11-28)', () => {
+  it('reads the balance from PublicNode when Trongrid identity 429s', async () => {
+    const fetchMock = mockFetchRawSequence([
+      http429(),
+      http429(),
+      http429(),
+      okBody(PUBLIC_NODE_ACCOUNT),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('987654321');
+      expect(result.source).toBe('publicnode');
+    }
+    // 3 identity attempts (429 is retried, then gives up) + 1
+    // PublicNode fallback read — TronScan is never reached.
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('reads the balance from PublicNode when the Trongrid balance 404s', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http404(),
+      okBody(PUBLIC_NODE_ACCOUNT),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('987654321');
+      expect(result.source).toBe('publicnode');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('reports an exact zero for a never-funded account (PublicNode {})', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http404(),
+      okBody({}),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('0');
+      expect(result.source).toBe('publicnode');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects a PublicNode balance for a different address and falls through to TronScan', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http404(),
+      okBody({ balance: 1, address: OTHER }),
+      okBody(TRONSCAN_ACCOUNT),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('20032755932541');
+      expect(result.source).toBe('tronscan');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('never reads a PublicNode error body as a balance', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http404(),
+      okBody({ Error: 'invalid address for field: protocol.Account.address' }),
+      okBody(TRONSCAN_ACCOUNT),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('20032755932541');
+      expect(result.source).toBe('tronscan');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });
 

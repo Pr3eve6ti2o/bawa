@@ -15,6 +15,7 @@ import { fiatValueForTokenBalance } from '../wallet/token-prices';
 import { shortenAddress } from '../wallet/address-detection';
 import { tokenKey } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
+import { Badge } from '../ui/components/badge';
 import { NumberTicker } from '../ui/components/number-ticker';
 import { AssetRows } from './asset-rows';
 import { FailedBalancesRetry } from './asset-list';
@@ -52,6 +53,7 @@ export function DashboardScreen() {
     vaultState,
     tokenBalances,
     vaultAddresses,
+    addresses,
     devnetEnabled,
   } = useWallet();
   const isLocked = vaultState === 'locked';
@@ -405,6 +407,33 @@ export function DashboardScreen() {
     return undefined;
   }, [vaultAddresses]);
 
+  // (3) Watch-only-only: no vault, but watched addresses exist. The
+  // dashboard's rows already read the watched addresses then; the
+  // fresh-zero note below stays off when any are present.
+  const hasWatchAddresses = useMemo(
+    () => Object.values(addresses ?? {}).some((list) => (list ?? []).length > 0),
+    [addresses],
+  );
+
+  // (3) Watch-only hero address: with no vault address in state —
+  // locked vault (derived addresses hidden) or no vault at all — the
+  // hero still copies an address when a watched one exists. Public
+  // data, like the vault address; labelled Watch-only where it
+  // renders, and never a send source (the Send screen never offers
+  // a watched address).
+  const watchAddress = useMemo(() => {
+    if (primaryAddress !== undefined) return undefined;
+    const watch = addresses ?? {};
+    for (const chain of availableFor('balance')) {
+      const first = watch[chain]?.[0]?.address;
+      if (typeof first === 'string' && first !== '') return first;
+    }
+    return undefined;
+  }, [addresses, primaryAddress]);
+  const heroAddress = primaryAddress ?? watchAddress;
+  const heroAddressIsWatchOnly =
+    primaryAddress === undefined && watchAddress !== undefined;
+
   // P0-A (Lane E M8): the button's own label flips to "Copied!" for 2 s
   // after a successful copy — no separate status line. A failed write
   // (e.g. a denied clipboard) flips to "Couldn't copy" for the same 2 s.
@@ -412,10 +441,10 @@ export function DashboardScreen() {
   const copyTimerRef = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(copyTimerRef.current), []);
   async function copyPrimaryAddress(): Promise<void> {
-    if (primaryAddress === undefined) return;
+    if (heroAddress === undefined) return;
     window.clearTimeout(copyTimerRef.current);
     try {
-      await navigator.clipboard.writeText(primaryAddress);
+      await navigator.clipboard.writeText(heroAddress);
       setCopyLabel('copied');
     } catch {
       setCopyLabel('failed');
@@ -456,11 +485,14 @@ export function DashboardScreen() {
             stops the digits jittering while the ticker counts; normal
             totals render exactly as before. */}
         <p className="break-words tabular-nums text-display-lg font-bold tracking-tight text-ink"><NumberTicker text={heroText} /></p>
-        {primaryAddress !== undefined && (
+        {heroAddress !== undefined && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="font-mono text-sm break-all text-ink" title={primaryAddress}>
-              {shortenAddress(primaryAddress)}
+            <span className="font-mono text-sm break-all text-ink" title={heroAddress}>
+              {shortenAddress(heroAddress)}
             </span>
+            {heroAddressIsWatchOnly ? (
+              <Badge size="sm" className="whitespace-nowrap" aria-label="Watch-only">Watch-only</Badge>
+            ) : null}
             <Button
               type="button"
               variant="secondary"
@@ -489,7 +521,15 @@ export function DashboardScreen() {
         {hero.quietNote && (
           <p className="text-xs leading-4 text-panel-text-muted">Some balances couldn&apos;t be checked.</p>
         )}
-        {hero.freshZeroNote && (
+        {/* (3) The fresh-zero note is the HD wallet's empty state. It
+            must not say "Nothing here yet" while watched balances
+            sit below it — with watch addresses present the dashboard
+            is not empty, so the note (and its Receive CTA) stays off
+            and the Watch-only section speaks for itself. The
+            watch-only-only state never mounts this screen at all
+            (Home renders Welcome there — app.tsx), so no
+            watch-only-only copy belongs here. */}
+        {hero.freshZeroNote && !hasWatchAddresses && (
           <div className="space-y-2">
             <p className="text-xs leading-4 text-panel-text-muted">Nothing here yet.</p>
             <Button type="button" variant="secondary" size="sm" asChild>
@@ -570,7 +610,7 @@ export function DashboardScreen() {
             dashed, per the Lane T button system. */}
         <button
           type="button"
-          disabled={primaryAddress === undefined}
+          disabled={heroAddress === undefined}
           aria-live="polite"
           onClick={() => void copyPrimaryAddress()}
           className="flex cursor-pointer flex-col items-center gap-2 rounded-flat-sm border border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun disabled:cursor-not-allowed disabled:opacity-40"

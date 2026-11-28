@@ -36,8 +36,24 @@ const BASE_URL = 'https://api.trongrid.io';
 // SUN agrees exactly with Trongrid and with PublicNode's
 // /wallet/getaccount the same minute. Mainnet only — the devnet
 // adapter (networkId 'tron:nile') never reads mainnet TronScan.
+// 2026-11-28 update: TronScan sends no Access-Control-Allow-Origin
+// header, so the browser blocks it — since then it is the SECOND
+// balance fallback, after PublicNode's POST /wallet/getaccount (see
+// PUBLIC_NODE_BASE_URL below), which is CORS-open.
 const TRONSCAN_BASE_URL = 'https://apilist.tronscanapi.com';
 const TRONSCAN_SOURCE = 'tronscan';
+// PublicNode full-node fallback (2026-11-28, probed live): the
+// registry's second endpoint is a real TRON full node, and unlike
+// Trongrid's keyless tier it answers POST /wallet/getaccount without
+// a key — 200 with { balance: <SUN> } for a funded account, {} for a
+// never-funded one — and it sends `access-control-allow-origin: *`
+// with a 204 preflight, so the browser POST passes CORS. Trongrid
+// 429s the shared egress IP ("request credit rate exceeded") and
+// TronScan sends no ACAO header at all, so both older paths are dead
+// in the browser exactly when they are needed. Full-node API, same
+// shape as Trongrid's /wallet/* paths.
+const PUBLIC_NODE_BASE_URL = 'https://tron-rpc.publicnode.com';
+const PUBLIC_NODE_SOURCE = 'publicnode';
 const DECIMALS = 6;
 interface TronAdapterOverrides {
   baseUrl?: string;
@@ -53,6 +69,11 @@ interface TronAdapterOverrides {
   transport?: FetchTransport;
   /** TronScan base URL (balance/history fallback). */
   tronScanBaseUrl?: string;
+  /**
+   * Full-node base URL for the PublicNode balance fallback (POST
+   * /wallet/getaccount). Defaults to the registry's second endpoint.
+   */
+  fullNodeBaseUrl?: string;
   /**
    * Devnet overrides (temporary devnet mode): the network id, the
    * explorer base, and the devnet broadcast. Unset, the adapter is
@@ -71,6 +92,24 @@ function readWithRetry(
   operation: string,
 ): Promise<unknown> {
   return withRetry(() => transport.request(url), { operation });
+}
+
+/** One bounded-retry POST through the given transport (PublicNode full-node read). */
+function postWithRetry(
+  transport: FetchTransport,
+  url: string,
+  body: unknown,
+  operation: string,
+): Promise<unknown> {
+  return withRetry(
+    () =>
+      transport.request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    { operation },
+  );
 }
 
 
@@ -128,14 +167,79 @@ export function createTronAdapter(
   // full node (tron-rpc.publicnode.com). It answers the /wallet/*
   // full-node paths (identity, fee) but not Trongrid's /v1/* REST
   // paths — a /v1 sweep that reaches it 404s fast (404 is not
-  // retried) and the TronScan fallback below owns balance/history.
-  // Verified live 2026-11-24: Trongrid /wallet/getaccount 429d the
-  // same minute PublicNode returned the same balance, 20032755932541.
+  // retried) and the PublicNode/TronScan fallbacks below own the
+  // balance then (PublicNode POST /wallet/getaccount first — it is
+  // the same full node the sweep just 404d on, but on its native
+  // path). Verified live 2026-11-24: Trongrid /wallet/getaccount
+  // 429d the same minute PublicNode returned the same balance,
+  // 20032755932541.
   // TronScan fallback (Fix-All Lane A): mainnet only, different API
   // shape from Trongrid, so it lives outside the base-URL sweep — the
   // same split the TON adapter uses for TonAPI.
   const tronScanBaseUrl = overrides.tronScanBaseUrl ?? TRONSCAN_BASE_URL;
+  // PublicNode fallback (2026-11-28): the full-node base for the POST
+  // /wallet/getaccount balance read. Mainnet only, like TronScan.
+  const fullNodeBaseUrl = overrides.fullNodeBaseUrl ?? PUBLIC_NODE_BASE_URL;
   const tronScanEnabled = networkId === NETWORK_ID;
+
+  /** Parse a PublicNode /wallet/getaccount response into SUN, or null. */
+  const parsePublicNodeBalance = (raw: unknown, address: string): string | null => {
+    if (!isRecord(raw)) return null;
+    // A full-node error answers HTTP 200 with an `Error` field (an
+    // invalid address, for example) — never read that as a balance.
+    if (typeof raw['Error'] === 'string') return null;
+    const returned = raw['address'];
+    if (typeof returned === 'string' && returned !== address) return null;
+    // A never-funded account answers `{}` — no balance field at all.
+    // That is an exact zero, the same rule as Trongrid's empty data list.
+    const balance = raw['balance'];
+    if (balance === undefined) return '0';
+    if (
+      typeof balance !== 'number' ||
+      !Number.isFinite(balance) ||
+      balance < 0
+    ) {
+      return null;
+    }
+    return String(Math.trunc(balance));
+  };
+
+  const getPublicNodeBalance = async (
+    address: string,
+  ): Promise<AdapterResult<AdapterBalance>> => {
+    let raw: unknown;
+    try {
+      raw = await postWithRetry(
+        transport,
+        `${fullNodeBaseUrl}/wallet/getaccount`,
+        { address, visible: true },
+        'trx.getBalance.publicnode',
+      );
+    } catch (error: unknown) {
+      return toAdapterError(error);
+    }
+    const balance = parsePublicNodeBalance(raw, address);
+    if (balance === null) {
+      return {
+        status: 'error',
+        reason: 'Invalid response: expected a PublicNode account balance',
+      };
+    }
+    return {
+      status: 'ok',
+      data: {
+        chain: 'trx',
+        address,
+        networkId,
+        valueBaseUnits: balance,
+        decimals: DECIMALS,
+        source: PUBLIC_NODE_SOURCE,
+        fetchedAt: Date.now(),
+      },
+      source: PUBLIC_NODE_SOURCE,
+      fetchedAt: Date.now(),
+    };
+  };
 
   /** Parse a TronScan /api/account response into SUN, or null. */
   const parseTronScanBalance = (raw: unknown, address: string): string | null => {
@@ -187,6 +291,23 @@ export function createTronAdapter(
       source: TRONSCAN_SOURCE,
       fetchedAt: Date.now(),
     };
+  };
+
+  /**
+   * Balance fallbacks, in order: PublicNode's full-node POST first
+   * (keyless, CORS-open, authoritative), TronScan second (CORS-blocked
+   * in browsers — kept for non-browser contexts). Returns the first
+   * success, or null when neither answered, so the caller keeps its
+   * primary error.
+   */
+  const getFallbackBalance = async (
+    address: string,
+  ): Promise<AdapterResult<AdapterBalance> | null> => {
+    const publicNode = await getPublicNodeBalance(address);
+    if (publicNode.status === 'ok') return publicNode;
+    const tronScan = await getTronScanBalance(address);
+    if (tronScan.status === 'ok') return tronScan;
+    return null;
   };
 
   /** Parse TronScan /api/transaction entries: native transfers only. */
@@ -326,19 +447,19 @@ export function createTronAdapter(
     const blocked = await checkAddress(address);
     if (blocked) {
       // Identity failure (Trongrid 429 on the shared egress IP) falls
-      // back to TronScan on mainnet (Fix-All Lane A); an invalid
-      // address never falls back.
+      // back to the PublicNode/TronScan fallbacks on mainnet
+      // (Fix-All Lane A); an invalid address never falls back.
       if (!tronScanEnabled || !isTronAddress(address)) return blocked;
-      const fallback = await getTronScanBalance(address);
-      return fallback.status === 'ok' ? fallback : blocked;
+      const fallback = await getFallbackBalance(address);
+      return fallback ?? blocked;
     }
     const read = await tryRead(() =>
       readJsonFrom((base) => `${base}/v1/accounts/${address}`, 'trx.getBalance'),
     );
     if ('status' in read) {
       if (!tronScanEnabled) return read;
-      const fallback = await getTronScanBalance(address);
-      return fallback.status === 'ok' ? fallback : read;
+      const fallback = await getFallbackBalance(address);
+      return fallback ?? read;
     }
     const { raw, endpoint } = read;
     const data = dataList(raw);
@@ -346,10 +467,8 @@ export function createTronAdapter(
       if (!tronScanEnabled) {
         return { status: 'error', reason: 'Invalid response: expected an account list' };
       }
-      const fallback = await getTronScanBalance(address);
-      return fallback.status === 'ok'
-        ? fallback
-        : { status: 'error', reason: 'Invalid response: expected an account list' };
+      const fallback = await getFallbackBalance(address);
+      return fallback ?? { status: 'error', reason: 'Invalid response: expected an account list' };
     }
     const first = data[0];
     // An account that was never funded has no data entry: exact zero.

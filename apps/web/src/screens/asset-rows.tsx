@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { useWallet } from '../state/wallet-context';
+import { ensureAdapters, useWallet } from '../state/wallet-context';
 import type { BalanceState } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
+import { shortenAddress } from '../wallet/address-detection';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { fiatValueForBalance, formatChangePct, isFreshQuote, quoteFreshnessLabel, unitPriceForChain } from '../wallet/prices';
 import type {
@@ -117,6 +118,12 @@ type AssetRowModel =
       logoIconUrl?: string | null;
       /** Lane A: may the bundled symbol logo be shown (defaults only). */
       logoAllowSymbol?: boolean;
+      /**
+       * (3) Watch-only row: this row is a watched address's balance,
+       * not the HD wallet's. It is labelled Watch-only and never
+       * rendered as a link, so it can never offer Send.
+       */
+      watchOnly?: boolean;
     }
   | {
       kind: 'unavailable';
@@ -138,6 +145,8 @@ type AssetRowModel =
       logoAllowSymbol?: boolean;
       /** Token gaps, item 2: official token — show the VERIFIED tick. */
       verified?: boolean;
+      /** (3) Watch-only row (see the loading variant). */
+      watchOnly?: boolean;
     }
   | {
       kind: 'ready';
@@ -162,6 +171,8 @@ type AssetRowModel =
       logoAllowSymbol?: boolean;
       /** Token gaps, item 2: official token — show the VERIFIED tick. */
       verified?: boolean;
+      /** (3) Watch-only row (see the loading variant). */
+      watchOnly?: boolean;
     };
 
 function RowLogo({ model }: { model: AssetRowModel }) {
@@ -306,15 +317,31 @@ function getNativeRowModel(
   nowMs: number,
   pricesLoading: boolean | undefined,
   devnet = false,
+  // (3) A watched address's own row: its balance is fetched directly
+  // (see the watch section in AssetRows) because refreshBalances is
+  // vault-shadowed — balances[chain] is the HD wallet's while a vault
+  // exists. The watch row keeps the same price + 24 h change as the
+  // HD row, is labelled Watch-only, and is never linked (see ListRow
+  // / TableRow), so it can never offer Send.
+  watch?: { address: string; balance: BalanceState },
 ): AssetRowModel {
   const { balances } = wallet;
   const config = chainConfig(chain);
   // Lane G: no wallet for this chain — a balance that can never be
   // fetched renders as zero, never as "Balance unavailable" + Retry.
-  const rawBalance: BalanceState = balances[chain];
-  const balance: BalanceState = noWalletForChain(wallet, chain)
-    ? noWalletBalance(rawBalance)
-    : rawBalance;
+  // (5a) A chain missing from the balances map entirely renders as
+  // loading, never throws: one missing entry must not take the whole
+  // list down through the app error boundary.
+  const rawBalance: BalanceState =
+    watch !== undefined
+      ? watch.balance
+      : (balances[chain] ?? { status: 'loading' });
+  const balance: BalanceState =
+    watch !== undefined
+      ? rawBalance
+      : noWalletForChain(wallet, chain)
+        ? noWalletBalance(rawBalance)
+        : rawBalance;
   const entry: PriceEntry | undefined = prices?.[chain];
   const unit = unitPriceForChain(entry, nowMs);
   // While the first fetch is still in flight, idle entries read as
@@ -324,36 +351,50 @@ function getNativeRowModel(
     pricesLoading === true && unit.kind === 'unavailable'
       ? { kind: 'missing' }
       : unit;
-  const link = `/assets/${chain}`;
+  // A watch row is never a link: it points at /wallets (the section
+  // header links there), and ListRow / TableRow never wrap it in one.
+  const link = watch !== undefined ? '/wallets' : `/assets/${chain}`;
   // P0-A: the 24 h movement for this row, computed once — the ready
   // detail line and the price cells share it.
   const change24h = change24hForEntry(entry, nowMs);
+  // (3) The watch label carries the watched address, so a row never
+  // reads as the HD wallet's. The subtitle is the row's own line for
+  // tokens and for watch rows (see ListRow's subline rule).
+  const subtitle =
+    watch !== undefined
+      ? `Watch-only · ${shortenAddress(watch.address)}`
+      : config.symbol;
+  const searchText =
+    watch !== undefined
+      ? `${config.displayName} ${config.symbol} ${chain} watch-only ${watch.address}`
+      : `${config.displayName} ${config.symbol} ${chain}`;
 
   if (balance.status === 'loading') {
     return {
       kind: 'loading',
-      key: chain,
+      key: watch !== undefined ? `watch:${chain}` : chain,
       title: config.displayName,
-      subtitle: config.symbol,
+      subtitle,
       // Lane 4 (UX-major, data): a row still loading is searchable
       // too — the chain id is in the search text from the start.
-      searchText: `${config.displayName} ${config.symbol} ${chain}`,
+      searchText,
       link,
       isToken: false,
       logoChain: chain,
       logoSymbol: config.symbol,
+      ...(watch !== undefined ? { watchOnly: true as const } : {}),
     };
   }
 
   if (balance.status === 'unavailable' || balance.status === 'error') {
     return {
       kind: 'unavailable',
-      key: chain,
+      key: watch !== undefined ? `watch:${chain}` : chain,
       title: config.displayName,
-      subtitle: config.symbol,
+      subtitle,
       // Lane 4 (UX-major, data): search matches the chain id too —
       // typing "btc" finds Bitcoin even though the id is not shown.
-      searchText: `${config.displayName} ${config.symbol} ${chain}`,
+      searchText,
       symbol: config.symbol,
       statusText:
         balance.status === 'unavailable'
@@ -365,6 +406,7 @@ function getNativeRowModel(
       isToken: false,
       logoChain: chain,
       logoSymbol: config.symbol,
+      ...(watch !== undefined ? { watchOnly: true as const } : {}),
     };
   }
 
@@ -397,10 +439,10 @@ function getNativeRowModel(
 
   return {
     kind: 'ready',
-    key: chain,
+    key: watch !== undefined ? `watch:${chain}` : chain,
     title: config.displayName,
-    subtitle: config.symbol,
-    searchText: `${config.displayName} ${config.symbol} ${chain}`,
+    subtitle,
+    searchText,
     symbol: config.symbol,
     balanceStatus: balance.status,
     // P0-A (double-zero): the amount is always the figure — "0 BTC"
@@ -415,6 +457,7 @@ function getNativeRowModel(
     isToken: false,
     logoChain: chain,
     logoSymbol: config.symbol,
+    ...(watch !== undefined ? { watchOnly: true as const } : {}),
   };
 }
 
@@ -568,6 +611,11 @@ function ListRow({ model }: { model: AssetRowModel }) {
         <span className="min-w-0 flex-1">
           <span className="block text-base font-bold text-foreground">
             {model.title}
+            {/* (3) A watch-only row is labelled on every state — a
+                failed watched balance must still read as watched. */}
+            {model.watchOnly === true ? (
+              <Badge size="sm" className="ml-2 whitespace-nowrap" aria-label="Watch-only">Watch-only</Badge>
+            ) : null}
             {/* Lane 4: the tick never splits from its label — "✓" on
                 one line and "Verified" on the next was the cramped
                 mobile row the owner saw. Lane 1: the verified mark
@@ -606,26 +654,39 @@ function ListRow({ model }: { model: AssetRowModel }) {
     );
   }
 
+  // (3) A watch-only row is never a link: the asset detail page
+  // offers Send, and a watched address can never send. The row
+  // renders the same AssetRow, unlinked, with its watch label as
+  // the subline.
+  const inner = (
+    <AssetRow
+      avatar={<RowLogo model={model} />}
+      symbol={model.title}
+      amount={model.amount}
+      {...(model.valueText === undefined ? {} : { value: model.valueText })}
+      detail={model.detail}
+      {...(model.change24h === undefined ? {} : { change24h: model.change24h })}
+      {...(model.isToken ? { verified: model.verified === true } : {})}
+      // Lane X (Lane D #49): no "Zero balance" subline — the
+      // amount ("0 BTC") + $0.00 already say it. A token row
+      // keeps its contract subtitle here (the copycat check), so
+      // its zero state reads from the "0 USDC" amount + $0.00.
+      // A watch row keeps its watch label here for the same reason:
+      // the label must survive on the row itself, not only in the
+      // section header above it.
+      subline={model.isToken || model.watchOnly === true ? model.subtitle : undefined}
+    />
+  );
+  if (model.watchOnly === true) {
+    return <li>{inner}</li>;
+  }
   return (
     <li>
       <Link
         to={model.link}
         className="block"
       >
-        <AssetRow
-          avatar={<RowLogo model={model} />}
-          symbol={model.title}
-          amount={model.amount}
-          {...(model.valueText === undefined ? {} : { value: model.valueText })}
-          detail={model.detail}
-          {...(model.change24h === undefined ? {} : { change24h: model.change24h })}
-          {...(model.isToken ? { verified: model.verified === true } : {})}
-          // Lane X (Lane D #49): no "Zero balance" subline — the
-          // amount ("0 BTC") + $0.00 already say it. A token row
-          // keeps its contract subtitle here (the copycat check), so
-          // its zero state reads from the "0 USDC" amount + $0.00.
-          subline={model.isToken ? model.subtitle : undefined}
-        />
+        {inner}
       </Link>
     </li>
   );
@@ -687,6 +748,10 @@ function TableRow({ model, hideValue }: { model: AssetRowModel; hideValue?: bool
                   and hide the rest of the name. */}
               <span className="block text-base font-bold text-foreground">
                 {model.title}
+                {/* (3) A watch-only row is labelled on every state. */}
+                {model.watchOnly === true ? (
+                  <Badge size="sm" className="ml-2 whitespace-nowrap" aria-label="Watch-only">Watch-only</Badge>
+                ) : null}
                 {/* Lane 1: the wide table's failed row had no mark at
                     all — the list variant already showed it. Merge: the
                     tick never splits from its label, as on the other
@@ -730,53 +795,65 @@ function TableRow({ model, hideValue }: { model: AssetRowModel; hideValue?: bool
   // "per BTC" appeared in two columns on every row.
   const valueText = model.valueText;
 
+  // (3) A watch-only row is never a link (see ListRow): the asset
+  // detail page offers Send, and a watched address can never send.
+  const inner = (
+    <div className={hideValue === true ? TABLE_GRID_NO_VALUE : TABLE_GRID}>
+      <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
+        <RowLogo model={model} />
+        <span className="min-w-0">
+          {/* Lane 4: the name wraps instead of truncating — the
+              narrow table used to ellipsise chain names ("Ethere…")
+              and hide the rest of the name. */}
+          <span className="block text-base font-bold text-foreground">
+            {model.title}
+            {/* (3) A watch-only row is labelled on every state. */}
+            {model.watchOnly === true ? (
+              <Badge size="sm" className="ml-2 whitespace-nowrap" aria-label="Watch-only">Watch-only</Badge>
+            ) : null}
+            {/* Lane 4: the tick never splits from its label (see
+                the list row above). Lane 1: an unverified token
+                reads "Unverified" instead of silence. */}
+            {model.verified === true ? (
+              <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
+            ) : model.verified === false ? (
+              <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
+            ) : null}
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            {model.subtitle}
+          </span>
+        </span>
+      </span>
+      <span className="col-start-1 row-start-2 truncate text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:text-right @md:text-base @md:font-semibold @md:text-foreground">
+        {model.balanceStatus === 'zero' ? `0 ${model.symbol}` : model.amount}
+      </span>
+      <span className="col-start-2 row-start-2 text-right @md:col-start-auto @md:row-start-auto">
+        <TablePriceCell price={model.price} change={model.change24h} />
+      </span>
+      {hideValue === true ? null : (
+        <span className="col-start-2 row-start-1 min-w-0 text-right @md:col-start-auto @md:row-start-auto">
+          {valueText === undefined ? (
+            <span className="text-base font-semibold text-muted-foreground">—</span>
+          ) : (
+            <span className="text-base font-bold text-foreground">
+              {valueText}
+            </span>
+          )}
+        </span>
+      )}
+    </div>
+  );
+  if (model.watchOnly === true) {
+    return <li>{inner}</li>;
+  }
   return (
     <li>
       <Link
         to={model.link}
         className="block"
       >
-        <div className={hideValue === true ? TABLE_GRID_NO_VALUE : TABLE_GRID}>
-          <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
-            <RowLogo model={model} />
-            <span className="min-w-0">
-              {/* Lane 4: the name wraps instead of truncating — the
-                  narrow table used to ellipsise chain names ("Ethere…")
-                  and hide the rest of the name. */}
-              <span className="block text-base font-bold text-foreground">
-                {model.title}
-                {/* Lane 4: the tick never splits from its label (see
-                    the list row above). Lane 1: an unverified token
-                    reads "Unverified" instead of silence. */}
-                {model.verified === true ? (
-                  <Badge size="sm" className="ml-2 whitespace-nowrap" icon={<BawaIcon name="check" aria-hidden="true" />} aria-label="Verified token">Verified</Badge>
-                ) : model.verified === false ? (
-                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Unverified token">Unverified</span>
-                ) : null}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {model.subtitle}
-              </span>
-            </span>
-          </span>
-          <span className="col-start-1 row-start-2 truncate text-sm text-muted-foreground @md:col-start-auto @md:row-start-auto @md:text-right @md:text-base @md:font-semibold @md:text-foreground">
-            {model.balanceStatus === 'zero' ? `0 ${model.symbol}` : model.amount}
-          </span>
-          <span className="col-start-2 row-start-2 text-right @md:col-start-auto @md:row-start-auto">
-            <TablePriceCell price={model.price} change={model.change24h} />
-          </span>
-          {hideValue === true ? null : (
-            <span className="col-start-2 row-start-1 min-w-0 text-right @md:col-start-auto @md:row-start-auto">
-              {valueText === undefined ? (
-                <span className="text-base font-semibold text-muted-foreground">—</span>
-              ) : (
-                <span className="text-base font-bold text-foreground">
-                  {valueText}
-                </span>
-              )}
-            </span>
-          )}
-        </div>
+        {inner}
       </Link>
     </li>
   );
@@ -871,6 +948,16 @@ interface AssetRowsProps {
  * `variant={isWideLayout ? 'table' : 'list'}`): a four-column
  * Asset | Balance | Price | Value table that collapses back to the
  * list shape on a narrow container, via container queries.
+ *
+ * Watch-only (3): below the main list, one section per watched
+ * address set — the funded, failed and loading rows for chains whose
+ * watched address differs from the vault's. The balances are fetched
+ * directly per chain (refreshBalances is vault-shadowed), each row is
+ * labelled Watch-only, and no watch row is ever a link, so it can
+ * never offer Send. Zero watch balances collapse into one count
+ * line; /wallets holds the full list. In the watch-only-only state
+ * (no vault) this section is empty — the main rows already are the
+ * watch balances there.
  */
 export function AssetRows({
   hideZero,
@@ -919,6 +1006,121 @@ export function AssetRows({
     void refreshTokenBalances();
   }, [refreshTokenBalances, addressesKey]);
 
+  // (3) Watch-only balances: refreshBalances is vault-shadowed —
+  // while a vault exists, balances[chain] is the HD wallet's, so a
+  // watched address's balances never reach the main rows (Lane E
+  // §3a). The chains below are the ones with a vault address AND a
+  // watched address that differs from it. The vault-address
+  // requirement is the point: in the watch-only-only state (no
+  // vault) the main rows already ARE the watch balances, because
+  // refreshBalances reads the watched addresses when there is no
+  // vault address — so the list is empty there and the section can
+  // never duplicate the main list. Devnet has no watch-only mode,
+  // so the section stays off there.
+  const watchedChains = useMemo(() => {
+    if (wallet.devnetEnabled === true) return [] as Array<{ chain: ChainId; address: string }>;
+    const vault = wallet.vaultAddresses ?? {};
+    const watch = wallet.addresses ?? {};
+    const list: Array<{ chain: ChainId; address: string }> = [];
+    for (const chain of availableFor('balance')) {
+      if (enabledChains !== undefined && !enabledChains.includes(chain)) continue;
+      const watchAddress = watch[chain]?.[0]?.address;
+      if (typeof watchAddress !== 'string' || watchAddress === '') continue;
+      const vaultAddress = vault[chain]?.[0];
+      if (typeof vaultAddress !== 'string' || vaultAddress === '') continue;
+      if (vaultAddress === watchAddress) continue;
+      list.push({ chain, address: watchAddress });
+    }
+    return list;
+  }, [enabledChains, wallet.addresses, wallet.devnetEnabled, wallet.vaultAddresses]);
+
+  // (3) The watched balances, fetched directly per chain (same
+  // adapter, same retry shape as the Wallets screen's
+  // WatchOnlyBalance): the context's refreshBalances cannot serve
+  // them while a vault exists. Fetch-on-mount and on watched-set /
+  // retry; a failed row keeps its honest error state (5a), and the
+  // section's Retry re-runs the fetch with the adapters' own
+  // backoff. The adapter chunk loads lazily here, as everywhere
+  // else — no watch addresses means no fetch and no chunk load.
+  const [watchAttempt, setWatchAttempt] = useState(0);
+  const [watchBalances, setWatchBalances] = useState<Record<string, BalanceState>>({});
+  useEffect(() => {
+    if (watchedChains.length === 0) {
+      setWatchBalances({});
+      return;
+    }
+    let cancelled = false;
+    setWatchBalances(() => {
+      const next: Record<string, BalanceState> = {};
+      for (const { chain } of watchedChains) next[chain] = { status: 'loading' };
+      return next;
+    });
+    void (async () => {
+      // Older mocked contexts have no ensureAdapters (the
+      // asset-list tests mock wallet-context with useWallet only):
+      // without it the rows report unavailable instead of throwing.
+      if (typeof ensureAdapters !== 'function') {
+        if (!cancelled) {
+          setWatchBalances(() => {
+            const next: Record<string, BalanceState> = {};
+            for (const { chain } of watchedChains) {
+              next[chain] = { status: 'unavailable', reason: 'no-adapter' };
+            }
+            return next;
+          });
+        }
+        return;
+      }
+      let adapters: Awaited<ReturnType<typeof ensureAdapters>>;
+      try {
+        adapters = await ensureAdapters();
+      } catch {
+        if (cancelled) return;
+        setWatchBalances(() => {
+          const next: Record<string, BalanceState> = {};
+          for (const { chain } of watchedChains) {
+            next[chain] = { status: 'error', reason: 'Balance adapters could not be loaded.' };
+          }
+          return next;
+        });
+        return;
+      }
+      const results = await Promise.all(
+        watchedChains.map(async ({ chain, address }) => {
+          const adapter = adapters.getAdapter(chain);
+          if (adapter === undefined) {
+            return { chain, state: { status: 'unavailable', reason: 'no-adapter' } as BalanceState };
+          }
+          let result: Awaited<ReturnType<typeof adapter.getBalance>>;
+          try {
+            result = await adapter.getBalance(address);
+          } catch {
+            return { chain, state: { status: 'error', reason: 'Could not load balance.' } as BalanceState };
+          }
+          if (result.status !== 'ok') {
+            return { chain, state: { status: 'error', reason: result.reason } as BalanceState };
+          }
+          const fetchedAtMs = Date.now();
+          return {
+            chain,
+            state: (result.data.valueBaseUnits === '0'
+              ? { status: 'zero', value: '0', fetchedAtMs }
+              : { status: 'available', value: result.data.valueBaseUnits, fetchedAtMs }) as BalanceState,
+          };
+        }),
+      );
+      if (cancelled) return;
+      setWatchBalances(() => {
+        const next: Record<string, BalanceState> = {};
+        for (const { chain, state } of results) next[chain] = state;
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [watchedChains, watchAttempt]);
+
   if (chains.length === 0 && tokens.length === 0) {
     return <p className="p-4 text-sm text-muted-foreground">Balances aren't available yet.</p>;
   }
@@ -954,6 +1156,32 @@ export function AssetRows({
         .includes(normalizedQuery),
     );
   }
+  // (3) The watch rows: same prices + 24 h change as the HD rows,
+  // built from the directly fetched watch balances. Zero watch
+  // balances collapse into one count line (an EVM watch import fans
+  // out to 59 chains): the section lists funded, failed and loading
+  // rows only. The same search query filters both lists.
+  const watchModels: AssetRowModel[] = watchedChains.map(({ chain, address }) =>
+    getNativeRowModel(
+      chain,
+      wallet,
+      prices,
+      nowMs,
+      pricesLoading,
+      devnet,
+      { address, balance: watchBalances[chain] ?? { status: 'loading' } },
+    ),
+  );
+  let watchFiltered = watchModels;
+  if (normalizedQuery !== '') {
+    watchFiltered = watchFiltered.filter((model) =>
+      (model.searchText ?? `${model.title} ${model.subtitle}`)
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }
+  const watchZeroCount = watchFiltered.filter(isZeroBalance).length;
+  const watchVisible = watchFiltered.filter((model) => !isZeroBalance(model));
   // Lane X (Lane D #49): hide the Value column while every visible
   // row is worth $0.00 — the column adds nothing then.
   const allZeroValue =
@@ -972,7 +1200,94 @@ export function AssetRows({
       </p>
     ) : null;
 
-  if (visible.length === 0) {
+  // (3) The watch-only section: labelled, never linked, with its own
+  // retry for failed rows (5a) and a pointer at /wallets for the full
+  // list. Under an active search with no watch match it stays hidden
+  // — the no-match empty state owns that screen instead.
+  const watchFailedCount = watchVisible.filter(
+    (model) => model.kind === 'unavailable',
+  ).length;
+  const watchLoading = watchVisible.some((model) => model.kind === 'loading');
+  const watchAllZeroValue =
+    watchVisible.length > 0 &&
+    watchVisible.every(
+      (model) => model.kind === 'ready' && model.valueText === '$0.00',
+    );
+  const watchSection =
+    watchedChains.length === 0 ||
+    (normalizedQuery !== '' && watchFiltered.length === 0) ? null : (
+      <section aria-label="Watch-only balances" className="mt-6">
+        <div className="flex flex-wrap items-center gap-2 px-4">
+          <h3 className="text-base font-semibold text-ink">Watch-only</h3>
+        </div>
+        <p className="px-4 pt-1 text-sm text-muted-foreground">
+          Balances for addresses you watch. Watch-only wallets can’t send — manage them in{' '}
+          <Link to="/wallets" className="font-semibold underline underline-offset-4">
+            Wallets
+          </Link>
+          .
+        </p>
+        {watchFailedCount > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 px-4 pt-2" role="status">
+            <p className="text-base text-ink">
+              {watchFailedCount === 1
+                ? '1 watched balance failed'
+                : `${watchFailedCount} watched balances failed`}
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={watchLoading}
+              onClick={() => setWatchAttempt((count) => count + 1)}
+            >
+              {watchLoading ? 'Retrying…' : 'Retry'}
+            </Button>
+          </div>
+        ) : null}
+        {watchVisible.length > 0 ? (
+          variant === 'table' ? (
+            <div className="@container">
+              <ul className="divide-y divide-border">
+                {watchVisible.map((model) => (
+                  <TableRow key={model.key} model={model} hideValue={watchAllZeroValue} />
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {watchVisible.map((model) => (
+                <ListRow key={model.key} model={model} />
+              ))}
+            </ul>
+          )
+        ) : (
+          <p className="px-4 pt-2 text-sm text-muted-foreground">
+            No funded watched balances yet.
+          </p>
+        )}
+        {watchZeroCount > 0 ? (
+          <p className="px-4 pt-2 text-xs text-muted-foreground">
+            {`${watchZeroCount} watched chain${watchZeroCount === 1 ? '' : 's'} at zero — see Wallets for the full list.`}
+          </p>
+        ) : null}
+      </section>
+    );
+
+  // The hide-zero empty state, shared by the early return below and
+  // the variant returns: when the main list is empty but funded watch
+  // rows exist, the screen shows this note above the watch section
+  // instead of the empty state alone.
+  const hideZeroEmpty = (
+    <div className="space-y-2 p-4">
+      <p className="text-sm text-muted-foreground">No non-zero balances</p>
+      <Button type="button" variant="secondary" onClick={() => onShowAll?.()}>
+        Show all
+      </Button>
+    </div>
+  );
+
+  if (visible.length === 0 && watchFiltered.length === 0) {
     if (normalizedQuery !== '') {
       return (
         <div className="space-y-2 p-4">
@@ -986,14 +1301,7 @@ export function AssetRows({
       );
     }
     if (hideZero) {
-      return (
-        <div className="space-y-2 p-4">
-          <p className="text-sm text-muted-foreground">No non-zero balances</p>
-          <Button type="button" variant="secondary" onClick={() => onShowAll?.()}>
-            Show all
-          </Button>
-        </div>
-      );
+      return hideZeroEmpty;
     }
 
     return (
@@ -1038,25 +1346,29 @@ export function AssetRows({
             </details>
           </div>
         ) : null}
-        <div
-          aria-hidden="true"
-          className={
-            allZeroValue
-              ? 'hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)]'
-              : 'hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]'
-          }
-        >
-          <span>Asset</span>
-          <span className="text-right">Balance</span>
-          <span className="text-right">Price</span>
-          {allZeroValue ? null : <span className="text-right">Value</span>}
-        </div>
+        {visible.length === 0 && normalizedQuery === '' ? hideZeroEmpty : null}
+        {visible.length === 0 ? null : (
+          <div
+            aria-hidden="true"
+            className={
+              allZeroValue
+                ? 'hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)]'
+                : 'hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]'
+            }
+          >
+            <span>Asset</span>
+            <span className="text-right">Balance</span>
+            <span className="text-right">Price</span>
+            {allZeroValue ? null : <span className="text-right">Value</span>}
+          </div>
+        )}
         <ul className="divide-y divide-border">
           {visible.map((model) => (
             <TableRow key={model.key} model={model} hideValue={allZeroValue} />
           ))}
         </ul>
         </div>
+        {watchSection}
       </>
     );
   }
@@ -1074,11 +1386,13 @@ export function AssetRows({
           </details>
         </div>
       ) : null}
+      {visible.length === 0 && normalizedQuery === '' ? hideZeroEmpty : null}
       <ul className="divide-y divide-border">
         {visible.map((model) => (
           <ListRow key={model.key} model={model} />
         ))}
       </ul>
+      {watchSection}
     </>
   );
 }
