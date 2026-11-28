@@ -158,6 +158,8 @@ The five blocked chains — BNB Smart Chain, Gnosis, opBNB, Metis, Fantom — we
 **Store the raw chain-native facts first; normalise into your own common schema second.**
 ## 5. EVM token and NFT tracking
 
+> **Guide-only reference (owner decision, 2026-11-28, `docs/DECISIONS.md` §44):** NFT indexing is documented here as reference for building a tracker. The live Bawa wallet has no NFT support and no NFT indexer — the dashboard says so plainly ("NFTs aren't listed yet — no indexer connected"). Do not read this section as a live or planned wallet feature.
+
 Do not trust symbols alone. Anyone can reuse symbols such as USDC, USDT and WETH, or give different tokens the same name. The contract address identifies a token on a specific chain; matching contract addresses across chains are still separate identities.
 
 Always store `chain_id` and `contract_address`, plus `token_id` when applicable. Treat the symbol as metadata. Give every EVM asset an unambiguous key:

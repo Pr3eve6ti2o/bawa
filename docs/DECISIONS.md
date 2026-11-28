@@ -2473,3 +2473,9 @@ hash, not the fetched text, when checking the live chain count.
 **Gates at `2205f15` on loud-stone with Node 22 (verified first-hand before the push):** tsc 0, eslint 0, build 0, vitest 129 files / 3,347 passed + 5 skipped / 0 failures, bundle 4,482,619 / 6,000,000, diagram test 5/5.
 
 **Current counts (verified 2026-11-28 on this tree):** 87 chains (`registry/chains.json` chainCount 87), 21 default tokens (`registry/tokens.json` tokenCount 21), 43 dashboard rows (22 native assets + 21 default tokens), bundle budget 6,000,000, diagram test 5/5. This supersedes §38 as the current live state; §38 stays as the record of the P0 push.
+
+## §44 — NFT indexer stays guide-only, out of the live wallet (owner decision, 2026-11-28)
+
+**Decision (owner, 2026-11-28 ~13:56 IST):** the NFT indexer stays in the GUIDE ONLY, out of the live preview wallet. No indexer in the app; no provider (SimpleHash / Alchemy / Moralis) to choose for the live wallet. This closes the NFT indexer pick — it was never a live feature and stays that way.
+
+**What this means:** the live wallet has no NFT support and no NFT indexer. The dashboard says so plainly (`dashboard.tsx`: "No NFTs tab: no NFT support exists"; the dashboard NFT box is one line saying NFTs aren't listed yet — no indexer connected). No code change is needed for the app. The guide keeps NFT indexer guidance as reference only, clearly marked guide-only (see `docs/06-tracking/README.md` §5) — not a live or planned wallet feature. Do not present an NFT indexer as a live or planned feature in any doc, and do not re-open the provider pick for the live wallet.
