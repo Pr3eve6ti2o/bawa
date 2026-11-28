@@ -39,6 +39,8 @@ import {
   readPendingSendLinkSearch,
   savePendingSendLink,
   wrapCardText,
+  QR_CARD_TEMPLATE_QR,
+  STARKNET_RECEIVE_ONLY_WARNING,
   type QrCardPngDetails,
   type QrRenderDeps,
 } from './payment-links';
@@ -778,6 +780,18 @@ describe('qrSvgToPngFile — sharing the QR as an image (UI/UX fixes, item 4)', 
   });
 });
 
+describe('STARKNET_RECEIVE_ONLY_WARNING — one shared warning', () => {
+  it('is the Receive details step wording, in full', () => {
+    // The constant is the single source for the Receive details
+    // step, the in-app QR card and the PNG exporter — the wording
+    // cannot drift between the three places, and it is never
+    // paraphrased or shortened.
+    expect(STARKNET_RECEIVE_ONLY_WARNING).toBe(
+      'This Starknet address is a counterfactual Argent account. Funds sent here can only be recovered by deploying that exact Argent account, and this wallet cannot deploy it yet — so this address is receive-only.',
+    );
+  });
+});
+
 describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-cards Lane E)', () => {
   const SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192"><rect width="192" height="192" fill="#FFFDF7"/><rect x="10" y="10" width="20" height="20" fill="#2B2B2B"/></svg>';
@@ -1371,6 +1385,48 @@ describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1; QR-car
       'B',
       'Bawa Wallet',
     ]);
+  });
+
+  it('draws the Starknet warning in every template — after the subtitle, before the QR — and grows the card by the warning alone', async () => {
+    const warningWords = STARKNET_RECEIVE_ONLY_WARNING.split(' ');
+    for (const template of ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as const) {
+      const plain = cardDeps();
+      await qrCardToPngBlob(SVG, { ...DETAILS, template }, plain.deps);
+      const warned = cardDeps();
+      await qrCardToPngBlob(
+        SVG,
+        { ...DETAILS, template, warning: STARKNET_RECEIVE_ONLY_WARNING },
+        warned.deps,
+      );
+      // The card grows by the warning block alone, and the QR moves
+      // down by exactly the same amount — nothing below the warning
+      // is reflowed, and a card with no warning is laid out exactly
+      // as before.
+      const heightDelta = warned.canvas.height - plain.canvas.height;
+      expect(heightDelta).toBeGreaterThan(0);
+      const qrWidth = Math.round(
+        QR_CARD_TEMPLATE_QR[template].size * (640 / 390),
+      );
+      const plainQr = plain.drawImage.mock.calls.find(
+        (call) => call[3] === qrWidth,
+      )!;
+      const warnedQr = warned.drawImage.mock.calls.find(
+        (call) => call[3] === qrWidth,
+      )!;
+      expect(warnedQr[2] - plainQr[2]).toBe(heightDelta);
+      // The warning words are drawn in order, after the subtitle
+      // ('here.') and before the amount ('25 USDC') — the same place
+      // the in-app card shows them.
+      const texts = warned.fillText.mock.calls.map((call) => call[0]);
+      let cursor = texts.lastIndexOf('here.');
+      expect(cursor).toBeGreaterThanOrEqual(0);
+      for (const word of warningWords) {
+        const at = texts.indexOf(word, cursor + 1);
+        expect(at).toBeGreaterThan(cursor);
+        cursor = at;
+      }
+      expect(texts.indexOf('25 USDC')).toBeGreaterThan(cursor);
+    }
   });
 });
 

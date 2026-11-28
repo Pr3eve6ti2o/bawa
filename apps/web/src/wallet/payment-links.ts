@@ -772,6 +772,18 @@ export const QR_CARD_SCAN_LINE =
   'Scan or share this QR code to receive crypto.';
 /** Template A's link line below the card — Bawa's own share-link slot. */
 export const QR_CARD_SHARE_LINK_TEXT = 'Open the Bawa link ›';
+/**
+ * The Starknet receive-only warning, in full: a Starknet address is
+ * a counterfactual Argent account, and this wallet cannot deploy it
+ * yet — so funds sent here can only be recovered by deploying that
+ * exact Argent account. ONE constant, used by the Receive details
+ * step, the in-app QR card and the PNG exporter, so the wording
+ * cannot drift between the three places. Never paraphrase or shorten
+ * it: if it does not fit a template, that template is blocked, not
+ * the text.
+ */
+export const STARKNET_RECEIVE_ONLY_WARNING =
+  'This Starknet address is a counterfactual Argent account. Funds sent here can only be recovered by deploying that exact Argent account, and this wallet cannot deploy it yet — so this address is receive-only.';
 /** The brand wordmark, drawn once per card, outside the functional area. */
 const QR_CARD_BRAND = 'Bawa Wallet';
 
@@ -791,6 +803,12 @@ export interface QrCardPngDetails {
   subline?: string;
   /** Template A's link line; default 'Open the Bawa link ›'. */
   shareLinkText?: string;
+  /**
+   * The Starknet receive-only warning (STARKNET_RECEIVE_ONLY_WARNING),
+   * drawn after the subtitle and before the QR tile — the same place
+   * the in-app card shows it. Omitted for every other chain.
+   */
+  warning?: string;
   /** Which template to draw; default 'b' (Paper). */
   template?: QrCardTemplate;
   /** Export width in px; default 640. The 1080 px share export is
@@ -1197,6 +1215,14 @@ interface QrCardGeometryBase {
   height: number;
   subtitleLines: RichWord[][];
   addressLines: string[];
+  /**
+   * The wrapped warning lines (details.warning, 13 px on a 19 px
+   * rhythm), and the y of their first line — null when no warning
+   * was passed, in which case every other row is exactly where it
+   * was before the warning existed.
+   */
+  warningLines: RichWord[][];
+  warningY: number | null;
 }
 
 interface QrCardGeometryA extends QrCardGeometryBase {
@@ -1377,10 +1403,13 @@ function layoutCentredCard(
   s: number,
   subtitleLines: RichWord[][],
   addressMaxW: number,
+  warningLines: RichWord[][],
 ): {
   logoY: number;
   titleY: number;
   subtitleY: number;
+  warningLines: RichWord[][];
+  warningY: number | null;
   tileX: number;
   tileY: number;
   tileSize: number;
@@ -1409,7 +1438,16 @@ function layoutCentredCard(
   const subtitleY = px(32 + 96 + 20 + 38 + 8);
   const tileSize = px(qrSpec.size + 48);
   const tileX = Math.round((px(390) - tileSize) / 2);
-  const tileY = subtitleY + px(subtitleLines.length * 22 + 24);
+  // The warning sits between the subtitle and the tile, exactly as
+  // in the in-app centred card — 20 px clear of the subtitle, 20 px
+  // clear of the tile, against the 24 px gap the tile had before.
+  const warnShift =
+    warningLines.length === 0 ? 0 : px(warningLines.length * 19 + 16);
+  const warningY =
+    warningLines.length === 0
+      ? null
+      : subtitleY + px(subtitleLines.length * 22 + 20);
+  const tileY = subtitleY + px(subtitleLines.length * 22 + 24) + warnShift;
   const qrX = tileX + px(24);
   const qrY = tileY + px(24);
   const amountY = tileY + tileSize + px(24);
@@ -1423,6 +1461,8 @@ function layoutCentredCard(
     logoY,
     titleY,
     subtitleY,
+    warningLines,
+    warningY,
     tileX,
     tileY,
     tileSize,
@@ -1465,6 +1505,42 @@ function layoutQrCard(
     px(subtitleMaxW),
   );
 
+  /**
+   * The warning block (details.warning — the Starknet receive-only
+   * warning), measured once here: 13 px lines on a 19 px rhythm,
+   * 20 px clear of the subtitle above and of the tile below (the
+   * in-app card's gap-5; template C uses its own 24 px rhythm —
+   * see its branch). The shift is the block height plus the two
+   * gaps, less the gap the template already had between the
+   * subtitle and the tile — so a card with no warning is laid out
+   * exactly as before, and a card with one grows by the warning
+   * alone. The draw step replays warningY; it never re-derives it.
+   */
+  const wrapWarning = (maxW: number): RichWord[][] =>
+    details.warning === undefined
+      ? []
+      : wrapRichWords(
+          ctx,
+          richWords([{ text: details.warning, bold: false }]),
+          BODY_FONT(px(13)),
+          BODY_FONT(px(13), 700),
+          px(maxW),
+        );
+  const warningLayout = (
+    maxW: number,
+    subtitleY: number,
+    subtitleLineHeight: number,
+    gapBefore: number,
+  ): { lines: RichWord[][]; shift: number; y: number | null } => {
+    const lines = wrapWarning(maxW);
+    if (lines.length === 0) return { lines, shift: 0, y: null };
+    return {
+      lines,
+      shift: px(lines.length * 19 + 40 - gapBefore),
+      y: subtitleY + px(subtitleLines.length * subtitleLineHeight + 20),
+    };
+  };
+
   if (template === 'a') {
     const qrSpec = QR_CARD_TEMPLATE_QR.a;
     const addressLines = wrapCardText(details.address, px(252), (text) => {
@@ -1474,7 +1550,9 @@ function layoutQrCard(
     const bandH = px(36 + qrSpec.size + 20 + 28 + 24);
     const footerH = px(20 + 20 + 6 + addressLines.length * 24 + 20);
     const cardH = bandH + footerH;
-    const cardY = px(32 + 96 + 20 + 38 + 8 + subtitleLines.length * 22 + 24);
+    const warn = warningLayout(340, px(32 + 96 + 20 + 38 + 8), 22, 24);
+    const cardY =
+      px(32 + 96 + 20 + 38 + 8 + subtitleLines.length * 22 + 24) + warn.shift;
     const height =
       cardY + cardH + px(20 + 22 + 24 + 84);
     return {
@@ -1482,6 +1560,8 @@ function layoutQrCard(
       height,
       subtitleLines,
       addressLines,
+      warningLines: warn.lines,
+      warningY: warn.y,
       logoY: px(32),
       titleY: px(32 + 96 + 20),
       subtitleY: px(32 + 96 + 20 + 38 + 8),
@@ -1519,6 +1599,11 @@ function layoutQrCard(
     y += px(32 + 24);
     const noteY = y;
     y += px(subtitleLines.length * 20 + 24);
+    // C's rhythm is one even 24 px — the warning takes its own
+    // 24 px slot between the subtitle and the code, exactly as in-app.
+    const warnLines = wrapWarning(340);
+    const warningY = warnLines.length === 0 ? null : y;
+    if (warnLines.length > 0) y += px(warnLines.length * 19 + 24);
     const qrY = y;
     const qrX = (px(390) - px(qrSpec.size)) / 2;
     y += px(qrSpec.size + 24);
@@ -1539,6 +1624,8 @@ function layoutQrCard(
       height,
       subtitleLines,
       addressLines,
+      warningLines: warnLines,
+      warningY,
       logoY,
       titleY,
       noteY,
@@ -1569,7 +1656,8 @@ function layoutQrCard(
     const headerH = Math.max(titleLines.length * 42, 72);
     const titleY = px(24);
     const subtitleY = titleY + px(headerH + 12);
-    const tileY = subtitleY + px(subtitleLines.length * 22 + 24);
+    const warn = warningLayout(254, subtitleY, 22, 24);
+    const tileY = subtitleY + px(subtitleLines.length * 22 + 24) + warn.shift;
     // UX-major Lane 1: the tile is the code + its 24 px padding each
     // side, exactly as the in-app tile (was a fixed 300 px, so the PNG
     // tile carried 45 px of padding against the in-app 24).
@@ -1589,6 +1677,8 @@ function layoutQrCard(
       height,
       subtitleLines,
       addressLines,
+      warningLines: warn.lines,
+      warningY: warn.y,
       titleLines,
       titleY,
       subtitleY,
@@ -1610,7 +1700,15 @@ function layoutQrCard(
   }
 
   if (template === 'e') {
-    const shared = layoutCentredCard('e', details, ctx, s, subtitleLines, 298);
+    const shared = layoutCentredCard(
+      'e',
+      details,
+      ctx,
+      s,
+      subtitleLines,
+      298,
+      wrapWarning(340),
+    );
     return {
       template: 'e',
       subtitleLines,
@@ -1621,7 +1719,15 @@ function layoutQrCard(
   }
 
   if (template === 'f') {
-    const shared = layoutCentredCard('f', details, ctx, s, subtitleLines, 262);
+    const shared = layoutCentredCard(
+      'f',
+      details,
+      ctx,
+      s,
+      subtitleLines,
+      262,
+      wrapWarning(340),
+    );
     return {
       template: 'f',
       subtitleLines,
@@ -1650,7 +1756,8 @@ function layoutQrCard(
     const titleY = cardY + px(20 + 64 + 20);
     const subtitleY = titleY + px(34 + 8);
     const tileX = cardX + Math.round((cardW - tileSize) / 2);
-    const tileY = subtitleY + px(subtitleLines.length * 20 + 20);
+    const warn = warningLayout(320, subtitleY, 20, 20);
+    const tileY = subtitleY + px(subtitleLines.length * 20 + 20) + warn.shift;
     const qrX = tileX + px(16 + 2);
     const qrY = tileY + px(16 + 2);
     const tearY = tileY + tileSize + px(24);
@@ -1668,6 +1775,8 @@ function layoutQrCard(
       height,
       subtitleLines,
       addressLines,
+      warningLines: warn.lines,
+      warningY: warn.y,
       cardX,
       cardY,
       cardW,
@@ -1706,16 +1815,25 @@ function layoutQrCard(
   // code breathes like Bitget's — tile = code + 32 + border 4.
   const tileSize = px(qrSpec.size + 32 + 4);
   const addressBoxH = px(addressLines.length * 18 + 20);
+  const warn = warningLayout(
+    320,
+    cardY + px(20 + 64 + 20 + 34 + 8),
+    20,
+    20,
+  );
   let cardH =
     px(20 + 64 + 20 + 34 + 8 + subtitleLines.length * 20 + 20) +
     tileSize +
     px(4 + 20 + 28 + 20 + 24 + 8) +
     addressBoxH +
-    px(20 + 20 + 20 + 2 + 12 + 24 + 20);
+    px(20 + 20 + 20 + 2 + 12 + 24 + 20) +
+    warn.shift;
   if (details.subline !== undefined) cardH += px(8 + 20);
   const height = cardY + cardH + px(24);
   const tileX = cardX + (cardW - tileSize) / 2;
-  const tileY = cardY + px(20 + 64 + 20 + 34 + 8 + subtitleLines.length * 20 + 20);
+  const tileY =
+    cardY + px(20 + 64 + 20 + 34 + 8 + subtitleLines.length * 20 + 20) +
+    warn.shift;
   const qrX = tileX + px(16 + 2);
   const qrY = tileY + px(16 + 2);
   const amountY = tileY + tileSize + px(4 + 20);
@@ -1738,6 +1856,8 @@ function layoutQrCard(
     height,
     subtitleLines,
     addressLines,
+    warningLines: warn.lines,
+    warningY: warn.y,
     cardX,
     cardY,
     cardW,
@@ -1879,6 +1999,11 @@ function drawQrCard(
     }
     drawText(ctx, details.title, width / 2, g.titleY, BODY_FONT(px(30), 800), '#FFFFFF');
     drawSubtitleBlock(ctx, g.subtitleLines, width / 2, g.subtitleY, px(22), px(15), muted, '#FFFFFF');
+    // The Starknet receive-only warning: after the subtitle, before
+    // the card — white, so it reads on the dark teal.
+    if (g.warningY !== null) {
+      drawSubtitleBlock(ctx, g.warningLines, width / 2, g.warningY, px(19), px(13), '#FFFFFF', '#FFFFFF');
+    }
     // The card: QR band over footer band, one rounded shape. The
     // bands are painted inside a clip of the rounded card path, so
     // both bands keep the card's round corners.
@@ -1927,6 +2052,11 @@ function drawQrCard(
     }
     drawText(ctx, details.title, width / 2, g.titleY, BODY_FONT(px(28), 600), '#111111');
     drawSubtitleBlock(ctx, g.subtitleLines, width / 2, g.noteY, px(20), px(14), '#6B7280', '#111111');
+    // The Starknet receive-only warning: after the subtitle, before
+    // the code — near-black, so it reads on the plain white card.
+    if (g.warningY !== null) {
+      drawSubtitleBlock(ctx, g.warningLines, width / 2, g.warningY, px(19), px(13), '#111111', '#111111');
+    }
     ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
     centreMark(ctx, deps, images, 'c', g.qrX + px(qrSpec.size) / 2, g.qrY + px(qrSpec.size) / 2, s);
     drawText(ctx, QR_CARD_SCAN_LINE, width / 2, g.instructionY, BODY_FONT(px(14)), '#6B7280');
@@ -1969,6 +2099,12 @@ function drawQrCard(
       );
     });
     drawSubtitleBlock(ctx, g.subtitleLines, px(24), g.subtitleY, px(22), px(15), 'rgba(255,255,255,0.85)', '#FFFFFF', 'left');
+    // The Starknet receive-only warning: after the subtitle, before
+    // the tile — white, left-aligned like the subtitle, so it reads
+    // on the coral.
+    if (g.warningY !== null) {
+      drawSubtitleBlock(ctx, g.warningLines, px(24), g.warningY, px(19), px(13), '#FFFFFF', '#FFFFFF', 'left');
+    }
     // White QR tile.
     fillRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), '#FFFFFF');
     ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
@@ -1993,6 +2129,11 @@ function drawQrCard(
     ctx.fillStyle = QR_CARD_SUN;
     ctx.fillRect(0, 0, width, g.height);
     drawCentredHeader(ctx, images, g, details, width, s, QR_CARD_INK, QR_CARD_INK, QR_CARD_INK);
+    // The Starknet receive-only warning: after the subtitle, before
+    // the tile — ink, so it reads on the sun field.
+    if (g.warningY !== null) {
+      drawSubtitleBlock(ctx, g.warningLines, width / 2, g.warningY, px(19), px(13), QR_CARD_INK, QR_CARD_INK);
+    }
     // White QR tile: hard offset shadow, ink frame, QR inside. The
     // shadow is a ROUNDED rect with the tile's own 24 px radius —
     // UX-major Lane 1: the old square shadow rect poked past the
@@ -2022,6 +2163,11 @@ function drawQrCard(
     ctx.fillStyle = QR_CARD_INK;
     ctx.fillRect(0, 0, width, g.height);
     drawCentredHeader(ctx, images, g, details, width, s, '#FFFFFF', '#9CA3AF', '#FFFFFF');
+    // The Starknet receive-only warning: after the subtitle, before
+    // the tile — white, so it reads on the ink field.
+    if (g.warningY !== null) {
+      drawSubtitleBlock(ctx, g.warningLines, width / 2, g.warningY, px(19), px(13), '#FFFFFF', '#FFFFFF');
+    }
     // White QR tile — no border: white on ink is the edge.
     fillRoundRect(ctx, g.tileX, g.tileY, g.tileSize, g.tileSize, px(24), '#FFFFFF');
     ctx.drawImage(images.qr, g.qrX, g.qrY, px(qrSpec.size), px(qrSpec.size));
@@ -2081,6 +2227,11 @@ function drawQrCard(
     }
     drawText(ctx, details.title, width / 2, g.titleY, DISPLAY_FONT(px(28), 700), QR_CARD_INK);
     drawSubtitleBlock(ctx, g.subtitleLines, width / 2, g.subtitleY, px(20), px(14), QR_CARD_INK, QR_CARD_INK);
+    // The Starknet receive-only warning: after the subtitle, before
+    // the tile — ink, so it reads on the paper.
+    if (g.warningY !== null) {
+      drawSubtitleBlock(ctx, g.warningLines, width / 2, g.warningY, px(19), px(13), QR_CARD_INK, QR_CARD_INK);
+    }
     // The tile: hard offset shadow, ink frame, QR inside (as B).
     ctx.fillStyle = QR_CARD_INK;
     ctx.fillRect(g.tileX + px(4), g.tileY + px(4), g.tileSize, g.tileSize);
@@ -2162,6 +2313,11 @@ function drawQrCard(
   }
   drawText(ctx, details.title, width / 2, g.titleY, DISPLAY_FONT(px(28), 700), QR_CARD_INK);
   drawSubtitleBlock(ctx, g.subtitleLines, width / 2, g.subtitleY, px(20), px(14), QR_CARD_INK, QR_CARD_INK);
+  // The Starknet receive-only warning: after the subtitle, before
+  // the tile — ink, so it reads on the paper.
+  if (g.warningY !== null) {
+    drawSubtitleBlock(ctx, g.warningLines, width / 2, g.warningY, px(19), px(13), QR_CARD_INK, QR_CARD_INK);
+  }
   // The tile: hard offset shadow, ink frame, QR inside.
   ctx.fillStyle = QR_CARD_INK;
   ctx.fillRect(g.tileX + px(4), g.tileY + px(4), g.tileSize, g.tileSize);

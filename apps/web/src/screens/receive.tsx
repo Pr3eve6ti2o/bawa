@@ -32,7 +32,7 @@ import {
   type BuyProviderInfo,
 } from '../wallet/buy-providers';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
-import { buildBawaSendLink, buildPaymentUri, DEFAULT_QR_CARD_TEMPLATE, QR_CARD_TEMPLATES, qrCardToPngFile, type QrCardTemplate } from '../wallet/payment-links';
+import { buildBawaSendLink, buildPaymentUri, DEFAULT_QR_CARD_TEMPLATE, QR_CARD_TEMPLATES, STARKNET_RECEIVE_ONLY_WARNING, qrCardToPngFile, type QrCardTemplate } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
   isDefaultToken,
@@ -974,6 +974,14 @@ export function ReceiveScreen() {
             effectiveToken === null
               ? undefined
               : qrCardTokenSubline(effectiveToken, chain),
+          // The Starknet receive-only warning rides on the exported
+          // PNG too — same text, same place (after the subtitle,
+          // before the QR tile), so the shared card warns wherever
+          // it is seen.
+          warning:
+            chain === 'starknet'
+              ? STARKNET_RECEIVE_ONLY_WARNING
+              : undefined,
           template: cardTemplate,
           width: 1080,
           tokenLogoSrc: tokenLogoFor(
@@ -1586,10 +1594,7 @@ export function ReceiveScreen() {
       )}
       {chain === 'starknet' && (
         <p className="text-base text-ink">
-          This Starknet address is a counterfactual Argent account.
-          Funds sent here can only be recovered by deploying that
-          exact Argent account, and this wallet cannot deploy it
-          yet — so this address is receive-only.
+          {STARKNET_RECEIVE_ONLY_WARNING}
         </p>
       )}
       </div>

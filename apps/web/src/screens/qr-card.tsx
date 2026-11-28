@@ -78,6 +78,7 @@ import {
   QR_CARD_SCAN_LINE,
   QR_CARD_SHARE_LINK_TEXT,
   QR_CARD_TEMPLATE_QR,
+  STARKNET_RECEIVE_ONLY_WARNING,
   type QrCardTemplate,
 } from '../wallet/payment-links';
 import { chainLogoFor, FallbackMark, tokenLogoFor } from './token-logo';
@@ -166,6 +167,32 @@ function NetworkSubtitle({
       {subtitle.slice(0, at)}
       <strong className={boldClassName}>{networkName}</strong>
       {subtitle.slice(at + networkName.length)}
+    </p>
+  );
+}
+
+/**
+ * The Starknet receive-only warning: a Starknet address is a
+ * counterfactual Argent account this wallet cannot deploy yet, so
+ * the address is receive-only. Shown only when chain is starknet,
+ * in every template, after the subtitle and before the QR tile —
+ * the same place the PNG exporter draws it. The wording is the
+ * shared STARKNET_RECEIVE_ONLY_WARNING constant, in full, never
+ * paraphrased or shortened. The colour is per template, passed in
+ * by the caller, so the warning reads in each template's own
+ * colours: the strong text colour, never a muted subtitle tone.
+ */
+function StarknetWarning({
+  chain,
+  className,
+}: {
+  chain: ChainId;
+  className: string;
+}): React.ReactElement | null {
+  if (chain !== 'starknet') return null;
+  return (
+    <p data-testid="qr-card-starknet-warning" className={className}>
+      {STARKNET_RECEIVE_ONLY_WARNING}
     </p>
   );
 }
@@ -371,6 +398,7 @@ function CentredQrCard({
   titleClassName,
   subtitleClassName,
   subtitleBoldClassName,
+  warning,
   tileClassName,
   amountClassName,
   amountSizeClassName,
@@ -394,6 +422,10 @@ function CentredQrCard({
   titleClassName: string;
   subtitleClassName: string;
   subtitleBoldClassName: string;
+  /** The Starknet warning, already styled in the template's own
+   * colours by the caller — null for every other chain. Rendered
+   * after the subtitle, before the QR tile. */
+  warning: React.ReactNode;
   tileClassName: string;
   amountClassName: string;
   /** E's amount is 22 px, F's 20 px — as the PNG draws them. */
@@ -444,6 +476,7 @@ function CentredQrCard({
         className={`text-center text-[15px] leading-[22px] ${subtitleClassName}`}
         boldClassName={subtitleBoldClassName}
       />
+      {warning}
       <div data-testid="qr-card-tile" className={tileClassName}>
         <div id="qr-card-qr" className="shrink-0">
           {qrCode}
@@ -565,6 +598,10 @@ export function QrCard({
           className="text-center text-[15px] leading-[22px] text-qr-muted"
           boldClassName="font-bold text-white"
         />
+        <StarknetWarning
+          chain={chain}
+          className="text-center text-[13px] leading-[19px] text-white"
+        />
         <div className="w-full max-w-[352px] overflow-hidden rounded-[24px] bg-qr-teal-deep">
           <div
             data-testid="qr-card-tile"
@@ -638,6 +675,10 @@ export function QrCard({
           className="text-center text-sm text-qr-grey"
           boldClassName="font-bold text-qr-nearblack"
         />
+        <StarknetWarning
+          chain={chain}
+          className="text-center text-[13px] leading-[19px] text-qr-nearblack"
+        />
         <div data-testid="qr-card-tile" className="shrink-0">
           <div id="qr-card-qr" className="shrink-0">
             {qrCode}
@@ -698,6 +739,10 @@ export function QrCard({
               className="text-[15px] leading-[22px] text-qr-white-dim"
               boldClassName="font-bold text-white"
             />
+            <StarknetWarning
+              chain={chain}
+              className="text-left text-[13px] leading-[19px] text-white"
+            />
           </div>
           <span className="flex size-[72px] shrink-0 items-center justify-center rounded-full bg-white">
             <LogoImage
@@ -755,6 +800,12 @@ export function QrCard({
         titleClassName="text-ink"
         subtitleClassName="text-ink"
         subtitleBoldClassName="font-bold text-ink"
+        warning={
+          <StarknetWarning
+            chain={chain}
+            className="text-center text-[13px] leading-[19px] text-ink"
+          />
+        }
         tileClassName="rounded-[24px] border-2 border-ink bg-white p-6 shadow-[var(--bawa-shadow)]"
         amountClassName="text-ink"
         amountSizeClassName="text-[22px]"
@@ -803,6 +854,12 @@ export function QrCard({
         titleClassName="text-white"
         subtitleClassName="text-qr-faint"
         subtitleBoldClassName="font-bold text-white"
+        warning={
+          <StarknetWarning
+            chain={chain}
+            className="text-center text-[13px] leading-[19px] text-white"
+          />
+        }
         tileClassName="rounded-[24px] bg-white p-6"
         amountClassName="text-white"
         // UX-major Lane 1: F's amount is 22 px like E's (was 20) —
@@ -876,6 +933,10 @@ export function QrCard({
           networkName={networkName}
           className="text-center text-sm text-ink"
           boldClassName="font-bold"
+        />
+        <StarknetWarning
+          chain={chain}
+          className="text-center text-[13px] leading-[19px] text-ink"
         />
         <div
           data-testid="qr-card-tile"
@@ -971,6 +1032,10 @@ export function QrCard({
         networkName={networkName}
         className="text-center text-sm text-ink"
         boldClassName="font-bold"
+      />
+      <StarknetWarning
+        chain={chain}
+        className="text-center text-[13px] leading-[19px] text-ink"
       />
       {/* Lane H: the QR in its own bordered tile — the tile's ink
           frame is what makes the code read as a card, not a bare

@@ -12,7 +12,10 @@ import {
   qrCardTokenSubline,
 } from './qr-card';
 import { chainConfig } from '../wallet/chains';
-import type { QrCardTemplate } from '../wallet/payment-links';
+import {
+  STARKNET_RECEIVE_ONLY_WARNING,
+  type QrCardTemplate,
+} from '../wallet/payment-links';
 import type { TokenRecord } from '../wallet/tokens';
 
 vi.mock('../wallet/chains', () => ({
@@ -28,6 +31,7 @@ const CHAINS = {
   base: { displayName: 'Base', symbol: 'ETH' },
   bsc: { displayName: 'BNB Smart Chain', symbol: 'BNB' },
   zora: { displayName: 'Zora', symbol: 'ETH' },
+  starknet: { displayName: 'Starknet', symbol: 'STRK' },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;
@@ -543,6 +547,65 @@ describe('QrCard templates (QR-cards programme, Lane E)', () => {
         );
         expect(identicons).toHaveLength(1);
         expect(identicons?.[0]?.getAttribute('aria-hidden')).toBe('true');
+      } finally {
+        await mounted.cleanup();
+      }
+    }
+  });
+});
+
+describe('QrCard Starknet warning (receive-only Argent account)', () => {
+  const starknetProps = {
+    qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+    amountText: '0.5 STRK',
+    address: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+    token: null,
+    chain: 'starknet' as const,
+  };
+  const ethProps = {
+    qrValue: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+    amountText: '0.5 ETH',
+    address: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+    token: null,
+    chain: 'eth' as const,
+  };
+
+  it('shows the full receive-only warning in every template', async () => {
+    for (const template of ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as const) {
+      const mounted = await mountCard({ ...starknetProps, template });
+      try {
+        const warning = mounted.div.querySelector(
+          '[data-testid="qr-card-starknet-warning"]',
+        );
+        expect(warning).not.toBeNull();
+        // The shared constant, in full — never paraphrased or
+        // shortened — after the subtitle and before the QR tile.
+        expect(warning?.textContent).toBe(STARKNET_RECEIVE_ONLY_WARNING);
+        const card = mounted.div.querySelector('[data-testid="qr-card"]');
+        const ordered = [
+          ...(card?.querySelectorAll(
+            '[data-testid="qr-card-subtitle"], [data-testid="qr-card-starknet-warning"], [data-testid="qr-card-tile"]',
+          ) ?? []),
+        ].map((el) => el.getAttribute('data-testid'));
+        expect(ordered).toEqual([
+          'qr-card-subtitle',
+          'qr-card-starknet-warning',
+          'qr-card-tile',
+        ]);
+      } finally {
+        await mounted.cleanup();
+      }
+    }
+  });
+
+  it('shows no warning for other chains', async () => {
+    for (const template of ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as const) {
+      const mounted = await mountCard({ ...ethProps, template });
+      try {
+        expect(
+          mounted.div.querySelector('[data-testid="qr-card-starknet-warning"]'),
+        ).toBeNull();
+        expect(mounted.div.textContent).not.toContain('counterfactual');
       } finally {
         await mounted.cleanup();
       }
