@@ -987,14 +987,15 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   Bitget Wallet v7.3.1 blog; Zerion / DeBank / Rabby tracker layout;
   Web3 dashboard polling guide (khalilahmed.dev) + wallet-tracking
   API comparison (bitquery.io). Full URLs in the research report.
-  **Known partial (2026-11-28, Blockscout 429s on loud-stone's
-  shared egress IP):** USDC token-history rows and /track
-  recent-activity rows did not load in verification — "Could not
-  load token transactions. HTTP 429" / "Tried 3 times — the indexer
-  stayed unreachable." They load once the rate-limit window resets,
-  a different egress IP is used, or a keyed history source is
-  configured (the owner decision already pending for the four
-  history-blocked chains, §2.7). **Not changed by this programme:**
+  **Fixed 2026-11-28 (was a known partial, Blockscout 429s on
+  loud-stone's shared egress IP):** USDC token-history rows and
+  /track recent-activity rows now load — Ethereum history moved to
+  Routescan's keyless Etherscan-compatible API, with Blockscout v2
+  REST as the fallback when the primary errors transiently
+  (DECISIONS.md §53). Verified in the browser at 390 px + 1280 px
+  with the EF address: all 4 USDC transfers and 10 /track rows
+  render with "Source: routescan — Powered by Routescan.io APIs".
+  **Not changed by this programme:**
   the hero count-up still animates from $0 at first paint; amounts
   still render at full precision; "Hide zero balances" is still a
   manual toggle, off by default.

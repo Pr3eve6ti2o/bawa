@@ -615,10 +615,16 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     ...GENERATED_CHAIN_FACTS.eth,
     id: 'eth',
     pathFor: expandedPathFor(EVM_PATH),
-    // Lane B: the tracker's Blockscout v2 lookup reads these (shared
-    // with the four newly-wired Blockscout chains). The adapter itself
-    // keeps its hardcoded URL in wallet/adapters/eth.ts.
-    historyBaseUrl: 'https://eth.blockscout.com/api',
+    // Partials fix (2026-11-28): history reads Routescan's
+    // Etherscan-compatible API (Blockscout v1 429s on loud-stone's
+    // shared egress IP; Routescan answered live with real rows). The
+    // explorer base stays eth.blockscout.com, so the tracker's
+    // Blockscout v2 lookup reads it (shared with the four
+    // newly-wired Blockscout chains) and the adapter's v2 fallback
+    // reads from it. The adapter itself keeps its hardcoded URL in
+    // wallet/adapters/eth.ts.
+    historyBaseUrl:
+      'https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api',
     historyExplorerBase: 'https://eth.blockscout.com',
     capabilities: capabilitiesForAdapterChain('eth', true),
   },

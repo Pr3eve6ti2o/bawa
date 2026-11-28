@@ -726,7 +726,9 @@ describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
     try {
       const eth = rpcRow(mounted, 'Ethereum');
       expect(eth.textContent).toContain('Last balance from 1rpc.io');
-      expect(eth.textContent).toContain('History: eth.blockscout.com');
+      // Partials fix (2026-11-28): Ethereum history moved from
+      // eth.blockscout.com to Routescan (api.routescan.io).
+      expect(eth.textContent).toContain('History: api.routescan.io');
       expect(eth.textContent).toContain('working');
       await selectRpcChain(mounted, 'Gnosis');
       const gnosis = rpcRow(mounted, 'Gnosis');

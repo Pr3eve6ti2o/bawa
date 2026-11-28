@@ -6,7 +6,10 @@
  * every call, native balance via getBalance, nonce tx inputs, and a
  * 21000-gas native-transfer fee estimate. History reads the
  * Etherscan-compatible txlist API whenever a history endpoint is
- * configured — Ethereum, Optimism, Scroll, Celo and Aurora via
+ * configured — Ethereum via Routescan (partials fix, 2026-11-28:
+ * Blockscout v1 429s on the shared egress IP, and its tokentx +
+ * contract filter hangs; Blockscout v2 REST is the fallback when
+ * the primary errors), Optimism, Scroll, Celo and Aurora via
  * Blockscout instances, Avalanche and Mantle via Routescan (Lane B,
  * 2026-11-23), Linea via Etherscan's V2 API keyless (Fix-All Lane A,
  * 2026-11-24: api.etherscan.io/v2/api?chainid=59144 answers real
@@ -54,7 +57,7 @@ export interface EvmAdapterConfig {
   /** Native asset symbol, e.g. ETH, BNB, POL, AVAX. */
   nativeSymbol: string;
   source: string;
-  /** Blockscout-shaped history base URL (Ethereum, Celo, Optimism, Scroll). */
+  /** Etherscan-compatible history base URL (Ethereum via Routescan, the rest via Blockscout instances). */
   historyBaseUrl?: string;
   /** Explorer base for history links, e.g. https://eth.blockscout.com. */
   historyExplorerBase?: string;
@@ -108,6 +111,179 @@ export function normalizeEvmAddress(address: string): string {
   if (!trimmed.startsWith('ronin:')) return trimmed;
   const stripped = trimmed.slice('ronin:'.length);
   return stripped.startsWith('0x') ? stripped : `0x${stripped}`;
+}
+
+interface BlockscoutV2ParseOpts {
+  chain: ChainId;
+  networkId: string;
+  address: string;
+  explorerBase?: string;
+}
+
+// Partials fix (2026-11-28): Blockscout v2 REST parsers, for the
+// fallback in createEvmAdapter. The v2 shapes were probed live from
+// loud-stone (eth.blockscout.com/api/v2): the transactions list is
+// {items, next_page_params} with per-item {hash, block_number,
+// timestamp (ISO), status ('ok'|'error'), value (string),
+// from/to: {hash} (to is null on contract creation), fee: {value}};
+// the token-transfers list is the same envelope with per-item
+// {transaction_hash, block_number, timestamp (ISO), from/to: {hash},
+// token: {address_hash, symbol, decimals (string)}, total: {value}}.
+// Strict, like parseEthTx in tracker.ts: a malformed item fails the
+// whole page (null) so the caller keeps the primary error instead of
+// showing invented rows. A `to` of null is valid (contract creation),
+// not malformed.
+function blockscoutV2Tx(
+  hash: string,
+  fromRaw: string,
+  toRaw: string,
+  value: string,
+  timestampMs: number | null,
+  failed: boolean,
+  opts: BlockscoutV2ParseOpts,
+  token?: { symbol: string; decimals: number },
+): AdapterTx {
+  const lower = opts.address.toLowerCase();
+  const from = fromRaw.toLowerCase();
+  const to = toRaw.toLowerCase();
+  const fromSelf = from === lower;
+  const toSelf = to === lower;
+  return {
+    hash,
+    chain: opts.chain,
+    networkId: opts.networkId,
+    direction: fromSelf && toSelf ? 'self' : fromSelf ? 'out' : 'in',
+    amountBaseUnits: value,
+    counterparty:
+      fromSelf && toSelf ? null : fromSelf ? toRaw || null : fromRaw || null,
+    timestamp: timestampMs,
+    status: failed ? 'failed' : 'confirmed',
+    explorerUrl:
+      opts.explorerBase !== undefined
+        ? `${opts.explorerBase}/tx/${hash}`
+        : null,
+    ...(token !== undefined ? { token } : {}),
+  };
+}
+
+export function parseBlockscoutV2TxList(
+  raw: unknown,
+  opts: BlockscoutV2ParseOpts,
+): AdapterTx[] | null {
+  if (!isRecord(raw) || !Array.isArray(raw['items'])) return null;
+  const txs: AdapterTx[] = [];
+  for (const item of raw['items']) {
+    if (!isRecord(item)) return null;
+    const hash = typeof item['hash'] === 'string' ? item['hash'] : null;
+    const value = typeof item['value'] === 'string' ? item['value'] : null;
+    if (hash === null || value === null) return null;
+    const from = isRecord(item['from']) ? item['from'] : null;
+    const to = isRecord(item['to']) ? item['to'] : null;
+    if (from === null || typeof from['hash'] !== 'string') return null;
+    const toRaw =
+      to !== null && typeof to['hash'] === 'string' ? to['hash'] : '';
+    const parsedTime =
+      typeof item['timestamp'] === 'string'
+        ? Date.parse(item['timestamp'])
+        : NaN;
+    txs.push(
+      blockscoutV2Tx(
+        hash,
+        from['hash'],
+        toRaw,
+        value,
+        Number.isFinite(parsedTime) ? parsedTime : null,
+        item['status'] === 'error',
+        opts,
+      ),
+    );
+  }
+  return txs;
+}
+
+export interface BlockscoutV2TokenTransfersPage {
+  txs: AdapterTx[];
+  nextPageParams: Record<string, string | number> | null;
+}
+
+export function parseBlockscoutV2TokenTransfers(
+  raw: unknown,
+  opts: BlockscoutV2ParseOpts & { contract: string },
+): BlockscoutV2TokenTransfersPage | null {
+  if (!isRecord(raw) || !Array.isArray(raw['items'])) return null;
+  // The server-side ?token= filter hangs (probed live 2026-11-28,
+  // same slow path as v1's contractaddress filter), so the token is
+  // filtered client-side on token.address_hash.
+  const contract = opts.contract.toLowerCase();
+  const txs: AdapterTx[] = [];
+  for (const item of raw['items']) {
+    if (!isRecord(item)) return null;
+    const token = isRecord(item['token']) ? item['token'] : null;
+    const tokenAddress =
+      token !== null && typeof token['address_hash'] === 'string'
+        ? token['address_hash']
+        : '';
+    if (tokenAddress.toLowerCase() !== contract) continue;
+    const hash =
+      typeof item['transaction_hash'] === 'string'
+        ? item['transaction_hash']
+        : null;
+    const total = isRecord(item['total']) ? item['total'] : null;
+    const value =
+      total !== null && typeof total['value'] === 'string'
+        ? total['value']
+        : null;
+    if (hash === null || value === null) return null;
+    const from = isRecord(item['from']) ? item['from'] : null;
+    const to = isRecord(item['to']) ? item['to'] : null;
+    if (from === null || typeof from['hash'] !== 'string') return null;
+    const toRaw =
+      to !== null && typeof to['hash'] === 'string' ? to['hash'] : '';
+    const parsedTime =
+      typeof item['timestamp'] === 'string'
+        ? Date.parse(item['timestamp'])
+        : NaN;
+    const symbol =
+      token !== null && typeof token['symbol'] === 'string'
+        ? token['symbol']
+        : '';
+    const decimals =
+      token !== null && typeof token['decimals'] === 'string'
+        ? Number(token['decimals'])
+        : NaN;
+    txs.push(
+      blockscoutV2Tx(
+        hash,
+        from['hash'],
+        toRaw,
+        value,
+        Number.isFinite(parsedTime) ? parsedTime : null,
+        false,
+        opts,
+        symbol !== '' && Number.isFinite(decimals)
+          ? { symbol, decimals }
+          : undefined,
+      ),
+    );
+  }
+  // Keyset pagination for the next page, or null at the end of the
+  // list. Only string/number params survive — anything else cannot
+  // be a query param, so a page carrying none is the end.
+  const next = isRecord(raw['next_page_params'])
+    ? raw['next_page_params']
+    : null;
+  let nextPageParams: Record<string, string | number> | null = null;
+  if (next !== null) {
+    const params: Record<string, string | number> = {};
+    for (const [key, value] of Object.entries(next)) {
+      if (typeof value === 'string' || typeof value === 'number') {
+        params[key] = value;
+      }
+    }
+    nextPageParams =
+      Object.keys(params).length > 0 ? params : null;
+  }
+  return { txs, nextPageParams };
 }
 
 export function createEvmAdapter(
@@ -168,7 +344,9 @@ export function createEvmAdapter(
     overrides.historyExplorerBase ?? config.historyExplorerBase;
   // The history source label names the indexer that answered: an
   // explicit config label wins (Lane D: optimism-explorer, scrollscan);
-  // otherwise derive it from the URL — Routescan for Avalanche/Mantle,
+  // otherwise derive it from the URL — Routescan for Ethereum/
+  // Avalanche/Mantle, Blockscout v2 ('blockscout-v2') is set by the
+  // fallback below, not derived here.
   // Etherscan V2 for Linea, gnosisscan for Gnosis (Etherscan v1 API,
   // 2026-11-28), Blockscout instances for the rest (Lane B).
   const historySource =
@@ -183,6 +361,132 @@ export function createEvmAdapter(
   const transport = overrides.transport ?? httpFetchTransport;
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });
+
+  // Partials fix (2026-11-28): the Blockscout v2 REST fallback base.
+  // The v1 Etherscan-compatible API and the v2 REST API live on
+  // separate rate-limit buckets on the same host (v1: 10, v2: 180 —
+  // probed live 2026-11-28, v1 429ing while v2 answered 200), so when
+  // the primary errors the v2 read can still answer. Only chains whose
+  // explorer base is a Blockscout host get one (eth, matic, base, arb,
+  // celo); Routescan/Etherscan/scrollscan hosts have no v2 endpoint
+  // here, and their primary is the only path.
+  const blockscoutV2Base: string | undefined = (() => {
+    if (historyExplorerBase === undefined) return undefined;
+    let host: string;
+    try {
+      host = new URL(historyExplorerBase).hostname;
+    } catch {
+      return undefined;
+    }
+    return host === 'blockscout.com' || host.endsWith('.blockscout.com')
+      ? `${historyExplorerBase}/api/v2`
+      : undefined;
+  })();
+
+  // Runs after the Etherscan-compatible primary errors transiently,
+  // and only then (a terminal primary error never reaches here).
+  // Returns null when there is no v2 endpoint, when a v2 page fails,
+  // or when a token walk finds nothing in its bounded pages — all
+  // inconclusive, so the caller keeps the primary error instead of
+  // showing a false "no transactions". A v2 success is a real answer
+  // with source 'blockscout-v2' (an empty txlist page is conclusive:
+  // the list is newest-first, so empty means no transactions at all).
+  const fetchBlockscoutV2 = async (
+    action: 'txlist' | 'tokentx',
+    address: string,
+    limit: number,
+    contract?: string,
+  ): Promise<AdapterResult<AdapterTx[]> | null> => {
+    if (blockscoutV2Base === undefined) return null;
+    const normalized = normalizeEvmAddress(address);
+    // The v2 token-transfers list is slow (13–30 s a page, probed
+    // live 2026-11-28) — one attempt per page with a 30 s timeout, no
+    // retry loop: retrying a slow endpoint only burns the UI's
+    // patience, and the primary already spent its own retries.
+    const readV2Page = async (url: string): Promise<unknown | null> => {
+      try {
+        return await withRetry(
+          () => transport.request(url, undefined, 30000),
+          { operation: `${config.chain}.blockscoutV2`, maxAttempts: 1 },
+        );
+      } catch {
+        return null;
+      }
+    };
+    if (action === 'txlist') {
+      const raw = await readV2Page(
+        `${blockscoutV2Base}/addresses/${normalized}/transactions?items_count=${limit}`,
+      );
+      if (raw === null) return null;
+      const txs = parseBlockscoutV2TxList(raw, {
+        chain: config.chain,
+        networkId,
+        address: normalized,
+        explorerBase: historyExplorerBase,
+      });
+      return txs === null
+        ? null
+        : {
+            status: 'ok',
+            data: txs,
+            source: 'blockscout-v2',
+            fetchedAt: Date.now(),
+          };
+    }
+    if (contract === undefined) return null;
+    const found: AdapterTx[] = [];
+    let url =
+      `${blockscoutV2Base}/addresses/${normalized}/token-transfers` +
+      `?type=ERC-20&items_count=50`;
+    // Bounded walk: at most 3 pages, stopping early once `limit`
+    // matching transfers are found. The list is newest-first and a
+    // token's transfers may sit pages deep (the EF address's newest
+    // USDC transfer is on the first 50-page; the older two are not),
+    // so one page is not enough — but an unbounded walk would page
+    // through the address's whole ERC-20 history at ~20 s a page.
+    for (let page = 0; page < 3 && found.length < limit; page += 1) {
+      const raw = await readV2Page(url);
+      if (raw === null) return null;
+      const parsed = parseBlockscoutV2TokenTransfers(raw, {
+        chain: config.chain,
+        networkId,
+        address: normalized,
+        explorerBase: historyExplorerBase,
+        contract,
+      });
+      if (parsed === null) return null;
+      found.push(...parsed.txs.slice(0, limit - found.length));
+      if (found.length >= limit) break;
+      if (parsed.nextPageParams === null) {
+        // Walked to the end of the list: zero matches is a settled
+        // empty answer, not an inconclusive one.
+        return {
+          status: 'ok',
+          data: found,
+          source: 'blockscout-v2',
+          fetchedAt: Date.now(),
+        };
+      }
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(parsed.nextPageParams)) {
+        query.set(key, String(value));
+      }
+      url =
+        `${blockscoutV2Base}/addresses/${normalized}/token-transfers` +
+        `?type=ERC-20&items_count=50&${query.toString()}`;
+    }
+    // Matches found are a real answer; none after the bounded walk
+    // proves nothing (more pages may hold the token's transfers), so
+    // the caller keeps the primary error.
+    return found.length > 0
+      ? {
+          status: 'ok',
+          data: found,
+          source: 'blockscout-v2',
+          fetchedAt: Date.now(),
+        }
+      : null;
+  };
 
   /**
    * Runs one read on the first endpoint that is both reachable and
@@ -275,111 +579,134 @@ export function createEvmAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    // A history base URL may already carry a query string (Linea's
-    // Etherscan V2 base carries ?chainid=59144): join with '&' then,
-    // '?' otherwise. A second '?' would make the whole query one
-    // opaque parameter and Etherscan would ignore the txlist module.
-    const separator = historyBaseUrl.includes('?') ? '&' : '?';
-    const operation = action === 'tokentx' ? 'getTokenHistory' : 'getHistory';
-    const contractParam =
-      contract !== undefined ? `&contractaddress=${contract}` : '';
-    const url =
-      `${historyBaseUrl}${separator}module=account&action=${action}` +
-      `&address=${normalized}${contractParam}&page=1&offset=${limit}&sort=desc`;
-    // Merge lane (2026-11-24): Etherscan V2's keyless tier allows 1
-    // request per 5 s per IP, and answers NOTOK "Missing/Invalid API
-    // Key" inside the window — the same message as a missing key, so
-    // it looks like keyless access ended when it did not (proven live:
-    // a quiet call without any apikey parameter returns status 1 with
-    // real transactions). The app fires the history refresh twice in
-    // quick succession (boot + page), so the second Linea call lands
-    // inside the window, and the store's request counter discards the
-    // first (good) result — the page ends on "No transactions yet".
-    // One retry after 6 s clears the window; a second NOTOK is
-    // returned as the error, as before. No key is used or needed.
-    let raw: unknown;
-    for (let attempt = 1; ; attempt += 1) {
-      try {
-        raw = await readJson(url, `${config.chain}.${operation}`);
-      } catch (error: unknown) {
-        return toAdapterError(error);
+    // The primary Etherscan-compatible read, extracted so the v2
+    // fallback below can run when it errors — a primary 'ok' (rows
+    // or an empty list) is never second-guessed.
+    const fetchEtherscanCompatible = async (): Promise<
+      AdapterResult<AdapterTx[]>
+    > => {
+      // A history base URL may already carry a query string (Linea's
+      // Etherscan V2 base carries ?chainid=59144): join with '&' then,
+      // '?' otherwise. A second '?' would make the whole query one
+      // opaque parameter and Etherscan would ignore the txlist module.
+      const separator = historyBaseUrl.includes('?') ? '&' : '?';
+      const operation = action === 'tokentx' ? 'getTokenHistory' : 'getHistory';
+      const contractParam =
+        contract !== undefined ? `&contractaddress=${contract}` : '';
+      const url =
+        `${historyBaseUrl}${separator}module=account&action=${action}` +
+        `&address=${normalized}${contractParam}&page=1&offset=${limit}&sort=desc`;
+      // Merge lane (2026-11-24): Etherscan V2's keyless tier allows 1
+      // request per 5 s per IP, and answers NOTOK "Missing/Invalid API
+      // Key" inside the window — the same message as a missing key, so
+      // it looks like keyless access ended when it did not (proven live:
+      // a quiet call without any apikey parameter returns status 1 with
+      // real transactions). The app fires the history refresh twice in
+      // quick succession (boot + page), so the second Linea call lands
+      // inside the window, and the store's request counter discards the
+      // first (good) result — the page ends on "No transactions yet".
+      // One retry after 6 s clears the window; a second NOTOK is
+      // returned as the error, as before. No key is used or needed.
+      let raw: unknown;
+      for (let attempt = 1; ; attempt += 1) {
+        try {
+          raw = await readJson(url, `${config.chain}.${operation}`);
+        } catch (error: unknown) {
+          return toAdapterError(error);
+        }
+        // The quota signal is in `result`, not `message`: Etherscan
+        // answers { status: '0', message: 'NOTOK', result:
+        // 'Missing/Invalid API Key' } inside the 5 s window. (isRecord
+        // narrows `raw` first — it is still `unknown` here.)
+        const quotaHit =
+          historySource === 'etherscan-v2' &&
+          attempt === 1 &&
+          isRecord(raw) &&
+          raw['status'] !== '1' &&
+          ((typeof raw['message'] === 'string' &&
+            raw['message'].includes('Missing/Invalid API Key')) ||
+            (typeof raw['result'] === 'string' &&
+              raw['result'].includes('Missing/Invalid API Key')));
+        if (!quotaHit) break;
+        await new Promise((resolve) => setTimeout(resolve, 6000));
       }
-      // The quota signal is in `result`, not `message`: Etherscan
-      // answers { status: '0', message: 'NOTOK', result:
-      // 'Missing/Invalid API Key' } inside the 5 s window. (isRecord
-      // narrows `raw` first — it is still `unknown` here.)
-      const quotaHit =
-        historySource === 'etherscan-v2' &&
-        attempt === 1 &&
-        isRecord(raw) &&
-        raw['status'] !== '1' &&
-        ((typeof raw['message'] === 'string' &&
-          raw['message'].includes('Missing/Invalid API Key')) ||
-          (typeof raw['result'] === 'string' &&
-            raw['result'].includes('Missing/Invalid API Key')));
-      if (!quotaHit) break;
-      await new Promise((resolve) => setTimeout(resolve, 6000));
-    }
-    if (!isRecord(raw)) {
-      return { status: 'error', reason: 'Invalid response: expected an object' };
-    }
-    if (raw['status'] !== '1') {
-      const message = typeof raw['message'] === 'string' ? raw['message'] : '';
-      if (message.includes('No transactions found')) {
-        return { status: 'ok', data: [], source: historySource, fetchedAt: Date.now() };
+      if (!isRecord(raw)) {
+        return { status: 'error', reason: 'Invalid response: expected an object' };
       }
-      return { status: 'error', reason: message || 'History request failed' };
-    }
-    if (!Array.isArray(raw['result'])) {
-      return { status: 'error', reason: 'Invalid response: expected a result list' };
-    }
-    const lower = normalized.toLowerCase();
-    const txs: AdapterTx[] = [];
-    for (const entry of raw['result']) {
-      if (!isRecord(entry)) continue;
-      const hash = typeof entry['hash'] === 'string' ? entry['hash'] : '';
-      const fromRaw = typeof entry['from'] === 'string' ? entry['from'] : '';
-      const toRaw = typeof entry['to'] === 'string' ? entry['to'] : '';
-      const from = fromRaw.toLowerCase();
-      const to = toRaw.toLowerCase();
-      const value = typeof entry['value'] === 'string' ? entry['value'] : '0';
-      const timeStamp =
-        typeof entry['timeStamp'] === 'string' ? Number(entry['timeStamp']) : NaN;
-      const receiptStatus = entry['txreceipt_status'];
-      const isError = entry['isError'];
-      const failed = receiptStatus === '0' || isError === '1';
-      const fromSelf = from === lower;
-      const toSelf = to === lower;
-      const tokenSymbol =
-        typeof entry['tokenSymbol'] === 'string' ? entry['tokenSymbol'] : '';
-      const tokenDecimal =
-        typeof entry['tokenDecimal'] === 'string'
-          ? Number(entry['tokenDecimal'])
-          : NaN;
-      txs.push({
-        hash,
-        chain: config.chain,
-        networkId,
-        direction: fromSelf && toSelf ? 'self' : fromSelf ? 'out' : 'in',
-        amountBaseUnits: value,
-        counterparty:
-          fromSelf && toSelf ? null : fromSelf ? toRaw || null : fromRaw || null,
-        timestamp: Number.isFinite(timeStamp) ? timeStamp * 1000 : null,
-        status: failed ? 'failed' : 'confirmed',
-        explorerUrl:
-          historyExplorerBase !== undefined
-            ? `${historyExplorerBase}/tx/${hash}`
-            : null,
-        // A tokentx entry names its token; the amount is in that
-        // token's smallest units, so the row carries the token with it.
-        ...(action === 'tokentx' &&
-        tokenSymbol !== '' &&
-        Number.isFinite(tokenDecimal)
-          ? { token: { symbol: tokenSymbol, decimals: tokenDecimal } }
-          : {}),
-      });
-    }
-    return { status: 'ok', data: txs, source: historySource, fetchedAt: Date.now() };
+      if (raw['status'] !== '1') {
+        const message = typeof raw['message'] === 'string' ? raw['message'] : '';
+        if (message.includes('No transactions found')) {
+          return { status: 'ok', data: [], source: historySource, fetchedAt: Date.now() };
+        }
+        return { status: 'error', reason: message || 'History request failed' };
+      }
+      if (!Array.isArray(raw['result'])) {
+        return { status: 'error', reason: 'Invalid response: expected a result list' };
+      }
+      const lower = normalized.toLowerCase();
+      const txs: AdapterTx[] = [];
+      for (const entry of raw['result']) {
+        if (!isRecord(entry)) continue;
+        const hash = typeof entry['hash'] === 'string' ? entry['hash'] : '';
+        const fromRaw = typeof entry['from'] === 'string' ? entry['from'] : '';
+        const toRaw = typeof entry['to'] === 'string' ? entry['to'] : '';
+        const from = fromRaw.toLowerCase();
+        const to = toRaw.toLowerCase();
+        const value = typeof entry['value'] === 'string' ? entry['value'] : '0';
+        const timeStamp =
+          typeof entry['timeStamp'] === 'string' ? Number(entry['timeStamp']) : NaN;
+        const receiptStatus = entry['txreceipt_status'];
+        const isError = entry['isError'];
+        const failed = receiptStatus === '0' || isError === '1';
+        const fromSelf = from === lower;
+        const toSelf = to === lower;
+        const tokenSymbol =
+          typeof entry['tokenSymbol'] === 'string' ? entry['tokenSymbol'] : '';
+        const tokenDecimal =
+          typeof entry['tokenDecimal'] === 'string'
+            ? Number(entry['tokenDecimal'])
+            : NaN;
+        txs.push({
+          hash,
+          chain: config.chain,
+          networkId,
+          direction: fromSelf && toSelf ? 'self' : fromSelf ? 'out' : 'in',
+          amountBaseUnits: value,
+          counterparty:
+            fromSelf && toSelf ? null : fromSelf ? toRaw || null : fromRaw || null,
+          timestamp: Number.isFinite(timeStamp) ? timeStamp * 1000 : null,
+          status: failed ? 'failed' : 'confirmed',
+          explorerUrl:
+            historyExplorerBase !== undefined
+              ? `${historyExplorerBase}/tx/${hash}`
+              : null,
+          // A tokentx entry names its token; the amount is in that
+          // token's smallest units, so the row carries the token with it.
+          ...(action === 'tokentx' &&
+          tokenSymbol !== '' &&
+          Number.isFinite(tokenDecimal)
+            ? { token: { symbol: tokenSymbol, decimals: tokenDecimal } }
+            : {}),
+        });
+      }
+      return { status: 'ok', data: txs, source: historySource, fetchedAt: Date.now() };
+    };
+    const primary = await fetchEtherscanCompatible();
+    if (primary.status !== 'error') return primary;
+    // Item 2 ("does not retry a terminal 404"): a terminal primary
+    // error is the indexer's settled answer, not a reason to try
+    // another endpoint. Only transient failures fall back — the same
+    // signals withRetry retries on (429 / 5xx / timeouts / network
+    // errors, per classifyRetryableError), plus a rate-limit message
+    // in the body. toAdapterError keeps the thrown message verbatim
+    // as the reason, so the reason string carries the signal.
+    const transient =
+      /^(HTTP (?:429|502|503|504)|Network error: )/.test(primary.reason) ||
+      /rate limit/i.test(primary.reason);
+    if (!transient) return primary;
+    return (
+      await fetchBlockscoutV2(action, address, limit, contract)
+    ) ?? primary;
   };
 
   const getHistory = async (
