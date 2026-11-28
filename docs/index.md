@@ -78,7 +78,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 
 ## The builder
 
-- Registries — `IMPLEMENTED_AND_VERIFIED` (the 10/10 claim was withdrawn 2026-11-26 and re-earned 2026-11-27): [profiles](../registry/profiles.json) (8 profiles), [capabilities](../registry/capabilities.json), [engines](../registry/engines.json) and [UI](../registry/ui.json). `node scripts/validate-registry.mjs` exits 0 with 0 errors on this tree — the validator was upgraded to the v4 model on 2026-11-27 (version check 4, the 87-chain `chainSupport` vocabulary from the schema, the v4 profiles rule for the 74 expansion chains), and `chainSupport.history` I&V is now 18, matching `chains.ts` (Gnosis joined via keyless gnosisscan.io, 2026-11-28). The 149-error state (13-chain universe, v3 version check, history lag 10 vs 17) is recorded in the git history.
+- Registries — `IMPLEMENTED_AND_VERIFIED` (the 10/10 claim was withdrawn 2026-11-26 and re-earned 2026-11-27): [profiles](../registry/profiles.json) (8 profiles), [capabilities](../registry/capabilities.json), [engines](../registry/engines.json) and [UI](../registry/ui.json). `node scripts/validate-registry.mjs` exits 0 with 0 errors on this tree — the validator was upgraded to the v4 model on 2026-11-27 (version check 4, the 87-chain `chainSupport` vocabulary from the schema, the v4 profiles rule for the 74 expansion chains). Note: `chainSupport.history` I&V is 17 in the registry, while `chains.ts` history covers 18 — Gnosis joined via keyless gnosisscan.io on 2026-11-28 (`d06a224`) and the registry entry has not caught up yet; that is a registry lag, not a docs fix. The 149-error state (13-chain universe, v3 version check, history lag 10 vs 17) is recorded in the git history.
 - Price feed: CoinGecko, see ADR-0007 (`docs/adr/0007-price-feed-provider.md`).
 - [Schema validation](../scripts/validate-registry.mjs) — `IMPLEMENTED_AND_VERIFIED`: validation entry point for `registry/schemas/`. Exits 0 with 0 errors on this tree (validator upgraded to the v4 model, 2026-11-27).
 - [AI request routing](../ai/request-routing.md) — `DOCUMENTED_NOT_TESTED`: routing guidance and the route into prompts in `ai/`.
@@ -151,7 +151,7 @@ bawa/
                     (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),
                     `src/assets` (chain/token icons), `e2e/` (19
-                    files: Playwright specs, plus helpers and manifest),
+                    files: 16 Playwright specs, plus helpers and manifest),
                     `scripts/` (wasm copy,
                     palette audit, chains generation).
     android/        (157 files) The Android starter (Kotlin): app, core

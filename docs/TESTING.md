@@ -62,7 +62,7 @@ Known exception: tools/hdwallet-gen/compare.js has no private-extended-key check
 - unexpected existing outputs — **no automated coverage**;
 - missing .env — **no automated coverage**.
 
-Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:119–128` enforces `MAX_INDEX 2147483647`, and `tools/hdwallet-gen/extended-key.js:218–249` rejects private extended keys (`validateAccountKey`); `tools/hdwallet-gen/derive-daemon.js:67` sets the same `MAX_INDEX`, and `:136,167–171` reject over-long lines ("request too large") and malformed JSON ("bad json").
+Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:119–128` enforces `MAX_INDEX 2147483647`, and `tools/hdwallet-gen/extended-key.js:333` rejects private extended keys (`validateAccountKey`); `tools/hdwallet-gen/derive-daemon.js:67` sets the same `MAX_INDEX`, and `:136,167–171` reject over-long lines ("request too large") and malformed JSON ("bad json").
 
 ## TON-specific coverage
 
@@ -115,5 +115,7 @@ Verification record (2026-11-27, loud-stone, Node v22.23.4, token-gaps `33f1ff1`
 Verification record (2026-11-28, loud-stone, publish gates at token-gaps `2205f15`, P2/P3 merge + bughunt-v2-fixes — NOT a fresh run, figures as verified first-hand before pushing): web typecheck 0, eslint 0, build 0; web `npm run test` — 129 files, 3,347 passed + 5 skipped, 0 failed; total JS 4,482,619 bytes (budget 6,000,000, passing by 1,517,381); diagram-references test 5/5; live site root 200 serving `index-B2tRFRuM.js` (gh-pages `5d64609`). A fresh full verification run at `2205f15` — including the root smoke and register-links suites — is still owed; these are the pre-push publish gates, not a re-run.
 
 Verification record (2026-11-28, loud-stone, token-gaps `734cfef`, docs-currency Lane B — hands-on, 0 Sol calls): root `npm test` re-run first-hand, exit 0 — smoke suite 412 ok / 0 not-ok, register-links 28 PASS (440 checks, 0 fail); web gates as verified first-hand by the coordinator before pushing: typecheck 0, eslint 0, build 0, vitest 129 files / 3,351 passed + 5 skipped / 0 failed, total JS 4,482,622 bytes (budget 6,000,000, passing by 1,517,378); live site root 200 serving `index-BxW-qfX0.js` (gh-pages `43fe69f`). This closes the fresh-full-run item the `2205f15` record left open.
+
+Verification record (2026-11-28, loud-stone, token-gaps `1253bf6`, honest-remains Lane 4 — hands-on, 0 Sol calls; tip `ceade79` is docs-only past it): web gates as verified first-hand by the lane before pushing: typecheck 0, eslint clean, build exit 0, vitest 129 files / 3,429 passed + 5 skipped / 0 failed, total JS 4,509,662 bytes (budget 6,000,000, passing by 1,490,338); live site root 200 serving `index-Brm7r34g.js` (gh-pages `c0cf697`). The root smoke + register-links suites were not re-run at this tip — the 440-check figure above (at `734cfef`) is the last fresh full run of those suites.
 
 The CI workflow is `.github/workflows/ci.yml`.
