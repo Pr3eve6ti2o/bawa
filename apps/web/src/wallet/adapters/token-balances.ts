@@ -10,7 +10,10 @@
  *   the small helpers below.
  * - TRC-20 `balanceOf` via TronGrid `triggerconstantcontract` (the
  *   read-only simulation path proven by the 2026-11-12 USDT dry run in
- *   docs/mainnet/MAINNET-GUIDE.md).
+ *   docs/mainnet/MAINNET-GUIDE.md), sweeping Trongrid -> PublicNode
+ *   (fix programme, 2026-11-28): Trongrid's keyless tier 429s the
+ *   shared egress IP, so the token read falls through to PublicNode's
+ *   full node the same way native TRX already does (adapters/trx.ts).
  * - Token verification for the Add Token flow: format + checksum,
  *   is-it-a-contract, on-chain name/symbol/decimals, balance sanity.
  *   Nothing is added until every check passes.
@@ -64,6 +67,29 @@ export interface EvmRpcClient {
 }
 
 const TRONGRID_BASE_URL = 'https://api.trongrid.io';
+// PublicNode TRON full node (fix programme, 2026-11-28): the second
+// registry TRON endpoint and the TRC-20 fallback. Probed live
+// 2026-11-28: POST /wallet/triggerconstantcontract answers 200 with
+// the same shape as Trongrid — balanceOf for USDT
+// TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t / owner
+// TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5 returned 258880897 base units
+// on both hosts, decimals() 6, and an OPTIONS preflight answers 204
+// with access-control-allow-origin: *, so the browser POST passes
+// CORS. TronScan cannot join this sweep: its API has no
+// triggerconstantcontract (POST /api/triggerconstantcontract
+// answers 405, probed the same day).
+const PUBLIC_NODE_TRON_BASE_URL = 'https://tron-rpc.publicnode.com';
+
+/** Ordered Trongrid-shaped base URLs for TRON token reads: an explicit
+ * override wins, else the owner's resolved TRON endpoint list
+ * (registry Trongrid -> PublicNode, or the owner's overrides), else
+ * the two known hosts in that order. */
+function tronTokenBaseUrls(baseUrl?: string): string[] {
+  if (baseUrl !== undefined) return [baseUrl];
+  const resolved = resolveRpcEndpoints('trx');
+  if (resolved.length > 0) return resolved;
+  return [TRONGRID_BASE_URL, PUBLIC_NODE_TRON_BASE_URL];
+}
 
 interface TokenBalanceInput {
   chain: ChainId;
@@ -256,50 +282,63 @@ async function fetchEvmTokenMetadata(input: {
   }
 }
 
-/** One TronGrid triggerconstantcontract read (bounded retry, read-only). */
+/** One triggerconstantcontract read (bounded retry, read-only),
+ * sweeping the TRON token endpoints in order (Trongrid -> PublicNode)
+ * and reporting the one that answered. A per-endpoint failure — an
+ * HTTP 429 from Trongrid, a malformed body, a reverted call — throws
+ * inside the attempt so tryEndpoints moves on; only when every
+ * endpoint fails does the whole sweep throw, and withRetry then
+ * retries the sweep. This is the same shape as the EVM sweep in
+ * createJsonRpcClient above (one withRetry around the whole sweep,
+ * one raw attempt per endpoint), so a dead primary fails over after
+ * one attempt, not nine. */
 async function triggerConstant(input: {
   contract: string;
   ownerAddress: string;
   functionSelector: string;
   parameter: string;
   transport: FetchTransport;
-  baseUrl: string;
-}): Promise<{ ok: boolean; constantResult: string[] }> {
+  baseUrls: string[];
+}): Promise<{ ok: boolean; constantResult: string[]; endpoint?: string }> {
   const ownerHex = tronAddressToHex(input.ownerAddress);
   const contractHex = tronAddressToHex(input.contract);
   if (ownerHex === null || contractHex === null) {
     return { ok: false, constantResult: [] };
   }
-  let raw: unknown;
-  try {
-    raw = await withRetry(
-      () =>
-        input.transport.request(`${input.baseUrl}/wallet/triggerconstantcontract`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({
-            owner_address: ownerHex,
-            contract_address: contractHex,
-            function_selector: input.functionSelector,
-            parameter: input.parameter,
-            visible: false,
-          }),
+  const attempt = async (baseUrl: string): Promise<string[]> => {
+    const raw: unknown = await input.transport.request(
+      `${baseUrl}/wallet/triggerconstantcontract`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          owner_address: ownerHex,
+          contract_address: contractHex,
+          function_selector: input.functionSelector,
+          parameter: input.parameter,
+          visible: false,
         }),
+      },
+    );
+    if (!isRecord(raw)) {
+      throw new Error('Invalid TRON triggerconstantcontract response');
+    }
+    const result = isRecord(raw['result']) ? raw['result']['result'] : undefined;
+    const constant = raw['constant_result'];
+    if (result !== true || !Array.isArray(constant)) {
+      throw new Error('Invalid TRON triggerconstantcontract response');
+    }
+    return constant.filter((entry): entry is string => typeof entry === 'string');
+  };
+  try {
+    const { result, endpoint } = await withRetry(
+      () => tryEndpoints(input.baseUrls, attempt),
       { operation: 'trx.triggerconstantcontract' },
     );
+    return { ok: true, constantResult: result, endpoint };
   } catch {
     return { ok: false, constantResult: [] };
   }
-  if (!isRecord(raw)) return { ok: false, constantResult: [] };
-  const result = isRecord(raw['result']) ? raw['result']['result'] : undefined;
-  const constant = raw['constant_result'];
-  if (result !== true || !Array.isArray(constant)) {
-    return { ok: false, constantResult: [] };
-  }
-  return {
-    ok: true,
-    constantResult: constant.filter((entry): entry is string => typeof entry === 'string'),
-  };
 }
 
 /** 20-byte TRON address hex (no 0x41 prefix) left-padded to 32 bytes. */
@@ -359,12 +398,15 @@ export async function fetchTronTokenMetadata(input: {
   ownerAddress: string;
   transport?: FetchTransport;
   baseUrl?: string;
+  baseUrls?: string[];
 }): Promise<MetadataResult> {
   const transport = input.transport ?? httpFetchTransport;
   // The owner's RPC list applies here too (item 19): a custom
   // Trongrid-shaped endpoint replaces the default for token reads.
-  const baseUrl =
-    input.baseUrl ?? resolveRpcEndpoints('trx')[0] ?? TRONGRID_BASE_URL;
+  // The list is swept in order (Trongrid -> PublicNode), so a
+  // Trongrid 429 falls through to PublicNode instead of failing the
+  // metadata read.
+  const baseUrls = input.baseUrls ?? tronTokenBaseUrls(input.baseUrl);
   // Probe first: a non-contract / nonexistent address fails here.
   const probe = await triggerConstant({
     contract: input.contract,
@@ -372,7 +414,7 @@ export async function fetchTronTokenMetadata(input: {
     functionSelector: 'decimals()',
     parameter: '',
     transport,
-    baseUrl,
+    baseUrls,
   });
   if (!probe.ok || probe.constantResult.length === 0) {
     return {
@@ -388,7 +430,7 @@ export async function fetchTronTokenMetadata(input: {
       functionSelector: 'name()',
       parameter: '',
       transport,
-      baseUrl,
+      baseUrls,
     }),
     triggerConstant({
       contract: input.contract,
@@ -396,7 +438,7 @@ export async function fetchTronTokenMetadata(input: {
       functionSelector: 'symbol()',
       parameter: '',
       transport,
-      baseUrl,
+      baseUrls,
     }),
   ]);
   const name =
@@ -513,7 +555,8 @@ async function fetchErc20Balance(input: {
   }
 }
 
-/** TRC-20 balanceOf via triggerconstantcontract. */
+/** TRC-20 balanceOf via triggerconstantcontract, sweeping the TRON
+ * token endpoints in order (Trongrid -> PublicNode). */
 async function fetchTrc20Balance(input: {
   contract: string;
   ownerAddress: string;
@@ -524,8 +567,10 @@ async function fetchTrc20Balance(input: {
   const transport = input.transport ?? httpFetchTransport;
   // The owner's RPC list applies here too (item 19): a custom
   // Trongrid-shaped endpoint replaces the default for token reads.
-  const baseUrl =
-    input.baseUrl ?? resolveRpcEndpoints('trx')[0] ?? TRONGRID_BASE_URL;
+  // The list is swept in order (Trongrid -> PublicNode), so a
+  // Trongrid 429 falls through to PublicNode instead of dropping
+  // the balance.
+  const baseUrls = tronTokenBaseUrls(input.baseUrl);
   const parameter = tronAddressParameter(input.ownerAddress);
   if (parameter === null) {
     return { status: 'error', reason: 'Invalid owner address' };
@@ -536,7 +581,7 @@ async function fetchTrc20Balance(input: {
     functionSelector: 'balanceOf(address)',
     parameter,
     transport,
-    baseUrl,
+    baseUrls,
   });
   if (!result.ok || result.constantResult.length === 0) {
     return { status: 'error', reason: UNREADABLE_TOKEN };
@@ -551,13 +596,20 @@ async function fetchTrc20Balance(input: {
       contract: input.contract,
       ownerAddress: input.ownerAddress,
       transport,
-      baseUrl,
+      baseUrls,
     });
     if (!metadata.ok) {
       return { status: 'error', reason: metadata.error };
     }
     decimals = metadata.metadata.decimals;
   }
+  // The source is the endpoint that actually answered — a balance
+  // that came through PublicNode must never claim Trongrid (the
+  // same rule as the EVM client's lastEndpoint).
+  const source =
+    result.endpoint !== undefined
+      ? endpointHost(result.endpoint)
+      : endpointHost(baseUrls[0] ?? TRONGRID_BASE_URL);
   return {
     status: 'ok',
     data: {
@@ -566,10 +618,10 @@ async function fetchTrc20Balance(input: {
       networkId: CHAINS.trx.networkId,
       valueBaseUnits: balance.toString(),
       decimals,
-      source: endpointHost(baseUrl),
+      source,
       fetchedAt: Date.now(),
     },
-    source: endpointHost(baseUrl),
+    source,
     fetchedAt: Date.now(),
   };
 }

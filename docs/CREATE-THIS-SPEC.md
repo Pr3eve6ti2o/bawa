@@ -855,6 +855,34 @@ Implementation: `apps/web/src/screens/qr-card.tsx`,
   node: it answers `/wallet/*` paths but not Trongrid's `/v1/*`
   REST paths — a `/v1` sweep that reaches it 404s fast (404 is not
   retried) and the fallbacks below own the balance then.
+- **TRON token (TRC-20) fallback — PublicNode (fix programme,
+  2026-11-28).** The TRC-20 read used to hit only the registry's
+  first TRON endpoint (Trongrid), so TRON USDT went missing in 3/10
+  baseline runs on Trongrid `triggerconstantcontract` 429s while
+  native TRX survived the same 429s via its PublicNode fallback.
+  The token read now sweeps the TRON endpoints in order (Trongrid
+  -> PublicNode) — `wallet/adapters/token-balances.ts:87`
+  (`tronTokenBaseUrls`), `:295` (`triggerConstant`, one `withRetry`
+  around the whole sweep, one raw attempt per endpoint, the same
+  shape as the EVM sweep in `createJsonRpcClient`), `:396`
+  (`fetchTronTokenMetadata`), `:560` (`fetchTrc20Balance`, which
+  reports the endpoint that actually answered as its source, so a
+  PublicNode balance never claims Trongrid). PublicNode answers
+  POST `/wallet/triggerconstantcontract` with the same shape as
+  Trongrid — probed live 2026-11-28 for USDT
+  `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` / owner
+  `TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5`: both hosts 200, balance
+  258880897 base units, `decimals()` 6, OPTIONS preflight 204 with
+  `access-control-allow-origin: *`. TronScan cannot join this sweep:
+  its API has no `triggerconstantcontract` (POST
+  `/api/triggerconstantcontract` answers 405, probed the same day).
+  No CSP change: `tron-rpc.publicnode.com` is already in
+  `connect-src` for the native fallback. Unit tests
+  (`token-balances.test.ts`, TRC-20 balanceOf / metadata /
+  verifyTronToken) cover the Trongrid-429 fall-through and the
+  all-endpoints-down error; e2e `lane2-tron-usdt-fallback.spec.ts`
+  aborts `api.trongrid.io` in the browser and adds USDT by
+  contract through PublicNode at 390/1280 px.
 - **Failed rows stay visible, never vanish (fix programme,
   2026-11-28, `e6a2727`).** A chain whose balance check fails keeps
   its row with an honest error — "Balance unavailable" / "Could not
