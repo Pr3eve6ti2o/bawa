@@ -128,7 +128,7 @@ Core’s [`registry.json`](https://github.com/trustwallet/wallet-core/blob/maste
 Single-address generation plus a public-key-only watch-only route via `derive-ton.js` (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. No mnemonic, seed or private key is involved. Input must be exactly 64 hex characters, with no `0x` prefix.
 
 ```sh
-echo "<64 hex chars>" | node derive-ton.js
+echo "<64 hex chars>" | node tools/hdwallet-gen/derive-ton.js
 ```
 
 ## 4. Account scope and discovery

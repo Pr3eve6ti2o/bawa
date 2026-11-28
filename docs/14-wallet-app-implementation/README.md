@@ -45,9 +45,9 @@ Keep gate status specific to the platform:
 
 **Web:** Fixture gate enforced in-engine and covered by offline engine tests; no live-network gate run exists.
 
-**Android:** Fixture gate defined (section I.4); the on-device gate has never run. For the fixture gate’s Android side, see `docs/index.md` for the overall Android test inventory and execution status: 77 `@Test` annotations across 10 test files, executed in the Android Step 3 data-layer lane (e20cee6, 2026-11-28); debug APK built (`app-debug.apk`, 53,712,159 bytes). The on-device fixture gate has still never run (no Core AAR yet — Step 4 is running). This annotation count is not a passing device-run result.
+**Android:** Fixture gate defined (section I.4); the on-device gate has never run. For the fixture gate’s Android side, see `docs/index.md` for the overall Android test inventory and execution status: 77 `@Test` annotations across 10 test files, executed in the Android Step 3 data-layer lane (e20cee6, 2026-11-28); debug APK built (`app-debug.apk`, 53,712,159 bytes). Step 4 is done — the Trust Wallet Core 4.8.4 AAR is built from source and in-tree (`f9f312b`, 2026-11-28; `ENGINE_BINDING_AVAILABLE` is `true`); the on-device fixture gate still has never run (no device run has happened). This annotation count is not a passing device-run result. (The "no Core AAR yet — Step 4 is running" clause is the pre-`f9f312b` record, superseded.)
 
-The on-device gate has never run: no Core AAR has been built and no device run has happened. The gate's requirements are acceptance criteria, not results.
+The on-device gate has never run: the Core AAR is built (Step 4, `f9f312b`) but no device run has happened. The gate's requirements are acceptance criteria, not results.
 
 Do not substitute the pure-module fixture checks for the Android on-device gate.
 
@@ -89,7 +89,7 @@ Until the recorded ownership-contract review establishes explicit ownership and 
 
 ### Open signing proof
 
-Treat the Trust Wallet Core 4.8.4 demonstration as evidence for that release only. D21 (8 November 2026) completed the EIP-1559 construction/signing demonstration with txMode: 1 against Trust Wallet Core 4.9.2 in a work copy of the Web draft upgraded to @trustwallet/wallet-core@4.9.2. The full suite recorded 31 pass / 0 fail; the dedicated demonstration produced a 0x02 envelope with exactly 12 RLP fields, and independent Python sender recovery matched the published fixture address exactly. The in-browser proof, send, sign and broadcast remain open.
+Treat the Trust Wallet Core 4.8.4 demonstration as evidence for that release only. D21 (8 November 2026) completed the EIP-1559 construction/signing demonstration with txMode: 1 against Trust Wallet Core 4.9.2 in a work copy of the Web draft upgraded to @trustwallet/wallet-core@4.9.2. The full suite recorded 31 pass / 0 fail; the dedicated demonstration produced a 0x02 envelope with exactly 12 RLP fields, and independent Python sender recovery matched the published fixture address exactly. The demonstration was re-run on 4.9.3 (D31). In-browser offline signing is implemented (`apps/web/src/wallet/send.ts` signers for BTC/ETH/TRX/TON/SOL + generalised EVM signer for 61 EVM chains; devnet TON sends ran on `panel-rebuild/devnet-temp`); mainnet broadcast remains disabled and no mainnet send has ever run.
 
 ## Derivation module
 
@@ -217,7 +217,7 @@ Provide one-tap copy for the receive address, with automatic clipboard clearing 
 
 ### 3.6 Vault passphrase policy and Web draft evidence
 
-Set the shared minimum vault unlock passphrase length to 8 characters. This explicitly adopts the minimum enforced by the Web validation draft in `main.js` as shared policy. Enforcement outside the Web draft is not established by the supplied evidence. Reject weak passphrases under the recorded policy.
+Set the shared minimum vault unlock passphrase length to 8 characters. This adopts the minimum enforced by the web app (`MIN_PASSWORD_LENGTH = 8` in `apps/web/src/screens/create-wallet.tsx:53` and `security-settings.tsx:22`, verified 2026-11-28 at `ceade79`); the "Web validation draft in `main.js`" attribution in the original text is the 2026-11-08 record — that draft's `main.js` no longer exists. Enforcement outside the web app is not established by the supplied evidence. Reject weak passphrases under the recorded policy.
 
 Keep the Web validation draft’s vault distinct from the repository envelope. Treat its PBKDF2-600k with AES-256-GCM and its own AAD `bawa-web-vault-v1` as draft implementation choices. Preserve the distinction that this AAD is deliberately not the repository’s AAD. Do not claim `seed.enc.json` compatibility.
 
@@ -306,7 +306,9 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 - **Wallet management:** Show accounts, chains, full addresses and optional public keys. Require explicit confirmation for local-wallet deletion, and never offer private-key export.
 - **Security and backup settings:** Show privacy, authentication and backup controls; the target auto-lock setting on `/security` is optional and OFF by default, with a toggle and duration selector (Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day), password-required unlocking when enabled, and the key-storage invariant specified in §3.3; do not display the mnemonic here.
 
-Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
+Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, with its own screen (`/lock`, `apps/web/src/screens/lock.tsx`).
+
+> **Screens beyond the 14 (2026-11-28, Lane A docs audit):** the app now also ships Swap (`/swap` — live LI.FI quotes, swap execution not implemented, broadcast disabled), Track (`/track` — resolve any real transaction hash) and Address book (`/address-book`) as screens beyond the canonical 14, plus Lock as a screen (`/lock`) as well as a state. The 14 above remain the canonical contract; these four are recorded here so the list is not mistaken for the app's full screen inventory.
 
 Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft implements QR receive: `receive.tsx` renders the derived address as a QR card in one of seven templates A–G, with a Starknet receive-only warning on every template and in the exported PNG (77e4473), as documented in `docs/web-wallet/WEB-GUIDE.md`, section J. `registry/profiles.json` lists receive-QR display as `IMPLEMENTED_AND_VERIFIED`. QR payment-request scanning is implemented at the decode level through `apps/web/src/wallet/qr-scanner.tsx` (jsQR, camera + image upload), which is wired into send; URI parsing is not implemented. `qr-scanner.test.tsx` exists alongside it. Add the Android verification half before treating it as implemented.
 
@@ -414,11 +416,11 @@ Treat the shipped web starter result as a mainnet-only app. Never use it to hold
 
 ### 6.3 Build-from-scratch checklist
 
-Treat the install steps as an unexecuted procedure, not a verified path: no debug APK has ever been built.
+Treat the install steps as an unexecuted procedure, not a verified path: the debug APK has been built, installed and launched on an emulator (Step 3, `e20cee6`, 53,712,159 bytes; welcome and import screens verified visually; the on-device Add-button acceptance path remains NOT VERIFIED), but the on-device fixture gate has never run.
 
-Keep the on-device fixture gate marked as never run: no Core AAR has been built and no device run has happened, so the gate has never run.
+Keep the on-device fixture gate marked as never run: the Core AAR is built (Step 4, `f9f312b`) but no device run has happened, so the gate has never run.
 
-Live validation so far: wallet creation and recovery were verified end to end in a live run on 8 November 2026 (V1; pushed head at the time: 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1's watch-only checks — derive 9/9, compare 9/9 and smoke 28/28 — ran on the repaired working copy, byte-identical to the phase-1 repair later pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12. The subsequent professional rewrite was pushed as 754721cd. No live testnet spend has been made from this wallet.
+Live validation so far: wallet creation and recovery were verified end to end in a live run on 8 November 2026 (V1; pushed head at the time: 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1's watch-only checks — derive 9/9, compare 9/9 and smoke 28/28 — ran on the repaired working copy, byte-identical to the phase-1 repair later pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12. The subsequent professional rewrite was pushed as 754721cd. No MAINNET send has ever run from this wallet; devnet TON test sends have run (panel-rebuild/devnet-temp).
 
 Use this nine-step checklist as work to complete, not as evidence of completion. Do not pass any release gate without its own evidence.
 
@@ -430,9 +432,9 @@ Use this nine-step checklist as work to complete, not as evidence of completion.
 
 4. **Check offline logic and public derivation.** Work through the unit, negative and differential requirements in Section 6.1. Assert exact differential equality in CI, and retain the open items for independent TRX and index `1` and `2` coverage.
 
-5. **Build the Core AAR.** Obtain evidence for the AAR build itself. Do not substitute the pure Kotlin harness results for AAR, JNI binding or signing evidence.
+5. **Build the Core AAR.** Done — Trust Wallet Core 4.8.4 AAR built from source and in-tree (Step 4, `f9f312b`, 2026-11-28; `ENGINE_BINDING_AVAILABLE` is `true`, on-device derivation bound, execution still unverified). Do not substitute the pure Kotlin harness results for AAR, JNI binding or signing evidence.
 
-6. **Build and install the debug APK.** Build the APK, carry out the install steps and run the on-device fixture gate. Record separate evidence for the build and device run before describing either as verified.
+6. **Build and install the debug APK.** Done for the build/install/launch half — debug APK built, installed and launched on an emulator (Step 3, `e20cee6`); run the on-device fixture gate and record separate evidence for the build and device run before describing either as verified. The on-device Add-button acceptance path remains NOT VERIFIED (taps swallowed under TCG emulation).
 
 7. **Exercise integration, UI and live wallet flows.** Use a disposable local node or explicitly selected testnet for integration checks. Exercise creation, backup verification and recovery with test-only inputs, and obtain evidence of end-to-end live creation and recovery and a live testnet spend. Complete the confirmation, cancellation and negative-path checks from Section 6.1.
 

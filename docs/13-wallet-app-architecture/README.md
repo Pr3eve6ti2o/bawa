@@ -59,7 +59,8 @@ The conceptual stack above is realised in the web starter as screens, one
 state provider, a vault, Core, and read-only chain adapters. Secrets live only
 inside the dashed boundary (the vault closure and Core); only public addresses
 and balance results cross to the public-data side. Verified against
-`apps/web/src/` on token-gaps (`8a1d681`).
+`apps/web/src/` on token-gaps (`8a1d681`); routes, screen list and chain count
+re-checked at `ceade79` (Lane A docs audit, 2026-11-28).
 
 ```mermaid
 flowchart TB
@@ -69,7 +70,7 @@ flowchart TB
   subgraph SCREENS["Screens — apps/web/src/screens/"]
     direction TB
     APP["apps/web/src/app/app.tsx<br/>react-router; lazy-loaded screen routes"]
-    VIEWS["apps/web/src/screens/<br/>welcome; dashboard (index); create-wallet; import-wallet<br/>mnemonic-backup; asset-list; asset-detail (assets/:chain)<br/>receive; send; transaction-history; transaction-detail<br/>network-selection; wallet-management; security-settings<br/>UI: apps/web/src/ui/ — vendored token-ui"]
+    VIEWS["apps/web/src/screens/<br/>welcome; dashboard (index); create-wallet; import-wallet<br/>mnemonic-backup; asset-list; asset-detail (assets/:chain)<br/>receive; send; swap; transaction-history; transaction-detail<br/>track; network-selection; wallet-management; address-book<br/>security-settings; lock<br/>UI: apps/web/src/ui/ — vendored token-ui"]
     APP --> VIEWS
   end
 
@@ -79,7 +80,7 @@ flowchart TB
 
   subgraph WALLET["Wallet layer — apps/web/src/wallet/core.ts"]
     direction TB
-    CHAINS["apps/web/src/wallet/chains.ts<br/>ChainId: btc | eth | trx | ton only<br/>Capabilities: derive, restore, receive, balance, history,<br/>fee-quote, unsigned-plan, local-sign, post-sign-verify<br/>Each: verified / blocked / unsupported / candidate, with evidence<br/>TON fee-quote and post-sign-verify: blocked"]
+    CHAINS["apps/web/src/wallet/chains.ts<br/>ChainId: 87 chains (22 curated + 65 expansion)<br/>Capabilities: derive, restore, receive, balance, history,<br/>fee-quote, unsigned-plan, local-sign, post-sign-verify<br/>Each: verified / blocked / unsupported / candidate, with evidence<br/>TON fee-quote and post-sign-verify: blocked"]
 
     subgraph SECRET["Secret trust boundary: vault closure + Core<br/>apps/web/src/wallet/vault.ts + apps/web/src/wallet/core.ts"]
       direction TB
@@ -113,7 +114,7 @@ flowchart TB
   style PUBLIC fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px
 ```
 
-The read-only `BalanceProvider` registry is in `apps/web/src/wallet/balance-providers.ts`. Its adapters are BTC (mempool.space REST), ETH (viem), TRX (TronGrid), and TON (TonCenter).
+The read-only `BalanceProvider` registry is in `apps/web/src/wallet/balance-providers.ts`. The original four adapters are BTC (mempool.space REST), ETH (viem), TRX (TronGrid), and TON (TonCenter); the full 22-chain endpoint table is below, and the remaining 65 expansion chains share the generic EVM adapter (`apps/web/src/wallet/adapters/evm.ts`) or their family adapter.
 
 | Network | Adapter | Endpoint URL | Source |
 | --- | --- | --- | --- |
@@ -201,7 +202,7 @@ Apply the fixed `bawa-derivation-policy-v1` policy. For BTC, use account origin 
 - For ETH, use `m/44'/60'/0'/0/i`.
 - For TRX, use `m/44'/195'/0'/0/i`.
 
-Keep TON generation-only from `m/44'/607'/0'` using ed25519. Provide a single deposit address and no xpub; the configured address is the V3 fixture in docs/11. Treat compatibility with any specific wallet as unverified.
+Keep TON single-address from `m/44'/607'/0'` using ed25519. Provide a single deposit address and no xpub; the configured address is the V3 fixture in docs/11. ("Generation-only" described the CLI generator: the web app now also has TON balance and history adapters and offline signing — `signTonOffline` in `send.ts` — so the app is not generation-only for TON.) Treat compatibility with any specific wallet as unverified.
 
 ### Vault protection and unlock policy
 
@@ -214,6 +215,8 @@ Use the shared minimum vault unlock passphrase length recorded in docs/14 sectio
 ### Adapter network identity and endpoint trust
 
 Verify the configured endpoint’s network identity separately for each adapter. Consult `docs/10` for the endpoint URLs and their verification commands.
+
+> **Currency note (2026-11-28, Lane A docs audit):** the four requirements below are the testnet identity checks for the testnet procedure; the live web wallet adapters are mainnet (BTC mempool.space mainnet, ETH mainnet, TRON mainnet, TON mainnet — see the per-chain endpoint table below).
 
 - For the BTC adapter, require testnet4.
 - For the ETH adapter, require Sepolia with chain ID `11155111`.
@@ -343,7 +346,7 @@ Use the worker’s recognised request fields, `chain`, `xpub` and `index`. Do no
 
 ### Signing boundary
 
-Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tooling and the web app pin version `4.9.3`; the Android Step 4 AAR build pins `4.8.4` per its build doc — see the 2026-11-28 status block in the Android guide — and the app's recorded `ENGINE_VERSION` of `4.9.3` is flagged to be corrected to `4.8.4` when the AAR lands). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
+Keep the implementation boundary explicit: offline transaction construction and local signing exist in the web app (`apps/web/src/wallet/send.ts` — signers for BTC/ETH/TRX/TON/SOL + the generalised EVM signer for 61 EVM chains; `broadcastSigned` returns disabled, no MAINNET send has ever run; devnet TON sends ran on `panel-rebuild/devnet-temp`). The repository tooling and the web app pin Trust Wallet Core version `4.9.3`; the Android Step 4 AAR build pins `4.8.4` (`DerivationPolicy.ENGINE_VERSION` is `4.8.4`, corrected when the AAR landed at `f9f312b`). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
 
 Give the signer an immutable unsigned transaction, an explicit chain/network context and the minimum evidence needed to validate the proposed spend. For Bitcoin, include previous-output information sufficient to check input values and scripts. Identify signing keys through a locally authorised key reference, not by passing private keys through application messages.
 
@@ -474,7 +477,7 @@ Two cross-checks against the code: the adapters hardcode the same defaults as th
 
 #### History indexers — summary
 
-The full per-chain history table and the indexer provider entries live in [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer) ("RPC is not an indexer"), where a reader of history looks. The summary: 17 of 87 chains have a verified keyless history indexer — Bitcoin (mempool.space / Blockstream), Ethereum, Polygon, Arbitrum, Optimism, Base, Celo, Scroll, Aurora (Blockscout instances), Avalanche and Mantle (Routescan), TRON (TronGrid), TON (TonCenter), Solana (Solana RPC), Litecoin (Litecoinspace / BlockCypher), Dogecoin (SoChain / BlockCypher), Linea (Etherscan V2, wired 2026-11-24). Five chains have **no** working keyless indexer and their history stays blocked, never faked: **BNB Smart Chain, Gnosis, opBNB, Metis, Fantom** — an Etherscan API key or another indexer is an owner decision, not a code fix.
+The full per-chain history table and the indexer provider entries live in [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer) ("RPC is not an indexer"), where a reader of history looks. The summary: 18 of 87 chains have a verified keyless history indexer — Bitcoin (mempool.space / Blockstream), Ethereum, Polygon, Arbitrum, Optimism, Base, Celo, Scroll, Aurora (Blockscout instances), Avalanche and Mantle (Routescan), TRON (TronGrid), TON (TonCenter), Solana (Solana RPC), Litecoin (Litecoinspace / BlockCypher), Dogecoin (SoChain / BlockCypher), Linea (Etherscan V2, wired 2026-11-24), Gnosis (gnosisscan.io keyless, `d06a224`, 2026-11-28). Four chains have **no** working keyless indexer and their history stays blocked, never faked: **BNB Smart Chain, opBNB, Metis, Fantom** — an Etherscan API key or another indexer is an owner decision, not a code fix.
 
 One flag on the Blockscout and Scrollscan hosts: Blockscout moved all API traffic to its keyed Pro API on 1 July 2026 and retired the per-instance APIs the wallet calls keyless — but Lane B probed those same per-instance hosts live on 2026-11-23 and they returned real transactions with no key. The keyless calls work today and are documented as they are; if they stop answering, history on those chains needs a Pro key (free tier: 100,000 credits/day at 5 requests/second, key required; Builder $49/month). See docs/06 for the full note.
 
@@ -518,6 +521,8 @@ Adopt the Android guide's 14 numbered screens, H.1 to H.14, as the wallet app's 
 14. **Security and backup settings** (H.14)
 
 Use docs/14 section 5.1 as the wallet app's sole canonical fourteen-screen list and permitted-data reference. Review is a required state of the Send flow; Lock is a required app state. Both platform guides must link to this contract instead of restating the full screen list. Platform-specific guidance must refer to the relevant canonical screen or state without defining an alternative inventory.
+
+> **Currency note (2026-11-28, Lane A docs audit):** the app now also ships Swap, Track and Address book as screens beyond the 14 (`/swap`, `/track`, `/address-book` in `apps/web/src/app/app.tsx`), and Lock as a screen as well as a state (`/lock`). See the docs/14 §5.1 update.
 
 ### Backup gate and mnemonic handling
 

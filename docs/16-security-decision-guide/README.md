@@ -25,7 +25,7 @@ How-to guide.
 
 ## Scope
 
-Use this guide for testnet wallets only. Mainnet is absent from this guide set, and passing any gate does not authorise mainnet use.
+Use this guide for testnet wallets only. Passing any gate does not authorise mainnet use. (The "mainnet is absent from this guide set" sentence in the original text is the 2026-11-08 record — mainnet is now covered by `docs/mainnet/MAINNET-GUIDE.md`; this guide itself stays testnet-scoped.)
 
 ## Who is holding what
 
@@ -38,7 +38,7 @@ Start with the decision that matters for your holder type.
 | Small business or shared fund | Identify who can approve spending and what happens if a key holder becomes unavailable. |
 | Institution | Count which people or services control enough signing power to spend, including during recovery. |
 
-Treat Bawa as a documented workflow, not a wallet application or custody service. Follow its coverage of key generation on a computer you trust, watch-only derivation with no seed present, and independent checks. Do not expect Bawa to operate a node, look up balances or broadcast transactions. Keep signing with a separate signer or hardware wallet; the tracker cannot sign.
+Treat Bawa as a documented workflow plus a web wallet starter (`apps/web`), not a custody service. Follow its coverage of key generation on a computer you trust, watch-only derivation with no seed present, and independent checks. The web starter looks up balances read-only via chain adapters; Bawa does not operate a node or broadcast transactions (broadcast disabled). Keep signing with a separate signer or hardware wallet; the tracker cannot sign.
 
 Judge custody by the keys, not the service label. Count who controls enough signing power to meet the spending threshold. If a provider must contribute to every spend, it can block you. If you hold the threshold yourself and the provider has only a below-threshold recovery share, you can spend without it, while it cannot move funds alone.
 

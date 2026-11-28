@@ -18,6 +18,8 @@ Recommend `token-ui` as the Web foundation. Use Tether WDK Starter as the Androi
 
 accepted
 
+Amendment (2026-11-28, Lane A docs audit): the "Bawa Balanced" default visual direction is superseded — owner style-B pick 2026-11-27: polished financial style everywhere, with only a tiny fraction of the paper/comic theme kept for brand moments (see `docs/CREATE-THIS-SPEC.md` §15 trace: "Bawa Balanced" default is superseded). The rest of this record stands: the repo is the builder's source of truth, `token-ui` is the Web foundation, Tether WDK Starter is the Android UI-only foundation.
+
 ## Consequences
 
 - The builder works from the repo's verified resources and never invents a stack.

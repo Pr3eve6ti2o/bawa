@@ -135,9 +135,9 @@ Per-chain history status (probed live 2026-11-23 unless noted):
 | Avalanche C-Chain | Routescan | Verified (hash lookup unsupported — shape differs) |
 | Litecoin | Litecoinspace / BlockCypher | Verified |
 | Dogecoin | SoChain / BlockCypher | Verified |
-| Gnosis | — | **Blocked — gnosisscan.io 403s; no keyless indexer answers** |
+| Gnosis | gnosisscan.io | Verified (`d06a224`, keyless Etherscan v1 API, `chains.ts:832`; 10 real transactions rendered in the app) |
 | Celo | celo.blockscout.com | Verified |
-| Linea | Etherscan V2 | Verified (wired 2026-11-24, `HISTORY_EVIDENCE_2026_11_24_LINEA`, `apps/web/src/wallet/chains.ts:291`) |
+| Linea | Etherscan V2 | Verified (wired 2026-11-24, `HISTORY_EVIDENCE_2026_11_24_LINEA`, `apps/web/src/wallet/chains.ts:868`) |
 | Mantle | Routescan | Verified (hash lookup unsupported — shape differs) |
 | Scroll | scrollscan.com | Verified |
 | opBNB | — | **Blocked — no keyless indexer answers** |
@@ -145,7 +145,7 @@ Per-chain history status (probed live 2026-11-23 unless noted):
 | Aurora | explorer.aurora.dev | Verified |
 | Fantom | — | **Blocked — no keyless indexer answers** |
 
-The five blocked chains — BNB Smart Chain, Gnosis, opBNB, Metis, Fantom — were each probed and no keyless public history indexer answers for them (the Etherscan-family hosts 404 or 403). Their history stays blocked, never faked. (Linea was the sixth until 2026-11-24, when it was wired via Etherscan V2 — see the table above.) Unblocking them needs an Etherscan API key or another indexer — an owner decision, because it is a keyed service. Note the stale comment in `apps/web/src/wallet/adapters/index.ts` (`EVM_HISTORY_SOURCES`) still says "the other twelve non-ETH EVM chains stay unwired": it predates the Lane B verification above and is out of date.
+The four blocked chains — BNB Smart Chain, opBNB, Metis, Fantom — were each probed and no keyless public history indexer answers for them (the Etherscan-family hosts 404 or 403). Their history stays blocked, never faked. (Linea was blocked until 2026-11-24, when it was wired via Etherscan V2 — see the table above — and Gnosis was blocked until 2026-11-28, when it was wired via gnosisscan.io keyless, `d06a224`.) Unblocking them needs an Etherscan API key or another indexer — an owner decision, because it is a keyed service. Note the stale comment in `apps/web/src/wallet/adapters/index.ts` (`EVM_HISTORY_SOURCES`) still says "the other twelve non-ETH EVM chains stay unwired": it predates the Lane B verification above and is out of date.
 
 ## 4. UTXO tracking vs account tracking
 

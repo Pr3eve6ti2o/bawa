@@ -217,4 +217,4 @@ Full research, with what was read and what was applied, in `~/workspace/bawa-fix
 
 **consenlabs/token-ui — VENDORED.** `apps/web/src/ui/`, commit `6380d5d4dfeebf89704c0527e3c552be6ee2d231` (2026-05-14), MIT — see `apps/web/src/ui/NOTICE.md`. 65 components plus `hooks/use-mobile.ts`, `lib/utils.ts` and `styles/globals.css` copied, import paths rewritten to relative paths, no behaviour changed. 12 vendored files nothing imported were removed 2026-11-23 (Lane 4); they are still upstream and can be re-copied.
 
-**Not usable, recorded so nobody re-mines them:** `abdoutech19/shop-app` (five years stale, e-commerce, no wallet patterns); liquid-glass / aurora / neon styling (clashes with the hand-drawn ink style — take structure, never the skin); `pixel-paper-editorial` (a different illustration style).
+**Not usable, recorded so nobody re-mines them:** `abdoutech19/shop-app` (five years stale, e-commerce, no wallet patterns); liquid-glass / aurora / neon styling (clashes with the polished flat style — take structure, never the skin); `pixel-paper-editorial` (a different illustration style).

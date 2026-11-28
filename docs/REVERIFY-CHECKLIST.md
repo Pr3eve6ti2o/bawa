@@ -5,6 +5,23 @@
 0 runner invocations. Base: `panel-rebuild/token-gaps` tip `71326e1`.
 Worktree: `/home/boxd/workspace/bawa-mkt-l8-worktree` on gray-pinee.**
 
+**Currency note (2026-11-28, Lane A docs audit):** this checklist is
+the 2026-11-23/24 browser-first record; its verdicts stand as dated
+evidence. Resolved since: **C-10** (desktop layout) and **C-16 /
+D-01** (980 px breakpoint) — the desktop layout with the 980 px
+breakpoint merged into token-gaps (`34849a2`, then `b65e8c3`); at 980 px
+the app now shows the sidebar, not the mobile layout. **C-11 / O-11**
+— GitHub Pages now serves the token-gaps build (`ceade79`, gh-pages
+`c0cf697`, live JS `index-Brm7r34g.js`), not the saved `67c48e2`
+build. **O-09** — the Receive tagline was restored by fix-all Lane H.
+**C-35 (B)** — README now states 87 chains (the "168 chains" figure
+here is the 2026-11-23 record). **C-36 / C-40 / D-03** — token-gaps
+tip has moved on to `ceade79`. Still open: O-04 (devnet faucets),
+O-05 (funded DOGE watch row), O-07 (review + sign), O-08 (live
+camera), O-12 (README showcase reference), C-21/C-25 item 19
+(SOL/DOGE live balances and Solana failover — shared-egress
+rate-limits, environmental).
+
 This document REPLACES the first checklist's verdicts (same file, written by
 Reverify Lane 1, coordinator `3e052fbd`, base `b089c28`). The old verdicts
 are kept in the table's "Old verdict" column so every correction is visible;
